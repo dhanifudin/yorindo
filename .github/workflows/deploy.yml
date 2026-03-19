@@ -37,6 +37,7 @@ jobs:
         working-directory: yorindo-app
         env:
           NEXT_EXPORT: 'true'
+          NEXT_PUBLIC_ENABLE_MOCKS: 'true'
         run: npm run build
 
       # GitHub Pages requires a .nojekyll file to serve files starting with _

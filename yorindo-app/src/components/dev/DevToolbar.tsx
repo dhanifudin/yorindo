@@ -7,8 +7,12 @@ const MOCK_USERS = {
   viewer: { id: 'dev-viewer', role: 'viewer' as const },
 }
 
+const MOCKS_ENABLED =
+  process.env.NODE_ENV === 'development' ||
+  process.env.NEXT_PUBLIC_ENABLE_MOCKS === 'true'
+
 export function DevToolbar() {
-  if (process.env.NODE_ENV !== 'development') return null
+  if (!MOCKS_ENABLED) return null
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const { user, setAccessToken } = useAuthStore()
