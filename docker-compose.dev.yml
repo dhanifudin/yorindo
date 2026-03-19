@@ -1,0 +1,32 @@
+# Development override — use with:
+# docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  api:
+    build: ./yorindo-api
+    volumes:
+      - ./yorindo-api:/app
+      - /app/node_modules
+    environment:
+      NODE_ENV: development
+
+  app:
+    build: ./yorindo-app
+    volumes:
+      - ./yorindo-app:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      NODE_ENV: development
+
+  postgres:
+    ports:
+      - "5432:5432"
+
+  mongodb:
+    ports:
+      - "27017:27017"
+
+  redis:
+    ports:
+      - "6379:6379"

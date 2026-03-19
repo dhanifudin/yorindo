@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+
+jobs:
+  lint-typecheck:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        repo: [yorindo-api, yorindo-app]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check if repo has package.json
+        id: pkg-check
+        run: |
+          if [ -f "package.json" ]; then
+            echo "has_pkg=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_pkg=false" >> $GITHUB_OUTPUT
+            echo "⚠️  ${{ matrix.repo }} has no package.json — skipping lint/typecheck (scaffold not yet created)"
+          fi
+        working-directory: ${{ matrix.repo }}
+
+      - uses: actions/setup-node@v4
+        if: steps.pkg-check.outputs.has_pkg == 'true'
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: '${{ matrix.repo }}/package-lock.json'
+
+      - name: Install dependencies
+        if: steps.pkg-check.outputs.has_pkg == 'true'
+        run: npm ci
+        working-directory: ${{ matrix.repo }}
+
+      - name: Lint
+        if: steps.pkg-check.outputs.has_pkg == 'true'
+        run: npm run lint
+        working-directory: ${{ matrix.repo }}
+
+      - name: Typecheck
+        if: steps.pkg-check.outputs.has_pkg == 'true'
+        run: npx tsc --noEmit
+        working-directory: ${{ matrix.repo }}
+
+  test:
+    needs: lint-typecheck
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        repo: [yorindo-api, yorindo-app]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check if repo has package.json
+        id: pkg-check
+        run: |
+          if [ -f "package.json" ]; then
+            echo "has_pkg=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_pkg=false" >> $GITHUB_OUTPUT
+            echo "⚠️  ${{ matrix.repo }} has no package.json — skipping tests (scaffold not yet created)"
+          fi
+        working-directory: ${{ matrix.repo }}
+
+      - uses: actions/setup-node@v4
+        if: steps.pkg-check.outputs.has_pkg == 'true'
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: '${{ matrix.repo }}/package-lock.json'
+
+      - name: Install dependencies
+        if: steps.pkg-check.outputs.has_pkg == 'true'
+        run: npm ci
+        working-directory: ${{ matrix.repo }}
+
+      - name: Test
+        if: steps.pkg-check.outputs.has_pkg == 'true'
+        run: npm run test
+        working-directory: ${{ matrix.repo }}

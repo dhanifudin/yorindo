@@ -55,9 +55,10 @@ Three UX surfaces: public participant registration (mobile-first, zero-account),
 
 | Layer | Technology | Version | Notes |
 |---|---|---|---|
-| Frontend framework | Next.js | 14 (App Router) | SSR + SSG + API Routes |
+| Frontend framework | Next.js | 16 (App Router) | SSR + SSG + API Routes |
 | Language | TypeScript | 5.x | Strict mode enabled; both repos |
-| Styling | Tailwind CSS | 3.x | Utility-first |
+| Styling | Tailwind CSS + shadcn/ui | 3.x + Radix | Design system + utility classes |
+| PWA | serwist | 9.x | Turbopack-compatible service worker |
 | State management | Zustand | 4.x | Lightweight, no Redux overhead |
 | Form handling | React Hook Form + Zod | latest | Client + server validation |
 | QR generate | react-qr-code | latest | Encode JWT → QR image |
@@ -156,7 +157,7 @@ Full-stack web — two separate repos coordinated via TypeScript type definition
 | Repo | Stack |
 |---|---|
 | `yorindo-api` | Fastify 4.x + TypeScript + Node.js 20 LTS |
-| `yorindo-app` | Next.js 14 (App Router) + TypeScript |
+| `yorindo-app` | Next.js 16 (App Router) + TypeScript |
 
 TypeScript type definitions for shared API contracts live in `yorindo-api/src/types/` and are manually synced to `yorindo-app/src/types/api.ts` (or extracted to a shared package in Growth Phase). **Both teams must agree on types before coding begins — this is the contract gate, replacing OpenAPI at MVP.**
 

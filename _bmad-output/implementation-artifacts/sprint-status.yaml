@@ -1,0 +1,182 @@
+# generated: 2026-03-19
+# last_updated: 2026-03-21
+# project: yorindo
+# project_key: NOKEY
+# tracking_system: file-system
+# story_location: _bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - SM typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+#
+# DEVELOPMENT APPROACH: FE-FIRST
+# ===============================
+# Phase 1 (FE): All of Epic 1 + FE layer of Epics 2-9 (built against MSW mocks)
+# Phase 2 (BE): BE layer of Epics 2-9 (real Fastify API), implemented after Phase 1 complete
+# Epic 1 is the foundation — must complete before any Phase 1 feature work begins
+# Story 1.4 (OpenAPI spec) is a hard gate: no Epic 2+ story begins until 1.4 is done
+
+generated: 2026-03-19
+last_updated: 2026-03-21
+project: yorindo
+project_key: NOKEY
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
+
+development_status:
+
+  # ─────────────────────────────────────────────
+  # EPIC 1: Foundation, OpenAPI Contract & Developer Experience
+  # Phase: Foundation — required before all other work
+  # ─────────────────────────────────────────────
+  epic-1: in-progress
+  1-1-backend-repository-scaffold-docker-compose: backlog
+  1-2-database-schema-migrations: backlog
+  1-3-frontend-repository-scaffold: review
+  1-4-openapi-30-specification: review
+  1-5-fe-type-definitions-msw-foundation-devtoolbar: review
+  1-6-msw-mock-handlers-for-all-api-domains: review
+  1-7-cicd-pipeline: review
+  epic-1-retrospective: optional
+
+  # ─────────────────────────────────────────────
+  # EPIC 2: Team & Access Management
+  # Phase 1 (FE): Login page, user mgmt UI, route guards, event assignment UI
+  # Phase 2 (BE): Auth endpoints, JWT, user CRUD, Redis token blacklist
+  # ─────────────────────────────────────────────
+  epic-2: in-progress
+  2-1-admin-login-jwt-authentication: review
+  2-2-user-account-management: review
+  2-3-role-based-route-guards-frontend: review
+  2-4-event-access-assignment-for-staff-viewer: review
+  epic-2-retrospective: optional
+
+  # ─────────────────────────────────────────────
+  # EPIC 3: Contact Database & Participant Intelligence
+  # Phase 1 (FE): Contacts table, upload form, ETL monitor, flagged review, duplicate merge, smart filter
+  # Phase 2 (BE): Contacts API, BullMQ ETL worker, GPT-4o normalization, repositories
+  # ─────────────────────────────────────────────
+  epic-3: in-progress
+  3-1-contact-list-with-server-side-pagination-filtering: review
+  3-2-excelcsv-upload-etl-job-trigger: review
+  3-3-etl-processing-gpt-4o-normalization-database-upsert: backlog
+  3-4-flagged-records-review-resolution: review
+  3-5-duplicate-profile-detection-merge: review
+  3-6-smart-filter-ai-industry-autocomplete: review
+  epic-3-retrospective: optional
+
+  # ─────────────────────────────────────────────
+  # EPIC 4: Event Configuration & Management
+  # Phase 1 (FE): Event creation form, lifecycle controls, clone, survey builder, audience preview, soft delete UI
+  # Phase 2 (BE): Events API, state machine, clone logic, survey JSONB, soft delete cron
+  # ─────────────────────────────────────────────
+  epic-4: in-progress
+  4-1-event-creation-with-full-configuration: review
+  4-2-event-lifecycle-management-state-machine: review
+  4-3-event-clone: review
+  4-4-survey-template-builder: review
+  4-5-event-capacity-target-criteria-with-audience-preview: review
+  4-6-soft-delete-recovery-for-events-and-records: review
+  epic-4-retrospective: optional
+
+  # ─────────────────────────────────────────────
+  # EPIC 5: Invitation Blast & Notifications
+  # Phase 1 (FE): Template editor, blast config, schedule picker, emergency blast, suppression view
+  # Phase 2 (BE): Blast API, BullMQ blast worker, Everpro + Brevo integrations, suppression enforcement
+  # ─────────────────────────────────────────────
+  epic-5: in-progress
+  5-1-notification-message-template-management: review
+  5-2-segmented-blast-configuration-audience-targeting: review
+  5-3-blast-scheduling-delivery-via-brevo-everpro: backlog
+  5-4-emergency-blast: review
+  5-5-suppression-list-consent-enforcement: review
+  epic-5-retrospective: optional
+
+  # ─────────────────────────────────────────────
+  # EPIC 6: Participant Registration & Approval Workflow
+  # Phase 1 (FE): Landing page, registration form, double opt-in, approval queue, waitlist, ticket, self-cancel
+  # Phase 2 (BE): Registration API, approval scoring, waitlist promotion, QR ticket gen, notification dispatch
+  # ─────────────────────────────────────────────
+  epic-6: in-progress
+  6-1-public-event-landing-page: review
+  6-2-participant-registration-form-mobile-first: review
+  6-3-double-opt-in-confirmation-flow: review
+  6-4-registration-approval-queue-admin-review: review
+  6-5-waitlist-management-auto-promotion: review
+  6-6-qr-ticket-generation-delivery: review
+  6-7-participant-self-cancellation: review
+  epic-6-retrospective: optional
+
+  # ─────────────────────────────────────────────
+  # EPIC 7: Event-Day Check-in (Offline-First PWA)
+  # Phase 1 (FE): PWA install banner, QR scanner UI, offline indicator, sync status, OTP flow, name search, live monitor
+  # Phase 2 (BE): Scan verify API, OTP service, offline participants cache endpoint, attendance SSE/polling
+  # ─────────────────────────────────────────────
+  epic-7: in-progress
+  7-1-pwa-installation-offline-participant-data-sync: review
+  7-2-qr-code-scan-check-in-online-mode: review
+  7-3-offline-check-in-queue-background-sync: review
+  7-4-otp-based-identity-recovery: review
+  7-5-name-search-manual-override-check-in: review
+  7-6-real-time-attendance-monitor-admin-dashboard: review
+  epic-7-retrospective: optional
+
+  # ─────────────────────────────────────────────
+  # EPIC 8: Analytics, Reporting & YoriMind
+  # Phase 1 (FE): Report page, vendor landing, DPA gate, analytics dashboard, YoriMind panel, download buttons
+  # Phase 2 (BE): Report generation job, magic link service, DPA endpoint, YoriMind cron + Claude API, xlsx + pdfkit
+  # ─────────────────────────────────────────────
+  epic-8: in-progress
+  8-1-post-event-attendance-report-generation: review
+  8-2-vendor-report-access-via-magic-link-dpa: review
+  8-3-analytics-dashboard-funnel-demographics: review
+  8-4-yorimind-ai-analysis-panel: review
+  8-5-report-download-pdf-excel: review
+  epic-8-retrospective: optional
+
+  # ─────────────────────────────────────────────
+  # EPIC 9: Participant Data Rights & UU PDP Compliance
+  # Phase 1 (FE): Data request form, erasure form, erasure/cancellation distinction UI
+  # Phase 2 (BE): Data export job, anonymization service, suppression enforcement
+  # ─────────────────────────────────────────────
+  epic-9: in-progress
+  9-1-participant-data-request-copy-of-stored-data: review
+  9-2-participant-data-erasure-anonymization: backlog
+  9-3-erasure-vs-cancellation-distinction-suppression-clarity: review
+  epic-9-retrospective: optional
+
+  # ─────────────────────────────────────────────
+  # EPIC 10: UI Design System & Mobile-Native Redesign
+  # Phase: FE only — design system adoption + UX polish
+  # ─────────────────────────────────────────────
+  epic-10: in-progress
+  10-1-shadcnui-foundation-setup: review
+  10-2-admin-shell-navigation-redesign: review
+  10-3-scan-pwa-mobile-native-redesign: review
+  10-4-public-pages-redesign: review
+  epic-10-retrospective: optional

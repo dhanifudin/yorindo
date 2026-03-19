@@ -1,0 +1,14 @@
+# SSL certificates — never commit private keys
+nginx/certs/
+
+# Local environment files — secrets live on VPS only
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/

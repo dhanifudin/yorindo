@@ -1,0 +1,1997 @@
+openapi: 3.0.3
+info:
+  title: Yorindo API
+  version: 1.0.0
+  license:
+    name: Proprietary
+  description: |
+    Yorindo event management platform API.
+
+    All dates are ISO 8601 UTC strings (e.g., "2026-04-15T02:00:00.000Z").
+    All IDs are UUIDs (string).
+    All errors use { error: { code, message, details[] } } format exclusively.
+    Rate limit: POST /api/registrations is limited to 10 requests/hour per IP.
+
+servers:
+  - url: http://localhost:3000/api
+    description: Local development (via Docker Compose)
+  - url: https://api.yorindo.id/api
+    description: Production
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+      description: Page number (1-based)
+    PageSizeParam:
+      name: pageSize
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+      description: Number of items per page
+    SortByParam:
+      name: sortBy
+      in: query
+      schema:
+        type: string
+      description: Field name to sort by
+    SortDirParam:
+      name: sortDir
+      in: query
+      schema:
+        type: string
+        enum: [asc, desc]
+        default: asc
+      description: Sort direction
+
+  schemas:
+    # ─── Pagination ────────────────────────────────────────────────────────────
+    Pagination:
+      type: object
+      required: [page, pageSize, total, totalPages]
+      properties:
+        page:
+          type: integer
+          minimum: 1
+          example: 1
+        pageSize:
+          type: integer
+          minimum: 1
+          maximum: 100
+          example: 20
+        total:
+          type: integer
+          example: 247
+        totalPages:
+          type: integer
+          example: 13
+
+    # ─── Error ─────────────────────────────────────────────────────────────────
+    ApiError:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, details]
+          properties:
+            code:
+              type: string
+              description: SCREAMING_SNAKE_CASE error code
+              example: VALIDATION_ERROR
+            message:
+              type: string
+              description: Human-readable error description
+              example: Validation failed
+            details:
+              type: array
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                    example: email
+                  message:
+                    type: string
+                    example: Invalid email format
+
+    # ─── Async Job ─────────────────────────────────────────────────────────────
+    AsyncJobResponse:
+      type: object
+      required: [jobId, status]
+      properties:
+        jobId:
+          type: string
+          example: etl:upload:1234
+        status:
+          type: string
+          enum: [queued]
+          example: queued
+
+    # ─── Lookup Tables ─────────────────────────────────────────────────────────
+    Industry:
+      type: object
+      required: [id, slug, name]
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+        slug:
+          type: string
+          example: teknologi
+        name:
+          type: string
+          example: Teknologi Informasi
+
+    JobTitle:
+      type: object
+      required: [id, slug, name]
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440001
+        slug:
+          type: string
+          example: direktur
+        name:
+          type: string
+          example: Direktur Utama
+
+    # ─── Contact ───────────────────────────────────────────────────────────────
+    Contact:
+      type: object
+      required: [id, name, phone, email, industryId, jobTitleId, city, companySize, completenessScore, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+        name:
+          type: string
+          example: Budi Santoso
+        phone:
+          type: string
+          example: "+6281234567890"
+        email:
+          type: string
+          format: email
+          example: budi@example.com
+        industryId:
+          type: string
+          example: teknologi
+          description: Slug from industries lookup table
+        jobTitleId:
+          type: string
+          example: direktur
+          description: Slug from job_titles lookup table
+        city:
+          type: string
+          example: Jakarta
+        companySize:
+          type: string
+          enum: [micro, small, medium, large, enterprise]
+          example: large
+        completenessScore:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          example: 0.85
+          description: GPT-4o computed data quality score (0=incomplete, 1=complete)
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-03-19T10:30:00.000Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2026-03-19T10:30:00.000Z"
+
+    PaginatedContacts:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Contact'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    FlaggedRecord:
+      type: object
+      required: [id, rawData, suggestedData, reason, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        rawData:
+          type: object
+          additionalProperties: true
+          description: Original unprocessed row from upload
+        suggestedData:
+          type: object
+          additionalProperties: true
+          description: GPT-4o normalized suggestion
+        reason:
+          type: string
+          description: Why this record was flagged
+        createdAt:
+          type: string
+          format: date-time
+
+    PaginatedFlaggedRecords:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/FlaggedRecord'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    # ─── Event ─────────────────────────────────────────────────────────────────
+    Event:
+      type: object
+      required: [id, name, slug, status, eventDate, timezone, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+        name:
+          type: string
+          example: Seminar ERP Jakarta
+        slug:
+          type: string
+          example: seminar-erp-jakarta
+        description:
+          type: string
+          example: Seminar tentang implementasi ERP di industri manufaktur
+        status:
+          type: string
+          enum: [draft, published, active, completed, cancelled, archived]
+          example: published
+        eventDate:
+          type: string
+          format: date-time
+          example: "2026-04-15T02:00:00.000Z"
+        timezone:
+          type: string
+          enum: [Asia/Jakarta, Asia/Makassar, Asia/Jayapura]
+          example: Asia/Jakarta
+        capacity:
+          type: integer
+          minimum: 1
+          example: 200
+        targetCriteria:
+          type: object
+          additionalProperties: true
+          description: Audience targeting criteria (JSONB)
+        surveySchema:
+          type: object
+          additionalProperties: true
+          description: Survey template schema (JSONB)
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-03-19T10:30:00.000Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2026-03-19T10:30:00.000Z"
+
+    CreateEventBody:
+      type: object
+      required: [name, eventDate, timezone]
+      properties:
+        name:
+          type: string
+          example: Seminar ERP Jakarta
+        description:
+          type: string
+        eventDate:
+          type: string
+          format: date-time
+        timezone:
+          type: string
+          enum: [Asia/Jakarta, Asia/Makassar, Asia/Jayapura]
+        capacity:
+          type: integer
+          minimum: 1
+        targetCriteria:
+          type: object
+          additionalProperties: true
+
+    UpdateEventBody:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        eventDate:
+          type: string
+          format: date-time
+        timezone:
+          type: string
+          enum: [Asia/Jakarta, Asia/Makassar, Asia/Jayapura]
+        capacity:
+          type: integer
+          minimum: 1
+        status:
+          type: string
+          enum: [draft, published, active, completed, cancelled, archived]
+        targetCriteria:
+          type: object
+          additionalProperties: true
+
+    PaginatedEvents:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Event'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    AttendanceStats:
+      type: object
+      required: [total, attended, pending]
+      properties:
+        total:
+          type: integer
+          example: 180
+        attended:
+          type: integer
+          example: 142
+        pending:
+          type: integer
+          example: 38
+
+    # ─── Registration ──────────────────────────────────────────────────────────
+    Registration:
+      type: object
+      required: [id, contactId, eventId, status, surveyAnswers, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+        contactId:
+          type: string
+          format: uuid
+        eventId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [pending, confirmed, approved, rejected, waitlisted, attended, cancelled]
+          example: pending
+        ticketToken:
+          type: string
+          nullable: true
+          description: JWT ticket token; null until status is approved
+          example: null
+        surveyAnswers:
+          type: object
+          additionalProperties: true
+        attendedAt:
+          type: string
+          format: date-time
+          nullable: true
+          example: null
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-03-19T10:30:00.000Z"
+
+    CreateRegistrationBody:
+      type: object
+      required: [eventId, name, email, phone]
+      properties:
+        eventId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+          example: "+6281234567890"
+        surveyAnswers:
+          type: object
+          additionalProperties: true
+
+    UpdateRegistrationStatusBody:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [pending, confirmed, approved, rejected, waitlisted, attended, cancelled]
+
+    PaginatedRegistrations:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Registration'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    # ─── Scan ──────────────────────────────────────────────────────────────────
+    ScanVerifyBody:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+          description: QR ticket JWT token
+
+    ScanResult:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [success, already_attended, invalid]
+          example: success
+        registration:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            contactName:
+              type: string
+              example: Budi Santoso
+            eventName:
+              type: string
+              example: Seminar ERP Jakarta
+        message:
+          type: string
+
+    # ─── User ──────────────────────────────────────────────────────────────────
+    User:
+      type: object
+      required: [id, email, name, role, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+          example: admin@yorindo.id
+        name:
+          type: string
+          example: Admin Yorindo
+        role:
+          type: string
+          enum: [admin, staff, viewer]
+          example: admin
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateUserBody:
+      type: object
+      required: [email, name, role, password]
+      properties:
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        role:
+          type: string
+          enum: [admin, staff, viewer]
+        password:
+          type: string
+          minLength: 8
+
+    PaginatedUsers:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    UserEventAssignment:
+      type: object
+      required: [id, userId, eventId, grantedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        eventId:
+          type: string
+          format: uuid
+        grantedAt:
+          type: string
+          format: date-time
+
+    # ─── Auth ──────────────────────────────────────────────────────────────────
+    LoginBody:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          example: admin@yorindo.id
+        password:
+          type: string
+          example: secret123
+
+    AuthResponse:
+      type: object
+      required: [accessToken, user]
+      properties:
+        accessToken:
+          type: string
+          description: Short-lived JWT access token
+        user:
+          type: object
+          required: [id, role]
+          properties:
+            id:
+              type: string
+              format: uuid
+            role:
+              type: string
+              enum: [admin, staff, viewer]
+
+    # ─── Analytics ─────────────────────────────────────────────────────────────
+    AnalyticsDashboard:
+      type: object
+      properties:
+        funnelData:
+          type: array
+          items:
+            type: object
+            properties:
+              stage:
+                type: string
+              count:
+                type: integer
+        industryBreakdown:
+          type: array
+          items:
+            type: object
+            properties:
+              industry:
+                type: string
+              count:
+                type: integer
+        cityBreakdown:
+          type: array
+          items:
+            type: object
+            properties:
+              city:
+                type: string
+              count:
+                type: integer
+        registrationTimeSeries:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+              count:
+                type: integer
+
+    # ─── YoriMind ──────────────────────────────────────────────────────────────
+    YoriMindResult:
+      type: object
+      required: [analysis, root_causes, recommendations, summary, tracked_metrics]
+      properties:
+        analysis:
+          type: string
+          description: Full AI-generated analysis text (Indonesian)
+        root_causes:
+          type: array
+          items:
+            type: string
+        recommendations:
+          type: array
+          items:
+            type: object
+            required: [action, impact, priority]
+            properties:
+              action:
+                type: string
+              impact:
+                type: string
+              priority:
+                type: string
+                enum: [high, medium, low]
+        summary:
+          type: string
+        tracked_metrics:
+          type: array
+          items:
+            type: string
+
+    # ─── Smart Filter ──────────────────────────────────────────────────────────
+    SmartFilterBody:
+      type: object
+      required: [rawText]
+      properties:
+        rawText:
+          type: string
+          example: "teknologi informasi dan komunikasi"
+
+    SmartFilterResult:
+      $ref: '#/components/schemas/Industry'
+
+    IndustryList:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Industry'
+
+    JobTitleList:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/JobTitle'
+
+    # ─── Blast ─────────────────────────────────────────────────────────────────
+    BlastConfigBody:
+      type: object
+      required: [templateId, segmentCriteria]
+      properties:
+        templateId:
+          type: string
+          format: uuid
+        segmentCriteria:
+          type: object
+          additionalProperties: true
+          description: Audience targeting criteria for this blast
+        scheduledAt:
+          type: string
+          format: date-time
+          description: Optional scheduled delivery time; immediate if omitted
+        channel:
+          type: string
+          enum: [email, whatsapp, both]
+          default: email
+
+paths:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # HEALTH
+  # ─────────────────────────────────────────────────────────────────────────────
+  /health:
+    get:
+      summary: Health check
+      operationId: getHealth
+      tags: [Health]
+      security: []
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+        '503':
+          description: Service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # AUTH
+  # ─────────────────────────────────────────────────────────────────────────────
+  /auth/login:
+    post:
+      summary: Login with email and password
+      operationId: login
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginBody'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /auth/refresh:
+    post:
+      summary: Refresh access token using httpOnly refresh token cookie
+      operationId: refreshToken
+      tags: [Auth]
+      security: []
+      responses:
+        '200':
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid or expired refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /auth/logout:
+    post:
+      summary: Logout and invalidate tokens
+      operationId: logout
+      tags: [Auth]
+      security:
+        - BearerAuth: []
+      responses:
+        '204':
+          description: Logged out successfully
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # CONTACTS
+  # ─────────────────────────────────────────────────────────────────────────────
+  /contacts:
+    get:
+      summary: List contacts with server-side pagination and filtering
+      operationId: listContacts
+      tags: [Contacts]
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - $ref: '#/components/parameters/SortByParam'
+        - $ref: '#/components/parameters/SortDirParam'
+        - name: industry
+          in: query
+          schema:
+            type: string
+          description: Filter by industry slug
+        - name: city
+          in: query
+          schema:
+            type: string
+          description: Filter by city name
+        - name: companySize
+          in: query
+          schema:
+            type: string
+            enum: [micro, small, medium, large, enterprise]
+          description: Filter by company size
+      responses:
+        '200':
+          description: Paginated contacts list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedContacts'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /contacts/import:
+    post:
+      summary: Upload Excel/CSV file to trigger ETL job (admin only)
+      operationId: importContacts
+      tags: [Contacts]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Excel (.xlsx) or CSV file
+      responses:
+        '202':
+          description: ETL job queued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AsyncJobResponse'
+        '400':
+          description: Invalid file format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /contacts/flagged:
+    get:
+      summary: List flagged records requiring review (admin only)
+      operationId: listFlaggedRecords
+      tags: [Contacts]
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: Paginated flagged records
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedFlaggedRecords'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /contacts/flagged/{id}:
+    patch:
+      summary: Approve or reject a flagged record (admin only)
+      operationId: resolveFlaggedRecord
+      tags: [Contacts]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action:
+                  type: string
+                  enum: [approve, reject]
+      responses:
+        '200':
+          description: Record resolved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FlaggedRecord'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Flagged record not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # EVENTS
+  # ─────────────────────────────────────────────────────────────────────────────
+  /events:
+    get:
+      summary: List events
+      operationId: listEvents
+      tags: [Events]
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - $ref: '#/components/parameters/SortByParam'
+        - $ref: '#/components/parameters/SortDirParam'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, published, active, completed, cancelled, archived]
+          description: Filter by event status
+      responses:
+        '200':
+          description: Paginated events list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEvents'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+    post:
+      summary: Create a new event (admin only)
+      operationId: createEvent
+      tags: [Events]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEventBody'
+      responses:
+        '201':
+          description: Event created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /events/{id}:
+    get:
+      summary: Get event by ID
+      operationId: getEvent
+      tags: [Events]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Event detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+    patch:
+      summary: Update event (admin only)
+      operationId: updateEvent
+      tags: [Events]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateEventBody'
+      responses:
+        '200':
+          description: Event updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+    delete:
+      summary: Soft delete event (admin only)
+      operationId: deleteEvent
+      tags: [Events]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Event soft-deleted
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /events/{id}/registrations:
+    get:
+      summary: List registrations for an event
+      operationId: listEventRegistrations
+      tags: [Events, Registrations]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, confirmed, approved, rejected, waitlisted, attended, cancelled]
+      responses:
+        '200':
+          description: Paginated registrations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedRegistrations'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /events/{id}/analytics:
+    get:
+      summary: Get analytics dashboard data for event (admin/viewer)
+      operationId: getEventAnalytics
+      tags: [Events, Analytics]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Analytics data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsDashboard'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Insufficient role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /events/{id}/yorimind:
+    get:
+      summary: Get YoriMind AI analysis for event (admin/viewer)
+      operationId: getYoriMindAnalysis
+      tags: [Events, YoriMind]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: YoriMind AI analysis result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/YoriMindResult'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Insufficient role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /events/{id}/attendance-stats:
+    get:
+      summary: Get live attendance stats for event (admin/staff) — poll every 5s
+      operationId: getAttendanceStats
+      tags: [Events]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Attendance statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttendanceStats'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /events/{id}/survey:
+    get:
+      summary: Get survey schema for event
+      operationId: getSurveySchema
+      tags: [Events]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Survey schema (JSONB)
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+    put:
+      summary: Update survey schema for event (admin only)
+      operationId: updateSurveySchema
+      tags: [Events]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Survey schema updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /events/{id}/blast:
+    post:
+      summary: Send blast notification to event audience (admin only)
+      operationId: sendBlast
+      tags: [Events, Blast]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BlastConfigBody'
+      responses:
+        '202':
+          description: Blast job queued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AsyncJobResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # REGISTRATIONS
+  # ─────────────────────────────────────────────────────────────────────────────
+  /registrations:
+    post:
+      summary: Create a new registration (public, rate-limited 10/hour per IP)
+      operationId: createRegistration
+      tags: [Registrations]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRegistrationBody'
+      responses:
+        '201':
+          description: Registration created
+          headers:
+            X-RateLimit-Limit:
+              description: Max requests per window
+              schema:
+                type: integer
+                example: 10
+            X-RateLimit-Window:
+              description: Window size in seconds
+              schema:
+                type: integer
+                example: 3600
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Registration'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+    get:
+      summary: List all registrations (admin/staff/viewer)
+      operationId: listRegistrations
+      tags: [Registrations]
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - $ref: '#/components/parameters/SortByParam'
+        - $ref: '#/components/parameters/SortDirParam'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, confirmed, approved, rejected, waitlisted, attended, cancelled]
+        - name: eventId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Paginated registrations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedRegistrations'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /registrations/{id}:
+    get:
+      summary: Get registration by ID
+      operationId: getRegistration
+      tags: [Registrations]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Registration detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Registration'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Registration not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /registrations/{id}/status:
+    patch:
+      summary: Update registration status (admin only)
+      operationId: updateRegistrationStatus
+      tags: [Registrations]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRegistrationStatusBody'
+      responses:
+        '200':
+          description: Registration status updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Registration'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Registration not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # SCAN
+  # ─────────────────────────────────────────────────────────────────────────────
+  /scan/verify:
+    post:
+      summary: Verify QR ticket and mark attendance (admin/staff)
+      operationId: scanVerify
+      tags: [Scan]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScanVerifyBody'
+      responses:
+        '200':
+          description: Scan result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScanResult'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Invalid or expired ticket
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Insufficient role (admin/staff only)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # ETL
+  # ─────────────────────────────────────────────────────────────────────────────
+  /etl/upload:
+    post:
+      summary: Trigger ETL contact import job (admin only)
+      operationId: triggerEtlUpload
+      tags: [ETL]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '202':
+          description: ETL job queued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AsyncJobResponse'
+        '400':
+          description: Invalid file
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # SMART FILTER
+  # ─────────────────────────────────────────────────────────────────────────────
+  /smart-filter/industry:
+    post:
+      summary: Map raw text to canonical industry slug via Claude Haiku (debounced)
+      operationId: smartFilterIndustry
+      tags: [SmartFilter]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SmartFilterBody'
+      responses:
+        '200':
+          description: Canonical industry slug and name
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SmartFilterResult'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # USERS
+  # ─────────────────────────────────────────────────────────────────────────────
+  /users:
+    get:
+      summary: List all users (admin only)
+      operationId: listUsers
+      tags: [Users]
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: Paginated users list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedUsers'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+    post:
+      summary: Create a new user (admin only)
+      operationId: createUser
+      tags: [Users]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserBody'
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Email already in use
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /users/{id}/events:
+    get:
+      summary: Get events assigned to user (admin only)
+      operationId: getUserEvents
+      tags: [Users]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: User's assigned events
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Event'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+    post:
+      summary: Assign event access to user (admin only)
+      operationId: assignUserEvent
+      tags: [Users]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [eventId]
+              properties:
+                eventId:
+                  type: string
+                  format: uuid
+      responses:
+        '201':
+          description: Event access assigned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserEventAssignment'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: User or event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Assignment already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /users/{id}/events/{eventId}:
+    delete:
+      summary: Revoke user's access to event (admin only)
+      operationId: revokeUserEventAccess
+      tags: [Users]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Access revoked
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Assignment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+tags:
+  - name: Health
+    description: Service health check
+  - name: Auth
+    description: Authentication and token management
+  - name: Contacts
+    description: Contact database management and ETL
+  - name: Events
+    description: Event configuration and lifecycle management
+  - name: Registrations
+    description: Participant registration and approval workflow
+  - name: Scan
+    description: Event-day QR ticket verification
+  - name: ETL
+    description: Contact import job management
+  - name: SmartFilter
+    description: AI-powered industry filter
+  - name: Blast
+    description: Invitation blast and notifications
+  - name: Analytics
+    description: Event analytics and reporting
+  - name: YoriMind
+    description: AI-powered event analysis
+  - name: Users
+    description: User account and access management
