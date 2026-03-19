@@ -33,25 +33,10 @@ jobs:
         working-directory: yorindo-app
         run: npm ci
 
-      # Determine basePath: /repo-name for project pages, empty for user/org pages (username.github.io)
-      - name: Set base path
-        id: basepath
-        run: |
-          REPO="${{ github.repository }}"
-          REPO_NAME="${REPO#*/}"
-          OWNER="${REPO%%/*}"
-          # User/org pages repo (username.github.io) gets no basePath
-          if [[ "$REPO_NAME" == "$OWNER.github.io" ]]; then
-            echo "base_path=" >> "$GITHUB_OUTPUT"
-          else
-            echo "base_path=/$REPO_NAME" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Build static export
         working-directory: yorindo-app
         env:
           NEXT_EXPORT: 'true'
-          NEXT_PUBLIC_BASE_PATH: ${{ steps.basepath.outputs.base_path }}
         run: npm run build
 
       # GitHub Pages requires a .nojekyll file to serve files starting with _
