@@ -1,20 +1,24 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import { useAuthStore } from '@/store/authStore'
 import { useEvents } from '@/hooks/useEvents'
+import { useAssignedEvents } from '@/hooks/useAssignedEvents'
 import { PWAInstallBanner } from '@/components/features/scan/PWAInstallBanner'
 import { ParticipantSyncStatus } from '@/components/features/scan/ParticipantSyncStatus'
 import { QRScanner } from '@/components/features/scan/QRScanner'
 import { OTPRecoverySheet } from '@/components/features/scan/OTPRecoverySheet'
 import { NameSearchSheet } from '@/components/features/scan/NameSearchSheet'
+import { ScanStatsBar } from '@/components/features/scan/ScanStatsBar'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { QrCode, Clock, ChevronDown, Key, Search, Wifi, WifiOff } from 'lucide-react'
 import { toast } from 'sonner'
 import { getQueueCount, flushScanQueue } from '@/lib/scanQueue'
+import { isToday } from '@/lib/dateUtils'
 
 export default function ScanPage() {
   const [selectedEventId, setSelectedEventId] = useState('')
@@ -24,10 +28,22 @@ export default function ScanPage() {
   const [activeTab, setActiveTab] = useState<'scan' | 'otp' | 'search'>('scan')
   const [isOnline, setIsOnline] = useState(true)
   const [queueCount, setQueueCount] = useState(0)
-  const { data, isLoading } = useEvents()
+  const [lastScan, setLastScan] = useState<{ contactName: string; time: Date } | null>(null)
+
+  const { data: allEventsData, isLoading: allEventsLoading } = useEvents()
+  const { data: assignedEvents, isLoading: assignedLoading } = useAssignedEvents()
+
   const accessToken = useAuthStore((s) => s.accessToken)
   const user = useAuthStore((s) => s.user)
   const router = useRouter()
+  const searchParams = useSearchParams()
+
+  const isStaff = user?.role === 'staff'
+  const isLoading = isStaff ? assignedLoading : allEventsLoading
+
+  const filteredEvents = isStaff
+    ? (assignedEvents ?? []).filter((e) => e.status === 'active' && isToday(e.eventDate, e.timezone))
+    : (allEventsData?.data ?? [])
 
   useEffect(() => {
     if (!accessToken) {
@@ -35,9 +51,28 @@ export default function ScanPage() {
       return
     }
     if (user?.role === 'admin' || user?.role === 'viewer') {
-      router.replace('/admin')
+      router.replace('/app')
     }
   }, [accessToken, user, router])
+
+  // URL param pre-select (runs after events load)
+  useEffect(() => {
+    if (isLoading) return
+    const preselect = searchParams.get('eventId')
+    if (preselect && !selectedEventId) {
+      const found = filteredEvents.find((e) => e.id === preselect)
+      if (found) setSelectedEventId(found.id)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading])
+
+  // Auto-select single event for staff (runs after URL param pre-select)
+  useEffect(() => {
+    if (isLoading || selectedEventId) return
+    if (isStaff && filteredEvents.length === 1) {
+      setSelectedEventId(filteredEvents[0].id)
+    }
+  }, [isLoading, filteredEvents.length, isStaff, selectedEventId])
 
   // Track online/offline
   useEffect(() => {
@@ -81,12 +116,25 @@ export default function ScanPage() {
 
   const handleCheckInSuccess = useCallback((result: { contactName: string; eventName: string }) => {
     toast.success(`✓ ${result.contactName}`)
+    setLastScan({ contactName: result.contactName, time: new Date() })
   }, [])
 
   if (!accessToken) return null
   if (user?.role === 'admin' || user?.role === 'viewer') return null
 
-  const selectedEvent = data?.data.find((e) => e.id === selectedEventId)
+  // Staff empty state (after loading)
+  if (isStaff && !isLoading && filteredEvents.length === 0) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 p-8">
+        <p className="text-muted-foreground text-center">Tidak ada event aktif yang ditugaskan hari ini.</p>
+        <Button asChild>
+          <Link href="/app">Kembali ke Dashboard</Link>
+        </Button>
+      </div>
+    )
+  }
+
+  const selectedEvent = filteredEvents.find((e) => e.id === selectedEventId)
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -113,6 +161,15 @@ export default function ScanPage() {
           <span className="text-xs text-muted-foreground">{user?.id}</span>
         </div>
       </header>
+
+      {/* Stats bar */}
+      {selectedEventId && (
+        <ScanStatsBar
+          eventId={selectedEventId}
+          capacity={selectedEvent?.capacity ?? 0}
+          lastScan={lastScan}
+        />
+      )}
 
       {/* Scanner fills remaining space */}
       <div className="flex-1 relative pb-28">
@@ -198,7 +255,7 @@ export default function ScanPage() {
       <Sheet open={showEventSheet} onOpenChange={setShowEventSheet}>
         <SheetContent side="bottom" className="max-h-[70vh] overflow-y-auto">
           <SheetHeader>
-            <SheetTitle>Pilih Event</SheetTitle>
+            <SheetTitle>{isStaff ? 'Pilih Event Hari Ini' : 'Pilih Event'}</SheetTitle>
           </SheetHeader>
           {isLoading ? (
             Array.from({ length: 3 }).map((_, i) => (
@@ -206,7 +263,7 @@ export default function ScanPage() {
             ))
           ) : (
             <div className="mt-2">
-              {data?.data.map((event) => (
+              {filteredEvents.map((event) => (
                 <button
                   key={event.id}
                   className="w-full text-left px-4 py-4 min-h-[56px] text-sm font-medium border-b border-border last:border-0 hover:bg-muted/50 active:bg-muted"

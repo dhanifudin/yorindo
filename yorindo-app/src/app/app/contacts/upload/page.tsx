@@ -96,7 +96,7 @@ export default function UploadPage() {
   return (
     <div className="max-w-xl">
       <div className="flex items-center gap-3 mb-6">
-        <Link href="/admin/contacts" className="text-muted-foreground hover:text-foreground text-sm">
+        <Link href="/app/contacts" className="text-muted-foreground hover:text-foreground text-sm">
           ← Kembali ke Kontak
         </Link>
       </div>
@@ -162,7 +162,7 @@ export default function UploadPage() {
                 <p>Diproses: <strong>{job.rowsProcessed}</strong></p>
                 <p>Ditandai (perlu review): <strong>{job.flaggedRows ?? 0}</strong></p>
                 {(job.flaggedRows ?? 0) > 0 && (
-                  <Link href="/admin/contacts/flagged" className="text-primary underline text-sm">
+                  <Link href="/app/contacts/flagged" className="text-primary underline text-sm">
                     Review record yang ditandai →
                   </Link>
                 )}

@@ -9,6 +9,15 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { toast } from 'sonner'
 import type { Event } from '@/types/api'
 import { useRouter } from 'next/navigation'
@@ -30,6 +39,7 @@ export default function EventsPage() {
   const [showForm, setShowForm] = useState(false)
   const [showDeleted, setShowDeleted] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Event | null>(null)
+  const [detailEvent, setDetailEvent] = useState<Event | null>(null)
   const { data, isLoading } = useEvents()
   const { setSelectedEvent } = useEventStore()
   const queryClient = useQueryClient()
@@ -120,6 +130,69 @@ export default function EventsPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Event detail sheet (mobile) */}
+      <Sheet open={!!detailEvent} onOpenChange={(v) => !v && setDetailEvent(null)}>
+        <SheetContent side="bottom" className="max-h-[60vh] overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>{detailEvent?.name}</SheetTitle>
+          </SheetHeader>
+          <div className="space-y-3 mt-4 text-sm">
+            <div>
+              <span className="text-muted-foreground">Status: </span>
+              {detailEvent && (
+                <Badge className={STATUS_BADGE[detailEvent.status].className}>
+                  {STATUS_BADGE[detailEvent.status].label}
+                </Badge>
+              )}
+            </div>
+            <div>
+              <span className="text-muted-foreground">Tanggal: </span>
+              {detailEvent && new Date(detailEvent.eventDate).toLocaleDateString('id-ID', {
+                year: 'numeric', month: 'long', day: 'numeric',
+                hour: '2-digit', minute: '2-digit', timeZone: detailEvent.timezone,
+              })}
+            </div>
+            {detailEvent?.capacity && (
+              <div>
+                <span className="text-muted-foreground">Kapasitas: </span>
+                {detailEvent.capacity}
+              </div>
+            )}
+            {detailEvent?.description && (
+              <div>
+                <span className="text-muted-foreground">Deskripsi: </span>
+                {detailEvent.description}
+              </div>
+            )}
+          </div>
+          <div className="flex gap-2 mt-6">
+            <Button
+              size="sm"
+              onClick={() => {
+                if (detailEvent) {
+                  setSelectedEvent(detailEvent.id)
+                  router.push(`/app/events/${detailEvent.id}`)
+                }
+                setDetailEvent(null)
+              }}
+            >
+              Lihat Detail
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-destructive hover:text-destructive"
+              onClick={() => {
+                if (detailEvent) setDeleteTarget(detailEvent)
+                setDetailEvent(null)
+              }}
+            >
+              Hapus
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
+
       {showDeleted ? (
         <div>
           <h2 className="text-lg font-semibold mb-4">Event Terhapus</h2>
@@ -158,51 +231,74 @@ export default function EventsPage() {
           ))}
         </div>
       ) : (
-        <div className="space-y-3">
-          {data?.data.map((event) => {
-            const badge = STATUS_BADGE[event.status] ?? STATUS_BADGE.draft
-            return (
-              <Card key={event.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="py-4 flex items-center justify-between">
-                  <div
-                    className="flex-1 cursor-pointer"
-                    onClick={() => {
-                      setSelectedEvent(event.id)
-                      router.push(`/admin/events/${event.id}`)
-                    }}
-                  >
-                    <h3 className="font-medium">{event.name}</h3>
-                    <p className="text-sm text-muted-foreground mt-0.5">
-                      {new Date(event.eventDate).toLocaleDateString('id-ID', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        timeZone: event.timezone,
-                      })}
-                      {event.capacity && ` · Kapasitas: ${event.capacity}`}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge className={badge.className}>{badge.label}</Badge>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-destructive hover:text-destructive"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setDeleteTarget(event)
-                      }}
+        <Card>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nama Event</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="hidden md:table-cell">Tanggal</TableHead>
+                <TableHead className="hidden md:table-cell">Kapasitas</TableHead>
+                <TableHead>Aksi</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {!data?.data.length ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                    Tidak ada event
+                  </TableCell>
+                </TableRow>
+              ) : (
+                data.data.map((event) => {
+                  const badge = STATUS_BADGE[event.status] ?? STATUS_BADGE.draft
+                  return (
+                    <TableRow
+                      key={event.id}
+                      className="cursor-pointer"
+                      onClick={() => setDetailEvent(event)}
                     >
-                      Hapus
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )
-          })}
-        </div>
+                      <TableCell
+                        className="font-medium"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setSelectedEvent(event.id)
+                          router.push(`/app/events/${event.id}`)
+                        }}
+                      >
+                        {event.name}
+                      </TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <Badge className={badge.className}>{badge.label}</Badge>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell text-muted-foreground text-sm" onClick={(e) => e.stopPropagation()}>
+                        {new Date(event.eventDate).toLocaleDateString('id-ID', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                          timeZone: event.timezone,
+                        })}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell text-muted-foreground text-sm" onClick={(e) => e.stopPropagation()}>
+                        {event.capacity ?? '—'}
+                      </TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => setDeleteTarget(event)}
+                        >
+                          Hapus
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })
+              )}
+            </TableBody>
+          </Table>
+        </Card>
       )}
     </div>
   )

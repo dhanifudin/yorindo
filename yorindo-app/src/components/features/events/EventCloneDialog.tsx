@@ -27,7 +27,7 @@ export function EventCloneDialog({ event }: EventCloneDialogProps) {
       queryClient.invalidateQueries({ queryKey: ['events'] })
       toast.success(`Event berhasil disalin: ${cloned.name}`)
       setOpen(false)
-      router.push(`/admin/events/${cloned.id}`)
+      router.push(`/app/events/${cloned.id}`)
     },
     onError: () => toast.error('Gagal menyalin event'),
   })

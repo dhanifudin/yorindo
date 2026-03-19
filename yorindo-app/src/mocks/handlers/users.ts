@@ -3,12 +3,12 @@ import { faker } from '@faker-js/faker'
 import type { User } from '@/types/api'
 
 // user_id -> Set of eventIds
-const userEventAssignments: Map<string, Set<string>> = new Map([
+export const userEventAssignments: Map<string, Set<string>> = new Map([
   ['user-002', new Set(['event-001', 'event-003'])],
   ['user-003', new Set(['event-001'])],
 ])
 
-let usersStore: User[] = [
+export let usersStore: User[] = [
   {
     id: 'user-001',
     name: 'Super Admin',
@@ -36,6 +36,26 @@ let usersStore: User[] = [
 ]
 
 export const userHandlers = [
+  http.get('/api/users/me', async ({ request }) => {
+    await delay(200)
+    const auth = request.headers.get('Authorization') ?? ''
+    const token = auth.replace('Bearer ', '')
+    const DEV_IDS: Record<string, User> = {
+      'dev-admin':  { id: 'dev-admin',  name: 'Super Admin',  email: 'admin@yorindo.app', role: 'admin',  createdAt: '', updatedAt: '' },
+      'dev-staff':  { id: 'dev-staff',  name: 'Budi Santoso', email: 'budi@yorindo.app',  role: 'staff',  createdAt: '', updatedAt: '' },
+      'dev-viewer': { id: 'dev-viewer', name: 'Sari Dewi',    email: 'sari@yorindo.app',  role: 'viewer', createdAt: '', updatedAt: '' },
+    }
+    if (token === 'dev-token') {
+      const userId = request.headers.get('X-User-Id') ?? 'dev-admin'
+      const devUser = DEV_IDS[userId]
+      if (devUser) return HttpResponse.json(devUser)
+      return HttpResponse.json(usersStore.find((u) => u.id === userId) ?? usersStore[0])
+    }
+    const roleFromToken = token.replace('mock-token-', '') as User['role']
+    const user = usersStore.find((u) => u.role === roleFromToken)
+    return HttpResponse.json(user ?? usersStore[0])
+  }),
+
   http.get('/api/users', async () => {
     await delay(300)
     return HttpResponse.json(usersStore)

@@ -1,13 +1,14 @@
 import { http, HttpResponse, delay } from 'msw'
 import { faker } from '@faker-js/faker'
 import type { Event } from '@/types/api'
+import { usersStore, userEventAssignments } from './users'
 
 const TIMEZONES: Event['timezone'][] = ['Asia/Jakarta', 'Asia/Makassar', 'Asia/Jayapura']
 
 // In-memory mutable store — mutations persist within session
 let deletedEventsStore: (Event & { deletedAt: string })[] = []
 
-let eventsStore: Event[] = [
+export let eventsStore: Event[] = [
   {
     id: 'event-001',
     name: 'Seminar ERP Jakarta',
@@ -300,6 +301,23 @@ export const eventHandlers = [
   http.post('/api/events/:id/blast/emergency', async () => {
     await delay(500)
     return HttpResponse.json({ jobId: `blast:emergency:${faker.number.int()}`, status: 'queued', recipientCount: 142 }, { status: 202 })
+  }),
+
+  http.get('/api/users/me/assigned-events', async ({ request }) => {
+    await delay(300)
+    const auth = request.headers.get('Authorization') ?? ''
+    const token = auth.replace('Bearer ', '')
+    let userId: string
+    if (token === 'dev-token') {
+      userId = request.headers.get('X-User-Id') ?? 'dev-admin'
+    } else {
+      const roleFromToken = token.replace('mock-token-', '') as 'admin' | 'staff' | 'viewer'
+      userId = usersStore.find((u) => u.role === roleFromToken)?.id ?? 'user-001'
+    }
+    const devToReal: Record<string, string> = { 'dev-admin': 'user-001', 'dev-staff': 'user-002', 'dev-viewer': 'user-003' }
+    const lookupId = devToReal[userId] ?? userId
+    const assignedEventIds = Array.from(userEventAssignments.get(lookupId) ?? [])
+    return HttpResponse.json(eventsStore.filter((e) => assignedEventIds.includes(e.id)))
   }),
 
   http.get('/api/events/:id/report/download', async ({ request }) => {

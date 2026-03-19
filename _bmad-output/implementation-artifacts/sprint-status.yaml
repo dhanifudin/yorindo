@@ -1,5 +1,5 @@
 # generated: 2026-03-19
-# last_updated: 2026-03-21
+# last_updated: 2026-03-21 (stories 10.5, 11.3, 11.4 created → ready-for-dev)
 # project: yorindo
 # project_key: NOKEY
 # tracking_system: file-system
@@ -42,7 +42,7 @@
 # Story 1.4 (OpenAPI spec) is a hard gate: no Epic 2+ story begins until 1.4 is done
 
 generated: 2026-03-19
-last_updated: 2026-03-21
+last_updated: 2026-03-20
 project: yorindo
 project_key: NOKEY
 tracking_system: file-system
@@ -179,4 +179,17 @@ development_status:
   10-2-admin-shell-navigation-redesign: review
   10-3-scan-pwa-mobile-native-redesign: review
   10-4-public-pages-redesign: review
+  10-5-responsive-table-redesign: review
   epic-10-retrospective: optional
+
+  # ─────────────────────────────────────────────
+  # EPIC 11: UX Experience & Routing Revamp
+  # Phase: FE only — role-differentiated UX, routing migration, landing page
+  # Sprint Change Proposal: 2026-03-21
+  # ─────────────────────────────────────────────
+  epic-11: in-progress
+  11-1-app-routing-migration: review
+  11-2-public-landing-page: review
+  11-3-role-based-personalized-dashboards: review
+  11-4-staff-checkin-dashboard-assigned-event-scan-filter: review
+  epic-11-retrospective: optional

@@ -9,17 +9,19 @@ import {
   FileText,
   UserCog,
   LogOut,
+  QrCode,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/authStore'
 
 const NAV_ITEMS = [
-  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'viewer'] },
-  { href: '/admin/contacts', label: 'Kontak', icon: Users, roles: ['admin'] },
-  { href: '/admin/events', label: 'Event', icon: Calendar, roles: ['admin', 'viewer'] },
-  { href: '/admin/templates', label: 'Template', icon: FileText, roles: ['admin'] },
-  { href: '/admin/users', label: 'Akun', icon: UserCog, roles: ['admin'] },
+  { href: '/app',              label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'viewer', 'staff'] },
+  { href: '/app/contacts',     label: 'Kontak',    icon: Users,           roles: ['admin'] },
+  { href: '/app/events',       label: 'Event',     icon: Calendar,        roles: ['admin', 'viewer'] },
+  { href: '/app/templates',    label: 'Template',  icon: FileText,        roles: ['admin'] },
+  { href: '/app/users',        label: 'Akun',      icon: UserCog,         roles: ['admin'] },
+  { href: '/app/scan',         label: 'Scan',      icon: QrCode,          roles: ['staff', 'admin'] },
 ]
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
@@ -36,9 +38,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     router.replace('/login')
   }
 
-  // Exact match for /admin dashboard; prefix match for all other routes
+  // Exact match for /app dashboard; prefix match for all other routes
   const isActive = (href: string) =>
-    href === '/admin' ? pathname === '/admin' : pathname.startsWith(href)
+    href === '/app' ? pathname === '/app' : pathname.startsWith(href)
 
   return (
     <div className="flex min-h-screen bg-background">

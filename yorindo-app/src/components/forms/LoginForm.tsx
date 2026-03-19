@@ -38,7 +38,7 @@ export function LoginForm() {
       }
       const data = await res.json()
       setAccessToken(data.accessToken, data.user)
-      router.push('/admin')
+      router.push('/app')
     } catch {
       setApiError('Gagal terhubung ke server. Coba lagi.')
     }

@@ -41,7 +41,7 @@ describe('LoginForm', () => {
     })
   })
 
-  it('calls setAccessToken and redirects to /admin on successful login', async () => {
+  it('calls setAccessToken and redirects to /app on successful login', async () => {
     const user = userEvent.setup()
     render(<LoginForm />)
 
@@ -50,7 +50,7 @@ describe('LoginForm', () => {
     await user.click(screen.getByRole('button', { name: /masuk/i }))
 
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith('/admin')
+      expect(mockPush).toHaveBeenCalledWith('/app')
     })
 
     const { accessToken, user: authUser } = useAuthStore.getState()
@@ -70,7 +70,7 @@ describe('LoginForm', () => {
 
     // Button should show loading state (disabled) while MSW 300ms delay runs
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith('/admin')
+      expect(mockPush).toHaveBeenCalledWith('/app')
     })
   })
 })

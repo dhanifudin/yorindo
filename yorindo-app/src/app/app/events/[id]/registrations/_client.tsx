@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import {
   Table,
   TableBody,
@@ -43,6 +44,7 @@ export default function RegistrationsPage({ params }: RegistrationsPageProps) {
   const { id } = use(params)
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState('pending')
+  const [detailReg, setDetailReg] = useState<Registration | null>(null)
 
   const { data, isLoading } = useQuery<{ data: Registration[]; pagination: { total: number } }>({
     queryKey: ['event-registrations', id, activeTab],
@@ -75,7 +77,7 @@ export default function RegistrationsPage({ params }: RegistrationsPageProps) {
   return (
     <div>
       <div className="flex items-center gap-3 mb-6">
-        <Link href={`/admin/events/${id}`} className="text-muted-foreground hover:text-foreground text-sm">
+        <Link href={`/app/events/${id}`} className="text-muted-foreground hover:text-foreground text-sm">
           ← Kembali ke Event
         </Link>
       </div>
@@ -98,6 +100,29 @@ export default function RegistrationsPage({ params }: RegistrationsPageProps) {
         ))}
       </div>
 
+      {/* Registration detail sheet (mobile) */}
+      <Sheet open={!!detailReg} onOpenChange={(v) => !v && setDetailReg(null)}>
+        <SheetContent side="bottom" className="max-h-[60vh] overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Detail Registrasi</SheetTitle>
+          </SheetHeader>
+          <div className="space-y-3 mt-4 text-sm">
+            <div><span className="text-muted-foreground">ID: </span><span className="font-mono text-xs">{detailReg?.id}</span></div>
+            <div>
+              <span className="text-muted-foreground">Status: </span>
+              {detailReg && <Badge className={STATUS_BADGE[detailReg.status]}>{detailReg.status}</Badge>}
+            </div>
+            <div>
+              <span className="text-muted-foreground">Terdaftar: </span>
+              {detailReg && new Date(detailReg.createdAt).toLocaleString('id-ID')}
+            </div>
+            {detailReg?.attendedAt && (
+              <div><span className="text-muted-foreground">Hadir: </span>{new Date(detailReg.attendedAt).toLocaleString('id-ID')}</div>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
+
       {isLoading ? (
         <div className="space-y-2">
           {Array.from({ length: 5 }).map((_, i) => (
@@ -109,11 +134,11 @@ export default function RegistrationsPage({ params }: RegistrationsPageProps) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>#</TableHead>
+                <TableHead className="hidden md:table-cell">#</TableHead>
                 <TableHead>ID Registrasi</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Terdaftar</TableHead>
-                {activeTab === 'waitlisted' && <TableHead>Posisi</TableHead>}
+                <TableHead className="hidden md:table-cell">Terdaftar</TableHead>
+                {activeTab === 'waitlisted' && <TableHead className="hidden md:table-cell">Posisi</TableHead>}
                 <TableHead>Aksi</TableHead>
               </TableRow>
             </TableHeader>
@@ -126,19 +151,19 @@ export default function RegistrationsPage({ params }: RegistrationsPageProps) {
                 </TableRow>
               ) : (
                 displayData.map((reg, idx) => (
-                  <TableRow key={reg.id}>
-                    <TableCell className="text-muted-foreground text-xs">{idx + 1}</TableCell>
-                    <TableCell className="font-mono text-xs">{reg.id}</TableCell>
-                    <TableCell>
+                  <TableRow key={reg.id} className="cursor-pointer" onClick={() => setDetailReg(reg)}>
+                    <TableCell className="hidden md:table-cell text-muted-foreground text-xs" onClick={(e) => e.stopPropagation()}>{idx + 1}</TableCell>
+                    <TableCell className="font-mono text-xs" onClick={(e) => e.stopPropagation()}>{reg.id}</TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
                       <Badge className={STATUS_BADGE[reg.status]}>{reg.status}</Badge>
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-xs">
+                    <TableCell className="hidden md:table-cell text-muted-foreground text-xs" onClick={(e) => e.stopPropagation()}>
                       {new Date(reg.createdAt).toLocaleDateString('id-ID')}
                     </TableCell>
                     {activeTab === 'waitlisted' && (
-                      <TableCell className="text-muted-foreground">#{idx + 1}</TableCell>
+                      <TableCell className="hidden md:table-cell text-muted-foreground" onClick={(e) => e.stopPropagation()}>#{idx + 1}</TableCell>
                     )}
-                    <TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
                       <div className="flex gap-1">
                         {activeTab === 'pending' && (
                           <>

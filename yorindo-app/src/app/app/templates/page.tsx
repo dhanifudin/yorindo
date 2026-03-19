@@ -6,6 +6,7 @@ import { TemplateForm } from '@/components/features/templates/TemplateForm'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import {
   Table,
   TableBody,
@@ -30,6 +31,7 @@ const TYPE_BADGE: Record<string, string> = {
 export default function TemplatesPage() {
   const [mode, setMode] = useState<'list' | 'create' | 'edit'>('list')
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null)
+  const [detailTemplate, setDetailTemplate] = useState<Template | null>(null)
   const { data: templates, isLoading } = useTemplates()
   const { mutate: deleteTemplate } = useDeleteTemplate()
 
@@ -67,6 +69,50 @@ export default function TemplatesPage() {
         </Card>
       )}
 
+      {/* Template detail sheet (mobile) */}
+      <Sheet open={!!detailTemplate} onOpenChange={(v) => !v && setDetailTemplate(null)}>
+        <SheetContent side="bottom" className="max-h-[60vh] overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>{detailTemplate?.name}</SheetTitle>
+          </SheetHeader>
+          <div className="space-y-3 mt-4 text-sm">
+            <div>
+              <span className="text-muted-foreground">Channel: </span>
+              {detailTemplate && (
+                <Badge className={CHANNEL_BADGE[detailTemplate.channel] ?? 'bg-muted text-muted-foreground'}>
+                  {detailTemplate.channel}
+                </Badge>
+              )}
+            </div>
+            <div>
+              <span className="text-muted-foreground">Tipe: </span>
+              {detailTemplate && (
+                <Badge className={TYPE_BADGE[detailTemplate.type] ?? 'bg-muted text-muted-foreground'}>
+                  {detailTemplate.type}
+                </Badge>
+              )}
+            </div>
+            <div>
+              <span className="text-muted-foreground block mb-1">Isi Template:</span>
+              <p className="text-foreground whitespace-pre-wrap text-xs bg-muted rounded p-2">{detailTemplate?.body}</p>
+            </div>
+          </div>
+          <div className="flex gap-2 mt-6">
+            <Button size="sm" variant="outline" onClick={() => { if (detailTemplate) { handleEdit(detailTemplate) } setDetailTemplate(null) }}>
+              Edit
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-destructive hover:text-destructive"
+              onClick={() => { if (detailTemplate) deleteTemplate(detailTemplate.id); setDetailTemplate(null) }}
+            >
+              Hapus
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
+
       {isLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
@@ -79,30 +125,30 @@ export default function TemplatesPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nama</TableHead>
-                <TableHead>Tipe</TableHead>
+                <TableHead className="hidden md:table-cell">Tipe</TableHead>
                 <TableHead>Channel</TableHead>
-                <TableHead>Isi (Preview)</TableHead>
+                <TableHead className="hidden md:table-cell">Isi (Preview)</TableHead>
                 <TableHead>Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {templates?.map((tmpl) => (
-                <TableRow key={tmpl.id}>
-                  <TableCell className="font-medium">{tmpl.name}</TableCell>
-                  <TableCell>
+                <TableRow key={tmpl.id} className="cursor-pointer" onClick={() => setDetailTemplate(tmpl)}>
+                  <TableCell className="font-medium" onClick={(e) => e.stopPropagation()}>{tmpl.name}</TableCell>
+                  <TableCell className="hidden md:table-cell" onClick={(e) => e.stopPropagation()}>
                     <Badge className={TYPE_BADGE[tmpl.type] ?? 'bg-muted text-muted-foreground'}>
                       {tmpl.type}
                     </Badge>
                   </TableCell>
-                  <TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
                     <Badge className={CHANNEL_BADGE[tmpl.channel] ?? 'bg-muted text-muted-foreground'}>
                       {tmpl.channel}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-muted-foreground max-w-xs truncate">
+                  <TableCell className="hidden md:table-cell text-muted-foreground max-w-xs truncate" onClick={(e) => e.stopPropagation()}>
                     {tmpl.body}
                   </TableCell>
-                  <TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
                     <div className="flex gap-2">
                       <Button variant="ghost" size="sm" onClick={() => handleEdit(tmpl)}>
                         Edit

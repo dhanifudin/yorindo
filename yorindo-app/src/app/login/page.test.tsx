@@ -25,7 +25,7 @@ describe('LoginPage', () => {
     expect(screen.getByText('Admin Portal')).toBeTruthy()
   })
 
-  it('redirects to /admin when already authenticated', async () => {
+  it('redirects to /app when already authenticated', async () => {
     useAuthStore.setState({
       accessToken: 'existing-token',
       user: { id: 'u1', role: 'admin' },
@@ -33,7 +33,7 @@ describe('LoginPage', () => {
     render(<LoginPage />)
 
     await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith('/admin')
+      expect(mockReplace).toHaveBeenCalledWith('/app')
     })
   })
 
