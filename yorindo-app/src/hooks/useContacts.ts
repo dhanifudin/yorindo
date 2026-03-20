@@ -10,6 +10,7 @@ async function fetchContacts(params: {
   industry: string
   city: string
   companySize: string
+  flagFilter: string
 }): Promise<PaginatedResponse<Contact>> {
   const url = new URL('/api/contacts', window.location.origin)
   url.searchParams.set('page', String(params.page))
@@ -17,6 +18,7 @@ async function fetchContacts(params: {
   if (params.industry) url.searchParams.set('industry', params.industry)
   if (params.city) url.searchParams.set('city', params.city)
   if (params.companySize) url.searchParams.set('companySize', params.companySize)
+  if (params.flagFilter) url.searchParams.set('flagFilter', params.flagFilter)
 
   const res = await fetch(url.toString())
   if (!res.ok) throw new Error('Failed to fetch contacts')
@@ -24,10 +26,10 @@ async function fetchContacts(params: {
 }
 
 export function useContacts() {
-  const { page, industry, city, companySize } = useFilterStore()
+  const { page, industry, city, companySize, flagFilter } = useFilterStore()
 
   return useQuery({
-    queryKey: ['contacts', { page, pageSize: PAGE_SIZE, industry, city, companySize }],
-    queryFn: () => fetchContacts({ page, pageSize: PAGE_SIZE, industry, city, companySize }),
+    queryKey: ['contacts', { page, pageSize: PAGE_SIZE, industry, city, companySize, flagFilter }],
+    queryFn: () => fetchContacts({ page, pageSize: PAGE_SIZE, industry, city, companySize, flagFilter }),
   })
 }

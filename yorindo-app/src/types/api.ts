@@ -1,6 +1,8 @@
 // FE-owned types — derived from openapi.yaml (Story 1.4).
 // BE adopts these shapes when implementing; do NOT auto-generate from spec.
 
+export type FlagCategory = 'spam' | 'not-potential' | 'invalid-data' | 'duplicate' | null
+
 export interface Contact {
   id: string
   name: string
@@ -11,6 +13,7 @@ export interface Contact {
   city: string
   companySize: string
   completenessScore: number // 0.0–1.0, computed by GPT-4o in ETL (Story 3.3)
+  flagCategory: FlagCategory // Manual flag set by admin (Story 3.4)
   createdAt: string
   updatedAt: string
 }
@@ -24,6 +27,7 @@ export interface Event {
   eventDate: string // ISO 8601 UTC
   timezone: 'Asia/Jakarta' | 'Asia/Makassar' | 'Asia/Jayapura'
   capacity?: number
+  bannerUrl?: string // Event banner image URL (Story 4.7)
   targetCriteria?: Record<string, unknown>
   surveySchema?: Record<string, unknown>
   createdAt: string
@@ -116,6 +120,10 @@ export interface CreateEventBody {
   eventDate: string
   timezone: Event['timezone']
   capacity?: number
+  bannerUrl?: string
+  blastTemplateId?: string
+  confirmationTemplateId?: string
+  rejectionTemplateId?: string
 }
 
 export interface UpdateRegistrationStatusBody {
@@ -139,4 +147,8 @@ export interface CreateUserBody {
   name: string
   role: User['role']
   password: string
+}
+
+export interface UpdateContactFlagBody {
+  flagCategory: FlagCategory
 }

@@ -55,6 +55,18 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
 
   return (
     <div className="space-y-6">
+      {/* Event banner */}
+      {event.bannerUrl && (
+        <div className="rounded-lg overflow-hidden border border-border">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={event.bannerUrl}
+            alt={`Banner ${event.name}`}
+            className="w-full h-48 md:h-64 object-cover"
+          />
+        </div>
+      )}
+
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold mb-1">{event.name}</h1>

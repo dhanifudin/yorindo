@@ -120,54 +120,81 @@ export default function TemplatesPage() {
           ))}
         </div>
       ) : (
-        <Card>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nama</TableHead>
-                <TableHead className="hidden md:table-cell">Tipe</TableHead>
-                <TableHead>Channel</TableHead>
-                <TableHead className="hidden md:table-cell">Isi (Preview)</TableHead>
-                <TableHead>Aksi</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {templates?.map((tmpl) => (
-                <TableRow key={tmpl.id} className="cursor-pointer" onClick={() => setDetailTemplate(tmpl)}>
-                  <TableCell className="font-medium" onClick={(e) => e.stopPropagation()}>{tmpl.name}</TableCell>
-                  <TableCell className="hidden md:table-cell" onClick={(e) => e.stopPropagation()}>
-                    <Badge className={TYPE_BADGE[tmpl.type] ?? 'bg-muted text-muted-foreground'}>
-                      {tmpl.type}
-                    </Badge>
-                  </TableCell>
-                  <TableCell onClick={(e) => e.stopPropagation()}>
-                    <Badge className={CHANNEL_BADGE[tmpl.channel] ?? 'bg-muted text-muted-foreground'}>
-                      {tmpl.channel}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell text-muted-foreground max-w-xs truncate" onClick={(e) => e.stopPropagation()}>
-                    {tmpl.body}
-                  </TableCell>
-                  <TableCell onClick={(e) => e.stopPropagation()}>
-                    <div className="flex gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => handleEdit(tmpl)}>
-                        Edit
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-destructive hover:text-destructive"
-                        onClick={() => deleteTemplate(tmpl.id)}
-                      >
-                        Hapus
-                      </Button>
-                    </div>
-                  </TableCell>
+        <>
+          {/* Mobile cards */}
+          <div className="md:hidden space-y-2">
+            {templates?.map((tmpl) => (
+              <div
+                key={tmpl.id}
+                className="rounded-lg border border-border bg-card p-3 cursor-pointer active:bg-muted/50"
+                onClick={() => setDetailTemplate(tmpl)}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-sm">{tmpl.name}</span>
+                  <Badge className={TYPE_BADGE[tmpl.type] ?? 'bg-muted text-muted-foreground'}>
+                    {tmpl.type}
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-2 mt-1">
+                  <Badge className={CHANNEL_BADGE[tmpl.channel] ?? 'bg-muted text-muted-foreground'} >
+                    {tmpl.channel}
+                  </Badge>
+                  <span className="text-xs text-muted-foreground truncate">{tmpl.body?.slice(0, 50)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop table */}
+          <Card className="hidden md:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nama</TableHead>
+                  <TableHead>Tipe</TableHead>
+                  <TableHead>Channel</TableHead>
+                  <TableHead>Isi (Preview)</TableHead>
+                  <TableHead>Aksi</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
+              </TableHeader>
+              <TableBody>
+                {templates?.map((tmpl) => (
+                  <TableRow key={tmpl.id} className="cursor-pointer" onClick={() => setDetailTemplate(tmpl)}>
+                    <TableCell className="font-medium" onClick={(e) => e.stopPropagation()}>{tmpl.name}</TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <Badge className={TYPE_BADGE[tmpl.type] ?? 'bg-muted text-muted-foreground'}>
+                        {tmpl.type}
+                      </Badge>
+                    </TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <Badge className={CHANNEL_BADGE[tmpl.channel] ?? 'bg-muted text-muted-foreground'}>
+                        {tmpl.channel}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground max-w-xs truncate" onClick={(e) => e.stopPropagation()}>
+                      {tmpl.body}
+                    </TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <div className="flex gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => handleEdit(tmpl)}>
+                          Edit
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => deleteTemplate(tmpl.id)}
+                        >
+                          Hapus
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
+        </>
       )}
     </div>
   )

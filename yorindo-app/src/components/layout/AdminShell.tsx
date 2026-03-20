@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import { useQuery } from '@tanstack/react-query'
 import {
   LayoutDashboard,
   Users,
@@ -32,10 +33,23 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   const visible = NAV_ITEMS.filter((item) => item.roles.includes(user?.role ?? 'viewer'))
 
+  // Fetch duplicate count for badge (admin only)
+  const { data: dupData } = useQuery<{ data: Array<unknown> }>({
+    queryKey: ['contacts', 'duplicates-count'],
+    queryFn: () => fetch('/api/contacts/duplicates').then((r) => r.json()),
+    enabled: user?.role === 'admin',
+    refetchInterval: 60_000,
+  })
+  const duplicateCount = dupData?.data?.length ?? 0
+
   const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' })
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' })
+    } catch {
+      // Proceed with client-side logout even if server request fails
+    }
+    router.replace('/')
     clearAuth()
-    router.replace('/login')
   }
 
   // Exact match for /app dashboard; prefix match for all other routes
@@ -63,6 +77,11 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             >
               <item.icon className="size-4 shrink-0" />
               {item.label}
+              {item.href === '/app/contacts' && duplicateCount > 0 && (
+                <span className="ml-auto inline-flex items-center justify-center size-5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold">
+                  {duplicateCount}
+                </span>
+              )}
             </Link>
           ))}
         </nav>
@@ -94,7 +113,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             key={item.href}
             href={item.href}
             className={cn(
-              'flex flex-col items-center justify-center gap-0.5 min-h-[56px] min-w-[56px] px-2 py-2 text-[10px] font-medium transition-colors',
+              'relative flex flex-col items-center justify-center gap-0.5 min-h-[56px] min-w-[56px] px-2 py-2 text-[10px] font-medium transition-colors',
               isActive(item.href)
                 ? 'text-primary'
                 : 'text-muted-foreground hover:text-foreground'
@@ -102,6 +121,11 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           >
             <item.icon className="size-5" />
             <span>{item.label}</span>
+            {item.href === '/app/contacts' && duplicateCount > 0 && (
+              <span className="absolute top-1 right-0 inline-flex items-center justify-center size-4 rounded-full bg-destructive text-destructive-foreground text-[8px] font-bold">
+                {duplicateCount}
+              </span>
+            )}
           </Link>
         ))}
       </nav>

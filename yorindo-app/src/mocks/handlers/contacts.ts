@@ -1,6 +1,6 @@
 import { http, HttpResponse, delay } from 'msw'
 import { faker } from '@faker-js/faker'
-import type { Contact, PaginatedResponse } from '@/types/api'
+import type { Contact, FlagCategory, PaginatedResponse } from '@/types/api'
 
 faker.seed(42)
 
@@ -14,9 +14,10 @@ const INDUSTRIES = [
 ]
 const COMPANY_SIZES = ['micro', 'small', 'medium', 'large', 'enterprise'] as const
 const JOB_TITLES = ['direktur', 'manajer', 'supervisor', 'staff', 'koordinator']
+const FLAG_CATEGORIES: FlagCategory[] = ['spam', 'not-potential', 'invalid-data', 'duplicate']
 
 // Seeded pool of 247 contacts — deterministic with faker.seed(42)
-const contactsPool: Contact[] = Array.from({ length: 247 }, () => ({
+const contactsPool: Contact[] = Array.from({ length: 247 }, (_, i) => ({
   id: faker.string.uuid(),
   name: faker.person.fullName(),
   phone: `+62${faker.string.numeric(10)}`,
@@ -26,6 +27,8 @@ const contactsPool: Contact[] = Array.from({ length: 247 }, () => ({
   city: faker.helpers.arrayElement(INDONESIAN_CITIES),
   companySize: faker.helpers.arrayElement(COMPANY_SIZES),
   completenessScore: parseFloat((faker.number.float({ min: 0.4, max: 1.0 })).toFixed(2)),
+  // Pre-flag first 5 contacts with various categories
+  flagCategory: i < 5 ? FLAG_CATEGORIES[i % FLAG_CATEGORIES.length] : null,
   createdAt: faker.date.past().toISOString(),
   updatedAt: faker.date.recent().toISOString(),
 }))
@@ -39,11 +42,14 @@ export const contactHandlers = [
     const industry = url.searchParams.get('industry') ?? ''
     const city = url.searchParams.get('city') ?? ''
     const companySize = url.searchParams.get('companySize') ?? ''
+    const flagFilter = url.searchParams.get('flagFilter') ?? ''
 
     let filtered = contactsPool
     if (industry) filtered = filtered.filter((c) => c.industryId === industry)
     if (city) filtered = filtered.filter((c) => c.city.toLowerCase() === city.toLowerCase())
     if (companySize) filtered = filtered.filter((c) => c.companySize === companySize)
+    if (flagFilter === 'flagged') filtered = filtered.filter((c) => c.flagCategory !== null)
+    if (flagFilter === 'unflagged') filtered = filtered.filter((c) => c.flagCategory === null)
 
     const total = filtered.length
     const start = (page - 1) * pageSize
@@ -204,6 +210,24 @@ export const contactHandlers = [
   http.delete('/api/contacts/suppression/:id', async () => {
     await delay(300)
     return new HttpResponse(null, { status: 204 })
+  }),
+
+  http.patch('/api/contacts/:id', async ({ params, request }) => {
+    await delay(300)
+    const id = params.id as string
+    const contact = contactsPool.find((c) => c.id === id)
+    if (!contact) {
+      return HttpResponse.json(
+        { error: { code: 'NOT_FOUND', message: 'Contact not found', details: [] } },
+        { status: 404 }
+      )
+    }
+    const body = await request.json() as { flagCategory?: FlagCategory }
+    if (body.flagCategory !== undefined) {
+      contact.flagCategory = body.flagCategory
+    }
+    contact.updatedAt = new Date().toISOString()
+    return HttpResponse.json(contact)
   }),
 
   http.patch('/api/contacts/flagged/:id', async () => {

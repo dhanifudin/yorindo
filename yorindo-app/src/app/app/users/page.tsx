@@ -117,83 +117,109 @@ export default function UsersPage() {
           ))}
         </div>
       ) : (
-        <Card>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nama</TableHead>
-                <TableHead className="hidden md:table-cell">Email</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead className="hidden md:table-cell">Dibuat</TableHead>
-                <TableHead>Aksi</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {users?.map((user) => {
-                const isSelf = user.id === currentUser?.id
-                return (
-                  <TableRow key={user.id} className="cursor-pointer" onClick={() => setDetailUser(user)}>
-                    <TableCell className="font-medium" onClick={(e) => e.stopPropagation()}>{user.name}</TableCell>
-                    <TableCell className="hidden md:table-cell text-muted-foreground" onClick={(e) => e.stopPropagation()}>{user.email}</TableCell>
-                    <TableCell onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center gap-2">
-                        <Select
-                          value={user.role}
-                          onValueChange={(value) =>
-                            updateRole({ id: user.id, role: value as User['role'] })
-                          }
-                          disabled={isSelf}
-                        >
-                          <SelectTrigger className="h-7 w-28 text-xs" disabled={isSelf}>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="admin">Admin</SelectItem>
-                            <SelectItem value="staff">Staff</SelectItem>
-                            <SelectItem value="viewer">Viewer</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Badge className={ROLE_BADGE[user.role]}>{user.role}</Badge>
-                      </div>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell text-muted-foreground" onClick={(e) => e.stopPropagation()}>
-                      {new Date(user.createdAt).toLocaleDateString('id-ID')}
-                    </TableCell>
-                    <TableCell onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center gap-2">
-                        {(user.role === 'staff' || user.role === 'viewer') && !isSelf && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setAssignUser(user)}
+        <>
+          {/* Mobile cards */}
+          <div className="md:hidden space-y-2">
+            {users?.map((user) => {
+              const isSelf = user.id === currentUser?.id
+              return (
+                <div
+                  key={user.id}
+                  className="rounded-lg border border-border bg-card p-3 cursor-pointer active:bg-muted/50"
+                  onClick={() => setDetailUser(user)}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-sm">{user.name}</span>
+                    <Badge className={ROLE_BADGE[user.role]}>{user.role}</Badge>
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {user.email}
+                    {isSelf && <span className="ml-2 text-primary">(Anda)</span>}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Desktop table */}
+          <Card className="hidden md:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nama</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Dibuat</TableHead>
+                  <TableHead>Aksi</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {users?.map((user) => {
+                  const isSelf = user.id === currentUser?.id
+                  return (
+                    <TableRow key={user.id} className="cursor-pointer" onClick={() => setDetailUser(user)}>
+                      <TableCell className="font-medium" onClick={(e) => e.stopPropagation()}>{user.name}</TableCell>
+                      <TableCell className="text-muted-foreground" onClick={(e) => e.stopPropagation()}>{user.email}</TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center gap-2">
+                          <Select
+                            value={user.role}
+                            onValueChange={(value) =>
+                              updateRole({ id: user.id, role: value as User['role'] })
+                            }
+                            disabled={isSelf}
                           >
-                            Assign Event
-                          </Button>
-                        )}
-                        {!isSelf ? (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-destructive hover:text-destructive"
-                            onClick={() => {
-                              if (confirm(`Nonaktifkan akun ${user.name}?`)) {
-                                deleteUser(user.id)
-                              }
-                            }}
-                          >
-                            Nonaktifkan
-                          </Button>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">Akun Anda</span>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
-        </Card>
+                            <SelectTrigger className="h-7 w-28 text-xs" disabled={isSelf}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="admin">Admin</SelectItem>
+                              <SelectItem value="staff">Staff</SelectItem>
+                              <SelectItem value="viewer">Viewer</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Badge className={ROLE_BADGE[user.role]}>{user.role}</Badge>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground" onClick={(e) => e.stopPropagation()}>
+                        {new Date(user.createdAt).toLocaleDateString('id-ID')}
+                      </TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center gap-2">
+                          {(user.role === 'staff' || user.role === 'viewer') && !isSelf && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setAssignUser(user)}
+                            >
+                              Assign Event
+                            </Button>
+                          )}
+                          {!isSelf ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => {
+                                if (confirm(`Nonaktifkan akun ${user.name}?`)) {
+                                  deleteUser(user.id)
+                                }
+                              }}
+                            >
+                              Nonaktifkan
+                            </Button>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">Akun Anda</span>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          </Card>
+        </>
       )}
     </div>
   )
