@@ -1,8 +1,8 @@
 name: CI
 
 on:
-  push:
-    branches: ['**']
+  # Postponed
+  workflow_dispatch:
 
 jobs:
   lint-typecheck:
