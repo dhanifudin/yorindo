@@ -17,6 +17,31 @@ interface QRScannerProps {
 
 const AUTO_RESET_MS = 3000
 
+// Patch HTMLVideoElement.prototype.play once to silently catch AbortError.
+// html5-qrcode calls video.play() without catching the returned promise.
+// When the video element is removed (navigation, React Strict Mode, etc.),
+// the browser rejects play() with AbortError — a benign, expected condition
+// per Chrome docs: https://developer.chrome.com/blog/play-request-was-interrupted
+if (typeof window !== 'undefined' && !(_patchApplied())) {
+  const origPlay = HTMLVideoElement.prototype.play
+  HTMLVideoElement.prototype.play = function (this: HTMLVideoElement) {
+    return origPlay.call(this).catch((err: unknown) => {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        return // expected — play interrupted by removal or source change
+      }
+      throw err
+    })
+  }
+}
+
+function _patchApplied(): boolean {
+  // Guard against double-patching from HMR
+  const key = '__qrPlayPatched' as keyof typeof globalThis
+  if ((globalThis as Record<string, unknown>)[key]) return true
+  ;(globalThis as Record<string, unknown>)[key] = true
+  return false
+}
+
 export function QRScanner({ eventId }: QRScannerProps) {
   const accessToken = useAuthStore((s) => s.accessToken)
   const accessTokenRef = useRef(accessToken)
@@ -26,10 +51,9 @@ export function QRScanner({ eventId }: QRScannerProps) {
     const elementId = 'qr-reader'
     const html5QrCode = new Html5Qrcode(elementId)
     let isMounted = true
-    let isStarted = false
     let isScanReady = true
 
-    html5QrCode
+    const startPromise = html5QrCode
       .start(
         { facingMode: 'environment' },
         { fps: 10, qrbox: { width: 250, height: 250 } },
@@ -78,27 +102,24 @@ export function QRScanner({ eventId }: QRScannerProps) {
           // scan failure on each frame — intentionally ignored
         }
       )
-      .then(() => {
-        isStarted = true
-        // If unmounted while start() was pending, stop immediately
-        if (!isMounted) {
-          html5QrCode.stop().catch(() => {})
-          releaseCamera(elementId)
-        }
-      })
-      .catch(() => {
-        if (isMounted) {
-          toast.error('Kamera Tidak Tersedia', { description: 'Kamera tidak tersedia atau akses ditolak' })
-        }
-      })
+      .then(() => true, () => false) // normalize: true = started, false = failed
+
+    // Show error toast only if start failed while still mounted
+    startPromise.then((started) => {
+      if (!started && isMounted) {
+        toast.error('Kamera Tidak Tersedia', { description: 'Kamera tidak tersedia atau akses ditolak' })
+      }
+    })
 
     return () => {
       isMounted = false
-      if (isStarted) {
-        html5QrCode.stop().catch(() => {})
-      }
-      // Always release camera tracks as a fallback
-      releaseCamera(elementId)
+      // Chain cleanup after start resolves/rejects to avoid racing
+      startPromise
+        .then((started) => {
+          if (started) return html5QrCode.stop()
+        })
+        .catch(() => {})
+        .finally(() => releaseCamera(elementId))
     }
   }, [eventId]) // restart scanner when event changes
 
