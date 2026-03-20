@@ -91,6 +91,20 @@ export let eventsStore: Event[] = [
 ]
 
 export const eventHandlers = [
+  http.get('/api/events/upcoming-uncontacted', async () => {
+    await delay(300)
+    return HttpResponse.json({
+      event: {
+        id: 'event-upcoming-001',
+        name: 'Konferensi Teknologi 2026',
+        eventDate: '2026-03-28T02:00:00.000Z',
+        industryTags: ['teknologi'],
+      },
+      daysUntil: 8,
+      uncontactedCount: 45,
+    })
+  }),
+
   http.get('/api/events', async ({ request }) => {
     await delay(400)
     const url = new URL(request.url)

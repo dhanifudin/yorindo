@@ -4,6 +4,8 @@ Admin can build and maintain a clean, qualified participant database by importin
 
 > **Phase 1 (FE):** Contacts table (TanStack Table, pagination, filter bar, smart filter input + debounce); upload form + file picker + job status poller; ETL job status page; flagged records review UI (side-by-side diff + approve/discard); duplicate merge UI (field selector); — all wired to MSW contacts/etl handlers
 > **Phase 2 (BE):** `GET /api/contacts`, `POST /api/etl/upload`, BullMQ ETL worker + GPT-4o normalization + Zod validation, `GET /api/etl/jobs/:id`, `GET/PATCH /api/contacts/flagged`, `POST /api/contacts/:id/merge`, `POST /api/smart-filter/industry` (Claude Haiku), MongoDB raw_uploads document write, all repositories
+>
+> **Contacts Intelligence Hub Revamp (Stories 3.7–3.12 — FE phase, wired to new MSW handlers):** HealthBar component + `/api/contacts/health` handler; FilterBar facet counts + `ActiveFilterPills` + URL state + `/api/contacts/facets` handler; `ActionToolbar` sticky blast entry; `TriagePanel` inline collapsible with optimistic updates + `/api/contacts/duplicates` handler; `EventBanner` pre-event shortcut + `/api/events/upcoming-uncontacted` handler; Contact event history tab in Sheet + `/api/contacts/:id/history` handler
 
 ## Story 3.1: Contact List with Server-Side Pagination & Filtering
 
@@ -180,5 +182,233 @@ So that I don't need to know exact industry taxonomy values to filter contacts a
 **Given** the smart filter API call fails or times out,
 **When** the error occurs,
 **Then** the filter silently falls back to the standard dropdown — no error shown to the user
+
+---
+
+## Story 3.7: HealthBar — Database Quality Pulse
+
+As an admin,
+I want to see a persistent health bar at the top of the contacts page showing flagged count, duplicate count, and contacts-missing-email count,
+So that I immediately know what data quality tasks need attention when I arrive on the page.
+
+**Acceptance Criteria:**
+
+**Given** I am authenticated as `admin`,
+**When** the `/app/contacts` page loads,
+**Then** the `HealthBar` component renders above the filter bar with three stat columns: flagged records count, duplicate pairs count, and contacts-missing-email count — each rendered as a `Button` with descriptive `aria-label`
+
+**Given** the health data is loading,
+**When** the page first renders,
+**Then** `Skeleton` placeholders replace each stat value until `GET /api/contacts/health` resolves
+
+**Given** the flagged count is > 0,
+**When** the HealthBar renders,
+**Then** the flagged stat value uses `text-destructive`; when count = 0 it uses `text-muted-foreground` and the label shows "Semua bersih ✓"
+
+**Given** I click the "flagged" stat in the HealthBar,
+**When** the TriagePanel is collapsed,
+**Then** the TriagePanel opens in "flagged" mode (see Story 3.10)
+
+**Given** I click the "duplicates" stat in the HealthBar,
+**When** the TriagePanel is collapsed,
+**Then** the TriagePanel opens in "duplicates" mode (see Story 3.10)
+
+**Given** I click the "missing email" stat in the HealthBar,
+**When** the stat is clicked,
+**Then** a `missingEmail=true` query param is added to the URL and the contact table re-fetches with that filter applied
+
+**Given** `GET /api/contacts/health` is called,
+**When** the MSW handler responds,
+**Then** it returns `{ flagged: 34, duplicates: 12, missingEmail: 58 }` with HTTP 200
+
+**Given** the HealthBar container element,
+**Then** it has `role="status"` and `aria-live="polite"` so screen readers announce count changes without interrupting the user
+
+---
+
+## Story 3.8: FilterBar Enhancements — Facet Counts, URL State & ActiveFilterPills
+
+As an admin,
+I want filter dropdowns to show contact counts per option, all applied filters to persist in the URL, and active filters to appear as dismissible pills below the filter bar,
+So that I know segment size before applying a filter, can share or restore filter state via URL, and have a clear view of what's currently active.
+
+**Acceptance Criteria:**
+
+**Given** the FilterBar renders,
+**When** `GET /api/contacts/facets` has resolved,
+**Then** each `SelectItem` in Industry, City, and Company Size dropdowns shows a count suffix — e.g., "Teknologi (47)"
+
+**Given** `GET /api/contacts/facets` is called,
+**When** the MSW handler responds,
+**Then** it returns `{ industry: [{ slug, label, count }], city: [{ slug, label, count }], companySize: [{ slug, label, count }] }` with HTTP 200; counts reflect the total contacts matching each facet value
+
+**Given** I select a filter value from a dropdown,
+**When** the Select onChange fires,
+**Then** the URL is updated via `router.push` (Next.js `useRouter`) adding the corresponding query param (e.g., `?industry=teknologi`) without a full page reload; React Query re-fetches contacts with the updated params
+
+**Given** the page loads with query params in the URL (e.g., `?industry=teknologi&city=jakarta`),
+**When** the FilterBar mounts,
+**Then** the dropdowns are pre-selected to match the URL state using `useSearchParams`
+
+**Given** one or more filters are active,
+**When** the `ActiveFilterPills` component renders,
+**Then** it shows a `ScrollArea orientation="horizontal"` containing one `Badge variant="secondary"` per active filter, each with a ghost icon-only `Button` (×) to remove it; when ≥2 filters are active a "Hapus semua" link appears; below the pills the contact count shows "N kontak ditemukan"
+
+**Given** I click × on an active filter pill,
+**When** the button is clicked,
+**Then** that filter's query param is removed from the URL and the contact table re-fetches
+
+**Given** no filters are active,
+**When** the `ActiveFilterPills` component renders,
+**Then** it renders null (no DOM output)
+
+**Given** the AI search Input renders in the FilterBar,
+**When** it renders,
+**Then** it shows a violet `Badge` labelled "AI ✦" inside the input's trailing slot; while `isSearching=true` a `Loader2` spinner is shown and `aria-busy={isSearching}` is set on the results container
+
+**Given** AI search is active and I clear the AI search input,
+**When** the input value is cleared,
+**Then** only the `q` URL query param is removed; all instant filter params (industry, city, companySize) remain unchanged
+
+**Given** filters are active and I click "Simpan Segmen" in the FilterBar,
+**When** the `Popover` opens,
+**Then** a `PopoverContent` with an autofocused `Input` and a "Simpan" `Button` is shown; on submit the segment name + current filter params are stored in `localStorage` and a Sonner toast confirms "Segmen '[name]' disimpan"
+
+**Given** the "Simpan Segmen" button,
+**When** no filters are active,
+**Then** it is not rendered
+
+---
+
+## Story 3.9: ActionToolbar — Segment Blast Entry Point
+
+As an admin,
+I want a sticky action toolbar to appear at the bottom of the contacts page when filters are active or rows are selected,
+So that I can blast the current filtered segment to the blast composer in one click.
+
+**Acceptance Criteria:**
+
+**Given** no filters are active and no table rows are selected,
+**When** the contacts page renders,
+**Then** the `ActionToolbar` is not rendered (renders null) and has `aria-hidden="true"` when hidden
+
+**Given** one or more filters are active,
+**When** the `ActionToolbar` renders,
+**Then** it appears as a `Card` with `className="sticky bottom-0 z-10 rounded-none border-t border-x-0 border-b-0"` containing: a segment contact count on the left ("18 kontak di segmen ini"), an "Export CSV" `Button variant="outline"` on the right, and a primary "Blast Segmen · 18 kontak →" `Button` on the far right
+
+**Given** the live contact count from the current React Query result,
+**When** filters change and the query re-fetches,
+**Then** the count in the ActionToolbar updates to match `pagination.total` from the contacts response
+
+**Given** I click "Blast Segmen · N kontak →",
+**When** the button is clicked,
+**Then** the app navigates to `/app/blasts/new?segment=teknologi,jakarta&count=18` with all active instant filter slugs comma-separated in the `segment` param and the live count in `count`
+
+**Given** the `ActionToolbar` root element,
+**Then** it has `role="toolbar"` and `aria-label="Aksi segmen"`
+
+---
+
+## Story 3.10: TriagePanel — Inline Flagged & Duplicate Records
+
+As an admin,
+I want to review and resolve flagged records and duplicate contact pairs inline on the contacts page without navigating to a sub-page,
+So that I can triage data quality issues within my current workflow context and see health counts update in real time.
+
+**Acceptance Criteria:**
+
+**Given** I click the "flagged" stat in the HealthBar,
+**When** the `TriagePanel` is collapsed,
+**Then** it expands using shadcn `Collapsible` + `CollapsibleContent` with `motion-safe:data-[state=open]:animate-collapsible-down` animation; focus moves to the first interactive element within the panel
+
+**Given** the TriagePanel is open in "flagged" mode,
+**When** it renders,
+**Then** it shows a compact flagged records table (fetching from `GET /api/contacts/flagged?status=pending&pageSize=20`) with "Setujui" and "Buang" action buttons per row; reuses the data-fetching and mutation logic from `/app/contacts/flagged`
+
+**Given** I click "Setujui" on a flagged record in the TriagePanel,
+**When** the mutation fires,
+**Then** an optimistic update immediately decrements the flagged count in the HealthBar (e.g., 34 → 33); if the API call succeeds the Sonner toast reads "Catatan disetujui · 33 tersisa"; if the API call fails the count rolls back and toast reads "Perubahan dibatalkan — terjadi kesalahan"
+
+**Given** I click "Buang" on a flagged record in the TriagePanel,
+**When** the mutation fires,
+**Then** the same optimistic decrement and rollback behavior applies as for "Setujui"
+
+**Given** the last pending flagged record is resolved,
+**When** the flagged count reaches 0,
+**Then** the TriagePanel collapses automatically; focus returns to the HealthBar flagged stat; the stat label updates to "Semua bersih ✓"; a Sonner toast reads "Semua catatan bermasalah diselesaikan"
+
+**Given** I click the "duplicates" stat in the HealthBar,
+**When** the TriagePanel opens in "duplicates" mode,
+**Then** it fetches `GET /api/contacts/duplicates` and shows duplicate pairs with a "Lihat Perbedaan" button per pair; clicking opens a `Sheet` with a side-by-side field diff and "Gabung" / "Bukan Duplikat" actions; optimistic count decrement applies on either action
+
+**Given** `GET /api/contacts/duplicates` is called,
+**When** the MSW handler responds,
+**Then** it returns `{ data: [{ id, contact1: Contact, contact2: Contact }], pagination: { total } }` with HTTP 200; deterministically seeded from the contacts pool
+
+**Given** one TriagePanel mode is already open and I click a different HealthBar stat,
+**When** the new stat is clicked,
+**Then** the panel switches to the new mode without close/reopen animation — the `Collapsible` stays open and content swaps
+
+**Given** I click the collapse toggle button in the TriagePanel header,
+**When** the button is clicked,
+**Then** the panel collapses and focus returns to the HealthBar stat that originally triggered it
+
+---
+
+## Story 3.11: EventBanner — Pre-event Blast Shortcut
+
+As an admin,
+I want a contextual banner to appear at the top of the contacts page when an event is within 14 days showing uncontacted contacts,
+So that I can blast the relevant audience in one click without manually configuring filters.
+
+**Acceptance Criteria:**
+
+**Given** an upcoming event is ≤14 days away and has uncontacted contacts > 0,
+**When** the contacts page loads and `GET /api/events/upcoming-uncontacted` resolves,
+**Then** the `EventBanner` renders below the `HealthBar` as a shadcn `Alert` with `className="bg-amber-50 border-amber-200 text-amber-900"` showing: a calendar icon, event name, days remaining ("8 hari lagi"), uncontacted count ("45 kontak belum diundang"), and "Blast Sekarang →" `Button`
+
+**Given** no upcoming event within 14 days exists,
+**When** the contacts page renders,
+**Then** the `EventBanner` renders null
+
+**Given** `GET /api/events/upcoming-uncontacted` is called,
+**When** the MSW handler responds,
+**Then** it returns `{ event: { id: 'event-001', name: 'Konferensi Teknologi 2026', eventDate: '...' }, daysUntil: 8, uncontactedCount: 45 }` with HTTP 200; or `{ event: null }` when no qualifying event is within 14 days; the mock deterministically returns a qualifying event so the banner is visible and testable in development
+
+**Given** I click "Blast Sekarang →" in the EventBanner,
+**When** the button is clicked,
+**Then** the app navigates to `/app/blasts/new?eventId=event-001&segment=teknologi&count=45` pre-filling the blast composer with the event's primary industry segment and uncontacted count
+
+**Given** the `EventBanner` element,
+**Then** it has `role="alert"` and `aria-live="polite"` on the `Alert` component
+
+---
+
+## Story 3.12: Contact Event History Tab in Sheet
+
+As an admin,
+I want to see a contact's event registration history in the contact detail sheet,
+So that I can understand their event engagement before deciding to invite them to a new event.
+
+**Acceptance Criteria:**
+
+**Given** I click a contact row in the contacts table,
+**When** the contact detail `Sheet` opens,
+**Then** it renders three shadcn `Tabs`: "Info" (existing personal/company fields), "Riwayat" (event history), and "Segmen" (industry/city/size/flagCategory)
+
+**Given** the "Riwayat" tab is selected,
+**When** the data loads from `GET /api/contacts/:id/history`,
+**Then** a chronological list of registrations is shown with: event name, formatted event date, and a status `Badge` per registration (approved → green, attended → primary, cancelled → destructive, pending → muted); most recent registration appears first
+
+**Given** `GET /api/contacts/:id/history` is called,
+**When** the MSW handler responds,
+**Then** it returns `{ registrations: [{ eventId, eventName, eventDate, status }] }` with HTTP 200; the registration list is deterministically generated from the contact ID using the djb2 hash pattern (consistent with existing mock conventions — same result for same contact ID across requests)
+
+**Given** the contact has no registration history,
+**When** the "Riwayat" tab renders,
+**Then** it shows "Belum ada riwayat event" empty state text
+
+**Given** the contact detail Sheet,
+**Then** it uses `SheetContent side="right" className="sm:max-w-lg w-full"` — no SSR-unsafe `isMobile` or `window.innerWidth` checks in any Sheet variant
 
 ---

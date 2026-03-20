@@ -2,6 +2,7 @@ import { http, HttpResponse, delay } from 'msw'
 import { faker } from '@faker-js/faker'
 import type { Contact, FlagCategory, PaginatedResponse, RecommendedEventsResponse } from '@/types/api'
 import { eventsStore } from './events'
+import { djb2 } from '@/lib/djb2'
 
 faker.seed(42)
 
@@ -22,7 +23,7 @@ export const contactsPool: Contact[] = Array.from({ length: 247 }, (_, i) => ({
   id: faker.string.uuid(),
   name: faker.person.fullName(),
   phone: `+62${faker.string.numeric(10)}`,
-  email: faker.internet.email(),
+  email: i % 5 === 0 ? '' : faker.internet.email(),
   industryId: faker.helpers.arrayElement(INDUSTRIES),
   jobTitleId: faker.helpers.arrayElement(JOB_TITLES),
   city: faker.helpers.arrayElement(INDONESIAN_CITIES),
@@ -35,6 +36,33 @@ export const contactsPool: Contact[] = Array.from({ length: 247 }, (_, i) => ({
 }))
 
 export const contactHandlers = [
+  // ─── Specific routes BEFORE parameterized routes ────────────────────────────
+
+  http.get('/api/contacts/health', async () => {
+    await delay(300)
+    return HttpResponse.json({ flagged: 34, duplicates: 12, missingEmail: 58 })
+  }),
+
+  http.get('/api/contacts/facets', async () => {
+    await delay(200)
+    const industry = INDUSTRIES.map((slug) => ({
+      slug,
+      label: slug.charAt(0).toUpperCase() + slug.slice(1),
+      count: contactsPool.filter((c) => c.industryId === slug).length,
+    }))
+    const city = INDONESIAN_CITIES.map((cityName) => ({
+      slug: cityName.toLowerCase(),
+      label: cityName,
+      count: contactsPool.filter((c) => c.city === cityName).length,
+    }))
+    const companySize = (COMPANY_SIZES as readonly string[]).map((size) => ({
+      slug: size,
+      label: size.charAt(0).toUpperCase() + size.slice(1),
+      count: contactsPool.filter((c) => c.companySize === size).length,
+    }))
+    return HttpResponse.json({ industry, city, companySize })
+  }),
+
   http.get('/api/contacts', async ({ request }) => {
     await delay(400)
     const url = new URL(request.url)
@@ -44,6 +72,8 @@ export const contactHandlers = [
     const city = url.searchParams.get('city') ?? ''
     const companySize = url.searchParams.get('companySize') ?? ''
     const flagFilter = url.searchParams.get('flagFilter') ?? ''
+    const missingEmail = url.searchParams.get('missingEmail') === 'true'
+    const q = url.searchParams.get('q') ?? ''
 
     let filtered = contactsPool
     if (industry) filtered = filtered.filter((c) => c.industryId === industry)
@@ -51,6 +81,12 @@ export const contactHandlers = [
     if (companySize) filtered = filtered.filter((c) => c.companySize === companySize)
     if (flagFilter === 'flagged') filtered = filtered.filter((c) => c.flagCategory !== null)
     if (flagFilter === 'unflagged') filtered = filtered.filter((c) => c.flagCategory === null)
+    if (missingEmail) filtered = filtered.filter((c) => !c.email)
+    if (q) filtered = filtered.filter((c) =>
+      c.name.toLowerCase().includes(q.toLowerCase()) ||
+      c.email.toLowerCase().includes(q.toLowerCase()) ||
+      c.city.toLowerCase().includes(q.toLowerCase())
+    )
 
     const total = filtered.length
     const start = (page - 1) * pageSize
@@ -155,6 +191,11 @@ export const contactHandlers = [
     return HttpResponse.json({ data, pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) } })
   }),
 
+  http.delete('/api/contacts/duplicates/:id', async () => {
+    await delay(300)
+    return new HttpResponse(null, { status: 204 })
+  }),
+
   http.get('/api/contacts/count', async ({ request }) => {
     await delay(300)
     const url = new URL(request.url)
@@ -213,10 +254,11 @@ export const contactHandlers = [
     return new HttpResponse(null, { status: 204 })
   }),
 
+  // ─── Parameterized :id routes — MUST come after specific routes ──────────────
+
   http.get('/api/contacts/:id/recommended-events', async ({ params }) => {
     await delay(400)
     const contactId = params.id as string
-    const djb2 = (s: string) => s.split('').reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 100, 0)
     const eligible = eventsStore.filter((e) => e.status === 'published' || e.status === 'active')
     const recommendations = eligible
       .map((event) => ({
@@ -236,6 +278,28 @@ export const contactHandlers = [
       totalMatched: recommendations.length,
     }
     return HttpResponse.json(response)
+  }),
+
+  http.get('/api/contacts/:id/history', async ({ params }) => {
+    await delay(250)
+    const id = params.id as string
+    const seed = djb2(id)
+    const count = seed % 6 // 0–5 history items
+    if (count === 0) return HttpResponse.json({ registrations: [] })
+
+    type HistoryStatus = 'approved' | 'attended' | 'cancelled' | 'pending' | 'rejected'
+    const STATUSES: HistoryStatus[] = ['approved', 'attended', 'cancelled', 'pending', 'rejected']
+    const registrations = eventsStore
+      .slice(0, count)
+      .map((event, i) => ({
+        eventId: event.id,
+        eventName: event.name,
+        eventDate: event.eventDate,
+        status: STATUSES[djb2(id + event.id + String(i)) % STATUSES.length],
+      }))
+      .sort((a, b) => new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime())
+
+    return HttpResponse.json({ registrations })
   }),
 
   http.put('/api/contacts/:id', async ({ params, request }) => {

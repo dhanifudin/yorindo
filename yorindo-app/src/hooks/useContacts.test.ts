@@ -1,9 +1,17 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createElement } from 'react'
 import { useContacts } from './useContacts'
-import { useFilterStore } from '@/store/filterStore'
+
+// Mock next/navigation with a configurable search params map
+const mockSearchParams = new URLSearchParams()
+
+vi.mock('next/navigation', () => ({
+  useSearchParams: () => mockSearchParams,
+  useRouter: () => ({ push: vi.fn() }),
+  usePathname: () => '/app/contacts',
+}))
 
 function makeWrapper() {
   const client = new QueryClient({
@@ -14,7 +22,13 @@ function makeWrapper() {
 }
 
 beforeEach(() => {
-  useFilterStore.setState({ industry: '', city: '', companySize: '', page: 1 })
+  // Reset URL params before each test
+  mockSearchParams.delete('industry')
+  mockSearchParams.delete('city')
+  mockSearchParams.delete('companySize')
+  mockSearchParams.delete('page')
+  mockSearchParams.delete('q')
+  mockSearchParams.delete('missingEmail')
 })
 
 describe('useContacts', () => {
@@ -29,8 +43,8 @@ describe('useContacts', () => {
     expect(result.current.data?.pagination.pageSize).toBe(20)
   })
 
-  it('fetches with industry filter when set in filterStore', async () => {
-    useFilterStore.setState({ industry: 'teknologi', city: '', companySize: '', page: 1 })
+  it('fetches with industry filter when set in URL params', async () => {
+    mockSearchParams.set('industry', 'teknologi')
 
     const { result } = renderHook(() => useContacts(), { wrapper: makeWrapper() })
 

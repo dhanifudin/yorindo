@@ -224,3 +224,44 @@ export interface BlastPrefilledAudience {
   contactIds: string[]
   count: number
 }
+
+// ─── Contacts Health & Facets ─────────────────────────────────────────────────
+
+export interface ContactsHealth {
+  flagged: number
+  duplicates: number
+  missingEmail: number
+}
+
+export interface FacetItem {
+  slug: string
+  label: string
+  count: number
+}
+
+export interface ContactsFacets {
+  industry: FacetItem[]
+  city: FacetItem[]
+  companySize: FacetItem[]
+}
+
+// ─── Contact History ──────────────────────────────────────────────────────────
+
+export interface ContactHistoryItem {
+  eventId: string
+  eventName: string
+  eventDate: string
+  status: 'pending' | 'confirmed' | 'approved' | 'attended' | 'cancelled' | 'rejected' | 'waitlisted'
+}
+
+export interface ContactHistoryResponse {
+  registrations: ContactHistoryItem[]
+}
+
+// ─── Event Banner ─────────────────────────────────────────────────────────────
+
+export interface UpcomingUncontactedEvent {
+  event: { id: string; name: string; eventDate: string; industryTags?: string[] } | null
+  daysUntil?: number
+  uncontactedCount?: number
+}

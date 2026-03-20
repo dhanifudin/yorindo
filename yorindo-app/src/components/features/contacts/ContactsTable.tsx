@@ -7,12 +7,14 @@ import {
   flexRender,
   type ColumnDef,
 } from '@tanstack/react-table'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useSearchParams } from 'next/navigation'
 import { useContacts, useRecommendedEvents } from '@/hooks/useContacts'
 import { useFilterStore } from '@/store/filterStore'
-import type { Contact, FlagCategory } from '@/types/api'
+import type { Contact, FlagCategory, ContactHistoryItem, ContactHistoryResponse } from '@/types/api'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Table,
   TableBody,
@@ -22,6 +24,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
 
 const FLAG_LABELS: Record<NonNullable<FlagCategory>, { label: string; className: string }> = {
@@ -29,6 +33,26 @@ const FLAG_LABELS: Record<NonNullable<FlagCategory>, { label: string; className:
   'not-potential': { label: 'Tidak Potensial', className: 'bg-orange-100 text-orange-700' },
   'invalid-data': { label: 'Data Invalid', className: 'bg-yellow-100 text-yellow-700' },
   duplicate: { label: 'Duplikat', className: 'bg-gray-100 text-gray-700' },
+}
+
+const STATUS_BADGE: Record<ContactHistoryItem['status'], string> = {
+  approved: 'bg-green-100 text-green-700',
+  attended: 'bg-primary/10 text-primary',
+  cancelled: 'bg-destructive/10 text-destructive',
+  pending: 'bg-muted text-muted-foreground',
+  rejected: 'bg-destructive/10 text-destructive',
+  confirmed: 'bg-blue-100 text-blue-700',
+  waitlisted: 'bg-orange-100 text-orange-700',
+}
+
+const STATUS_LABELS: Record<ContactHistoryItem['status'], string> = {
+  approved: 'Disetujui',
+  attended: 'Hadir',
+  cancelled: 'Dibatalkan',
+  pending: 'Menunggu',
+  rejected: 'Ditolak',
+  confirmed: 'Dikonfirmasi',
+  waitlisted: 'Antrian',
 }
 
 const columns: ColumnDef<Contact>[] = [
@@ -80,7 +104,9 @@ const FLAG_FILTER_OPTIONS = [
 ] as const
 
 export function ContactsTable() {
-  const { page, flagFilter, setFilter } = useFilterStore()
+  const searchParams = useSearchParams()
+  const { flagFilter, setFilter } = useFilterStore()
+  const page = parseInt(searchParams.get('page') ?? '1', 10)
   const { data, isLoading, isError } = useContacts()
   const [detailContact, setDetailContact] = useState<Contact | null>(null)
   const [eventsExpanded, setEventsExpanded] = useState(false)
@@ -90,6 +116,14 @@ export function ContactsTable() {
     detailContact?.id,
     eventsExpanded,
   )
+
+  // History tab data
+  const { data: historyData, isLoading: historyLoading } = useQuery<ContactHistoryResponse>({
+    queryKey: ['contact-history', detailContact?.id],
+    queryFn: () =>
+      fetch(`/api/contacts/${detailContact!.id}/history`).then((r) => r.json()),
+    enabled: !!detailContact,
+  })
 
   const flagMutation = useMutation({
     mutationFn: async ({ id, flagCategory }: { id: string; flagCategory: FlagCategory }) => {
@@ -130,119 +164,215 @@ export function ContactsTable() {
 
   return (
     <>
-      {/* Contact detail sheet (mobile) */}
-      <Sheet open={!!detailContact} onOpenChange={(v) => { if (!v) { setDetailContact(null); setEventsExpanded(false) } }}>
-        <SheetContent side="bottom" className="max-h-[65vh] overflow-y-auto">
+      {/* Contact detail sheet */}
+      <Sheet
+        open={!!detailContact}
+        onOpenChange={(v) => {
+          if (!v) {
+            setDetailContact(null)
+            setEventsExpanded(false)
+          }
+        }}
+      >
+        <SheetContent side="right" className="sm:max-w-lg w-full overflow-y-auto">
           <SheetHeader>
             <SheetTitle>{detailContact?.name}</SheetTitle>
           </SheetHeader>
-          <div className="space-y-3 mt-4 text-sm">
-            <div><span className="text-muted-foreground">Email: </span>{detailContact?.email}</div>
-            <div><span className="text-muted-foreground">Telepon: </span>{detailContact?.phone}</div>
-            <div><span className="text-muted-foreground">Industri: </span>{detailContact?.industryId}</div>
-            <div><span className="text-muted-foreground">Kota: </span>{detailContact?.city}</div>
-            <div><span className="text-muted-foreground">Ukuran Perusahaan: </span>{detailContact?.companySize}</div>
-            <div>
-              <span className="text-muted-foreground">Kelengkapan: </span>
-              {detailContact && `${Math.round(detailContact.completenessScore * 100)}%`}
-            </div>
-            <div>
-              <span className="text-muted-foreground">Dibuat: </span>
-              {detailContact && new Date(detailContact.createdAt).toLocaleDateString('id-ID')}
-            </div>
-            {detailContact?.flagCategory && (
-              <div>
-                <span className="text-muted-foreground">Status: </span>
-                <Badge className={FLAG_LABELS[detailContact.flagCategory].className}>
-                  {FLAG_LABELS[detailContact.flagCategory].label}
-                </Badge>
-              </div>
-            )}
-          </div>
-          {/* Flag actions in detail sheet */}
-          <div className="mt-4 space-y-2">
-            <p className="text-xs text-muted-foreground font-medium">Tandai sebagai:</p>
-            <div className="flex flex-wrap gap-2">
-              {(Object.keys(FLAG_LABELS) as NonNullable<FlagCategory>[]).map((cat) => (
-                <Button
-                  key={cat}
-                  variant="outline"
-                  size="sm"
-                  disabled={detailContact?.flagCategory === cat || flagMutation.isPending}
-                  onClick={() => {
-                    if (detailContact) {
-                      flagMutation.mutate({ id: detailContact.id, flagCategory: cat })
-                      setDetailContact({ ...detailContact, flagCategory: cat })
-                    }
-                  }}
-                >
-                  {FLAG_LABELS[cat].label}
-                </Button>
-              ))}
-              {detailContact?.flagCategory && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled={flagMutation.isPending}
-                  onClick={() => {
-                    if (detailContact) {
-                      flagMutation.mutate({ id: detailContact.id, flagCategory: null })
-                      setDetailContact({ ...detailContact, flagCategory: null })
-                    }
-                  }}
-                >
-                  Hapus Tanda
-                </Button>
-              )}
-            </div>
-          </div>
 
-          {/* Suggested Events section */}
-          <div className="mt-4 border-t pt-4">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-xs text-muted-foreground font-medium">Event yang Disarankan</p>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-auto py-0.5 px-2 text-xs"
-                onClick={() => setEventsExpanded((v) => !v)}
-              >
-                {eventsExpanded ? 'Tutup' : 'Lihat'}
-              </Button>
-            </div>
-            {eventsExpanded && (
-              eventsLoading ? (
+          <Tabs defaultValue="info" className="mt-4">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="info">Info</TabsTrigger>
+              <TabsTrigger value="riwayat">Riwayat</TabsTrigger>
+              <TabsTrigger value="segmen">Segmen</TabsTrigger>
+            </TabsList>
+
+            {/* Info tab — existing content */}
+            <TabsContent value="info" className="mt-4">
+              <div className="space-y-3 text-sm">
+                <div><span className="text-muted-foreground">Email: </span>{detailContact?.email || '—'}</div>
+                <div><span className="text-muted-foreground">Telepon: </span>{detailContact?.phone}</div>
+                <div><span className="text-muted-foreground">Industri: </span>{detailContact?.industryId}</div>
+                <div><span className="text-muted-foreground">Kota: </span>{detailContact?.city}</div>
+                <div><span className="text-muted-foreground">Ukuran Perusahaan: </span>{detailContact?.companySize}</div>
+                <div>
+                  <span className="text-muted-foreground">Kelengkapan: </span>
+                  {detailContact && `${Math.round(detailContact.completenessScore * 100)}%`}
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Dibuat: </span>
+                  {detailContact && new Date(detailContact.createdAt).toLocaleDateString('id-ID')}
+                </div>
+                {detailContact?.flagCategory && (
+                  <div>
+                    <span className="text-muted-foreground">Status: </span>
+                    <Badge className={FLAG_LABELS[detailContact.flagCategory].className}>
+                      {FLAG_LABELS[detailContact.flagCategory].label}
+                    </Badge>
+                  </div>
+                )}
+              </div>
+
+              {/* Flag actions */}
+              <Separator className="my-4" />
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground font-medium">Tandai sebagai:</p>
+                <div className="flex flex-wrap gap-2">
+                  {(Object.keys(FLAG_LABELS) as NonNullable<FlagCategory>[]).map((cat) => (
+                    <Button
+                      key={cat}
+                      variant="outline"
+                      size="sm"
+                      disabled={detailContact?.flagCategory === cat || flagMutation.isPending}
+                      onClick={() => {
+                        if (detailContact) {
+                          flagMutation.mutate({ id: detailContact.id, flagCategory: cat })
+                          setDetailContact({ ...detailContact, flagCategory: cat })
+                        }
+                      }}
+                    >
+                      {FLAG_LABELS[cat].label}
+                    </Button>
+                  ))}
+                  {detailContact?.flagCategory && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={flagMutation.isPending}
+                      onClick={() => {
+                        if (detailContact) {
+                          flagMutation.mutate({ id: detailContact.id, flagCategory: null })
+                          setDetailContact({ ...detailContact, flagCategory: null })
+                        }
+                      }}
+                    >
+                      Hapus Tanda
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* Suggested Events section */}
+              <Separator className="my-4" />
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs text-muted-foreground font-medium">Event yang Disarankan</p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto py-0.5 px-2 text-xs"
+                    onClick={() => setEventsExpanded((v) => !v)}
+                  >
+                    {eventsExpanded ? 'Tutup' : 'Lihat'}
+                  </Button>
+                </div>
+                {eventsExpanded && (
+                  eventsLoading ? (
+                    <div className="space-y-2">
+                      {Array.from({ length: 3 }).map((_, i) => (
+                        <div key={i} className="h-10 bg-muted rounded animate-pulse" />
+                      ))}
+                    </div>
+                  ) : (recommendedEventsData?.recommendations ?? []).length === 0 ? (
+                    <p className="text-xs text-muted-foreground">Tidak ada event yang cocok.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {(recommendedEventsData?.recommendations ?? []).map((rec) => (
+                        <div key={rec.eventId} className="rounded-md border p-2 text-xs">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-medium">{rec.name}</span>
+                            <Badge className={
+                              rec.score >= 70 ? 'bg-green-100 text-green-700 text-[10px]' :
+                              rec.score >= 40 ? 'bg-yellow-100 text-yellow-700 text-[10px]' :
+                              'bg-red-100 text-red-700 text-[10px]'
+                            }>
+                              {rec.score}%
+                            </Badge>
+                          </div>
+                          <p className="text-muted-foreground mt-0.5">
+                            {new Date(rec.eventDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            {' · '}{rec.status}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                )}
+              </div>
+            </TabsContent>
+
+            {/* Riwayat tab — event history */}
+            <TabsContent value="riwayat" className="mt-4">
+              {historyLoading ? (
                 <div className="space-y-2">
                   {Array.from({ length: 3 }).map((_, i) => (
-                    <div key={i} className="h-10 bg-muted rounded animate-pulse" />
+                    <Skeleton key={i} className="h-12" />
                   ))}
                 </div>
-              ) : (recommendedEventsData?.recommendations ?? []).length === 0 ? (
-                <p className="text-xs text-muted-foreground">Tidak ada event yang cocok.</p>
+              ) : !historyData?.registrations.length ? (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  Belum ada riwayat event
+                </p>
               ) : (
                 <div className="space-y-2">
-                  {(recommendedEventsData?.recommendations ?? []).map((rec) => (
-                    <div key={rec.eventId} className="rounded-md border p-2 text-xs">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-medium">{rec.name}</span>
-                        <Badge className={
-                          rec.score >= 70 ? 'bg-green-100 text-green-700 text-[10px]' :
-                          rec.score >= 40 ? 'bg-yellow-100 text-yellow-700 text-[10px]' :
-                          'bg-red-100 text-red-700 text-[10px]'
-                        }>
-                          {rec.score}%
-                        </Badge>
+                  {historyData.registrations.map((r) => (
+                    <div
+                      key={r.eventId}
+                      className="flex items-center justify-between py-2 border-b last:border-0"
+                    >
+                      <div>
+                        <p className="text-sm font-medium">{r.eventName}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(r.eventDate).toLocaleDateString('id-ID', {
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric',
+                          })}
+                        </p>
                       </div>
-                      <p className="text-muted-foreground mt-0.5">
-                        {new Date(rec.eventDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
-                        {' · '}{rec.status}
-                      </p>
+                      <Badge className={STATUS_BADGE[r.status]}>
+                        {STATUS_LABELS[r.status]}
+                      </Badge>
                     </div>
                   ))}
                 </div>
-              )
-            )}
-          </div>
+              )}
+            </TabsContent>
+
+            {/* Segmen tab — contact segment data */}
+            <TabsContent value="segmen" className="mt-4 space-y-3 text-sm">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium uppercase">Industri</p>
+                  <p className="mt-0.5">{detailContact?.industryId || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium uppercase">Kota</p>
+                  <p className="mt-0.5">{detailContact?.city || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium uppercase">Ukuran Perusahaan</p>
+                  <p className="mt-0.5">{detailContact?.companySize || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium uppercase">Kelengkapan</p>
+                  <p className="mt-0.5 font-medium">
+                    {detailContact ? `${Math.round(detailContact.completenessScore * 100)}%` : '—'}
+                  </p>
+                </div>
+              </div>
+              <Separator />
+              <div>
+                <p className="text-xs text-muted-foreground font-medium uppercase mb-1">Status Tanda</p>
+                {detailContact?.flagCategory ? (
+                  <Badge className={FLAG_LABELS[detailContact.flagCategory].className}>
+                    {FLAG_LABELS[detailContact.flagCategory].label}
+                  </Badge>
+                ) : (
+                  <p className="text-muted-foreground">Tidak ada tanda</p>
+                )}
+              </div>
+            </TabsContent>
+          </Tabs>
         </SheetContent>
       </Sheet>
 
@@ -252,7 +382,7 @@ export function ContactsTable() {
           <button
             key={opt.value}
             type="button"
-            onClick={() => setFilter({ flagFilter: opt.value as typeof flagFilter, page: 1 })}
+            onClick={() => setFilter({ flagFilter: opt.value as typeof flagFilter })}
             className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
               flagFilter === opt.value
                 ? 'border-primary bg-primary/10 text-primary'
