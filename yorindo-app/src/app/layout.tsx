@@ -24,6 +24,8 @@ const geistMono = localFont({
 export const metadata: Metadata = {
   title: "Yorindo",
   description: "Event management platform",
+  manifest: "/manifest.json",
+  themeColor: "#2563eb",
 };
 
 export default function RootLayout({

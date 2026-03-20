@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useAuthStore } from '@/store/authStore'
 import { AdminShell } from '@/components/layout/AdminShell'
+import { PWAInstallBanner } from '@/components/features/scan/PWAInstallBanner'
 
 // Routes that viewers (read-only) are allowed to access
 const VIEWER_ALLOWED_PATHS = ['/app', '/app/events']
@@ -33,5 +34,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (!accessToken) return null
 
-  return <AdminShell>{children}</AdminShell>
+  return (
+    <>
+      <AdminShell>{children}</AdminShell>
+      <PWAInstallBanner mode="global" />
+    </>
+  )
 }

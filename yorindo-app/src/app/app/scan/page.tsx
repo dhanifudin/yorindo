@@ -249,7 +249,7 @@ export default function ScanPage() {
       </nav>
 
       {/* PWA install banner */}
-      <PWAInstallBanner />
+      <PWAInstallBanner mode="scan" />
 
       {/* Event selection sheet */}
       <Sheet open={showEventSheet} onOpenChange={setShowEventSheet}>

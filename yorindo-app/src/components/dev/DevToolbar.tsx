@@ -11,6 +11,15 @@ const MOCKS_ENABLED =
   process.env.NODE_ENV === 'development' ||
   process.env.NEXT_PUBLIC_ENABLE_MOCKS === 'true'
 
+function triggerInstallPrompt() {
+  const event = new Event('beforeinstallprompt', { cancelable: true })
+  Object.assign(event, {
+    prompt: async () => { console.log('[DevToolbar] Mock install prompt triggered') },
+    userChoice: Promise.resolve({ outcome: 'dismissed' as const }),
+  })
+  window.dispatchEvent(event)
+}
+
 export function DevToolbar() {
   if (!MOCKS_ENABLED) return null
 
@@ -33,6 +42,13 @@ export function DevToolbar() {
           {role}
         </button>
       ))}
+      <div className="border-l border-yellow-400 mx-1" />
+      <button
+        className="rounded px-2 py-1 bg-blue-100 text-blue-700 hover:bg-blue-200"
+        onClick={triggerInstallPrompt}
+      >
+        PWA
+      </button>
     </div>
   )
 }

@@ -2,7 +2,7 @@
   "name": "Yorindo Check-in",
   "short_name": "Yorindo",
   "description": "Event check-in app for Yorindo event management platform",
-  "start_url": "/scan",
+  "start_url": "/app",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#2563eb",
