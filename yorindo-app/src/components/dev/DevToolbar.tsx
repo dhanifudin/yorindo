@@ -1,4 +1,5 @@
 'use client'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuthStore } from '@/store/authStore'
 
 const MOCK_USERS = {
@@ -21,18 +22,48 @@ function triggerInstallPrompt() {
 }
 
 export function DevToolbar() {
+  const { user, setAccessToken } = useAuthStore()
+  const [isExpanded, setIsExpanded] = useState(false)
+
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.key === 'Escape') setIsExpanded(false)
+  }, [])
+
+  useEffect(() => {
+    if (isExpanded) {
+      document.addEventListener('keydown', handleKeyDown)
+      return () => document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isExpanded, handleKeyDown])
+
   if (!MOCKS_ENABLED) return null
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  const { user, setAccessToken } = useAuthStore()
+  if (!isExpanded) {
+    return (
+      <button
+        onClick={() => setIsExpanded(true)}
+        aria-label="Open dev toolbar"
+        className="fixed bottom-16 right-0 z-50 rounded-l border border-r-0 border-yellow-400 bg-yellow-100 px-1 py-2 text-xs font-bold text-yellow-800 shadow-lg hover:bg-yellow-200 focus-visible:outline-2 focus-visible:outline-yellow-500"
+      >
+        <span className="[writing-mode:vertical-rl]">DEV</span>
+      </button>
+    )
+  }
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 flex gap-2 rounded border border-yellow-400 bg-yellow-100 p-2 text-xs shadow-lg">
-      <span className="font-bold text-yellow-800">DEV:</span>
+    <div className="fixed bottom-16 right-0 z-50 flex flex-col gap-1 rounded-l border border-r-0 border-yellow-400 bg-yellow-100 p-2 text-xs shadow-lg">
+      <button
+        onClick={() => setIsExpanded(false)}
+        aria-label="Close dev toolbar"
+        className="font-bold text-yellow-800 hover:text-yellow-600 focus-visible:outline-2 focus-visible:outline-yellow-500 pb-1"
+      >
+        DEV &times;
+      </button>
       {(['admin', 'staff', 'viewer'] as const).map((role) => (
         <button
           key={role}
-          className={`rounded px-2 py-1 ${
+          aria-pressed={user?.role === role}
+          className={`rounded px-2 py-1 focus-visible:outline-2 focus-visible:outline-yellow-500 ${
             user?.role === role
               ? 'bg-yellow-400 font-bold text-yellow-900'
               : 'bg-white text-gray-700 hover:bg-yellow-50'
@@ -42,9 +73,9 @@ export function DevToolbar() {
           {role}
         </button>
       ))}
-      <div className="border-l border-yellow-400 mx-1" />
+      <hr className="border-yellow-400 my-1" />
       <button
-        className="rounded px-2 py-1 bg-blue-100 text-blue-700 hover:bg-blue-200"
+        className="rounded px-2 py-1 bg-blue-100 text-blue-700 hover:bg-blue-200 focus-visible:outline-2 focus-visible:outline-yellow-500"
         onClick={triggerInstallPrompt}
       >
         PWA
