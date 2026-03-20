@@ -1,21 +1,56 @@
 import { http, HttpResponse, delay } from 'msw'
 import { faker } from '@faker-js/faker'
-import type { Registration, PaginatedResponse } from '@/types/api'
+import type { Registration, RegistrationWithContact, PaginatedResponse } from '@/types/api'
+import { contactsPool } from './contacts'
+import { djb2 } from '@/lib/djb2'
 
-const registrationsStore: Registration[] = Array.from({ length: 30 }, (_, i) => ({
-  id: `reg-${String(i + 1).padStart(3, '0')}`,
-  contactId: faker.string.uuid(),
-  eventId: 'event-001',
-  status: faker.helpers.arrayElement([
-    'pending', 'confirmed', 'approved', 'rejected', 'waitlisted', 'attended', 'cancelled',
-  ] as Registration['status'][]),
-  ticketToken: faker.datatype.boolean() ? `ticket-${faker.string.alphanumeric(20)}` : null,
-  surveyAnswers: {},
-  attendedAt: faker.datatype.boolean() ? faker.date.recent().toISOString() : null,
-  createdAt: faker.date.past().toISOString(),
-}))
+type StoredRegistration = Registration & { flagOverride: boolean }
+
+// Distribute registrations across the first 3 events for realistic mock data
+const EVENT_IDS = ['event-001', 'event-002', 'event-003']
+const STATUSES: Registration['status'][] = ['pending', 'approved', 'approved', 'approved', 'rejected', 'waitlisted', 'attended', 'attended', 'cancelled', 'confirmed']
+
+export const registrationsStore: StoredRegistration[] = Array.from({ length: 60 }, (_, i) => {
+  const status = STATUSES[i % STATUSES.length]
+  return {
+    id: `reg-${String(i + 1).padStart(3, '0')}`,
+    contactId: contactsPool[i % contactsPool.length].id,
+    eventId: EVENT_IDS[i % EVENT_IDS.length],
+    status,
+    ticketToken: status === 'approved' || status === 'attended' ? `ticket-${faker.string.alphanumeric(20)}` : null,
+    surveyAnswers: {},
+    attendedAt: status === 'attended' ? faker.date.recent({ days: 30 }).toISOString() : null,
+    createdAt: new Date(Date.now() - (60 - i) * 86400000).toISOString(),
+    flagOverride: false,
+  }
+})
+
+function enrichRegistration(reg: StoredRegistration, eventId: string): RegistrationWithContact {
+  const contact = contactsPool.find((c) => c.id === reg.contactId) ?? contactsPool[0]
+  return {
+    ...reg,
+    contactName: contact.name,
+    contactEmail: contact.email,
+    contactPhone: contact.phone,
+    contactFlagCategory: contact.flagCategory,
+    aiScore: djb2(contact.id + eventId),
+  }
+}
 
 export const registrationHandlers = [
+  http.post('/api/registrations/:id/clear-flag', async ({ params }) => {
+    await delay(300)
+    const idx = registrationsStore.findIndex((r) => r.id === params.id)
+    if (idx === -1) {
+      return HttpResponse.json(
+        { error: { code: 'NOT_FOUND', message: 'Registration not found', details: [] } },
+        { status: 404 }
+      )
+    }
+    registrationsStore[idx] = { ...registrationsStore[idx], flagOverride: true }
+    return HttpResponse.json(enrichRegistration(registrationsStore[idx], registrationsStore[idx].eventId))
+  }),
+
   http.get('/api/registrations', async ({ request }) => {
     await delay(400)
     const url = new URL(request.url)
@@ -40,15 +75,16 @@ export const registrationHandlers = [
 
   http.post('/api/registrations', async () => {
     await delay(400)
-    const newReg: Registration = {
+    const newReg: StoredRegistration = {
       id: faker.string.uuid(),
-      contactId: faker.string.uuid(),
+      contactId: contactsPool[registrationsStore.length % contactsPool.length].id,
       eventId: 'event-001',
       status: 'pending',
       ticketToken: null,
       surveyAnswers: {},
       attendedAt: null,
       createdAt: new Date().toISOString(),
+      flagOverride: false,
     }
     registrationsStore.push(newReg)
     return HttpResponse.json(newReg, { status: 201 })
@@ -118,7 +154,7 @@ export const registrationHandlers = [
     return HttpResponse.json(registrationsStore[idx])
   }),
 
-  http.patch('/api/registrations/:id/status', async ({ params, request }) => {
+  http.post('/api/registrations/:id/status', async ({ params, request }) => {
     await delay(600)
     const body = await request.json() as { status: Registration['status'] }
     const idx = registrationsStore.findIndex((r) => r.id === params.id)
@@ -131,11 +167,9 @@ export const registrationHandlers = [
     registrationsStore[idx] = {
       ...registrationsStore[idx],
       status: body.status,
-      // Generate ticket token when approved
       ticketToken: body.status === 'approved'
         ? `ticket-${faker.string.alphanumeric(20)}`
         : registrationsStore[idx].ticketToken,
-      // Set attendedAt when attended
       attendedAt: body.status === 'attended'
         ? new Date().toISOString()
         : registrationsStore[idx].attendedAt,

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import type { Event, PaginatedResponse, CreateEventBody } from '@/types/api'
+import type { AudienceRecommendationsResponse, Event, PaginatedResponse, CreateEventBody } from '@/types/api'
 
 async function fetchEvents(): Promise<PaginatedResponse<Event>> {
   const res = await fetch('/api/events?pageSize=50')
@@ -45,5 +45,16 @@ export function useCreateEvent() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] })
     },
+  })
+}
+
+export function useAudienceRecommendations(eventId: string | undefined, enabled: boolean) {
+  return useQuery({
+    queryKey: ['audience-recommendations', eventId],
+    queryFn: () =>
+      fetch(`/api/events/${eventId}/audience-recommendations`)
+        .then((r) => r.json()) as Promise<AudienceRecommendationsResponse>,
+    enabled: !!eventId && enabled,
+    staleTime: 5 * 60 * 1000,
   })
 }

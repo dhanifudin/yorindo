@@ -30,6 +30,9 @@ export interface Event {
   bannerUrl?: string // Event banner image URL (Story 4.7)
   targetCriteria?: Record<string, unknown>
   surveySchema?: Record<string, unknown>
+  industryTags?: string[]   // e.g. ['teknologi', 'keuangan']
+  eventType?: 'conference' | 'workshop' | 'networking' | 'seminar' | 'webinar'
+  topicTags?: string[]      // e.g. ['fintech', 'digital-banking']
   createdAt: string
   updatedAt: string
 }
@@ -43,6 +46,15 @@ export interface Registration {
   surveyAnswers: Record<string, unknown>
   attendedAt: string | null
   createdAt: string
+}
+
+export interface RegistrationWithContact extends Registration {
+  contactName: string
+  contactEmail: string
+  contactPhone: string
+  contactFlagCategory: FlagCategory
+  aiScore: number      // 0–99 (djb2 % 100)
+  flagOverride: boolean
 }
 
 export interface User {
@@ -121,6 +133,9 @@ export interface CreateEventBody {
   timezone: Event['timezone']
   capacity?: number
   bannerUrl?: string
+  industryTags?: string[]
+  eventType?: Event['eventType']
+  topicTags?: string[]
   blastTemplateId?: string
   confirmationTemplateId?: string
   rejectionTemplateId?: string
@@ -151,4 +166,61 @@ export interface CreateUserBody {
 
 export interface UpdateContactFlagBody {
   flagCategory: FlagCategory
+}
+
+// ─── AI Audience Recommendations ─────────────────────────────────────────────
+
+export interface AudienceRecommendation {
+  contactId: string
+  name: string
+  email: string
+  phone: string
+  industryId: string // matches Contact.industryId (normalized ID, not display string)
+  city: string
+  companySize: string
+  score: number // 0–100
+  factors: string[] // e.g. ['industry:teknologi', 'attended:similar-event', 'location:jakarta']
+  reliabilityRate?: number // 0.0–1.0 (checked_in / registered ratio)
+}
+
+export interface AudienceRecommendationsResponse {
+  recommendations: AudienceRecommendation[]
+  totalMatched: number
+  totalExcluded: number
+  excludedReasons: Record<string, number> // e.g. { 'not-potential': 5, 'spam': 3 }
+}
+
+export interface RecommendedEvent {
+  eventId: string // NOTE: field is eventId, not id — use event.eventId for link construction
+  name: string
+  eventDate: string
+  status: string
+  score: number // 0–100
+  factors: string[]
+}
+
+export interface RecommendedEventsResponse {
+  recommendations: RecommendedEvent[]
+  totalMatched: number
+}
+
+export interface BlastPayload {
+  filters?: { industry?: string; city?: string; companySize?: string }
+  contactIds?: string[] // AI-curated list from sessionStorage
+  templateId: string
+  channel: 'whatsapp' | 'email'
+  scheduledAt?: string // ISO 8601 UTC; must be >= now + 5 minutes if provided
+}
+
+export interface BlastResponse {
+  jobId: string
+  status: 'queued' | 'scheduled'
+  scheduledAt?: string
+  recipientCount?: number
+}
+
+export interface BlastPrefilledAudience {
+  eventId: string
+  contactIds: string[]
+  count: number
 }

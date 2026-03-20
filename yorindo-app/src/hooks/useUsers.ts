@@ -19,7 +19,7 @@ async function createUser(body: CreateUserBody): Promise<User> {
 
 async function updateUserRole({ id, role }: { id: string; role: User['role'] }): Promise<User> {
   const res = await fetch(`/api/users/${id}`, {
-    method: 'PATCH',
+    method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ role }),
   })

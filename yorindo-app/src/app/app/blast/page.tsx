@@ -1,12 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import {
   Select,
   SelectContent,
@@ -15,7 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { toast } from 'sonner'
-import type { Event } from '@/types/api'
+import type { BlastPayload, BlastPrefilledAudience, BlastResponse, Event } from '@/types/api'
 
 interface Template {
   id: string
@@ -33,18 +32,37 @@ export default function BlastPage() {
   const [channel, setChannel] = useState('whatsapp')
   const [filters, setFilters] = useState({ industry: '', city: '', companySize: '' })
   const [previewCount, setPreviewCount] = useState<number | null>(null)
-  const [emergencyOpen, setEmergencyOpen] = useState(false)
-  const [emergencyMsg, setEmergencyMsg] = useState('')
+  const [scheduleEnabled, setScheduleEnabled] = useState(false)
+  const [scheduledAtLocal, setScheduledAtLocal] = useState('')
+  const [scheduleError, setScheduleError] = useState('')
+  const [prefilledAudience, setPrefilledAudience] = useState<BlastPrefilledAudience | null>(null)
+
+  useEffect(() => {
+    const raw = sessionStorage.getItem('blast:prefilledAudience')
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw) as BlastPrefilledAudience
+        setPrefilledAudience(parsed)
+        setSelectedEvent(parsed.eventId)
+      } catch {
+        // invalid data, ignore
+      }
+      sessionStorage.removeItem('blast:prefilledAudience')
+    }
+  }, [])
 
   const { data: eventsData } = useQuery<{ data: Event[] }>({
     queryKey: ['events'],
     queryFn: () => fetch('/api/events?pageSize=50').then((r) => r.json()),
   })
 
-  const { data: templates } = useQuery<Template[]>({
+  const { data: allTemplates } = useQuery<Template[]>({
     queryKey: ['templates'],
     queryFn: () => fetch('/api/templates').then((r) => r.json()),
   })
+
+  // Blast page is for audience invitations only — show invitation templates only
+  const templates = (allTemplates ?? []).filter((t) => t.type === 'invitation')
 
   const previewMutation = useMutation({
     mutationFn: async () => {
@@ -63,43 +81,62 @@ export default function BlastPage() {
     onSuccess: (data) => setPreviewCount(data.count),
   })
 
+  function getScheduledAtUTC(): string | undefined {
+    if (!scheduleEnabled || !scheduledAtLocal) return undefined
+    return new Date(scheduledAtLocal).toISOString()
+  }
+
+  function validateSchedule(): boolean {
+    if (!scheduleEnabled) return true
+    if (!scheduledAtLocal) {
+      setScheduleError('Pilih waktu jadwal.')
+      return false
+    }
+    const minTime = new Date(Date.now() + 5 * 60 * 1000)
+    if (new Date(scheduledAtLocal) < minTime) {
+      setScheduleError('Jadwal harus minimal 5 menit dari sekarang.')
+      return false
+    }
+    setScheduleError('')
+    return true
+  }
+
   const blastMutation = useMutation({
     mutationFn: async () => {
+      if (!validateSchedule()) throw new Error('Validasi jadwal gagal')
+      const scheduledAt = getScheduledAtUTC()
+      const payload: BlastPayload = prefilledAudience
+        ? { contactIds: prefilledAudience.contactIds, templateId, channel: channel as BlastPayload['channel'], scheduledAt }
+        : { filters, templateId, channel: channel as BlastPayload['channel'], scheduledAt }
       const res = await fetch(`/api/events/${selectedEvent}/blast`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filters, templateId, channel }),
+        body: JSON.stringify(payload),
       })
       if (!res.ok) throw new Error('Blast gagal')
-      return res.json()
-    },
-    onSuccess: (data) => toast.success(`Blast dijadwalkan. Job ID: ${data.jobId}`),
-    onError: () => toast.error('Gagal mengirim blast'),
-  })
-
-  const emergencyMutation = useMutation({
-    mutationFn: async () => {
-      const res = await fetch(`/api/events/${selectedEvent}/blast/emergency`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: emergencyMsg, channel }),
-      })
-      if (!res.ok) throw new Error('Emergency blast gagal')
-      return res.json()
+      return res.json() as Promise<BlastResponse>
     },
     onSuccess: (data) => {
-      toast.success(`Emergency blast dikirim ke ${data.recipientCount} peserta`)
-      setEmergencyOpen(false)
-      setEmergencyMsg('')
+      if (data.status === 'scheduled' && data.scheduledAt) {
+        const formatted = new Date(data.scheduledAt).toLocaleString('id-ID', {
+          day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+        })
+        toast.success(`Blast dijadwalkan untuk ${formatted}`)
+      } else {
+        toast.success('Blast dikirim!')
+      }
     },
-    onError: () => toast.error('Gagal mengirim emergency blast'),
+    onError: () => toast.error('Gagal mengirim blast'),
   })
 
   const events = eventsData?.data ?? []
 
   return (
     <div className="max-w-2xl space-y-6">
-      <h1 className="text-2xl font-bold">Konfigurasi Blast</h1>
+      <h1 className="text-2xl font-bold">Kirim Undangan</h1>
+      <p className="text-sm text-muted-foreground -mt-4">
+        Kirim undangan event ke kontak yang belum mendaftar. Untuk notifikasi ke peserta terdaftar, gunakan Blast Darurat di halaman event.
+      </p>
 
       <Card>
         <CardHeader>
@@ -108,7 +145,11 @@ export default function BlastPage() {
         <CardContent className="space-y-4">
           <div>
             <label className="block text-xs text-muted-foreground mb-1">Event</label>
-            <Select value={selectedEvent} onValueChange={setSelectedEvent}>
+            <Select
+              value={selectedEvent}
+              onValueChange={prefilledAudience ? undefined : setSelectedEvent}
+              disabled={!!prefilledAudience}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Pilih event..." />
               </SelectTrigger>
@@ -121,17 +162,24 @@ export default function BlastPage() {
           </div>
 
           <div>
-            <label className="block text-xs text-muted-foreground mb-1">Template</label>
+            <label className="block text-xs text-muted-foreground mb-1">
+              Template Undangan
+            </label>
             <Select value={templateId} onValueChange={setTemplateId}>
               <SelectTrigger>
-                <SelectValue placeholder="Pilih template..." />
+                <SelectValue placeholder="Pilih template undangan..." />
               </SelectTrigger>
               <SelectContent>
-                {(templates ?? []).map((t) => (
+                {templates.map((t) => (
                   <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {templates.length === 0 && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Belum ada template undangan. Buat template dengan tipe &quot;invitation&quot; di halaman Template.
+              </p>
+            )}
           </div>
 
           <div>
@@ -147,116 +195,137 @@ export default function BlastPage() {
             </Select>
           </div>
 
+          {/* Audience section — AI mode vs manual filter mode */}
           <div className="border-t pt-4">
-            <p className="text-sm font-medium mb-3">Filter Audience</p>
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <label className="block text-xs text-muted-foreground mb-1">Industri</label>
-                <select
-                  value={filters.industry}
-                  onChange={(e) => setFilters((p) => ({ ...p, industry: e.target.value }))}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+            {prefilledAudience ? (
+              <div className="rounded-md bg-blue-50 border border-blue-200 p-4">
+                <p className="text-sm font-medium text-blue-800 mb-1">
+                  🤖 Audiens dari rekomendasi YoriMind: <strong>{prefilledAudience.count} kontak terpilih</strong>
+                </p>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-blue-700 h-auto p-0 hover:text-blue-900 mt-1"
+                  onClick={() => {
+                    setPrefilledAudience(null)
+                    setSelectedEvent('')
+                  }}
                 >
-                  <option value="">Semua</option>
-                  {INDUSTRIES.map((i) => (
-                    <option key={i} value={i}>{i}</option>
-                  ))}
-                </select>
+                  Hapus pilihan
+                </Button>
               </div>
-              <div>
-                <label className="block text-xs text-muted-foreground mb-1">Kota</label>
-                <Input
-                  value={filters.city}
-                  onChange={(e) => setFilters((p) => ({ ...p, city: e.target.value }))}
-                  placeholder="Semua kota"
-                  className="h-9"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-muted-foreground mb-1">Ukuran Perusahaan</label>
-                <select
-                  value={filters.companySize}
-                  onChange={(e) => setFilters((p) => ({ ...p, companySize: e.target.value }))}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
-                >
-                  <option value="">Semua</option>
-                  <option value="small">Small</option>
-                  <option value="medium">Medium</option>
-                  <option value="large">Large</option>
-                  <option value="enterprise">Enterprise</option>
-                </select>
-              </div>
-            </div>
+            ) : (
+              <>
+                <p className="text-sm font-medium mb-3">Filter Audience</p>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs text-muted-foreground mb-1">Industri</label>
+                    <select
+                      value={filters.industry}
+                      onChange={(e) => setFilters((p) => ({ ...p, industry: e.target.value }))}
+                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                    >
+                      <option value="">Semua</option>
+                      {INDUSTRIES.map((i) => (
+                        <option key={i} value={i}>{i}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-muted-foreground mb-1">Kota</label>
+                    <Input
+                      value={filters.city}
+                      onChange={(e) => setFilters((p) => ({ ...p, city: e.target.value }))}
+                      placeholder="Semua kota"
+                      className="h-9"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-muted-foreground mb-1">Ukuran Perusahaan</label>
+                    <select
+                      value={filters.companySize}
+                      onChange={(e) => setFilters((p) => ({ ...p, companySize: e.target.value }))}
+                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                    >
+                      <option value="">Semua</option>
+                      <option value="small">Small</option>
+                      <option value="medium">Medium</option>
+                      <option value="large">Large</option>
+                      <option value="enterprise">Enterprise</option>
+                    </select>
+                  </div>
+                </div>
 
-            <div className="flex items-center gap-4 mt-3">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => previewMutation.mutate()}
-                disabled={!selectedEvent || previewMutation.isPending}
-              >
-                Preview Audience
-              </Button>
-              {previewCount !== null && (
-                <span className="text-sm">
-                  <strong>{previewCount.toLocaleString('id-ID')}</strong> kontak akan dikirim
-                  {previewCount === 0 && (
-                    <Badge className="ml-2 bg-destructive/10 text-destructive text-xs">Tidak ada penerima</Badge>
+                <div className="flex items-center gap-4 mt-3">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => previewMutation.mutate()}
+                    disabled={!selectedEvent || previewMutation.isPending}
+                  >
+                    Preview Audience
+                  </Button>
+                  {previewCount !== null && (
+                    <span className="text-sm">
+                      <strong>{previewCount.toLocaleString('id-ID')}</strong> kontak akan dikirim
+                      {previewCount === 0 && (
+                        <Badge className="ml-2 bg-destructive/10 text-destructive text-xs">Tidak ada penerima</Badge>
+                      )}
+                    </span>
                   )}
-                </span>
-              )}
-            </div>
+                </div>
+              </>
+            )}
           </div>
 
-          <div className="flex gap-2 pt-2 border-t">
+          {/* Schedule section */}
+          <div className="border-t pt-4">
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="schedule-toggle"
+                checked={scheduleEnabled}
+                onChange={(e) => {
+                  setScheduleEnabled(e.target.checked)
+                  if (!e.target.checked) {
+                    setScheduledAtLocal('')
+                    setScheduleError('')
+                  }
+                }}
+                className="h-4 w-4"
+              />
+              <label htmlFor="schedule-toggle" className="text-sm font-medium cursor-pointer">
+                Jadwalkan Blast
+              </label>
+            </div>
+            {scheduleEnabled && (
+              <div className="mt-3">
+                <input
+                  type="datetime-local"
+                  value={scheduledAtLocal}
+                  onChange={(e) => {
+                    setScheduledAtLocal(e.target.value)
+                    setScheduleError('')
+                  }}
+                  className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                />
+                {scheduleError && (
+                  <p className="text-xs text-destructive mt-1">{scheduleError}</p>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="pt-2 border-t">
             <Button
               onClick={() => blastMutation.mutate()}
               disabled={!selectedEvent || !templateId || blastMutation.isPending}
             >
-              Kirim Blast
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => setEmergencyOpen(true)}
-              disabled={!selectedEvent}
-            >
-              Emergency Blast
+              {scheduleEnabled ? 'Jadwalkan Blast' : 'Kirim Undangan'}
             </Button>
           </div>
         </CardContent>
       </Card>
-
-      {/* Emergency Blast Dialog */}
-      <Dialog open={emergencyOpen} onOpenChange={(v) => !v && setEmergencyOpen(false)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Emergency Blast</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Blast darurat akan dikirim ke <strong>semua peserta yang sudah disetujui</strong> segera.
-          </p>
-          <div>
-            <label className="block text-xs text-muted-foreground mb-1">Pesan</label>
-            <textarea
-              value={emergencyMsg}
-              onChange={(e) => setEmergencyMsg(e.target.value)}
-              rows={4}
-              className="w-full border rounded-md px-3 py-2 text-sm"
-              placeholder="Tulis pesan darurat..."
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEmergencyOpen(false)}>Batal</Button>
-            <Button
-              variant="destructive"
-              onClick={() => emergencyMutation.mutate()}
-              disabled={!emergencyMsg.trim() || emergencyMutation.isPending}
-            >
-              {emergencyMutation.isPending ? 'Mengirim…' : 'Kirim Sekarang'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

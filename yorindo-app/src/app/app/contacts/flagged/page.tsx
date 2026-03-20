@@ -66,7 +66,7 @@ export default function FlaggedRecordsPage() {
   const resolveMutation = useMutation({
     mutationFn: async ({ id, action, resolvedData }: { id: string; action: 'approve' | 'discard'; resolvedData?: Record<string, string> }) => {
       const res = await fetch(`/api/contacts/flagged/${id}`, {
-        method: 'PATCH',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action, resolved_data: resolvedData }),
       })

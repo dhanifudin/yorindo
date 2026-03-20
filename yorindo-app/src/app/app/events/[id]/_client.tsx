@@ -1,18 +1,23 @@
 'use client'
 
-import { use, useCallback } from 'react'
+import { use, useCallback, useState } from 'react'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import Link from 'next/link'
 import { useEvent } from '@/hooks/useEvents'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Copy, ExternalLink } from 'lucide-react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Copy, ExternalLink, Users } from 'lucide-react'
 import { EventLifecycleControls } from '@/components/features/events/EventLifecycleControls'
 import { EventCloneDialog } from '@/components/features/events/EventCloneDialog'
 import { SurveyBuilder } from '@/components/features/events/SurveyBuilder'
 import { AttendanceMonitor } from '@/components/features/events/AttendanceMonitor'
 import { YoriMindPanel } from '@/components/features/events/YoriMindPanel'
 import { AnalyticsDashboard } from '@/components/features/events/AnalyticsDashboard'
+import { AudienceRecommendationsCard } from '@/components/features/events/AudienceRecommendationsCard'
+import type { Registration } from '@/types/api'
 
 interface EventDetailPageProps {
   params: Promise<{ id: string }>
@@ -30,6 +35,41 @@ const STATUS_BADGE: Record<string, string> = {
 export default function EventDetailPage({ params }: EventDetailPageProps) {
   const { id } = use(params)
   const { data: event, isLoading, isError } = useEvent(id)
+  const [emergencyOpen, setEmergencyOpen] = useState(false)
+  const [emergencyMsg, setEmergencyMsg] = useState('')
+
+  const { data: registrationStats } = useQuery<{ data: Registration[]; pagination: { total: number } }>({
+    queryKey: ['event-registrations', id, 'pending'],
+    queryFn: () => fetch(`/api/events/${id}/registrations?status=pending&pageSize=1`).then((r) => r.json()),
+    enabled: !!id,
+  })
+
+  const { data: waitlistStats } = useQuery<{ data: Registration[]; pagination: { total: number } }>({
+    queryKey: ['event-registrations', id, 'waitlisted'],
+    queryFn: () => fetch(`/api/events/${id}/registrations?status=waitlisted&pageSize=1`).then((r) => r.json()),
+    enabled: !!id,
+  })
+
+  const pendingCount = registrationStats?.pagination.total ?? 0
+  const waitlistCount = waitlistStats?.pagination.total ?? 0
+
+  const emergencyMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/events/${id}/blast/emergency`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: emergencyMsg, channel: 'whatsapp' }),
+      })
+      if (!res.ok) throw new Error('Emergency blast gagal')
+      return res.json()
+    },
+    onSuccess: (data) => {
+      toast.success(`Blast darurat dikirim ke ${data.recipientCount} peserta`)
+      setEmergencyOpen(false)
+      setEmergencyMsg('')
+    },
+    onError: () => toast.error('Gagal mengirim blast darurat'),
+  })
 
   const copyRegistrationLink = useCallback((slug: string) => {
     const url = `${window.location.origin}/register/${slug}`
@@ -131,17 +171,98 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
         </CardContent>
       </Card>
 
+      {/* Registration management card */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-muted-foreground" />
+              <span className="text-base font-semibold">Manajemen Pendaftaran</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="destructive" size="sm" onClick={() => setEmergencyOpen(true)}>
+                Blast Darurat
+              </Button>
+              <Button asChild size="sm">
+                <Link href={`/app/events/${event.id}/registrations`}>
+                  Kelola Pendaftaran
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-6 text-sm">
+            <div>
+              <p className="text-muted-foreground text-xs uppercase font-medium">Menunggu Review</p>
+              <p className="text-lg font-semibold mt-0.5">
+                {pendingCount}
+                {pendingCount > 0 && <span className="ml-1.5 text-xs font-normal text-orange-600">perlu tindakan</span>}
+              </p>
+            </div>
+            <div>
+              <p className="text-muted-foreground text-xs uppercase font-medium">Waitlist</p>
+              <p className="text-lg font-semibold mt-0.5">
+                {waitlistCount}
+                {waitlistCount > 0 && <span className="ml-1.5 text-xs font-normal text-muted-foreground">antrian</span>}
+              </p>
+            </div>
+          </div>
+          {(pendingCount > 0 || waitlistCount > 0) && (
+            <p className="text-xs text-muted-foreground mt-3">
+              {pendingCount > 0 && `${pendingCount} pendaftar menunggu persetujuan. `}
+              {waitlistCount > 0 && `${waitlistCount} pendaftar di waitlist dapat dipromosikan jika kapasitas tersedia.`}
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Emergency blast dialog */}
+      <Dialog open={emergencyOpen} onOpenChange={(v) => !v && setEmergencyOpen(false)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Blast Darurat</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Pesan akan dikirim ke <strong>semua peserta yang sudah disetujui</strong> segera.
+          </p>
+          <div>
+            <label className="block text-xs text-muted-foreground mb-1">Pesan</label>
+            <textarea
+              value={emergencyMsg}
+              onChange={(e) => setEmergencyMsg(e.target.value)}
+              rows={4}
+              className="w-full border rounded-md px-3 py-2 text-sm"
+              placeholder="Tulis pesan darurat..."
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEmergencyOpen(false)}>Batal</Button>
+            <Button
+              variant="destructive"
+              onClick={() => emergencyMutation.mutate()}
+              disabled={!emergencyMsg.trim() || emergencyMutation.isPending}
+            >
+              {emergencyMutation.isPending ? 'Mengirim…' : 'Kirim Sekarang'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* AI audience recommendations */}
+      <AudienceRecommendationsCard eventId={event.id} />
+
       {/* Live attendance monitor (only for active events) */}
       {event.status === 'active' && <AttendanceMonitor eventId={event.id} status={event.status} />}
-
-      {/* Survey builder */}
-      <SurveyBuilder eventId={event.id} />
 
       {/* Analytics dashboard */}
       <AnalyticsDashboard eventId={event.id} />
 
       {/* YoriMind AI panel */}
       <YoriMindPanel eventId={event.id} />
+
+      {/* Survey builder */}
+      <SurveyBuilder eventId={event.id} />
     </div>
   )
 }

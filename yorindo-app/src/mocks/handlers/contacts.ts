@@ -1,6 +1,7 @@
 import { http, HttpResponse, delay } from 'msw'
 import { faker } from '@faker-js/faker'
-import type { Contact, FlagCategory, PaginatedResponse } from '@/types/api'
+import type { Contact, FlagCategory, PaginatedResponse, RecommendedEventsResponse } from '@/types/api'
+import { eventsStore } from './events'
 
 faker.seed(42)
 
@@ -17,7 +18,7 @@ const JOB_TITLES = ['direktur', 'manajer', 'supervisor', 'staff', 'koordinator']
 const FLAG_CATEGORIES: FlagCategory[] = ['spam', 'not-potential', 'invalid-data', 'duplicate']
 
 // Seeded pool of 247 contacts — deterministic with faker.seed(42)
-const contactsPool: Contact[] = Array.from({ length: 247 }, (_, i) => ({
+export const contactsPool: Contact[] = Array.from({ length: 247 }, (_, i) => ({
   id: faker.string.uuid(),
   name: faker.person.fullName(),
   phone: `+62${faker.string.numeric(10)}`,
@@ -212,7 +213,32 @@ export const contactHandlers = [
     return new HttpResponse(null, { status: 204 })
   }),
 
-  http.patch('/api/contacts/:id', async ({ params, request }) => {
+  http.get('/api/contacts/:id/recommended-events', async ({ params }) => {
+    await delay(400)
+    const contactId = params.id as string
+    const djb2 = (s: string) => s.split('').reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 100, 0)
+    const eligible = eventsStore.filter((e) => e.status === 'published' || e.status === 'active')
+    const recommendations = eligible
+      .map((event) => ({
+        eventId: event.id,
+        name: event.name,
+        eventDate: event.eventDate,
+        status: event.status,
+        score: djb2(contactId + event.id),
+        factors: [
+          ...(event.industryTags?.length ? [`industry:${event.industryTags[0]}`] : []),
+          ...(event.eventType ? [`type:${event.eventType}`] : []),
+        ],
+      }))
+      .sort((a, b) => b.score - a.score)
+    const response: RecommendedEventsResponse = {
+      recommendations,
+      totalMatched: recommendations.length,
+    }
+    return HttpResponse.json(response)
+  }),
+
+  http.put('/api/contacts/:id', async ({ params, request }) => {
     await delay(300)
     const id = params.id as string
     const contact = contactsPool.find((c) => c.id === id)
@@ -230,7 +256,7 @@ export const contactHandlers = [
     return HttpResponse.json(contact)
   }),
 
-  http.patch('/api/contacts/flagged/:id', async () => {
+  http.post('/api/contacts/flagged/:id', async () => {
     await delay(400)
     return HttpResponse.json({
       id: faker.string.uuid(),

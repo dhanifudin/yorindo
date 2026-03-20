@@ -52,7 +52,7 @@ export function EventLifecycleControls({ event }: EventLifecycleControlsProps) {
   const patchMutation = useMutation({
     mutationFn: async (newStatus: Event['status']) => {
       const res = await fetch(`/api/events/${event.id}`, {
-        method: 'PATCH',
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
       })
@@ -93,7 +93,7 @@ export function EventLifecycleControls({ event }: EventLifecycleControlsProps) {
   const autoMutation = useMutation({
     mutationFn: async (newStatus: Event['status']) => {
       const res = await fetch(`/api/events/${event.id}`, {
-        method: 'PATCH',
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
       })

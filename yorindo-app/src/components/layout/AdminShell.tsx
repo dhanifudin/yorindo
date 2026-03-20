@@ -14,6 +14,7 @@ import {
   QrCode,
   PanelLeftClose,
   PanelLeftOpen,
+  Sparkles,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -25,6 +26,7 @@ const NAV_ITEMS = [
   { href: '/app',              label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'viewer', 'staff'] },
   { href: '/app/events',       label: 'Event',     icon: Calendar,        roles: ['admin', 'viewer'] },
   { href: '/app/contacts',     label: 'Kontak',    icon: Users,           roles: ['admin'] },
+  { href: '/app/yorimind',     label: 'YoriMind',  icon: Sparkles,        roles: ['admin'] },
   { href: '/app/templates',    label: 'Template',  icon: FileText,        roles: ['admin'] },
   { href: '/app/users',        label: 'Akun',      icon: UserCog,         roles: ['admin'] },
   { href: '/app/scan',         label: 'Scan',      icon: QrCode,          roles: ['staff', 'admin'] },

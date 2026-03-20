@@ -8,7 +8,7 @@ import {
   type ColumnDef,
 } from '@tanstack/react-table'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useContacts } from '@/hooks/useContacts'
+import { useContacts, useRecommendedEvents } from '@/hooks/useContacts'
 import { useFilterStore } from '@/store/filterStore'
 import type { Contact, FlagCategory } from '@/types/api'
 import { Badge } from '@/components/ui/badge'
@@ -83,12 +83,18 @@ export function ContactsTable() {
   const { page, flagFilter, setFilter } = useFilterStore()
   const { data, isLoading, isError } = useContacts()
   const [detailContact, setDetailContact] = useState<Contact | null>(null)
+  const [eventsExpanded, setEventsExpanded] = useState(false)
   const queryClient = useQueryClient()
+
+  const { data: recommendedEventsData, isLoading: eventsLoading } = useRecommendedEvents(
+    detailContact?.id,
+    eventsExpanded,
+  )
 
   const flagMutation = useMutation({
     mutationFn: async ({ id, flagCategory }: { id: string; flagCategory: FlagCategory }) => {
       const res = await fetch(`/api/contacts/${id}`, {
-        method: 'PATCH',
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ flagCategory }),
       })
@@ -125,7 +131,7 @@ export function ContactsTable() {
   return (
     <>
       {/* Contact detail sheet (mobile) */}
-      <Sheet open={!!detailContact} onOpenChange={(v) => !v && setDetailContact(null)}>
+      <Sheet open={!!detailContact} onOpenChange={(v) => { if (!v) { setDetailContact(null); setEventsExpanded(false) } }}>
         <SheetContent side="bottom" className="max-h-[65vh] overflow-y-auto">
           <SheetHeader>
             <SheetTitle>{detailContact?.name}</SheetTitle>
@@ -189,6 +195,53 @@ export function ContactsTable() {
                 </Button>
               )}
             </div>
+          </div>
+
+          {/* Suggested Events section */}
+          <div className="mt-4 border-t pt-4">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs text-muted-foreground font-medium">Event yang Disarankan</p>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-auto py-0.5 px-2 text-xs"
+                onClick={() => setEventsExpanded((v) => !v)}
+              >
+                {eventsExpanded ? 'Tutup' : 'Lihat'}
+              </Button>
+            </div>
+            {eventsExpanded && (
+              eventsLoading ? (
+                <div className="space-y-2">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="h-10 bg-muted rounded animate-pulse" />
+                  ))}
+                </div>
+              ) : (recommendedEventsData?.recommendations ?? []).length === 0 ? (
+                <p className="text-xs text-muted-foreground">Tidak ada event yang cocok.</p>
+              ) : (
+                <div className="space-y-2">
+                  {(recommendedEventsData?.recommendations ?? []).map((rec) => (
+                    <div key={rec.eventId} className="rounded-md border p-2 text-xs">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium">{rec.name}</span>
+                        <Badge className={
+                          rec.score >= 70 ? 'bg-green-100 text-green-700 text-[10px]' :
+                          rec.score >= 40 ? 'bg-yellow-100 text-yellow-700 text-[10px]' :
+                          'bg-red-100 text-red-700 text-[10px]'
+                        }>
+                          {rec.score}%
+                        </Badge>
+                      </div>
+                      <p className="text-muted-foreground mt-0.5">
+                        {new Date(rec.eventDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        {' · '}{rec.status}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )
+            )}
           </div>
         </SheetContent>
       </Sheet>

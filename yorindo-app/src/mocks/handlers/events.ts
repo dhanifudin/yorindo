@@ -1,6 +1,7 @@
 import { http, HttpResponse, delay } from 'msw'
 import { faker } from '@faker-js/faker'
-import type { Event } from '@/types/api'
+import type { AudienceRecommendationsResponse, BlastPayload, Event, PaginatedResponse, RegistrationWithContact } from '@/types/api'
+import { djb2 } from '@/lib/djb2'
 import { usersStore, userEventAssignments } from './users'
 
 const TIMEZONES: Event['timezone'][] = ['Asia/Jakarta', 'Asia/Makassar', 'Asia/Jayapura']
@@ -19,6 +20,9 @@ export let eventsStore: Event[] = [
     timezone: 'Asia/Jakarta',
     capacity: 200,
     bannerUrl: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&h=675&fit=crop',
+    industryTags: ['teknologi'],
+    eventType: 'conference',
+    topicTags: ['cloud', 'ai'],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
@@ -32,6 +36,9 @@ export let eventsStore: Event[] = [
     timezone: 'Asia/Jakarta',
     capacity: 50,
     bannerUrl: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=1200&h=675&fit=crop',
+    industryTags: ['kesehatan'],
+    eventType: 'seminar',
+    topicTags: ['medtech', 'diagnostics'],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
@@ -45,6 +52,9 @@ export let eventsStore: Event[] = [
     timezone: 'Asia/Jakarta',
     capacity: 150,
     bannerUrl: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=1200&h=675&fit=crop',
+    industryTags: ['keuangan', 'teknologi'],
+    eventType: 'workshop',
+    topicTags: ['fintech'],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
@@ -57,6 +67,9 @@ export let eventsStore: Event[] = [
     eventDate: '2025-11-10T02:00:00.000Z',
     timezone: 'Asia/Jakarta',
     capacity: 300,
+    industryTags: ['retail'],
+    eventType: 'networking',
+    topicTags: ['ecommerce'],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
@@ -69,6 +82,9 @@ export let eventsStore: Event[] = [
     eventDate: '2026-02-28T02:00:00.000Z',
     timezone: 'Asia/Makassar',
     capacity: 100,
+    industryTags: ['manufaktur'],
+    eventType: 'webinar',
+    topicTags: ['industry40'],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
@@ -140,7 +156,7 @@ export const eventHandlers = [
     return HttpResponse.json(event)
   }),
 
-  http.patch('/api/events/:id', async ({ params, request }) => {
+  http.put('/api/events/:id', async ({ params, request }) => {
     await delay(600)
     const body = await request.json() as Partial<Event>
     const idx = eventsStore.findIndex((e) => e.id === params.id)
@@ -176,15 +192,40 @@ export const eventHandlers = [
     return HttpResponse.json({ data: participants, total: participants.length })
   }),
 
-  http.get('/api/events/:id/registrations', async ({ request }) => {
+  http.get('/api/events/:id/registrations', async ({ params, request }) => {
     await delay(400)
     const url = new URL(request.url)
     const page = parseInt(url.searchParams.get('page') ?? '1', 10)
     const pageSize = parseInt(url.searchParams.get('pageSize') ?? '20', 10)
-    return HttpResponse.json({
-      data: [],
-      pagination: { page, pageSize, total: 0, totalPages: 0 },
-    })
+    const status = url.searchParams.get('status')
+    const eventId = params.id as string
+    const { registrationsStore } = await import('./registrations')
+
+    let filtered = registrationsStore.filter((r) => r.eventId === eventId)
+    if (status) filtered = filtered.filter((r) => r.status === status)
+
+    const total = filtered.length
+    const { contactsPool } = await import('./contacts')
+
+    const enriched: RegistrationWithContact[] = filtered
+      .slice((page - 1) * pageSize, page * pageSize)
+      .map((reg) => {
+        const contact = contactsPool.find((c) => c.id === reg.contactId) ?? contactsPool[0]
+        return {
+          ...reg,
+          contactName: contact.name,
+          contactEmail: contact.email,
+          contactPhone: contact.phone,
+          contactFlagCategory: contact.flagCategory,
+          aiScore: djb2(contact.id + eventId),
+        }
+      })
+
+    const response: PaginatedResponse<RegistrationWithContact> = {
+      data: enriched,
+      pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
+    }
+    return HttpResponse.json(response)
   }),
 
   http.get('/api/events/:id/analytics', async () => {
@@ -240,9 +281,15 @@ export const eventHandlers = [
     return HttpResponse.json(event)
   }),
 
-  http.post('/api/events/:id/blast', async () => {
+  http.post('/api/events/:id/blast', async ({ request }) => {
     await delay(400)
-    return HttpResponse.json({ jobId: `blast:${faker.number.int()}`, status: 'queued' }, { status: 202 })
+    const body = await request.json() as BlastPayload
+    const recipientCount = body.contactIds?.length ?? 50
+    const jobId = crypto.randomUUID()
+    if (body.scheduledAt) {
+      return HttpResponse.json({ jobId, status: 'scheduled', scheduledAt: body.scheduledAt, recipientCount }, { status: 202 })
+    }
+    return HttpResponse.json({ jobId, status: 'queued', recipientCount }, { status: 202 })
   }),
 
   http.post('/api/events/:id/clone', async ({ params }) => {
@@ -267,7 +314,7 @@ export const eventHandlers = [
     return HttpResponse.json(cloned, { status: 201 })
   }),
 
-  http.patch('/api/events/:id/restore', async ({ params }) => {
+  http.post('/api/events/:id/restore', async ({ params }) => {
     await delay(400)
     const deletedIdx = deletedEventsStore.findIndex((e) => e.id === params.id)
     if (deletedIdx === -1) {
@@ -289,6 +336,58 @@ export const eventHandlers = [
       attended: faker.number.int({ min: 60, max: 160 }),
       pending: faker.number.int({ min: 20, max: 60 }),
     })
+  }),
+
+  http.get('/api/events/:id/audience-recommendations', async ({ params }) => {
+    await delay(600)
+    const { contactsPool } = await import('./contacts')
+    const eventId = params.id as string
+    const event = eventsStore.find((e) => e.id === eventId)
+
+    const excludedReasons: Record<string, number> = {}
+    const eligible = contactsPool.filter((contact) => {
+      if (contact.flagCategory === 'not-potential' || contact.flagCategory === 'spam') {
+        const key = contact.flagCategory
+        excludedReasons[key] = (excludedReasons[key] ?? 0) + 1
+        return false
+      }
+      return true
+    })
+
+    const totalExcluded = contactsPool.length - eligible.length
+
+    const recommendations = eligible
+      .map((contact) => {
+        const score = djb2(contact.id + eventId)
+        const factors: string[] = []
+        if (event?.industryTags?.[0] && contact.industryId === event.industryTags[0]) {
+          factors.push(`industry:${contact.industryId}`)
+        }
+        if (contact.city === 'Jakarta') factors.push('location:jakarta')
+        if (contact.completenessScore > 0.7) factors.push('completeness:high')
+        return {
+          contactId: contact.id,
+          name: contact.name,
+          email: contact.email,
+          phone: contact.phone,
+          industryId: contact.industryId,
+          city: contact.city,
+          companySize: contact.companySize,
+          score,
+          factors,
+          reliabilityRate: (score % 10) / 10,
+        }
+      })
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 20)
+
+    const response: AudienceRecommendationsResponse = {
+      recommendations,
+      totalMatched: eligible.length,
+      totalExcluded,
+      excludedReasons,
+    }
+    return HttpResponse.json(response)
   }),
 
   http.post('/api/events/:id/audience-preview', async ({ request }) => {

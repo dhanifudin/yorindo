@@ -58,7 +58,7 @@ export const templateHandlers = [
     return HttpResponse.json(newTemplate, { status: 201 })
   }),
 
-  http.patch('/api/templates/:id', async ({ params, request }) => {
+  http.put('/api/templates/:id', async ({ params, request }) => {
     await delay(400)
     const body = await request.json() as Partial<Template>
     const idx = templatesStore.findIndex((t) => t.id === params.id)

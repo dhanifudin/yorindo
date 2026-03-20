@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useFilterStore } from '@/store/filterStore'
-import type { Contact, PaginatedResponse } from '@/types/api'
+import type { Contact, PaginatedResponse, RecommendedEventsResponse } from '@/types/api'
 
 const PAGE_SIZE = 20
 
@@ -31,5 +31,16 @@ export function useContacts() {
   return useQuery({
     queryKey: ['contacts', { page, pageSize: PAGE_SIZE, industry, city, companySize, flagFilter }],
     queryFn: () => fetchContacts({ page, pageSize: PAGE_SIZE, industry, city, companySize, flagFilter }),
+  })
+}
+
+export function useRecommendedEvents(contactId: string | undefined, enabled: boolean) {
+  return useQuery({
+    queryKey: ['recommended-events', contactId],
+    queryFn: () =>
+      fetch(`/api/contacts/${contactId}/recommended-events`)
+        .then((r) => r.json()) as Promise<RecommendedEventsResponse>,
+    enabled: !!contactId && enabled,
+    staleTime: 5 * 60 * 1000,
   })
 }

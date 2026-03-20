@@ -162,7 +162,7 @@ export default function EventsPage() {
 
   const restoreMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`/api/events/${id}/restore`, { method: 'PATCH' })
+      const res = await fetch(`/api/events/${id}/restore`, { method: 'POST' })
       if (!res.ok) throw new Error('Restore gagal')
       return res.json()
     },

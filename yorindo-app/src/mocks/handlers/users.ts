@@ -76,7 +76,7 @@ export const userHandlers = [
     return HttpResponse.json(newUser, { status: 201 })
   }),
 
-  http.patch('/api/users/:id', async ({ params, request }) => {
+  http.put('/api/users/:id', async ({ params, request }) => {
     await delay(300)
     const body = await request.json() as Partial<Pick<User, 'name' | 'role'>>
     const idx = usersStore.findIndex((u) => u.id === params.id)

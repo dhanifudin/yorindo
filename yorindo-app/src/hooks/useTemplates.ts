@@ -30,7 +30,7 @@ async function createTemplate(body: CreateTemplateBody): Promise<Template> {
 
 async function updateTemplate({ id, ...body }: UpdateTemplateBody & { id: string }): Promise<Template> {
   const res = await fetch(`/api/templates/${id}`, {
-    method: 'PATCH',
+    method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })

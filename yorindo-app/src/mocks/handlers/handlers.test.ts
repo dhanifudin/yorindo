@@ -96,7 +96,7 @@ describe('Registrations handler', () => {
 
     // Then approve it
     const approveRes = await fetch(`/api/registrations/${created.id}/status`, {
-      method: 'PATCH',
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: 'approved' }),
     })

@@ -289,6 +289,22 @@ components:
           type: object
           additionalProperties: true
           description: Survey template schema (JSONB)
+        industryTags:
+          type: array
+          items:
+            type: string
+          example: [teknologi, keuangan]
+          description: Industry tags used for AI audience matching
+        eventType:
+          type: string
+          enum: [conference, workshop, networking, seminar, webinar]
+          example: conference
+        topicTags:
+          type: array
+          items:
+            type: string
+          example: [fintech, digital-banking]
+          description: Topic tags used for AI audience matching
         createdAt:
           type: string
           format: date-time
@@ -316,6 +332,17 @@ components:
         capacity:
           type: integer
           minimum: 1
+        industryTags:
+          type: array
+          items:
+            type: string
+        eventType:
+          type: string
+          enum: [conference, workshop, networking, seminar, webinar]
+        topicTags:
+          type: array
+          items:
+            type: string
         targetCriteria:
           type: object
           additionalProperties: true
@@ -404,6 +431,38 @@ components:
           type: string
           format: date-time
           example: "2026-03-19T10:30:00.000Z"
+
+    RegistrationWithContact:
+      allOf:
+        - $ref: '#/components/schemas/Registration'
+        - type: object
+          required: [contactName, contactEmail, contactPhone, contactFlagCategory, aiScore, flagOverride]
+          properties:
+            contactName:
+              type: string
+              example: Budi Santoso
+            contactEmail:
+              type: string
+              format: email
+              example: budi@example.com
+            contactPhone:
+              type: string
+              example: "+6281234567890"
+            contactFlagCategory:
+              type: string
+              nullable: true
+              enum: [spam, not-potential, invalid-data, duplicate]
+              description: Inherited from contact record; null if no flag
+            aiScore:
+              type: integer
+              minimum: 0
+              maximum: 99
+              description: Deterministic AI suitability score (djb2 hash of contactId+eventId)
+              example: 85
+            flagOverride:
+              type: boolean
+              description: When true, the inherited flag badge is suppressed for this registration without modifying the contact record
+              example: false
 
     CreateRegistrationBody:
       type: object
@@ -683,23 +742,147 @@ components:
     # ─── Blast ─────────────────────────────────────────────────────────────────
     BlastConfigBody:
       type: object
-      required: [templateId, segmentCriteria]
+      required: [templateId, channel]
       properties:
         templateId:
           type: string
           format: uuid
-        segmentCriteria:
+        filters:
           type: object
-          additionalProperties: true
-          description: Audience targeting criteria for this blast
+          properties:
+            industry:
+              type: string
+            city:
+              type: string
+            companySize:
+              type: string
+          description: Manual audience filter criteria (omit when using contactIds)
+        contactIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: AI-curated contact list from audience recommendations (omit when using filters)
         scheduledAt:
           type: string
           format: date-time
-          description: Optional scheduled delivery time; immediate if omitted
+          description: Optional scheduled delivery time (ISO 8601 UTC, must be >= now + 5 minutes); immediate if omitted
         channel:
           type: string
-          enum: [email, whatsapp, both]
+          enum: [email, whatsapp]
           default: email
+
+    BlastJobResponse:
+      type: object
+      required: [jobId, status]
+      properties:
+        jobId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [queued, scheduled]
+        scheduledAt:
+          type: string
+          format: date-time
+          description: Present when status is 'scheduled'
+        recipientCount:
+          type: integer
+          description: Number of contacts the blast will be sent to
+
+    # ─── AI Audience Recommendations ────────────────────────────────────────────
+    AudienceRecommendation:
+      type: object
+      required: [contactId, name, email, phone, industryId, city, companySize, score, factors]
+      properties:
+        contactId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        industryId:
+          type: string
+        city:
+          type: string
+        companySize:
+          type: string
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Suitability score 0–100
+        factors:
+          type: array
+          items:
+            type: string
+          example: ['industry:teknologi', 'location:jakarta']
+        reliabilityRate:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Historical attendance rate (checked_in / registered)
+
+    AudienceRecommendationsResponse:
+      type: object
+      required: [recommendations, totalMatched, totalExcluded, excludedReasons]
+      properties:
+        recommendations:
+          type: array
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/AudienceRecommendation'
+        totalMatched:
+          type: integer
+          description: Total eligible contacts (after exclusions)
+        totalExcluded:
+          type: integer
+          description: Total contacts excluded due to flags
+        excludedReasons:
+          type: object
+          additionalProperties:
+            type: integer
+          example: {not-potential: 5, spam: 3}
+
+    RecommendedEvent:
+      type: object
+      required: [eventId, name, eventDate, status, score, factors]
+      properties:
+        eventId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        eventDate:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [published, active]
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100
+        factors:
+          type: array
+          items:
+            type: string
+
+    RecommendedEventsResponse:
+      type: object
+      required: [recommendations, totalMatched]
+      properties:
+        recommendations:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecommendedEvent'
+        totalMatched:
+          type: integer
 
 paths:
   # ─────────────────────────────────────────────────────────────────────────────
@@ -928,7 +1111,7 @@ paths:
                 $ref: '#/components/schemas/ApiError'
 
   /contacts/flagged/{id}:
-    patch:
+    post:
       summary: Approve or reject a flagged record (admin only)
       operationId: resolveFlaggedRecord
       tags: [Contacts]
@@ -979,6 +1162,46 @@ paths:
                 $ref: '#/components/schemas/ApiError'
         '404':
           description: Flagged record not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /contacts/{id}/recommended-events:
+    get:
+      summary: Get AI-recommended events for a contact (admin only)
+      operationId: getRecommendedEvents
+      tags: [Contacts]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: AI-recommended events for this contact
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecommendedEventsResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Contact not found
           content:
             application/json:
               schema:
@@ -1089,7 +1312,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiError'
-    patch:
+    put:
       summary: Update event (admin only)
       operationId: updateEvent
       tags: [Events]
@@ -1197,11 +1420,19 @@ paths:
             enum: [pending, confirmed, approved, rejected, waitlisted, attended, cancelled]
       responses:
         '200':
-          description: Paginated registrations
+          description: Paginated enriched registrations with contact details and AI scores
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedRegistrations'
+                type: object
+                required: [data, pagination]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RegistrationWithContact'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
         '401':
           description: Unauthorized
           content:
@@ -1409,6 +1640,59 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
 
+  /events/{id}/audience-recommendations:
+    get:
+      summary: Get AI-scored audience recommendations for an event (admin only)
+      operationId: getAudienceRecommendations
+      tags: [Events]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 50
+        - name: minScore
+          in: query
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+            maximum: 100
+      responses:
+        '200':
+          description: AI-scored audience recommendations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AudienceRecommendationsResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
   /events/{id}/blast:
     post:
       summary: Send blast notification to event audience (admin only)
@@ -1431,11 +1715,11 @@ paths:
               $ref: '#/components/schemas/BlastConfigBody'
       responses:
         '202':
-          description: Blast job queued
+          description: Blast job queued or scheduled
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AsyncJobResponse'
+                $ref: '#/components/schemas/BlastJobResponse'
         '400':
           description: Validation error
           content:
@@ -1570,7 +1854,7 @@ paths:
                 $ref: '#/components/schemas/ApiError'
 
   /registrations/{id}/status:
-    patch:
+    post:
       summary: Update registration status (admin only)
       operationId: updateRegistrationStatus
       tags: [Registrations]
@@ -1610,6 +1894,77 @@ paths:
                 $ref: '#/components/schemas/ApiError'
         '403':
           description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Registration not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /registrations/{id}/cancel:
+    post:
+      summary: Cancel a registration
+      operationId: cancelRegistration
+      tags: [Registrations]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Registration cancelled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Registration'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Registration not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /registrations/{id}/clear-flag:
+    post:
+      summary: Clear inherited contact flag for a registration
+      operationId: clearRegistrationFlag
+      description: >
+        Suppresses the inherited contact flag badge for this registration without
+        modifying the contact record. Sets flagOverride=true. Idempotent.
+      tags: [Registrations]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Flag cleared; returns enriched registration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistrationWithContact'
+        '401':
+          description: Unauthorized
           content:
             application/json:
               schema:
