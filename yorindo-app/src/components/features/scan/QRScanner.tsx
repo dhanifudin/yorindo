@@ -19,30 +19,31 @@ const AUTO_RESET_MS = 3000
 
 export function QRScanner({ eventId }: QRScannerProps) {
   const accessToken = useAuthStore((s) => s.accessToken)
-  const scannerRef = useRef<Html5Qrcode | null>(null)
-  const isScanningRef = useRef(true)
-  const isStartedRef = useRef(false)
+  const accessTokenRef = useRef(accessToken)
+  accessTokenRef.current = accessToken
 
   useEffect(() => {
     const elementId = 'qr-reader'
     const html5QrCode = new Html5Qrcode(elementId)
-    scannerRef.current = html5QrCode
-    isScanningRef.current = true
-    isStartedRef.current = false
+    let isMounted = true
+    let isStarted = false
+    let isScanReady = true
 
     html5QrCode
       .start(
         { facingMode: 'environment' },
         { fps: 10, qrbox: { width: 250, height: 250 } },
         async (decodedText) => {
-          if (!isScanningRef.current) return
-          isScanningRef.current = false
+          if (!isMounted || !isScanReady) return
+          isScanReady = false
           try {
             await html5QrCode.pause(true)
           } catch {
             // pause may fail if already stopped — safe to ignore
           }
-          const result = await verifyScan(decodedText, accessToken)
+          const result = await verifyScan(decodedText, accessTokenRef.current)
+
+          if (!isMounted) return
 
           if (result.type === 'success') {
             toast.success('Check-in Berhasil', { description: result.contactName })
@@ -64,7 +65,8 @@ export function QRScanner({ eventId }: QRScannerProps) {
 
           // Auto-resume after AUTO_RESET_MS so next scan is accepted
           setTimeout(async () => {
-            isScanningRef.current = true
+            if (!isMounted) return
+            isScanReady = true
             try {
               await html5QrCode.resume()
             } catch {
@@ -77,18 +79,26 @@ export function QRScanner({ eventId }: QRScannerProps) {
         }
       )
       .then(() => {
-        isStartedRef.current = true
+        isStarted = true
+        // If unmounted while start() was pending, stop immediately
+        if (!isMounted) {
+          html5QrCode.stop().catch(() => {})
+          releaseCamera(elementId)
+        }
       })
       .catch(() => {
-        // Camera access denied or not available
-        toast.error('Tiket Tidak Valid', { description: 'Kamera tidak tersedia atau akses ditolak' })
+        if (isMounted) {
+          toast.error('Kamera Tidak Tersedia', { description: 'Kamera tidak tersedia atau akses ditolak' })
+        }
       })
 
     return () => {
-      if (isStartedRef.current) {
+      isMounted = false
+      if (isStarted) {
         html5QrCode.stop().catch(() => {})
       }
-      scannerRef.current = null
+      // Always release camera tracks as a fallback
+      releaseCamera(elementId)
     }
   }, [eventId]) // restart scanner when event changes
 
@@ -98,13 +108,28 @@ export function QRScanner({ eventId }: QRScannerProps) {
         id="qr-reader"
         className="w-full flex-1 bg-black"
       />
-      <p className="mt-2 mx-4 text-xs text-muted-foreground text-center pb-2">
-        Token uji: <code className="bg-muted px-1 rounded">MOCK_INVALID</code>,{' '}
-        <code className="bg-muted px-1 rounded">MOCK_ALREADY</code>,{' '}
-        <code className="bg-muted px-1 rounded">MOCK_WRONG_EVENT</code>
-      </p>
+      {process.env.NODE_ENV === 'development' && (
+        <p className="mt-2 mx-4 text-xs text-muted-foreground text-center pb-2">
+          Token uji: <code className="bg-muted px-1 rounded">MOCK_INVALID</code>,{' '}
+          <code className="bg-muted px-1 rounded">MOCK_ALREADY</code>,{' '}
+          <code className="bg-muted px-1 rounded">MOCK_WRONG_EVENT</code>
+        </p>
+      )}
     </div>
   )
+}
+
+function releaseCamera(elementId: string) {
+  try {
+    const videoEl = document.querySelector(`#${elementId} video`) as HTMLVideoElement | null
+    if (videoEl?.srcObject) {
+      const stream = videoEl.srcObject as MediaStream
+      stream.getTracks().forEach((track) => track.stop())
+      videoEl.srcObject = null
+    }
+  } catch {
+    // DOM query may fail during teardown — safe to ignore
+  }
 }
 
 async function verifyScan(token: string, accessToken: string | null): Promise<ScanResultState> {
