@@ -13,7 +13,7 @@ interface HealthBarProps {
 export function HealthBar({ onStatClick }: HealthBarProps) {
   const { data, isLoading } = useQuery<ContactsHealth>({
     queryKey: ['contacts-health'],
-    queryFn: () => fetch('/api/contacts/health').then((r) => r.json()),
+    queryFn: () => fetch('/api/contacts/health').then((r) => { if (!r.ok) throw new Error('Failed'); return r.json() }),
   })
 
   return (

@@ -37,7 +37,7 @@ function DuplicateTriageTable({ onClose }: { onClose: () => void }) {
 
   const { data, isLoading } = useQuery<{ data: DuplicatePair[] }>({
     queryKey: ['triage-duplicates'],
-    queryFn: () => fetch('/api/contacts/duplicates?pageSize=20').then((r) => r.json()),
+    queryFn: () => fetch('/api/contacts/duplicates?pageSize=20').then((r) => { if (!r.ok) throw new Error('Failed'); return r.json() }),
   })
 
   const mergeMutation = useMutation({

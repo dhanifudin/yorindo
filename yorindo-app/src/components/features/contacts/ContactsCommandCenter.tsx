@@ -13,7 +13,7 @@ import { ContactsTable } from './ContactsTable'
 import { ContactsPagination } from './ContactsPagination'
 import { ActionToolbar } from './ActionToolbar'
 
-const FILTER_KEYS = ['industry', 'city', 'companySize', 'q']
+const FILTER_KEYS = ['industry', 'city', 'companySize', 'q', 'missingEmail']
 
 export function ContactsCommandCenter() {
   const [triageMode, setTriageMode] = useState<'flagged' | 'duplicates' | null>(null)
@@ -31,12 +31,13 @@ export function ContactsCommandCenter() {
       const params = new URLSearchParams(searchParams.toString())
       if (params.get('missingEmail') === 'true') {
         params.delete('missingEmail')
+        setFilter({ missingEmail: false })
       } else {
         params.set('missingEmail', 'true')
         params.delete('page')
+        setFilter({ missingEmail: true })
       }
       router.push(`${pathname}?${params.toString()}`)
-      setFilter({ missingEmail: true })
     } else {
       setTriageMode(type)
     }
@@ -44,10 +45,10 @@ export function ContactsCommandCenter() {
 
   return (
     <div className="p-6">
+      <h1 className="text-2xl font-bold text-gray-900 mb-6">Database Kontak</h1>
+
       <HealthBar onStatClick={handleStatClick} />
       <EventBanner />
-
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Database Kontak</h1>
 
       <ContactsFilterBar />
       <ActiveFilterPills total={contacts?.pagination.total} />

@@ -5,15 +5,17 @@ import { X } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
+import { useFilterStore } from '@/store/filterStore'
 
 const FILTER_LABELS: Record<string, string> = {
   industry: 'Industri',
   city: 'Kota',
   companySize: 'Ukuran',
   q: 'Pencarian',
+  missingEmail: 'Email Kosong',
 }
 
-const FILTER_KEYS = ['industry', 'city', 'companySize', 'q']
+const FILTER_KEYS = ['industry', 'city', 'companySize', 'q', 'missingEmail']
 
 interface ActiveFilterPillsProps {
   total?: number
@@ -23,6 +25,7 @@ export function ActiveFilterPills({ total }: ActiveFilterPillsProps) {
   const searchParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
+  const { setFilter } = useFilterStore()
 
   const activeFilters = FILTER_KEYS
     .map((key) => ({ key, value: searchParams.get(key) ?? '' }))
@@ -34,6 +37,7 @@ export function ActiveFilterPills({ total }: ActiveFilterPillsProps) {
     const params = new URLSearchParams(searchParams.toString())
     params.delete(key)
     params.delete('page')
+    if (key === 'missingEmail') setFilter({ missingEmail: false })
     router.push(`${pathname}?${params.toString()}`)
   }
 
@@ -41,6 +45,7 @@ export function ActiveFilterPills({ total }: ActiveFilterPillsProps) {
     const params = new URLSearchParams(searchParams.toString())
     FILTER_KEYS.forEach((k) => params.delete(k))
     params.delete('page')
+    setFilter({ missingEmail: false })
     router.push(`${pathname}?${params.toString()}`)
   }
 

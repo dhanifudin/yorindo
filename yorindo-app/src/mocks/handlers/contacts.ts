@@ -84,7 +84,7 @@ export const contactHandlers = [
     if (missingEmail) filtered = filtered.filter((c) => !c.email)
     if (q) filtered = filtered.filter((c) =>
       c.name.toLowerCase().includes(q.toLowerCase()) ||
-      c.email.toLowerCase().includes(q.toLowerCase()) ||
+      c.email?.toLowerCase().includes(q.toLowerCase()) ||
       c.city.toLowerCase().includes(q.toLowerCase())
     )
 

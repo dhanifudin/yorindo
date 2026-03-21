@@ -20,7 +20,7 @@ export function EventBanner() {
   const router = useRouter()
   const { data, isLoading } = useQuery<UpcomingUncontactedEvent>({
     queryKey: ['upcoming-uncontacted'],
-    queryFn: () => fetch('/api/events/upcoming-uncontacted').then((r) => r.json()),
+    queryFn: () => fetch('/api/events/upcoming-uncontacted').then((r) => { if (!r.ok) throw new Error('Failed'); return r.json() }),
     staleTime: 5 * 60 * 1000,
   })
 
@@ -34,6 +34,7 @@ export function EventBanner() {
 
   return (
     <Alert
+      role="alert"
       className="bg-amber-50 border-amber-200 text-amber-900 flex items-center justify-between py-3 px-4 rounded-none mb-4"
       aria-live="polite"
     >
