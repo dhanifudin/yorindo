@@ -6,24 +6,45 @@ import { djb2 } from '@/lib/djb2'
 
 type StoredRegistration = Registration & { flagOverride: boolean }
 
-// Distribute registrations across the first 3 events for realistic mock data
-const EVENT_IDS = ['event-001', 'event-002', 'event-003']
-const STATUSES: Registration['status'][] = ['pending', 'approved', 'approved', 'approved', 'rejected', 'waitlisted', 'attended', 'attended', 'cancelled', 'confirmed']
+// Distribute registrations across events for realistic mock data
+// event-001: published (upcoming) — pending/approved mix, not near capacity
+// event-003: active today — mostly approved, near capacity (80), some attended
+// event-006: active today — mix of approved/attended/pending, near capacity (120)
+// event-004: completed — all attended/approved
 
-export const registrationsStore: StoredRegistration[] = Array.from({ length: 60 }, (_, i) => {
-  const status = STATUSES[i % STATUSES.length]
-  return {
-    id: `reg-${String(i + 1).padStart(3, '0')}`,
-    contactId: contactsPool[i % contactsPool.length].id,
-    eventId: EVENT_IDS[i % EVENT_IDS.length],
-    status,
-    ticketToken: status === 'approved' || status === 'attended' ? `ticket-${faker.string.alphanumeric(20)}` : null,
-    surveyAnswers: {},
-    attendedAt: status === 'attended' ? faker.date.recent({ days: 30 }).toISOString() : null,
-    createdAt: new Date(Date.now() - (60 - i) * 86400000).toISOString(),
-    flagOverride: false,
-  }
-})
+type EventRegistrationConfig = {
+  eventId: string
+  count: number
+  statusWeights: Registration['status'][]
+}
+
+const EVENT_CONFIGS: EventRegistrationConfig[] = [
+  { eventId: 'event-001', count: 35, statusWeights: ['pending', 'pending', 'approved', 'approved', 'approved', 'rejected', 'confirmed', 'confirmed', 'waitlisted', 'cancelled'] },
+  { eventId: 'event-002', count: 12, statusWeights: ['pending', 'pending', 'pending', 'approved', 'rejected', 'cancelled'] },
+  { eventId: 'event-003', count: 75, statusWeights: ['attended', 'attended', 'attended', 'attended', 'approved', 'approved', 'pending', 'rejected', 'waitlisted', 'confirmed'] },
+  { eventId: 'event-004', count: 40, statusWeights: ['attended', 'attended', 'attended', 'approved', 'cancelled', 'rejected'] },
+  { eventId: 'event-006', count: 110, statusWeights: ['attended', 'attended', 'attended', 'approved', 'approved', 'pending', 'pending', 'confirmed', 'waitlisted', 'rejected'] },
+]
+
+let regCounter = 0
+export const registrationsStore: StoredRegistration[] = EVENT_CONFIGS.flatMap(({ eventId, count, statusWeights }) =>
+  Array.from({ length: count }, (_, i) => {
+    regCounter++
+    const status = statusWeights[i % statusWeights.length]
+    const daysAgo = count - i
+    return {
+      id: `reg-${String(regCounter).padStart(3, '0')}`,
+      contactId: contactsPool[(regCounter - 1) % contactsPool.length].id,
+      eventId,
+      status,
+      ticketToken: status === 'approved' || status === 'attended' || status === 'confirmed' ? `ticket-${faker.string.alphanumeric(20)}` : null,
+      surveyAnswers: {},
+      attendedAt: status === 'attended' ? faker.date.recent({ days: 1 }).toISOString() : null,
+      createdAt: new Date(Date.now() - daysAgo * 86400000).toISOString(),
+      flagOverride: false,
+    }
+  })
+)
 
 function enrichRegistration(reg: StoredRegistration, eventId: string): RegistrationWithContact {
   const contact = contactsPool.find((c) => c.id === reg.contactId) ?? contactsPool[0]
@@ -64,9 +85,12 @@ export const registrationHandlers = [
     if (eventId) filtered = filtered.filter((r) => r.eventId === eventId)
 
     const total = filtered.length
-    const data = filtered.slice((page - 1) * pageSize, page * pageSize)
+    const paged = filtered.slice((page - 1) * pageSize, page * pageSize)
 
-    const response: PaginatedResponse<Registration> = {
+    // Enrich with contact data so RegistrationWithContact fields are available
+    const data = paged.map((r) => enrichRegistration(r, r.eventId))
+
+    const response: PaginatedResponse<RegistrationWithContact> = {
       data,
       pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
     }
@@ -175,5 +199,58 @@ export const registrationHandlers = [
         : registrationsStore[idx].attendedAt,
     }
     return HttpResponse.json(registrationsStore[idx])
+  }),
+
+  // POST /api/registrations/:id/resend-ticket — Story 4.11
+  http.post('/api/registrations/:id/resend-ticket', async ({ params }) => {
+    await delay(400)
+    const reg = registrationsStore.find((r) => r.id === params.id)
+    if (!reg) {
+      return HttpResponse.json(
+        { error: { code: 'NOT_FOUND', message: 'Registration not found', details: [] } },
+        { status: 404 }
+      )
+    }
+    return HttpResponse.json({ message: 'Ticket resent', registrationId: reg.id }, { status: 202 })
+  }),
+
+  // PUT /api/registrations/bulk-approve — must be before /:id/status (literal path before wildcard)
+  http.put('/api/registrations/bulk-approve', async ({ request }) => {
+    await delay(800)
+    const body = await request.json() as { ids: string[] }
+    let approved = 0
+    for (const id of body.ids) {
+      const idx = registrationsStore.findIndex((r) => r.id === id)
+      if (idx !== -1) {
+        registrationsStore[idx] = {
+          ...registrationsStore[idx],
+          status: 'approved',
+          ticketToken: `ticket-${faker.string.alphanumeric(20)}`,
+        }
+        approved++
+      }
+    }
+    return HttpResponse.json({ approved, total: body.ids.length })
+  }),
+
+  // PUT /api/registrations/:id/status — hub approval queue (Story 4.10)
+  http.put('/api/registrations/:id/status', async ({ params, request }) => {
+    await delay(400)
+    const body = await request.json() as { status: Registration['status'] }
+    const idx = registrationsStore.findIndex((r) => r.id === params.id)
+    if (idx === -1) {
+      return HttpResponse.json(
+        { error: { code: 'NOT_FOUND', message: 'Registration not found', details: [] } },
+        { status: 404 }
+      )
+    }
+    registrationsStore[idx] = {
+      ...registrationsStore[idx],
+      status: body.status,
+      ticketToken: body.status === 'approved'
+        ? `ticket-${faker.string.alphanumeric(20)}`
+        : registrationsStore[idx].ticketToken,
+    }
+    return HttpResponse.json(enrichRegistration(registrationsStore[idx], registrationsStore[idx].eventId))
   }),
 ]

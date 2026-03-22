@@ -12,7 +12,7 @@ Super admin can create and manage internal user accounts (admin, staff, viewer);
 **NFRs:** NFR-S1, NFR-S2, NFR-S3, NFR-S9, NFR-S10, NFR-S11
 
 ## Epic 3: Contact Database & Participant Intelligence
-Admin can build and maintain a clean, qualified participant database by importing Excel/CSV data, reviewing AI-normalized records (GPT-4o), resolving duplicate profiles, and searching/filtering contacts with AI-assisted smart industry classification.
+Admin can build and maintain a clean, qualified participant database by importing Excel/CSV data, reviewing AI-normalized records (provider-agnostic via `IEtlNormalizationService`), resolving duplicate profiles, and searching/filtering contacts with AI-assisted smart industry classification (provider-agnostic via `ISmartFilterService`).
 **FRs covered:** FR9, FR10, FR11, FR12, FR13, FR14
 **FR49 audit trail:** contact.imported, contact.merged, flagged.reviewed actions logged in this epic.
 **NFRs:** NFR-SC1, NFR-SC5, NFR-P3

@@ -1,11 +1,18 @@
 'use client'
 
-import { use, useState } from 'react'
+import { use, useState, useMemo, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Card } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import {
+  useReactTable,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  type ColumnDef,
+  type ColumnFiltersState,
+} from '@tanstack/react-table'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { Button } from '@/components/ui/button'
 import {
   Table,
   TableBody,
@@ -14,24 +21,20 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
-import { Flag, X } from 'lucide-react'
-import Link from 'next/link'
-import type { Registration, RegistrationWithContact } from '@/types/api'
+import { Flag, ChevronLeft, ChevronRight } from 'lucide-react'
+import { BulkApproveBar } from '@/components/registrasi/BulkApproveBar'
+import { AiScoreBadge } from '@/components/registrasi/AiScoreBadge'
+import { ContactSheet } from '@/components/registrasi/ContactSheet'
+import { RegistrationFilters } from '@/components/registrasi/RegistrationFilters'
+import type { Event, Registration, RegistrationWithContact } from '@/types/api'
 
 interface RegistrationsPageProps {
   params: Promise<{ id: string }>
 }
 
-const STATUS_TABS = [
-  { value: 'pending', label: 'Pending' },
-  { value: 'approved', label: 'Disetujui' },
-  { value: 'rejected', label: 'Ditolak' },
-  { value: 'waitlisted', label: 'Waitlist' },
-  { value: 'attended', label: 'Hadir' },
-]
-
-const STATUS_BADGE: Record<Registration['status'], string> = {
+const STATUS_BADGE_CLASS: Record<Registration['status'], string> = {
   pending: 'bg-orange-100 text-orange-700',
   confirmed: 'bg-blue-100 text-blue-700',
   approved: 'bg-green-100 text-green-700',
@@ -41,261 +44,469 @@ const STATUS_BADGE: Record<Registration['status'], string> = {
   cancelled: 'bg-muted text-muted-foreground',
 }
 
-function scoreBadgeClass(score: number) {
-  if (score >= 70) return 'bg-green-100 text-green-700'
-  if (score >= 40) return 'bg-yellow-100 text-yellow-700'
-  return 'bg-red-100 text-red-700'
+const STATUS_LABEL: Record<Registration['status'], string> = {
+  pending: 'Pending',
+  confirmed: 'Terkonfirmasi',
+  approved: 'Disetujui',
+  rejected: 'Ditolak',
+  waitlisted: 'Waitlist',
+  attended: 'Hadir',
+  cancelled: 'Dibatalkan',
+}
+
+async function patchRegistrationStatus(id: string, status: Registration['status']) {
+  const res = await fetch(`/api/registrations/${id}/status`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status }),
+  })
+  if (!res.ok) throw new Error('Gagal memperbarui status')
+  return res.json() as Promise<RegistrationWithContact>
 }
 
 export default function RegistrationsPage({ params }: RegistrationsPageProps) {
   const { id } = use(params)
   const queryClient = useQueryClient()
-  const [activeTab, setActiveTab] = useState('pending')
-  const [detailReg, setDetailReg] = useState<RegistrationWithContact | null>(null)
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
+  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({})
+  const [sheetIndex, setSheetIndex] = useState<number | null>(null)
+  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 20 })
+  const tableContainerRef = useRef<HTMLDivElement>(null)
 
-  const { data, isLoading } = useQuery<{ data: RegistrationWithContact[]; pagination: { total: number } }>({
-    queryKey: ['event-registrations', id, activeTab],
+  // Read event capacity from cache (loaded by layout)
+  const event = queryClient.getQueryData<Event>(['events', id])
+  const capacity = event?.capacity ?? null
+
+  const { data: rawData, isLoading } = useQuery<{ data: RegistrationWithContact[]; pagination: { total: number } }>({
+    queryKey: ['event-registrations', id],
     queryFn: () =>
-      fetch(`/api/events/${id}/registrations?status=${activeTab}&pageSize=50`).then((r) => r.json()),
+      fetch(`/api/registrations?eventId=${id}&pageSize=500`).then((r) => r.json()),
+    staleTime: 30_000,
   })
 
-  const statusMutation = useMutation({
-    mutationFn: async ({ regId, status, notes }: { regId: string; status: Registration['status']; notes?: string }) => {
-      const res = await fetch(`/api/registrations/${regId}/status`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status, notes }),
-      })
-      if (!res.ok) throw new Error('Gagal memperbarui status')
-      return res.json()
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['event-registrations', id] })
-      toast.success('Status registrasi diperbarui')
-    },
-    onError: () => toast.error('Gagal memperbarui status'),
-  })
+  const allRows = rawData?.data ?? []
 
-  const clearFlagMutation = useMutation({
-    mutationFn: async (regId: string) => {
-      const res = await fetch(`/api/registrations/${regId}/clear-flag`, { method: 'POST' })
-      if (!res.ok) throw new Error('Gagal menghapus flag')
-      return res.json() as Promise<RegistrationWithContact>
-    },
+  // Derive quota status from current data
+  const approvedCount = allRows.filter(
+    (r) => r.status === 'approved' || r.status === 'confirmed'
+  ).length
+  const quotaFull = capacity !== null && approvedCount >= capacity
+
+  // Mutations — defined BEFORE columns so they can be captured in closures
+  const approveMutation = useMutation({
+    mutationFn: (regId: string) => patchRegistrationStatus(regId, 'approved'),
     onMutate: async (regId) => {
-      await queryClient.cancelQueries({ queryKey: ['event-registrations', id, activeTab] })
-      const previous = queryClient.getQueryData(['event-registrations', id, activeTab])
+      await queryClient.cancelQueries({ queryKey: ['event-registrations', id] })
+      const previous = queryClient.getQueryData(['event-registrations', id])
       queryClient.setQueryData(
-        ['event-registrations', id, activeTab],
-        (old: { data: RegistrationWithContact[]; pagination: { total: number } } | undefined) => ({
+        ['event-registrations', id],
+        (old: { data: RegistrationWithContact[] } | undefined) => ({
           ...old,
-          data: (old?.data ?? []).map((r) => r.id === regId ? { ...r, flagOverride: true } : r),
+          data: (old?.data ?? []).map((r) =>
+            r.id === regId ? { ...r, status: 'approved' as const } : r
+          ),
         })
       )
       return { previous }
     },
-    onError: (_err, _regId, context) => {
-      queryClient.setQueryData(['event-registrations', id, activeTab], context?.previous)
-      toast.error('Gagal menghapus flag')
+    onError: (_err, _regId, ctx) => {
+      queryClient.setQueryData(['event-registrations', id], ctx?.previous)
+      toast.error('Gagal menyetujui')
+    },
+    onSuccess: () => toast.success('Peserta disetujui', { duration: 4000 }),
+  })
+
+  const waitlistMutation = useMutation({
+    mutationFn: (regId: string) => patchRegistrationStatus(regId, 'waitlisted'),
+    onMutate: async (regId) => {
+      await queryClient.cancelQueries({ queryKey: ['event-registrations', id] })
+      const previous = queryClient.getQueryData(['event-registrations', id])
+      queryClient.setQueryData(
+        ['event-registrations', id],
+        (old: { data: RegistrationWithContact[] } | undefined) => ({
+          ...old,
+          data: (old?.data ?? []).map((r) =>
+            r.id === regId ? { ...r, status: 'waitlisted' as const } : r
+          ),
+        })
+      )
+      return { previous }
+    },
+    onError: (_err, _regId, ctx) => {
+      queryClient.setQueryData(['event-registrations', id], ctx?.previous)
+      toast.error('Gagal menambah ke waitlist')
+    },
+    onSuccess: () => toast.success('Peserta ditambahkan ke waitlist (kuota penuh)', { duration: 4000 }),
+  })
+
+  const rejectMutation = useMutation({
+    mutationFn: (regId: string) => patchRegistrationStatus(regId, 'rejected'),
+    onMutate: async (regId) => {
+      await queryClient.cancelQueries({ queryKey: ['event-registrations', id] })
+      const previous = queryClient.getQueryData(['event-registrations', id])
+      queryClient.setQueryData(
+        ['event-registrations', id],
+        (old: { data: RegistrationWithContact[] } | undefined) => ({
+          ...old,
+          data: (old?.data ?? []).map((r) =>
+            r.id === regId ? { ...r, status: 'rejected' as const } : r
+          ),
+        })
+      )
+      return { previous, regId }
+    },
+    onSuccess: (_data, regId) => {
+      toast('Ditolak', {
+        action: {
+          label: 'Batalkan',
+          onClick: () => patchRegistrationStatus(regId, 'pending').then(() =>
+            queryClient.invalidateQueries({ queryKey: ['event-registrations', id] })
+          ),
+        },
+        duration: 2000,
+      })
+    },
+    onError: (_err, _regId, ctx) => {
+      queryClient.setQueryData(['event-registrations', id], ctx?.previous)
+      toast.error('Gagal menolak')
     },
   })
 
-  const sortedData = activeTab === 'pending'
-    ? [...(data?.data ?? [])].sort((a, b) => b.aiScore - a.aiScore)
-    : (data?.data ?? [])
+  const bulkApproveMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const res = await fetch('/api/registrations/bulk-approve', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids }),
+      })
+      if (!res.ok) throw new Error('Gagal bulk approve')
+      return res.json()
+    },
+    onSuccess: (_data, ids) => {
+      queryClient.setQueryData(
+        ['event-registrations', id],
+        (old: { data: RegistrationWithContact[] } | undefined) => ({
+          ...old,
+          data: (old?.data ?? []).map((r) =>
+            ids.includes(r.id) ? { ...r, status: 'approved' as const } : r
+          ),
+        })
+      )
+      toast.success(`Menyetujui ${ids.length} pendaftar`, { duration: 4000 })
+      setRowSelection({})
+    },
+    onError: () => toast.error('Gagal bulk approve'),
+  })
 
-  return (
-    <div>
-      <div className="flex items-center gap-3 mb-6">
-        <Link href={`/app/events/${id}`} className="text-muted-foreground hover:text-foreground text-sm">
-          ← Kembali ke Event
-        </Link>
-      </div>
-      <h1 className="text-2xl font-bold mb-6">Manajemen Registrasi</h1>
-
-      {/* Status tabs */}
-      <div className="flex gap-1 mb-4 border-b">
-        {STATUS_TABS.map((tab) => (
-          <button
-            key={tab.value}
-            onClick={() => setActiveTab(tab.value)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px ${
-              activeTab === tab.value
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Registration detail sheet */}
-      <Sheet open={!!detailReg} onOpenChange={(v) => !v && setDetailReg(null)}>
-        <SheetContent side="bottom" className="max-h-[70vh] overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>Detail Registrasi</SheetTitle>
-          </SheetHeader>
-          <div className="space-y-3 mt-4 text-sm">
-            <div><span className="text-muted-foreground">Nama: </span><span className="font-medium">{detailReg?.contactName}</span></div>
-            <div><span className="text-muted-foreground">Email: </span>{detailReg?.contactEmail}</div>
-            <div><span className="text-muted-foreground">Telepon: </span>{detailReg?.contactPhone}</div>
-            <div>
-              <span className="text-muted-foreground">Skor AI: </span>
-              {detailReg && (
-                <Badge className={`${scoreBadgeClass(detailReg.aiScore)} text-xs ml-1`}>{detailReg.aiScore}</Badge>
-              )}
-            </div>
-            <div className="border-t pt-3">
-              <div><span className="text-muted-foreground">ID: </span><span className="font-mono text-xs">{detailReg?.id}</span></div>
-              <div className="mt-2">
-                <span className="text-muted-foreground">Status: </span>
-                {detailReg && <Badge className={STATUS_BADGE[detailReg.status]}>{detailReg.status}</Badge>}
-              </div>
-              <div className="mt-2">
-                <span className="text-muted-foreground">Terdaftar: </span>
-                {detailReg && new Date(detailReg.createdAt).toLocaleString('id-ID')}
-              </div>
-              {detailReg?.attendedAt && (
-                <div className="mt-2"><span className="text-muted-foreground">Hadir: </span>{new Date(detailReg.attendedAt).toLocaleString('id-ID')}</div>
-              )}
-            </div>
-            {Object.keys(detailReg?.surveyAnswers ?? {}).length > 0 && (
-              <div className="border-t pt-3">
-                <p className="text-xs text-muted-foreground uppercase font-medium mb-2">Jawaban Survey</p>
-                {Object.entries(detailReg?.surveyAnswers ?? {}).map(([key, value]) => (
-                  <div key={key}><span className="text-muted-foreground capitalize">{key}: </span>{String(value)}</div>
-                ))}
-              </div>
+  // Column definitions — mutations are available via closure
+  const columns = useMemo<ColumnDef<RegistrationWithContact>[]>(() => [
+    {
+      id: 'select',
+      header: ({ table }) => (
+        <input
+          type="checkbox"
+          checked={table.getIsAllRowsSelected()}
+          onChange={table.getToggleAllRowsSelectedHandler()}
+          aria-label="Pilih semua"
+          className="accent-primary"
+        />
+      ),
+      cell: ({ row }) => (
+        <input
+          type="checkbox"
+          checked={row.getIsSelected()}
+          onChange={row.getToggleSelectedHandler()}
+          onClick={(e) => e.stopPropagation()}
+          aria-label={`Pilih ${row.original.contactName}`}
+          className="accent-primary"
+        />
+      ),
+    },
+    {
+      id: 'name',
+      accessorKey: 'contactName',
+      header: 'Peserta',
+      cell: ({ row }) => {
+        const reg = row.original
+        const showFlag =
+          !reg.flagOverride &&
+          (reg.contactFlagCategory === 'spam' || reg.contactFlagCategory === 'not-potential')
+        return (
+          <div className="flex flex-col gap-0.5">
+            <button
+              className="text-sm font-medium text-left hover:underline"
+              onClick={(e) => {
+                e.stopPropagation()
+                // row.index is the filtered row index (position in filteredRows)
+                setSheetIndex(row.index)
+              }}
+            >
+              {reg.contactName}
+            </button>
+            <span className="text-xs text-muted-foreground">{reg.contactEmail}</span>
+            {showFlag && (
+              <span className="inline-flex items-center gap-1 text-xs text-red-700">
+                <Flag className="h-3 w-3" />
+                {reg.contactFlagCategory}
+              </span>
             )}
           </div>
-        </SheetContent>
-      </Sheet>
+        )
+      },
+    },
+    {
+      id: 'score',
+      accessorKey: 'aiScore',
+      header: 'Skor AI',
+      cell: ({ row }) => <AiScoreBadge score={row.original.aiScore} />,
+    },
+    {
+      id: 'status',
+      accessorKey: 'status',
+      header: 'Status',
+      filterFn: (row, _id, filterValue) => {
+        if (filterValue === 'all' || !filterValue) return true
+        return row.original.status === filterValue
+      },
+      cell: ({ row }) => (
+        <Badge className={`${STATUS_BADGE_CLASS[row.original.status]} text-xs`}>
+          {STATUS_LABEL[row.original.status]}
+        </Badge>
+      ),
+    },
+    {
+      id: 'flag',
+      accessorFn: (row) => row.contactFlagCategory && !row.flagOverride,
+      header: '',
+      filterFn: (row, _id, filterValue) => {
+        if (!filterValue) return true
+        return (
+          !row.original.flagOverride &&
+          (row.original.contactFlagCategory === 'spam' || row.original.contactFlagCategory === 'not-potential')
+        )
+      },
+      cell: () => null,
+    },
+    {
+      id: 'actions',
+      header: 'Aksi',
+      cell: ({ row }) => {
+        const reg = row.original
+        if (reg.status !== 'pending') return null
+        return (
+          <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+            <Button
+              size="sm"
+              className="h-7 text-xs"
+              variant={quotaFull ? 'outline' : 'default'}
+              onClick={() => {
+                if (quotaFull) {
+                  waitlistMutation.mutate(reg.id)
+                } else {
+                  approveMutation.mutate(reg.id)
+                }
+              }}
+              disabled={approveMutation.isPending || waitlistMutation.isPending}
+            >
+              {quotaFull ? 'Waitlist' : 'Setujui'}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs text-destructive"
+              onClick={() => rejectMutation.mutate(reg.id)}
+              disabled={rejectMutation.isPending}
+            >
+              Tolak
+            </Button>
+          </div>
+        )
+      },
+    },
+  ], [quotaFull]) // eslint-disable-line react-hooks/exhaustive-deps
 
-      {isLoading ? (
-        <div className="space-y-2">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-12 bg-muted rounded animate-pulse" />
-          ))}
+  const table = useReactTable({
+    data: allRows,
+    columns,
+    state: { columnFilters, rowSelection, pagination },
+    onColumnFiltersChange: (updater) => {
+      setColumnFilters(updater)
+      setPagination((p) => ({ ...p, pageIndex: 0 })) // reset to page 1 on filter change
+    },
+    onRowSelectionChange: setRowSelection,
+    onPaginationChange: setPagination,
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+  })
+
+  const filteredRows = table.getFilteredRowModel().rows
+  const pageRows = table.getRowModel().rows
+
+  // sheetIndex is an absolute index into filteredRows (across all pages)
+  const sheetReg = sheetIndex !== null ? filteredRows[sheetIndex]?.original ?? null : null
+
+  // AI recommendation: all pending rows with score >= 80, sorted by score desc
+  const aiRecommendedIds = useMemo(
+    () =>
+      allRows
+        .filter((r) => r.status === 'pending' && r.aiScore >= 80)
+        .sort((a, b) => b.aiScore - a.aiScore)
+        .map((r) => r.id),
+    [allRows]
+  )
+
+  const selectedIds = table
+    .getSelectedRowModel()
+    .rows.map((r) => r.original.id)
+
+  const total = rawData?.pagination?.total ?? allRows.length
+
+  // Quota info banner
+  const quotaBannerText = capacity !== null
+    ? `${approvedCount} / ${capacity} kuota terisi${quotaFull ? ' — kuota penuh, pendaftar baru akan masuk waitlist' : ''}`
+    : null
+
+  if (isLoading) {
+    return (
+      <div className="space-y-3">
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-3">
+      {/* Quota status banner */}
+      {quotaBannerText && (
+        <div className={`rounded-md border px-4 py-2 text-sm ${
+          quotaFull
+            ? 'bg-red-50 border-red-200 text-red-700'
+            : 'bg-blue-50 border-blue-200 text-blue-700'
+        }`}>
+          {quotaBannerText}
         </div>
-      ) : (
-        <Card>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="hidden md:table-cell w-10">#</TableHead>
-                <TableHead>Peserta</TableHead>
-                <TableHead className="w-16">Skor AI</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="hidden md:table-cell">Terdaftar</TableHead>
-                {activeTab === 'waitlisted' && <TableHead className="hidden md:table-cell w-16">Posisi</TableHead>}
-                <TableHead>Aksi</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {!sortedData.length ? (
-                <TableRow>
-                  <TableCell colSpan={activeTab === 'waitlisted' ? 7 : 6} className="text-center text-muted-foreground py-8">
-                    Tidak ada registrasi dengan status {activeTab}
-                  </TableCell>
-                </TableRow>
-              ) : (
-                sortedData.map((reg, idx) => (
-                  <TableRow key={reg.id} className="cursor-pointer" onClick={() => setDetailReg(reg)}>
-                    <TableCell className="hidden md:table-cell text-muted-foreground text-xs" onClick={(e) => e.stopPropagation()}>{idx + 1}</TableCell>
-                    <TableCell onClick={(e) => e.stopPropagation()}>
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-sm font-medium">{reg.contactName}</span>
-                        <span className="text-xs text-muted-foreground">{reg.contactEmail}</span>
-                        {(reg.contactFlagCategory === 'spam' || reg.contactFlagCategory === 'not-potential') && !reg.flagOverride && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); clearFlagMutation.mutate(reg.id) }}
-                            title="Klik untuk hapus flag"
-                            className="self-start mt-0.5"
-                          >
-                            <Badge className="bg-orange-100 text-orange-700 text-xs gap-1 cursor-pointer hover:bg-orange-200">
-                              <Flag className="h-3 w-3" />
-                              {reg.contactFlagCategory}
-                              <X className="h-3 w-3" />
-                            </Badge>
-                          </button>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell onClick={(e) => e.stopPropagation()}>
-                      <Badge className={`${scoreBadgeClass(reg.aiScore)} text-xs`}>{reg.aiScore}</Badge>
-                    </TableCell>
-                    <TableCell onClick={(e) => e.stopPropagation()}>
-                      <Badge className={STATUS_BADGE[reg.status]}>{reg.status}</Badge>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell text-muted-foreground text-xs" onClick={(e) => e.stopPropagation()}>
-                      {new Date(reg.createdAt).toLocaleDateString('id-ID')}
-                    </TableCell>
-                    {activeTab === 'waitlisted' && (
-                      <TableCell className="hidden md:table-cell text-muted-foreground" onClick={(e) => e.stopPropagation()}>#{idx + 1}</TableCell>
-                    )}
-                    <TableCell onClick={(e) => e.stopPropagation()}>
-                      <div className="flex gap-1">
-                        {activeTab === 'pending' && (
-                          <>
-                            <Button
-                              size="sm"
-                              className="h-7 text-xs"
-                              onClick={() => statusMutation.mutate({ regId: reg.id, status: 'approved' })}
-                              disabled={statusMutation.isPending}
-                            >
-                              Setuju
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-7 text-xs text-destructive"
-                              onClick={() => statusMutation.mutate({ regId: reg.id, status: 'rejected' })}
-                              disabled={statusMutation.isPending}
-                            >
-                              Tolak
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-7 text-xs"
-                              onClick={() => statusMutation.mutate({ regId: reg.id, status: 'waitlisted' })}
-                              disabled={statusMutation.isPending}
-                            >
-                              Waitlist
-                            </Button>
-                          </>
-                        )}
-                        {activeTab === 'rejected' && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 text-xs"
-                            onClick={() => statusMutation.mutate({ regId: reg.id, status: 'pending' })}
-                            disabled={statusMutation.isPending}
-                          >
-                            Re-queue
-                          </Button>
-                        )}
-                        {activeTab === 'waitlisted' && (
-                          <Button
-                            size="sm"
-                            className="h-7 text-xs"
-                            onClick={() => statusMutation.mutate({ regId: reg.id, status: 'approved' })}
-                            disabled={statusMutation.isPending}
-                          >
-                            Promosikan
-                          </Button>
-                        )}
-                      </div>
+      )}
+
+      <BulkApproveBar
+        aiRecommendedCount={aiRecommendedIds.length}
+        aiScoringStatus="complete"
+        selectedCount={selectedIds.length}
+        onBulkApprove={(ids) => bulkApproveMutation.mutate(ids)}
+        aiRecommendedIds={aiRecommendedIds}
+        selectedIds={selectedIds}
+      />
+
+      <RegistrationFilters
+        columnFilters={columnFilters}
+        onColumnFiltersChange={setColumnFilters}
+      />
+
+      <Card>
+        <CardContent className="p-0">
+          <div ref={tableContainerRef} className="overflow-auto">
+            <Table>
+              <TableHeader>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => (
+                      header.column.id === 'flag' ? null : (
+                        <TableHead key={header.id} className="text-xs">
+                          {typeof header.column.columnDef.header === 'function'
+                            ? header.column.columnDef.header(header.getContext())
+                            : header.column.columnDef.header}
+                        </TableHead>
+                      )
+                    ))}
+                  </TableRow>
+                ))}
+              </TableHeader>
+              <TableBody>
+                {pageRows.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8 text-sm">
+                      Tidak ada data sesuai filter
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </Card>
+                ) : (
+                  pageRows.map((row) => {
+                    // row.index is the row's position in filteredRows (absolute, not page-relative)
+                    const filteredIndex = filteredRows.findIndex((fr) => fr.id === row.id)
+                    return (
+                    <TableRow
+                      key={row.id}
+                      className="cursor-pointer"
+                      onClick={() => setSheetIndex(filteredIndex)}
+                    >
+                      {row.getVisibleCells().map((cell) =>
+                        cell.column.id === 'flag' ? null : (
+                          <TableCell
+                            key={cell.id}
+                            className="py-2"
+                            onClick={cell.column.id === 'select' || cell.column.id === 'actions' ? (e) => e.stopPropagation() : undefined}
+                          >
+                            {typeof cell.column.columnDef.cell === 'function'
+                              ? cell.column.columnDef.cell(cell.getContext())
+                              : null}
+                          </TableCell>
+                        )
+                      )}
+                    </TableRow>
+                  )})
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Pagination — hidden when ≤ 20 rows */}
+      {filteredRows.length > 20 && (
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-muted-foreground">
+            {pagination.pageIndex * pagination.pageSize + 1}–{Math.min((pagination.pageIndex + 1) * pagination.pageSize, filteredRows.length)} dari {filteredRows.length} registrasi · halaman {pagination.pageIndex + 1}/{table.getPageCount()}
+          </p>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 w-7 p-0"
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 w-7 p-0"
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
       )}
+
+      <ContactSheet
+        registration={sheetReg}
+        currentIndex={sheetIndex ?? 0}
+        total={filteredRows.length}
+        onClose={() => setSheetIndex(null)}
+        onNext={() => setSheetIndex((i) => Math.min((i ?? 0) + 1, filteredRows.length - 1))}
+        onPrev={() => setSheetIndex((i) => Math.max((i ?? 0) - 1, 0))}
+        onApprove={(regId) => {
+          approveMutation.mutate(regId)
+          setSheetIndex(null)
+        }}
+        onReject={(regId) => {
+          rejectMutation.mutate(regId)
+          setSheetIndex(null)
+        }}
+        isPending={approveMutation.isPending || rejectMutation.isPending}
+      />
     </div>
   )
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useUsers, useUpdateUserRole, useDeleteUser } from '@/hooks/useUsers'
 import { useAuthStore } from '@/store/authStore'
 import { UserCreateForm } from '@/components/features/users/UserCreateForm'
@@ -24,7 +24,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { TablePagination } from '@/components/ui/table-pagination'
 import type { User } from '@/types/api'
+
+const PAGE_SIZE = 20
 
 const ROLE_BADGE: Record<User['role'], string> = {
   admin: 'bg-blue-100 text-blue-700',
@@ -36,7 +39,13 @@ export default function UsersPage() {
   const [showForm, setShowForm] = useState(false)
   const [assignUser, setAssignUser] = useState<User | null>(null)
   const [detailUser, setDetailUser] = useState<User | null>(null)
+  const [usersPage, setUsersPage] = useState(0)
   const { data: users, isLoading } = useUsers()
+
+  const pagedUsers = useMemo(
+    () => (users ?? []).slice(usersPage * PAGE_SIZE, (usersPage + 1) * PAGE_SIZE),
+    [users, usersPage]
+  )
   const { mutate: updateRole } = useUpdateUserRole()
   const { mutate: deleteUser } = useDeleteUser()
   const currentUser = useAuthStore((s) => s.user)
@@ -120,7 +129,7 @@ export default function UsersPage() {
         <>
           {/* Mobile cards */}
           <div className="md:hidden space-y-2">
-            {users?.map((user) => {
+            {pagedUsers.map((user) => {
               const isSelf = user.id === currentUser?.id
               return (
                 <div
@@ -154,7 +163,7 @@ export default function UsersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {users?.map((user) => {
+                {pagedUsers.map((user) => {
                   const isSelf = user.id === currentUser?.id
                   return (
                     <TableRow key={user.id} className="cursor-pointer" onClick={() => setDetailUser(user)}>
@@ -219,6 +228,13 @@ export default function UsersPage() {
               </TableBody>
             </Table>
           </Card>
+          <TablePagination
+            page={usersPage}
+            pageSize={PAGE_SIZE}
+            total={users?.length ?? 0}
+            onPrev={() => setUsersPage((p) => Math.max(0, p - 1))}
+            onNext={() => setUsersPage((p) => p + 1)}
+          />
         </>
       )}
     </div>

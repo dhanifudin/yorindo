@@ -36,10 +36,10 @@ FR30a: If double opt-in is enabled, system sends a confirmation request on form 
 FR31: System maintains a waitlist queue and automatically promotes waitlisted participants when confirmed slots become available
 FR32: System re-queues unconfirmed waitlist slots after configurable number of failed auto-promotion attempts (default: 2)
 FR33: Staff can scan participant QR codes or barcodes to confirm event-day check-in
-FR34: Staff can initiate OTP-based identity recovery for participants who cannot present their ticket
+FR34: Staff can verify a participant's identity using their KTP (national physical ID card) — staff reads the name from the KTP, searches the participant list by name, confirms the match, and manually approves check-in with a logged reason
 FR35: Staff can search for participants by name to perform manual check-in
 FR36: Staff can manually check in a participant with a logged override reason and staff identity record
-FR37: Staff can perform all check-in actions (QR scan, OTP recovery, name search, manual override) without network connectivity; records synced on reconnect
+FR37: Staff can perform all check-in actions (QR scan, KTP name search, manual override) without network connectivity; records synced automatically on reconnect via Background Sync API
 FR38: System detects when a presented ticket belongs to a different event and notifies staff without exposing cross-event registration details
 FR39: Event admin can monitor real-time check-in progress, queue status, and attendance count during event operations
 FR40: System automatically generates a post-event attendance report upon event completion
@@ -78,7 +78,7 @@ NFR-P5: QR/barcode scan → confirmation (online mode) ≤ 2 seconds full round-
 NFR-P6: QR/barcode scan → confirmation (offline mode) ≤ 1 second (IndexedDB lookup only)
 NFR-P7: Post-event report generation ≤ 10 minutes (async background job)
 NFR-P8: Vendor magic link report delivery ≤ 24 hours after event completion
-NFR-P9: OTP delivery ≤ 30 seconds from request to message received
+NFR-P9: ~~OTP delivery ≤ 30 seconds~~ — _Superseded: OTP identity recovery replaced by KTP manual verification (FR34 updated). NFR-P9 is void._
 NFR-P10: Emergency blast queued and transmission initiated ≤ 30 seconds of admin action
 NFR-P11: POST /registrations returns 201 ≤ 3 seconds normal load, ≤ 5 seconds burst; approve/reject action ≤ 1 second
 
@@ -94,8 +94,8 @@ NFR-R6: Background sync completion after reconnect ≤ 60 seconds
 NFR-S1: All data in transit encrypted via TLS 1.2 or higher
 NFR-S2: All personal data at rest encrypted at the storage layer
 NFR-S3: JWT access tokens expire after 15 minutes; refresh tokens after 7 days; invalidated on logout via server-side token blacklist
-NFR-S4: OTP codes are single-use, expire after 5 minutes, invalidated immediately on use
-NFR-S5: OTP requests rate-limited to maximum 3 per phone number per 10-minute window
+NFR-S4: ~~OTP codes are single-use, expire after 5 minutes~~ — _Superseded: OTP replaced by KTP manual verification (FR34 updated). NFR-S4 is void._
+NFR-S5: ~~OTP requests rate-limited to maximum 3 per phone number per 10-minute window~~ — _Superseded: OTP removed. NFR-S5 is void._
 NFR-S6: All inbound webhooks (Everpro, Brevo) verified via HMAC signature; unverified requests rejected with 401
 NFR-S7: Public registration form protected by bot-detection mechanism; failed detection logs and flags — does not block registration
 NFR-S8: All authenticated API requests validated against OpenAPI spec; schema violations return 400
@@ -138,8 +138,11 @@ NFR-A2: Admin dashboard and check-in PWA fully keyboard-navigable; all interacti
 
 - **OpenAPI 3.0 Spec (Sprint 0 gate):** OpenAPI spec must be written and approved by both FE and BE tech leads before any feature code is written. This is a hard gate — both teams blocked without it. Spec lives in `yorindo-api/openapi.yaml`. MSW handlers in `yorindo-app/src/mocks/` are generated from or validated against this spec.
 
+- **Tech Stack — Authoritative:** **Next.js 14 App Router** (FE) + **Fastify + TypeScript** (BE). This is the canonical stack per Architecture.md and Epics. The PRD document references an earlier draft stack (Vite+React+Express) — **disregard PRD tech stack section; Architecture.md + Epics are source of truth.**
+
 - **Starter Template — Two Repos:**
-  - `yorindo-api`: `mkdir yorindo-api && cd yorindo-api && npm init -y && npm install fastify @fastify/cors @fastify/helmet @fastify/rate-limit @fastify/cookie @fastify/multipart pg mongodb bullmq ioredis zod dotenv pino pino-http jsonwebtoken bcrypt xlsx node-cron qrcode openai @anthropic-ai/sdk && npm install -D typescript tsx vitest @vitest/coverage-v8 @types/pg @types/node @types/jsonwebtoken @types/bcrypt @types/node-cron @types/qrcode && npx tsc --init`
+  - `yorindo-api`: `mkdir yorindo-api && cd yorindo-api && npm init -y && npm install fastify @fastify/cors @fastify/helmet @fastify/rate-limit @fastify/cookie @fastify/multipart pg mongodb bullmq ioredis zod dotenv pino pino-http jsonwebtoken bcrypt xlsx node-cron qrcode && npm install -D typescript tsx vitest @vitest/coverage-v8 @types/pg @types/node @types/jsonwebtoken @types/bcrypt @types/node-cron @types/qrcode && npx tsc --init`
+  - **AI provider SDKs are installed per `*_AI_PROVIDER` env var selection** — do NOT install all at scaffold time. Add the relevant SDK only when implementing the real adapter (Phase 2): `openai` for OpenAI, `@anthropic-ai/sdk` for Anthropic, etc. Never import AI SDKs directly in route handlers — always via the service adapter.
   - `yorindo-app`: `npx create-next-app@14 yorindo-app --typescript --tailwind --eslint --app --src-dir --import-alias "@/*"` + post-init installs (Zustand, React Query, RHF+Zod, TanStack Table, MSW, @faker-js/faker, idb, next-pwa, etc.)
 
 - **Database Migrations:** `yorindo-api/db/migrations/` — numbered SQL files run by `scripts/migrate.ts`. Must be run before any feature story begins.
@@ -156,23 +159,43 @@ NFR-A2: Admin dashboard and check-in PWA fully keyboard-navigable; all interacti
 
 - **Repository Pattern:** All DB queries exclusively in `repositories/` files. Services call repos. Routes call services. Never query DB directly from routes.
 
+- **AI Provider Abstraction — MANDATORY:** All AI calls go through service adapter interfaces. Concrete provider is selected at runtime via env vars:
+  - `ETL_AI_PROVIDER` — controls `IEtlNormalizationService` implementation (`openai` | `anthropic` | `google` | custom)
+  - `YORIMIND_AI_PROVIDER` — controls `IYoriMindService` implementation
+  - `SMART_FILTER_AI_PROVIDER` — controls `ISmartFilterService` implementation
+  - Default (Phase 1/testing): all resolve to `MockEtlNormalizationService`, `MockYoriMindService`, `MockSmartFilterService`
+  - Provider SDK packages are installed only when implementing the real adapter — never at scaffold time
+  - `ISmartFilterService` interface added to `src/interfaces/services/` (alongside existing AI service interfaces)
+
 - **Three Zustand Stores (FE — do not add more without review):** `authStore`, `eventStore`, `filterStore`
 
 - **TanStack Table v8 — server-side (manual) mode:** All tables with >1K potential rows. Client-side pagination forbidden. Pagination API: `?page=&pageSize=&sortBy=&sortDir=`
 
-- **BullMQ — two queues only:** `etl` and `blast`. Workers started from `main.ts` in same Node process as API server (MVP).
+- **BullMQ — four named queues:** `otp` (highest priority) > `emergency-blast` > `transactional` > `marketing`. Workers started from `main.ts` in same Node process as API server (MVP). _(Updated per PRD §Queue Architecture — supersedes prior "two queues" note)_
 
-- **YoriMind pattern:** node-cron daily 02:00 WIB → VPS filesystem snapshot → Redis cache TTL 24h → Claude Sonnet API on cache miss.
+- **YoriMind pattern:** node-cron daily 02:00 WIB → VPS filesystem snapshot → Redis cache TTL 24h → `IYoriMindService.analyzeEvent(snapshot)` on cache miss. Concrete AI provider resolved from `YORIMIND_AI_PROVIDER` env var via `container.ts`. Never call any AI SDK directly from `yorimind.service.ts`.
 
 - **Custom JWT auth:** Access token 15min (Zustand memory), refresh token 7d (httpOnly cookie). Token blacklist in Redis. Role resolved from DB on issue.
 
-- **Roles:** `admin` (all events), `staff` (assigned events via user_events, scan only), `viewer` (assigned events via user_events, read-only analytics)
+- **Roles:** `super_admin` (platform-wide — users, templates, vendor config, state overrides), `event_admin` (full control of assigned events), `staff` (assigned events via user_events — scan + check-in only), `vendor_client` (magic-link report access, no login), `participant` (self-service registration/data rights portal). _(Updated per PRD §Roles — supersedes prior 3-role definition; `super_admin`+`event_admin` replace prior `admin` umbrella)_
 
 - **Offline scan:** next-pwa NetworkFirst for API, CacheFirst for static. IndexedDB via `idb`. `queueScan()` + `flushScanQueue()` on reconnect.
 
 ## UX Design Requirements
 
-_No UX Design document exists for this project. UX patterns are derived from PRD user journeys and Architecture FE scaffold decisions._
+Two complete UX design specifications exist for this project:
+
+1. **Event Pipeline Hub UX** — `_bmad-output/planning-artifacts/ux-event-pipeline.md`
+   - Covers the 6-tab Event Pipeline Hub at `/app/events/:id` (Overview, Undangan, Registrasi, Konfirmasi, Check-in, Laporan)
+   - Design direction: Command Bridge composite (A+D+E)
+   - Defines 5 custom components: `<FunnelVisualization>`, `<BlockerStrip>`, `<BulkApproveBar>`, `<AiScoreBadge>`, `<ScanResultOverlay>`
+   - Includes KTP-based manual check-in (replaces OTP for identity recovery — see FR34 note below)
+   - Offline-first: Background Sync API, seamless automatic flush — no manual sync button
+
+2. **General UX Design Specification** — `_bmad-output/planning-artifacts/ux-design-specification.md`
+   - Covers broader app UX patterns, component library decisions, and design system
+
+**FR34 Decision — Resolved (2026-03-22):** KTP manual verification adopted. FR34 and Story 7.4 updated to KTP-only flow. OTP endpoints removed from Epic 7 scope. NFR-P9, NFR-S4, NFR-S5 voided.
 
 ## FR Coverage Map
 

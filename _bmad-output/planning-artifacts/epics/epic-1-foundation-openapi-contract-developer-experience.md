@@ -36,6 +36,14 @@ So that the full backend stack runs locally with a single command and matches th
 **When** Fastify's AJV schema validation (configured from `openapi.yaml`) processes the request,
 **Then** it returns HTTP 400 with `{ error: { code: 'VALIDATION_ERROR', message: '...', details: [...] } }` before the handler runs (NFR-S8)
 
+**Given** the `src/` directory structure is established,
+**Then** the following directories exist: `src/interfaces/repositories/`, `src/interfaces/services/`, `src/repositories/memory/`, `src/repositories/postgres/` (empty, Phase 2), `src/services/adapters/mock/`, `src/services/adapters/real/` (empty, Phase 2), `src/container.ts`
+
+**Given** `src/container.ts` is created,
+**Then** it exports all repository and service instances resolved from `REPOSITORY_IMPL` and `SERVICE_IMPL` env vars (defaults: `memory` and `mock` respectively); all exports are typed to their interface, not their concrete implementation class
+
+> **Note:** Full interface definitions and in-memory implementations are done in Story 1.8.
+
 ---
 
 ## Story 1.2: Database Schema Migrations
@@ -250,5 +258,49 @@ So that every merge to main automatically reaches production without manual step
 
 **Given** pipeline secrets,
 **Then** `VPS_SSH_KEY`, `VPS_HOST`, `VPS_USER`, `GHCR_TOKEN` are sourced exclusively from GitHub Actions secrets — never hardcoded
+
+---
+
+## Story 1.8: Service Adapter Scaffold & In-Memory Repository Scaffold
+
+> **Added 2026-03-21** — Sprint Change Proposal v2: Concurrent FE+BE mock-first strategy
+> **Phase:** Foundation — required before any Phase 1 BE feature work begins
+
+As a BE developer,
+I want all repository interfaces, in-memory implementations, service adapter interfaces, and mock service implementations scaffolded,
+So that all BE feature stories can be implemented in Phase 1 without any dependency on PostgreSQL, MongoDB, Redis, Brevo, Everpro, GPT-4o, or Claude.
+
+**Acceptance Criteria:**
+
+**Given** the repo is scaffolded,
+**When** `src/interfaces/repositories/` is inspected,
+**Then** TypeScript interfaces exist for: `IContactRepository`, `IEventRepository`, `IRegistrationRepository`, `IUserRepository`, `ISurveyRepository`, `IFlaggedRecordsRepository`, `ISuppressionRepository` — each with method signatures matching the OpenAPI spec (Story 1.4)
+
+**Given** `src/interfaces/services/` is inspected,
+**Then** TypeScript interfaces exist for: `IEmailService`, `IWhatsAppService`, `IEtlNormalizationService`, `IYoriMindService`, `IQueueService`, `IOtpService`
+
+**Given** `src/repositories/memory/` is inspected,
+**Then** in-memory implementations exist for all seven repository interfaces; each stores data in a local `Map` or array; all CRUD operations function correctly without a database connection
+
+**Given** `src/services/adapters/mock/` is inspected,
+**Then** mock implementations exist for all six service interfaces; each implementation:
+- Makes no network calls
+- Returns deterministic fixture data (seeded with `faker.seed(42)` or hardcoded fixtures)
+- Records calls for test assertion (e.g., `MockEmailService.getSentEmails()`)
+
+**Given** `src/container.ts` exists,
+**When** `REPOSITORY_IMPL=memory` (default),
+**Then** all DI bindings resolve to in-memory implementations
+
+**Given** `src/container.ts` exists,
+**When** `SERVICE_IMPL=mock` (default),
+**Then** all DI bindings resolve to mock service adapters
+
+**Given** the scaffold is complete,
+**When** `npm test` is run,
+**Then** unit tests for all in-memory repositories pass (CRUD operations verified); unit tests for all mock service adapters pass (call recording verified)
+
+**Given** any BE feature story in Epics 2–9 is implemented in Phase 1,
+**Then** its route handlers, services, and workers import only the interface types — never concrete repository or adapter class names — and receive implementations via `src/container.ts`
 
 ---

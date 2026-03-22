@@ -6,6 +6,25 @@
 **Depends on:** 11.1 (routing migration)
 **Sprint Change Proposal:** 2026-03-20
 
+## Status
+
+review
+
+## Dev Agent Record
+
+### Completion Notes
+
+- Tab navigation (Mendatang/Riwayat) with URL state already existed; added date range filter + mobile filter sheet
+- Date range filter uses native `<input type="date">` with `startDate`/`endDate` URL params
+- Mobile: collapsible filter Sheet (bottom drawer) with filter count badge on trigger button
+- Desktop: inline search + date range inputs + status chips + reset button
+- Filters reset on tab switch (now includes startDate/endDate)
+- TypeScript clean
+
+### File List
+
+- MODIFY: `src/app/app/events/page.tsx`
+
 ---
 
 ## Description

@@ -533,6 +533,81 @@ components:
               example: Seminar ERP Jakarta
         message:
           type: string
+        attendedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Timestamp when the participant attended (set on successful scan)
+
+    # ─── Check-in ──────────────────────────────────────────────────────────────
+    CheckinStats:
+      type: object
+      required: [approved, attended, total]
+      properties:
+        approved:
+          type: integer
+          description: Registrations with status approved (not yet attended)
+          example: 35
+        attended:
+          type: integer
+          description: Registrations with status attended
+          example: 28
+        total:
+          type: integer
+          description: Total approved + attended (eligible attendees)
+          example: 63
+
+    # ─── Bulk operations ───────────────────────────────────────────────────────
+    BulkFlagBody:
+      type: object
+      required: [ids]
+      properties:
+        ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          minItems: 1
+          description: Contact IDs to flag
+        flagCategory:
+          type: string
+          nullable: true
+          enum: [spam, not-potential, invalid-data, duplicate]
+          description: Flag to apply; null clears existing flag
+
+    BulkFlagResult:
+      type: object
+      required: [updated]
+      properties:
+        updated:
+          type: integer
+          description: Number of contacts actually updated
+          example: 5
+
+    BulkApproveBody:
+      type: object
+      required: [ids]
+      properties:
+        ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          minItems: 1
+          description: Registration IDs to approve
+
+    BulkApproveResult:
+      type: object
+      required: [approved, total]
+      properties:
+        approved:
+          type: integer
+          description: Number of registrations successfully approved
+          example: 8
+        total:
+          type: integer
+          description: Total IDs submitted
+          example: 8
 
     # ─── User ──────────────────────────────────────────────────────────────────
     User:
@@ -1080,6 +1155,45 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
 
+  /contacts/bulk-flag:
+    put:
+      summary: Bulk set or clear flag category on contacts (admin only)
+      operationId: bulkFlagContacts
+      tags: [Contacts]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkFlagBody'
+      responses:
+        '200':
+          description: Number of contacts updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkFlagResult'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
   /contacts/flagged:
     get:
       summary: List flagged records requiring review (admin only)
@@ -1560,6 +1674,40 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
 
+  /events/{id}/checkin/stats:
+    get:
+      summary: Get live check-in stats for event (admin/staff) — poll every 15s
+      operationId: getCheckinStats
+      tags: [Events]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Check-in statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckinStats'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
   /events/{id}/survey:
     get:
       summary: Get survey schema for event
@@ -1971,6 +2119,45 @@ paths:
                 $ref: '#/components/schemas/ApiError'
         '404':
           description: Registration not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /registrations/bulk-approve:
+    put:
+      summary: Bulk approve registrations and send tickets (admin/staff)
+      operationId: bulkApproveRegistrations
+      tags: [Registrations]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkApproveBody'
+      responses:
+        '200':
+          description: Approval results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkApproveResult'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Insufficient role
           content:
             application/json:
               schema:

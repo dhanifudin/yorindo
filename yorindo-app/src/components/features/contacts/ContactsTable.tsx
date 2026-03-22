@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   useReactTable,
   getCoreRowModel,
   flexRender,
   type ColumnDef,
+  type RowSelectionState,
 } from '@tanstack/react-table'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams } from 'next/navigation'
@@ -14,6 +15,7 @@ import { useFilterStore } from '@/store/filterStore'
 import type { Contact, FlagCategory, ContactHistoryItem, ContactHistoryResponse } from '@/types/api'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Table,
@@ -55,46 +57,6 @@ const STATUS_LABELS: Record<ContactHistoryItem['status'], string> = {
   waitlisted: 'Antrian',
 }
 
-const columns: ColumnDef<Contact>[] = [
-  {
-    accessorKey: 'name',
-    header: 'Nama',
-    cell: ({ row }) => {
-      const contact = row.original
-      return (
-        <div className="flex items-center gap-2">
-          <span>{contact.name}</span>
-          {contact.flagCategory && (
-            <Badge className={FLAG_LABELS[contact.flagCategory].className + ' text-[10px] px-1.5 py-0'}>
-              {FLAG_LABELS[contact.flagCategory].label}
-            </Badge>
-          )}
-        </div>
-      )
-    },
-  },
-  { accessorKey: 'email', header: 'Email' },
-  { accessorKey: 'phone', header: 'Telepon' },
-  { accessorKey: 'industryId', header: 'Industri' },
-  { accessorKey: 'city', header: 'Kota' },
-  { accessorKey: 'companySize', header: 'Ukuran Perusahaan' },
-  {
-    accessorKey: 'completenessScore',
-    header: 'Kelengkapan',
-    cell: ({ getValue }) => `${Math.round((getValue() as number) * 100)}%`,
-  },
-  {
-    accessorKey: 'createdAt',
-    header: 'Dibuat',
-    cell: ({ getValue }) =>
-      new Date(getValue() as string).toLocaleDateString('id-ID', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-      }),
-  },
-]
-
 const SKELETON_ROWS = 8
 
 const FLAG_FILTER_OPTIONS = [
@@ -103,13 +65,21 @@ const FLAG_FILTER_OPTIONS = [
   { value: 'unflagged', label: 'Tidak Ditandai' },
 ] as const
 
-export function ContactsTable() {
+interface ContactsTableProps {
+  onSelectionChange: (ids: string[]) => void
+  onToggleSelectMode: () => void
+  selectMode: boolean
+  selectedIds: string[]
+}
+
+export function ContactsTable({ onSelectionChange, onToggleSelectMode, selectMode, selectedIds }: ContactsTableProps) {
   const searchParams = useSearchParams()
   const { flagFilter, setFilter } = useFilterStore()
   const page = parseInt(searchParams.get('page') ?? '1', 10)
   const { data, isLoading, isError } = useContacts()
   const [detailContact, setDetailContact] = useState<Contact | null>(null)
   const [eventsExpanded, setEventsExpanded] = useState(false)
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
   const queryClient = useQueryClient()
 
   const { data: recommendedEventsData, isLoading: eventsLoading } = useRecommendedEvents(
@@ -142,17 +112,78 @@ export function ContactsTable() {
     onError: () => toast.error('Gagal menandai kontak'),
   })
 
+  const columns: ColumnDef<Contact>[] = [
+    {
+      id: 'select',
+      header: ({ table }) => (
+        <Checkbox
+          checked={table.getIsAllPageRowsSelected()}
+          onCheckedChange={(v) => table.toggleAllPageRowsSelected(!!v)}
+          aria-label="Pilih semua"
+        />
+      ),
+      cell: ({ row }) => (
+        <Checkbox
+          checked={row.getIsSelected()}
+          onCheckedChange={(v) => row.toggleSelected(!!v)}
+          onClick={(e) => e.stopPropagation()}
+          aria-label="Pilih baris"
+        />
+      ),
+      size: 40,
+    },
+    {
+      accessorKey: 'name',
+      header: 'Nama',
+      cell: ({ row }) => {
+        const contact = row.original
+        return (
+          <div className="flex items-center gap-2">
+            <span>{contact.name}</span>
+            {contact.flagCategory && (
+              <Badge className={FLAG_LABELS[contact.flagCategory].className + ' text-[10px] px-1.5 py-0'}>
+                {FLAG_LABELS[contact.flagCategory].label}
+              </Badge>
+            )}
+          </div>
+        )
+      },
+    },
+    { accessorKey: 'phone', header: 'Telepon' },
+    { accessorKey: 'industryId', header: 'Industri' },
+    { accessorKey: 'city', header: 'Kota' },
+    {
+      accessorKey: 'completenessScore',
+      header: 'Kelengkapan',
+      cell: ({ getValue }) => `${Math.round((getValue() as number) * 100)}%`,
+    },
+  ]
+
   const table = useReactTable({
     data: data?.data ?? [],
     columns,
     pageCount: data?.pagination.totalPages ?? -1,
     state: {
       pagination: { pageIndex: page - 1, pageSize: 20 },
+      rowSelection,
     },
+    onRowSelectionChange: setRowSelection,
     getCoreRowModel: getCoreRowModel(),
+    getRowId: (row) => row.id,
     manualPagination: true,
     manualFiltering: true,
   })
+
+  // Derive stable selectedIds — useMemo with [rowSelection] avoids array reference churn
+  const derivedSelectedIds = useMemo(
+    () => table.getSelectedRowModel().rows.map((r) => r.original.id),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [rowSelection],
+  )
+
+  useEffect(() => {
+    onSelectionChange(derivedSelectedIds)
+  }, [derivedSelectedIds, onSelectionChange])
 
   if (isError) {
     return (
@@ -186,7 +217,7 @@ export function ContactsTable() {
               <TabsTrigger value="segmen">Segmen</TabsTrigger>
             </TabsList>
 
-            {/* Info tab — existing content */}
+            {/* Info tab */}
             <TabsContent value="info" className="mt-4">
               <div className="space-y-3 text-sm">
                 <div><span className="text-muted-foreground">Email: </span>{detailContact?.email || '—'}</div>
@@ -300,7 +331,7 @@ export function ContactsTable() {
               </div>
             </TabsContent>
 
-            {/* Riwayat tab — event history */}
+            {/* Riwayat tab */}
             <TabsContent value="riwayat" className="mt-4">
               {historyLoading ? (
                 <div className="space-y-2">
@@ -338,7 +369,7 @@ export function ContactsTable() {
               )}
             </TabsContent>
 
-            {/* Segmen tab — contact segment data */}
+            {/* Segmen tab */}
             <TabsContent value="segmen" className="mt-4 space-y-3 text-sm">
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -394,40 +425,87 @@ export function ContactsTable() {
         ))}
       </div>
 
-      {/* Mobile cards */}
-      <div className="md:hidden space-y-2">
-        {isLoading ? (
-          Array.from({ length: SKELETON_ROWS }).map((_, i) => (
-            <div key={i} className="rounded-lg border border-border bg-card p-3">
-              <div className="h-4 bg-muted rounded animate-pulse w-2/3" />
-              <div className="h-3 bg-muted rounded animate-pulse w-1/2 mt-2" />
-            </div>
-          ))
-        ) : (data?.data ?? []).length === 0 ? (
-          <p className="py-8 text-center text-muted-foreground">Tidak ada data kontak.</p>
-        ) : (
-          (data?.data ?? []).map((contact) => (
-            <div
-              key={contact.id}
-              className="rounded-lg border border-border bg-card p-3 cursor-pointer active:bg-muted/50"
-              onClick={() => setDetailContact(contact)}
+      {/* Mobile section */}
+      <div className="md:hidden">
+        {/* Mobile sticky select bar */}
+        <div className="sticky top-0 z-10 bg-background border-b py-2 flex items-center justify-between mb-2">
+          <button
+            type="button"
+            className="text-sm font-medium text-primary"
+            onClick={onToggleSelectMode}
+          >
+            {selectMode ? 'Batal Pilih' : 'Pilih'}
+          </button>
+          {selectMode && selectedIds.length > 0 && (
+            <span className="text-sm text-muted-foreground">{selectedIds.length} dipilih</span>
+          )}
+          {selectMode && (
+            <button
+              type="button"
+              className="text-sm font-medium"
+              onClick={() => table.toggleAllPageRowsSelected(true)}
             >
-              <div className="flex items-center gap-2">
-                <span className="font-medium text-sm">{contact.name}</span>
-                {contact.flagCategory && (
-                  <Badge className={FLAG_LABELS[contact.flagCategory].className + ' text-[10px] px-1.5 py-0'}>
-                    {FLAG_LABELS[contact.flagCategory].label}
-                  </Badge>
-                )}
+              Pilih Semua
+            </button>
+          )}
+        </div>
+
+        {/* Mobile cards */}
+        <div className="space-y-2">
+          {isLoading ? (
+            Array.from({ length: SKELETON_ROWS }).map((_, i) => (
+              <div key={i} className="rounded-lg border border-border bg-card p-3">
+                <div className="h-4 bg-muted rounded animate-pulse w-2/3" />
+                <div className="h-3 bg-muted rounded animate-pulse w-1/2 mt-2" />
               </div>
-              <div className="text-xs text-muted-foreground mt-1">
-                {contact.industryId && <span>{contact.industryId}</span>}
-                {contact.industryId && contact.phone && <span> · </span>}
-                {contact.phone && <span>{contact.phone}</span>}
-              </div>
-            </div>
-          ))
-        )}
+            ))
+          ) : table.getRowModel().rows.length === 0 ? (
+            <p className="py-8 text-center text-muted-foreground">Tidak ada data kontak.</p>
+          ) : (
+            table.getRowModel().rows.map((row) => {
+              const contact = row.original
+              return (
+                <div
+                  key={contact.id}
+                  className={`rounded-lg border border-border bg-card p-3 cursor-pointer active:bg-muted/50 flex items-center gap-2 ${
+                    row.getIsSelected() ? 'bg-muted/30' : ''
+                  }`}
+                  onClick={() => {
+                    if (selectMode) {
+                      row.toggleSelected()
+                    } else {
+                      setDetailContact(contact)
+                    }
+                  }}
+                >
+                  {selectMode && (
+                    <Checkbox
+                      checked={row.getIsSelected()}
+                      onCheckedChange={(v) => row.toggleSelected(!!v)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex-shrink-0"
+                    />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-sm">{contact.name}</span>
+                      {contact.flagCategory && (
+                        <Badge className={FLAG_LABELS[contact.flagCategory].className + ' text-[10px] px-1.5 py-0'}>
+                          {FLAG_LABELS[contact.flagCategory].label}
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {contact.industryId && <span>{contact.industryId}</span>}
+                      {contact.industryId && contact.phone && <span> · </span>}
+                      {contact.phone && <span>{contact.phone}</span>}
+                    </div>
+                  </div>
+                </div>
+              )
+            })
+          )}
+        </div>
       </div>
 
       {/* Desktop table */}
@@ -465,14 +543,13 @@ export function ContactsTable() {
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
-                  className="cursor-pointer"
+                  className={`cursor-pointer ${row.getIsSelected() ? 'bg-muted/30' : ''}`}
                   onClick={() => setDetailContact(row.original)}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell
                       key={cell.id}
                       className="whitespace-nowrap"
-                      onClick={(e) => e.stopPropagation()}
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>

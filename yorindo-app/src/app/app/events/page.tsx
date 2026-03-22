@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { useEvents } from '@/hooks/useEvents'
@@ -9,6 +9,7 @@ import { EventCreateForm } from '@/components/features/events/EventCreateForm'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Card, CardContent } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import {
@@ -19,9 +20,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet'
 import { toast } from 'sonner'
+import { TablePagination } from '@/components/ui/table-pagination'
 import type { Event } from '@/types/api'
+
+const PAGE_SIZE = 20
 
 const STATUS_BADGE: Record<Event['status'], { label: string; className: string }> = {
   draft: { label: 'Draft', className: 'bg-muted text-muted-foreground' },
@@ -46,6 +50,8 @@ export default function EventsPage() {
   const [showDeleted, setShowDeleted] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Event | null>(null)
   const [detailEvent, setDetailEvent] = useState<Event | null>(null)
+  const [showFilterSheet, setShowFilterSheet] = useState(false)
+  const [eventsPage, setEventsPage] = useState(0)
   const { data, isLoading } = useEvents()
   const { setSelectedEvent } = useEventStore()
   const queryClient = useQueryClient()
@@ -57,6 +63,8 @@ export default function EventsPage() {
   const activeTab = (searchParams.get('tab') as TabValue) || 'upcoming'
   const activeStatus = searchParams.get('status') as Event['status'] | null
   const searchQuery = searchParams.get('search') || ''
+  const startDate = searchParams.get('startDate') || ''
+  const endDate = searchParams.get('endDate') || ''
 
   const updateParams = useCallback(
     (updates: Record<string, string | null>) => {
@@ -78,8 +86,8 @@ export default function EventsPage() {
 
   const setTab = useCallback(
     (tab: TabValue) => {
-      // Switching tabs clears status filter and search
-      updateParams({ tab: tab === 'upcoming' ? null : tab, status: null, search: null })
+      updateParams({ tab: tab === 'upcoming' ? null : tab, status: null, search: null, startDate: null, endDate: null })
+      setEventsPage(0)
     },
     [updateParams],
   )
@@ -97,6 +105,8 @@ export default function EventsPage() {
     },
     [updateParams],
   )
+
+  const activeFilterCount = [activeStatus, searchQuery, startDate, endDate].filter(Boolean).length
 
   // Derived data
   const allEvents = data?.data ?? []
@@ -124,12 +134,25 @@ export default function EventsPage() {
       events = events.filter((e) => e.name.toLowerCase().includes(q))
     }
 
+    // Date range filter
+    if (startDate) {
+      events = events.filter((e) => e.eventDate.slice(0, 10) >= startDate)
+    }
+    if (endDate) {
+      events = events.filter((e) => e.eventDate.slice(0, 10) <= endDate)
+    }
+
     // Sort: upcoming = ascending by date, history = descending
     return [...events].sort((a, b) => {
       const diff = new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime()
       return activeTab === 'upcoming' ? diff : -diff
     })
-  }, [tabEvents, activeStatus, searchQuery, tabStatuses, activeTab])
+  }, [tabEvents, activeStatus, searchQuery, tabStatuses, activeTab, startDate, endDate])
+
+  // Reset to page 0 when filters change
+  useEffect(() => { setEventsPage(0) }, [activeStatus, searchQuery, startDate, endDate, activeTab])
+
+  const pagedEvents = filteredEvents.slice(eventsPage * PAGE_SIZE, (eventsPage + 1) * PAGE_SIZE)
 
   // Status counts for chips
   const statusCounts = useMemo(() => {
@@ -227,6 +250,81 @@ export default function EventsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Mobile filter sheet */}
+      <Sheet open={showFilterSheet} onOpenChange={setShowFilterSheet}>
+        <SheetContent side="bottom" className="max-h-[70vh] overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Filter</SheetTitle>
+          </SheetHeader>
+          <div className="space-y-4 mt-4">
+            <div>
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide mb-2 block">Cari Event</Label>
+              <Input
+                type="search"
+                placeholder="Nama event..."
+                value={searchQuery}
+                onChange={(e) => updateParams({ search: e.target.value || null })}
+              />
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide mb-2 block">Status</Label>
+              <div className="flex flex-wrap gap-2">
+                {tabStatuses.map((status) => {
+                  const isActive = activeStatus === status
+                  const badge = STATUS_BADGE[status]
+                  const count = statusCounts[status] ?? 0
+                  return (
+                    <button
+                      key={status}
+                      type="button"
+                      onClick={() => updateParams({ status: isActive ? null : status })}
+                      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                        isActive
+                          ? 'border-primary bg-primary/10 text-primary'
+                          : 'border-border text-muted-foreground hover:bg-muted'
+                      }`}
+                    >
+                      {badge.label}
+                      <span className="text-muted-foreground">({count})</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs text-muted-foreground uppercase tracking-wide mb-2 block">Dari Tanggal</Label>
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => updateParams({ startDate: e.target.value || null })}
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground uppercase tracking-wide mb-2 block">Sampai Tanggal</Label>
+                <Input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => updateParams({ endDate: e.target.value || null })}
+                />
+              </div>
+            </div>
+          </div>
+          <SheetFooter className="mt-6">
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                updateParams({ status: null, search: null, startDate: null, endDate: null })
+                setShowFilterSheet(false)
+              }}
+            >
+              Reset Filter
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
 
       {/* Event detail sheet (mobile) */}
       <Sheet open={!!detailEvent} onOpenChange={(v) => !v && setDetailEvent(null)}>
@@ -356,15 +454,61 @@ export default function EventsPage() {
             </button>
           </div>
 
-          {/* Filters: search + status chips */}
-          <div className="space-y-3 mb-4">
-            <Input
-              type="search"
-              placeholder="Cari nama event..."
-              value={searchQuery}
-              onChange={(e) => setSearch(e.target.value)}
-              className="max-w-sm"
-            />
+          {/* Mobile: filter button */}
+          <div className="md:hidden flex items-center gap-2 mb-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowFilterSheet(true)}
+              className="relative"
+            >
+              Filter
+              {activeFilterCount > 0 && (
+                <Badge className="ml-2 h-4 w-4 p-0 flex items-center justify-center text-[10px]">
+                  {activeFilterCount}
+                </Badge>
+              )}
+            </Button>
+            {searchQuery && (
+              <span className="text-xs text-muted-foreground">"{searchQuery}"</span>
+            )}
+          </div>
+
+          {/* Desktop: search + status chips + date range */}
+          <div className="hidden md:block space-y-3 mb-4">
+            <div className="flex items-center gap-3">
+              <Input
+                type="search"
+                placeholder="Cari nama event..."
+                value={searchQuery}
+                onChange={(e) => setSearch(e.target.value)}
+                className="max-w-sm"
+              />
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(e) => updateParams({ startDate: e.target.value || null })}
+                className="w-40"
+                title="Dari tanggal"
+              />
+              <span className="text-muted-foreground text-sm">—</span>
+              <Input
+                type="date"
+                value={endDate}
+                onChange={(e) => updateParams({ endDate: e.target.value || null })}
+                className="w-40"
+                title="Sampai tanggal"
+              />
+              {activeFilterCount > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => updateParams({ status: null, search: null, startDate: null, endDate: null })}
+                >
+                  Reset
+                </Button>
+              )}
+            </div>
             <div className="flex flex-wrap gap-2">
               {tabStatuses.map((status) => {
                 const isActive = activeStatus === status
@@ -407,7 +551,7 @@ export default function EventsPage() {
             <>
               {/* Mobile cards */}
               <div className="md:hidden space-y-2">
-                {filteredEvents.map((event) => {
+                {pagedEvents.map((event) => {
                   const badge = STATUS_BADGE[event.status] ?? STATUS_BADGE.draft
                   return (
                     <div
@@ -459,7 +603,7 @@ export default function EventsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredEvents.map((event) => {
+                    {pagedEvents.map((event) => {
                       const badge = STATUS_BADGE[event.status] ?? STATUS_BADGE.draft
                       return (
                         <TableRow
@@ -507,6 +651,13 @@ export default function EventsPage() {
                   </TableBody>
                 </Table>
               </Card>
+              <TablePagination
+                page={eventsPage}
+                pageSize={PAGE_SIZE}
+                total={filteredEvents.length}
+                onPrev={() => setEventsPage((p) => Math.max(0, p - 1))}
+                onNext={() => setEventsPage((p) => p + 1)}
+              />
             </>
           )}
         </>

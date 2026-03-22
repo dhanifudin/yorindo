@@ -1,268 +1,156 @@
 'use client'
 
-import { use, useCallback, useState } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
-import { toast } from 'sonner'
-import Link from 'next/link'
-import { useEvent } from '@/hooks/useEvents'
-import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { use } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { Copy, ExternalLink, Users } from 'lucide-react'
-import { EventLifecycleControls } from '@/components/features/events/EventLifecycleControls'
-import { EventCloneDialog } from '@/components/features/events/EventCloneDialog'
-import { SurveyBuilder } from '@/components/features/events/SurveyBuilder'
-import { AttendanceMonitor } from '@/components/features/events/AttendanceMonitor'
-import { YoriMindPanel } from '@/components/features/events/YoriMindPanel'
-import { AnalyticsDashboard } from '@/components/features/events/AnalyticsDashboard'
-import { AudienceRecommendationsCard } from '@/components/features/events/AudienceRecommendationsCard'
-import type { Registration } from '@/types/api'
+import { FunnelVisualization, getWorstHealth } from '@/components/hub/FunnelVisualization'
+import { ActionCard } from '@/components/hub/ActionCard'
+import { getHealth } from '@/lib/benchmarks'
+import Link from 'next/link'
+import type { Event } from '@/types/api'
+
+interface OverviewMetrics {
+  blastCount: number
+  registrationCount: number
+  approvedCount: number
+  attendedCount: number
+  lastBlastAt: string | null
+  pendingApprovals: number
+  seatsRemaining: number | null
+  daysUntilEvent: number
+}
 
 interface EventDetailPageProps {
   params: Promise<{ id: string }>
 }
 
-const STATUS_BADGE: Record<string, string> = {
-  draft: 'bg-muted text-muted-foreground',
-  published: 'bg-blue-100 text-blue-700',
-  active: 'bg-green-100 text-green-700',
-  completed: 'bg-purple-100 text-purple-700',
-  cancelled: 'bg-destructive/10 text-destructive',
-  archived: 'bg-muted text-muted-foreground',
+function formatDaysUntil(days: number): { text: string; className: string } {
+  if (days < 0) return { text: 'Event telah selesai', className: 'text-muted-foreground' }
+  if (days === 0) return { text: 'Hari ini!', className: 'text-red-700 font-semibold' }
+  if (days < 1) return { text: `${Math.round(days * 24)} jam lagi`, className: 'text-red-700 font-semibold' }
+  if (days < 2) return { text: 'Besok', className: 'text-amber-700 font-semibold' }
+  if (days < 7) return { text: `${days} hari lagi`, className: 'text-amber-700' }
+  return { text: `${days} hari lagi`, className: 'text-muted-foreground' }
 }
 
 export default function EventDetailPage({ params }: EventDetailPageProps) {
   const { id } = use(params)
-  const { data: event, isLoading, isError } = useEvent(id)
-  const [emergencyOpen, setEmergencyOpen] = useState(false)
-  const [emergencyMsg, setEmergencyMsg] = useState('')
+  const baseHref = `/app/events/${id}`
 
-  const { data: registrationStats } = useQuery<{ data: Registration[]; pagination: { total: number } }>({
-    queryKey: ['event-registrations', id, 'pending'],
-    queryFn: () => fetch(`/api/events/${id}/registrations?status=pending&pageSize=1`).then((r) => r.json()),
+  const { data: event } = useQuery<Event>({
+    queryKey: ['events', id],
+    queryFn: () => fetch(`/api/events/${id}`).then(r => r.json()),
+    staleTime: 60_000,
+  })
+
+  const { data: metrics, isLoading } = useQuery<OverviewMetrics>({
+    queryKey: ['event', id, 'overview'],
+    queryFn: () => fetch(`/api/events/${id}/overview`).then(r => r.json()),
+    staleTime: 60_000,
     enabled: !!id,
   })
 
-  const { data: waitlistStats } = useQuery<{ data: Registration[]; pagination: { total: number } }>({
-    queryKey: ['event-registrations', id, 'waitlisted'],
-    queryFn: () => fetch(`/api/events/${id}/registrations?status=waitlisted&pageSize=1`).then((r) => r.json()),
-    enabled: !!id,
-  })
-
-  const pendingCount = registrationStats?.pagination.total ?? 0
-  const waitlistCount = waitlistStats?.pagination.total ?? 0
-
-  const emergencyMutation = useMutation({
-    mutationFn: async () => {
-      const res = await fetch(`/api/events/${id}/blast/emergency`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: emergencyMsg, channel: 'whatsapp' }),
-      })
-      if (!res.ok) throw new Error('Emergency blast gagal')
-      return res.json()
-    },
-    onSuccess: (data) => {
-      toast.success(`Blast darurat dikirim ke ${data.recipientCount} peserta`)
-      setEmergencyOpen(false)
-      setEmergencyMsg('')
-    },
-    onError: () => toast.error('Gagal mengirim blast darurat'),
-  })
-
-  const copyRegistrationLink = useCallback((slug: string) => {
-    const url = `${window.location.origin}/register/${slug}`
-    navigator.clipboard.writeText(url).then(() => toast.success('Link disalin!'))
-  }, [])
-
-  if (isLoading) {
+  if (isLoading || !metrics || !event) {
     return (
-      <div>
-        <div className="h-8 w-64 bg-muted rounded animate-pulse mb-4" />
-        <div className="space-y-3">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-6 bg-muted rounded animate-pulse" />
-          ))}
+      <div className="space-y-4">
+        <Skeleton className="h-48 w-full" />
+        <div className="grid lg:grid-cols-[2fr_1fr] gap-4">
+          <Skeleton className="h-40" />
+          <Skeleton className="h-40" />
         </div>
       </div>
     )
   }
 
-  if (isError || !event) {
-    return <p className="text-destructive">Event tidak ditemukan.</p>
-  }
+  // Compute health for action card
+  const blastToReg = metrics.blastCount > 0 ? metrics.registrationCount / metrics.blastCount : null
+  const regToApproval = metrics.registrationCount > 0 ? metrics.approvedCount / metrics.registrationCount : null
+  const blastHealth = metrics.blastCount === 0 ? 'bad' as const : blastToReg !== null ? getHealth(blastToReg, 'blastToRegistration') : 'pending' as const
+  const regHealth = regToApproval !== null ? getHealth(regToApproval, 'registrationToApproval') : 'pending' as const
+
+  const hasActionCard = metrics.blastCount === 0 || blastHealth === 'bad' || regHealth === 'bad'
+  const daysUntil = formatDaysUntil(metrics.daysUntilEvent)
 
   return (
-    <div className="space-y-6">
-      {/* Event banner */}
-      {event.bannerUrl && (
-        <div className="rounded-lg overflow-hidden border border-border">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={event.bannerUrl}
-            alt={`Banner ${event.name}`}
-            className="w-full h-48 md:h-64 object-cover"
-          />
-        </div>
-      )}
-
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold mb-1">{event.name}</h1>
-          <p className="text-muted-foreground">{event.description}</p>
-        </div>
-        <EventCloneDialog event={event} />
-      </div>
-
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-wrap gap-8 mb-6">
-            <div>
-              <p className="text-xs text-muted-foreground uppercase font-medium">Tanggal</p>
-              <p className="text-sm mt-1">
-                {new Date(event.eventDate).toLocaleDateString('id-ID', {
-                  weekday: 'long',
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  timeZone: event.timezone,
-                })}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground uppercase font-medium">Status</p>
-              <div className="mt-1">
-                <Badge className={STATUS_BADGE[event.status] ?? 'bg-muted text-muted-foreground'}>
-                  {event.status}
-                </Badge>
-              </div>
-            </div>
-            {event.capacity && (
-              <div>
-                <p className="text-xs text-muted-foreground uppercase font-medium">Kapasitas</p>
-                <p className="text-sm mt-1">{event.capacity}</p>
-              </div>
-            )}
-          </div>
-          {event.slug && (
-            <div className="mb-4 pt-4 border-t border-border">
-              <p className="text-xs text-muted-foreground uppercase font-medium mb-2">Link Pendaftaran Publik</p>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 text-xs bg-muted px-3 py-2 rounded-md truncate text-foreground">
-                  {typeof window !== 'undefined' ? `${window.location.origin}/register/${event.slug}` : `/register/${event.slug}`}
-                </code>
-                <Button variant="outline" size="sm" onClick={() => copyRegistrationLink(event.slug!)}>
-                  <Copy className="h-3.5 w-3.5 mr-1" />
-                  Salin
-                </Button>
-                <Button variant="outline" size="sm" asChild>
-                  <a href={`/register/${event.slug}`} target="_blank" rel="noreferrer">
-                    <ExternalLink className="h-3.5 w-3.5 mr-1" />
-                    Buka
-                  </a>
-                </Button>
-              </div>
-            </div>
-          )}
-          <EventLifecycleControls event={event} />
-        </CardContent>
-      </Card>
-
-      {/* Registration management card */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-muted-foreground" />
-              <span className="text-base font-semibold">Manajemen Pendaftaran</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="destructive" size="sm" onClick={() => setEmergencyOpen(true)}>
-                Blast Darurat
-              </Button>
-              <Button asChild size="sm">
-                <Link href={`/app/events/${event.id}/registrations`}>
-                  Kelola Pendaftaran
-                </Link>
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-6 text-sm">
-            <div>
-              <p className="text-muted-foreground text-xs uppercase font-medium">Menunggu Review</p>
-              <p className="text-lg font-semibold mt-0.5">
-                {pendingCount}
-                {pendingCount > 0 && <span className="ml-1.5 text-xs font-normal text-orange-600">perlu tindakan</span>}
-              </p>
-            </div>
-            <div>
-              <p className="text-muted-foreground text-xs uppercase font-medium">Waitlist</p>
-              <p className="text-lg font-semibold mt-0.5">
-                {waitlistCount}
-                {waitlistCount > 0 && <span className="ml-1.5 text-xs font-normal text-muted-foreground">antrian</span>}
-              </p>
-            </div>
-          </div>
-          {(pendingCount > 0 || waitlistCount > 0) && (
-            <p className="text-xs text-muted-foreground mt-3">
-              {pendingCount > 0 && `${pendingCount} pendaftar menunggu persetujuan. `}
-              {waitlistCount > 0 && `${waitlistCount} pendaftar di waitlist dapat dipromosikan jika kapasitas tersedia.`}
-            </p>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Emergency blast dialog */}
-      <Dialog open={emergencyOpen} onOpenChange={(v) => !v && setEmergencyOpen(false)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Blast Darurat</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Pesan akan dikirim ke <strong>semua peserta yang sudah disetujui</strong> segera.
-          </p>
-          <div>
-            <label className="block text-xs text-muted-foreground mb-1">Pesan</label>
-            <textarea
-              value={emergencyMsg}
-              onChange={(e) => setEmergencyMsg(e.target.value)}
-              rows={4}
-              className="w-full border rounded-md px-3 py-2 text-sm"
-              placeholder="Tulis pesan darurat..."
+    <div className="space-y-4">
+      {/* Main funnel grid */}
+      <div className="grid lg:grid-cols-[2fr_1fr] gap-4">
+        {/* Left: Funnel visualization */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Pipeline Funnel</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <FunnelVisualization
+              blastCount={metrics.blastCount}
+              registrationCount={metrics.registrationCount}
+              approvedCount={metrics.approvedCount}
+              attendedCount={metrics.attendedCount}
+              eventStatus={event.status}
+              eventId={id}
             />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEmergencyOpen(false)}>Batal</Button>
-            <Button
-              variant="destructive"
-              onClick={() => emergencyMutation.mutate()}
-              disabled={!emergencyMsg.trim() || emergencyMutation.isPending}
-            >
-              {emergencyMutation.isPending ? 'Mengirim…' : 'Kirim Sekarang'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </CardContent>
+        </Card>
 
-      {/* AI audience recommendations */}
-      <AudienceRecommendationsCard eventId={event.id} />
+        {/* Right: Stats + Action card */}
+        <div className="space-y-3">
+          <Card>
+            <CardContent className="pt-4 space-y-3">
+              {/* Pending approvals */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase font-medium">Menunggu Persetujuan</p>
+                  <p className="text-2xl font-bold">{metrics.pendingApprovals}</p>
+                </div>
+                {metrics.pendingApprovals > 0 && (
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href={`${baseHref}/registrations`}>Review</Link>
+                  </Button>
+                )}
+              </div>
 
-      {/* Live attendance monitor (only for active events) */}
-      {event.status === 'active' && <AttendanceMonitor eventId={event.id} status={event.status} />}
+              <div className="border-t pt-3 space-y-2 text-sm">
+                {/* Days until */}
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Waktu tersisa</span>
+                  <span className={daysUntil.className}>{daysUntil.text}</span>
+                </div>
 
-      {/* Analytics dashboard */}
-      <AnalyticsDashboard eventId={event.id} />
+                {/* Seats remaining */}
+                {metrics.seatsRemaining !== null && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Kursi tersedia</span>
+                    <span className="font-medium">{metrics.seatsRemaining}</span>
+                  </div>
+                )}
 
-      {/* YoriMind AI panel */}
-      <YoriMindPanel eventId={event.id} />
+                {/* Last blast */}
+                {metrics.lastBlastAt && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Blast terakhir</span>
+                    <span className="text-xs">
+                      {new Date(metrics.lastBlastAt).toLocaleDateString('id-ID', {
+                        day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+                      })}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
 
-      {/* Survey builder */}
-      <SurveyBuilder eventId={event.id} />
+          {hasActionCard && (
+            <ActionCard
+              baseHref={baseHref}
+              blastHealth={blastHealth}
+              regHealth={regHealth}
+              blastCount={metrics.blastCount}
+            />
+          )}
+        </div>
+      </div>
     </div>
   )
 }

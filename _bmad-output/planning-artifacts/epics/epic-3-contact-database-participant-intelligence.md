@@ -3,7 +3,7 @@
 Admin can build and maintain a clean, qualified participant database by importing Excel/CSV data, reviewing AI-normalized records, resolving duplicate profiles, and searching/filtering contacts with AI-assisted smart industry classification.
 
 > **Phase 1 (FE):** Contacts table (TanStack Table, pagination, filter bar, smart filter input + debounce); upload form + file picker + job status poller; ETL job status page; flagged records review UI (side-by-side diff + approve/discard); duplicate merge UI (field selector); — all wired to MSW contacts/etl handlers
-> **Phase 2 (BE):** `GET /api/contacts`, `POST /api/etl/upload`, BullMQ ETL worker + GPT-4o normalization + Zod validation, `GET /api/etl/jobs/:id`, `GET/PATCH /api/contacts/flagged`, `POST /api/contacts/:id/merge`, `POST /api/smart-filter/industry` (Claude Haiku), MongoDB raw_uploads document write, all repositories
+> **Phase 2 (BE):** `GET /api/contacts`, `POST /api/etl/upload`, BullMQ ETL worker + AI normalization via `IEtlNormalizationService` adapter (provider set by `ETL_AI_PROVIDER` env var) + Zod validation, `GET /api/etl/jobs/:id`, `GET/PATCH /api/contacts/flagged`, `POST /api/contacts/:id/merge`, `POST /api/smart-filter/industry` via `ISmartFilterService` adapter (provider set by `SMART_FILTER_AI_PROVIDER` env var), MongoDB raw_uploads document write, all repositories
 >
 > **Contacts Intelligence Hub Revamp (Stories 3.7–3.12 — FE phase, wired to new MSW handlers):** HealthBar component + `/api/contacts/health` handler; FilterBar facet counts + `ActiveFilterPills` + URL state + `/api/contacts/facets` handler; `ActionToolbar` sticky blast entry; `TriagePanel` inline collapsible with optimistic updates + `/api/contacts/duplicates` handler; `EventBanner` pre-event shortcut + `/api/events/upcoming-uncontacted` handler; Contact event history tab in Sheet + `/api/contacts/:id/history` handler
 
@@ -66,10 +66,10 @@ So that I can import bulk data into the contact database without manual entry.
 
 ---
 
-## Story 3.3: ETL Processing — GPT-4o Normalization & Database Upsert
+## Story 3.3: ETL Processing — AI Normalization & Database Upsert
 
 As a system,
-I want the ETL worker to parse uploaded files, normalize records via GPT-4o in batches of 50, and upsert valid contacts into PostgreSQL,
+I want the ETL worker to parse uploaded files, normalize records via the configured AI normalization service in batches of 50, and upsert valid contacts into PostgreSQL,
 So that raw imported data becomes clean, standardized participant records automatically.
 
 **Acceptance Criteria:**
@@ -78,7 +78,7 @@ So that raw imported data becomes clean, standardized participant records automa
 **When** the file is read from `uploads_tmp`,
 **Then** `xlsx` parses it into an array of row objects and the temp file is deleted after parsing
 
-**Given** 50 rows are sent to GPT-4o with the standard system prompt,
+**Given** 50 rows are sent to the AI normalization service (`IEtlNormalizationService`) with the standard system prompt,
 **When** the response is received,
 **Then** each row has `{ name, phone, email, industry_slug, job_title_slug, city, company_size, confidence, flags[] }` and passes Zod schema validation
 
@@ -90,11 +90,11 @@ So that raw imported data becomes clean, standardized participant records automa
 **When** the ETL processes it,
 **Then** the row is inserted into `flagged_records` with the raw data and flags; it is NOT upserted into `contacts`
 
-**Given** GPT-4o returns invalid JSON or a Zod validation failure,
+**Given** the AI normalization service returns invalid JSON or a Zod validation failure,
 **When** the batch is processed,
 **Then** the batch is retried up to 3 times with exponential backoff before being marked as failed
 
-**Testing Strategy (Quinn):** ETL GPT-4o calls are never made in CI tests. The `etl.worker.ts` must accept a configurable `normalizer` function (default: GPT-4o, test override: deterministic stub returning pre-defined normalized rows). Vitest tests cover: valid batch upsert path, low-confidence flagging path, retry logic with simulated JSON parse failure. No real OpenAI API calls in test suite.
+**Testing Strategy (Quinn):** Real AI provider calls are never made in CI tests. The `etl.worker.ts` must accept a configurable `IEtlNormalizationService` implementation (default: resolved from `container.ts` via `ETL_AI_PROVIDER` env var; test override: `MockEtlNormalizationService` — deterministic stub returning pre-defined normalized rows). Vitest tests cover: valid batch upsert path, low-confidence flagging path, retry logic with simulated JSON parse failure. No real AI API calls in test suite.
 
 **Given** the ETL upsert runs for a contact row,
 **Then** `contacts.completeness_score` is computed as the integer percentage of non-null profile fields (`name`, `phone`, `email`, `company`, `industry_id`, `job_title_id`, `city`, `company_size`) and persisted alongside the upsert (FR12)
@@ -171,11 +171,11 @@ So that I don't need to know exact industry taxonomy values to filter contacts a
 **When** 500ms elapses (debounce),
 **Then** `POST /api/smart-filter/industry` is called with `{ query: 'rumah sakit' }`
 
-**Given** Claude Haiku returns a match with confidence ≥ 0.6,
+**Given** the AI smart filter service (`ISmartFilterService`) returns a match with confidence ≥ 0.6,
 **When** the response is received,
 **Then** the filter applies the matched slug (e.g., `kesehatan`) and the contact list updates
 
-**Given** Claude Haiku returns confidence < 0.6,
+**Given** the AI smart filter service returns confidence < 0.6,
 **When** the response is received,
 **Then** `{ fallback: true }` is returned and the filter displays a standard dropdown of all industry options
 

@@ -9,8 +9,10 @@ import { reportHandlers } from './reports'
 import { dataRightsHandlers } from './dataRights'
 import { userHandlers } from './users'
 import { etlHandlers } from './etl'
+import { blastHandlers } from './blast'
 
 export const handlers = [
+  ...blastHandlers,  // before eventHandlers — /api/blast/* must not be caught by event wildcard
   ...contactHandlers,
   ...eventHandlers,
   ...registrationHandlers,

@@ -191,6 +191,19 @@ export const contactHandlers = [
     return HttpResponse.json({ data, pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) } })
   }),
 
+  http.put('/api/contacts/bulk-flag', async ({ request }) => {
+    await delay(300)
+    const { ids, flagCategory } = await request.json() as { ids: string[]; flagCategory: FlagCategory | null }
+    let updated = 0
+    for (const contact of contactsPool) {
+      if (ids.includes(contact.id)) {
+        contact.flagCategory = flagCategory
+        updated++
+      }
+    }
+    return HttpResponse.json({ updated })
+  }),
+
   http.delete('/api/contacts/duplicates/:id', async () => {
     await delay(300)
     return new HttpResponse(null, { status: 204 })

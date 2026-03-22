@@ -4,11 +4,16 @@
 services:
   api:
     build: ./yorindo-api
+    command: npx tsx --watch --experimental-specifier-resolution=node src/main.ts
     volumes:
       - ./yorindo-api:/app
       - /app/node_modules
     environment:
       NODE_ENV: development
+      # tsx watch uses legacyWatch for WSL2 filesystem compatibility
+      TSX_LEGACY_WATCH: "true"
+    ports:
+      - "3000:3000"
 
   app:
     build: ./yorindo-app

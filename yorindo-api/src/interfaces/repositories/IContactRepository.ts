@@ -1,0 +1,31 @@
+import type { Contact, FacetResult, UUID } from '../../types/domain.js'
+
+export interface PaginationParams {
+  page: number
+  pageSize: number
+  sortBy?: string
+  sortDir?: 'asc' | 'desc'
+}
+
+export interface ContactFilters {
+  industry?: string
+  city?: string
+  companySize?: string
+  missingEmail?: boolean
+  flagCategory?: string
+  consentStatus?: string
+  search?: string
+}
+
+export interface IContactRepository {
+  findAll(params: PaginationParams, filters?: ContactFilters): Promise<{ data: Contact[]; total: number }>
+  findById(id: UUID): Promise<Contact | null>
+  findByPhone(phone: string): Promise<Contact | null>
+  upsert(data: Omit<Contact, 'id' | 'createdAt' | 'updatedAt'>): Promise<Contact>
+  update(id: UUID, data: Partial<Contact>): Promise<Contact | null>
+  softDelete(id: UUID): Promise<void>
+  countHealth(): Promise<{ flagged: number; duplicates: number; missingEmail: number }>
+  findFacets(): Promise<FacetResult>
+  anonymize(id: UUID, hashedPhone: string): Promise<void>
+  existsByPhoneHash(hashedPhone: string): Promise<boolean>
+}

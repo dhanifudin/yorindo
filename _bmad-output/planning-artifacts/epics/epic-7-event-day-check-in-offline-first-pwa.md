@@ -1,9 +1,9 @@
 # Epic 7: Event-Day Check-in (Offline-First PWA)
 
-Staff can run seamless event-day check-in via QR scan, OTP identity recovery, name search, and manual override — fully offline-resilient with automatic sync on reconnect and real-time attendance monitoring for admins.
+Staff can run seamless event-day check-in via QR scan, KTP name-search identity verification, and manual override — fully offline-resilient with automatic Background Sync on reconnect and real-time attendance monitoring for admins.
 
-> **Phase 1 (FE):** PWA install prompt (designed banner, not browser default); QR scanner UI (`html5-qrcode`); scan result screen (success/already-attended/invalid/wrong-event states); offline indicator + queue counter badge; sync status toast with conflict summary; OTP input flow; name search + manual override form; live attendance monitor chart (polling) — all wired to MSW scan handler (MOCK_INVALID / MOCK_ALREADY test tokens)
-> **Phase 2 (BE):** `POST /api/scan/verify`, registration status → `attended` write, `POST /api/scan/otp/request|verify`, OTP Redis storage + expiry + rate limit (NFR-S4/S5), `GET /api/events/:id/participants` (offline cache endpoint), `GET /api/events/:id/attendance` (live monitor SSE or polling), all scan repositories, audit trail writes
+> **Phase 1 (FE):** PWA install prompt (designed banner, not browser default); QR scanner UI (`html5-qrcode`); scan result screen (success/already-attended/invalid/wrong-event states); offline indicator + queue counter badge; Background Sync auto-flush with conflict summary toast; KTP identity verification flow (name search → KTP photo confirm → manual approve); name search + manual override form; live attendance monitor chart (polling) — all wired to MSW scan handler (MOCK_INVALID / MOCK_ALREADY test tokens)
+> **Phase 2 (BE):** `POST /api/scan/verify`, registration status → `attended` write, `GET /api/events/:id/participants` (offline cache endpoint), `GET /api/events/:id/attendance` (live monitor SSE or polling), all scan repositories, audit trail writes. No OTP endpoints required.
 
 ## Story 7.1: PWA Installation & Offline Participant Data Sync
 
@@ -102,29 +102,46 @@ So that no attendance record is lost due to network issues during the event.
 
 ---
 
-## Story 7.4: OTP-Based Identity Recovery
+## Story 7.4: KTP-Based Identity Verification
 
 As a staff member,
-I want to initiate OTP verification for a participant who cannot present their QR ticket,
-So that legitimate attendees are not turned away due to a lost or inaccessible ticket.
+I want to verify a participant's identity using their physical KTP (national ID card) when they cannot present their QR ticket,
+So that legitimate attendees are not turned away due to a lost or inaccessible ticket — without requiring network access to deliver an OTP.
 
 **Acceptance Criteria:**
 
 **Given** a participant cannot show their QR code,
-**When** I tap "OTP Recovery" and enter the participant's phone number,
-**Then** `POST /api/scan/otp/request` is called and an OTP is sent to the participant's registered phone via the event channel
+**When** I tap "Verifikasi KTP",
+**Then** the KTP verification flow opens: a name search field with a prompt "Masukkan nama sesuai KTP"
 
-**Given** the OTP delivery,
-**When** the message is sent,
-**Then** delivery occurs within 30 seconds (NFR-P9) and the OTP is single-use with a 5-minute expiry (NFR-S4)
+**Given** I type the participant's name from their KTP,
+**When** the search query is at least 3 characters,
+**Then** matching participant records are returned from the IndexedDB cache within 500ms (works fully offline); results are debounced and update as I type (FR35)
 
-**Given** the OTP request is made for the same phone number 4 times in 10 minutes,
-**When** the 4th request is made,
-**Then** it returns HTTP 429 — OTP rate-limited at 3 requests per phone per 10 minutes (NFR-S5)
+**Given** matching results are shown,
+**When** I select the correct participant,
+**Then** their profile card is displayed: name, company, photo (if available), and registration status — so staff can visually confirm against the physical KTP
 
-**Given** the participant provides the correct OTP,
-**When** `POST /api/scan/otp/verify` is called with `{ phone, otp }`,
-**Then** their registration is marked `attended` and the success check-in screen is shown; OTP is invalidated immediately
+**Given** the participant's profile card is shown,
+**When** I tap "Konfirmasi & Check-in",
+**Then** a confirmation dialog appears requiring a mandatory override reason entry (e.g., "Tiket tidak dapat ditampilkan — KTP diverifikasi") before proceeding (FR36)
+
+**Given** I confirm with a reason,
+**When** the check-in is submitted,
+**Then** the registration is marked `attended` via `POST /api/scan/manual-checkin` with `{ registrationId, reason: 'ktp-verified', staffNote }` and a `checkin.ktp-verified` audit entry is written with `{ actor_id (staff), reason, timestamp }`
+
+**Given** the device is offline when the KTP check-in is confirmed,
+**When** the override is submitted,
+**Then** it is stored in IndexedDB and auto-synced via Background Sync API on reconnect — identical path to manual override offline flow (FR37)
+
+**Given** a participant's registration status is `waitlisted` or `rejected`,
+**When** their profile card is displayed,
+**Then** the "Konfirmasi & Check-in" button is disabled with a clear status label — staff cannot KTP-verify a non-approved participant without a separate admin escalation
+
+**MSW Test Scenarios:**
+- Search `"Budi"` → returns 2 matching seeded participants from contactsPool
+- Search `"ZZZNOMATCH"` → returns empty results with "Tidak ditemukan" state
+- Submit with `registrationId: 'MOCK_ALREADY'` → returns conflict (already attended)
 
 ---
 

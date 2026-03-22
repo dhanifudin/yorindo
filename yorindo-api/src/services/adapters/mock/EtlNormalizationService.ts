@@ -1,0 +1,53 @@
+import type { IEtlNormalizationService, RawContactRow, NormalizedRow } from '../../../interfaces/services/IEtlNormalizationService.js'
+
+/**
+ * Mock ETL normalization service.
+ * Returns deterministic results: 80% of rows get confidence >= 0.7, 20% get < 0.7.
+ * Uses djb2 hash for determinism (same row always gets same confidence).
+ */
+function djb2(str: string): number {
+  let hash = 5381
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash * 33) ^ str.charCodeAt(i)
+  }
+  return Math.abs(hash)
+}
+
+function normalizePhone(raw: string | null | undefined): string {
+  if (!raw) return ''
+  const digits = String(raw).replace(/\D/g, '')
+  if (digits.startsWith('0')) return `+62${digits.slice(1)}`
+  if (digits.startsWith('62')) return `+${digits}`
+  return `+62${digits}`
+}
+
+export class MockEtlNormalizationService implements IEtlNormalizationService {
+  async normalizeBatch(rows: RawContactRow[]): Promise<NormalizedRow[]> {
+    return rows.map((row, index) => {
+      const key = JSON.stringify(row)
+      const hash = djb2(key + index)
+      const isLowConfidence = hash % 5 === 0  // 20% low confidence
+
+      const phone = normalizePhone(String(row.phone ?? row.telepon ?? row.no_hp ?? ''))
+      const name = String(row.name ?? row.nama ?? '').trim()
+      const flags: string[] = []
+
+      if (!name) flags.push('missing_name')
+      if (!phone || phone.length < 10) flags.push('invalid_phone')
+      if (isLowConfidence) flags.push('low_confidence')
+
+      return {
+        name: name || `Unknown ${index + 1}`,
+        phone: phone || `+628000${String(index).padStart(6, '0')}`,
+        email: row.email ? String(row.email) : null,
+        city: row.city ? String(row.city) : null,
+        company: row.company ?? row.perusahaan ? String(row.company ?? row.perusahaan) : null,
+        companySize: null,
+        industrySlug: null,
+        jobTitleSlug: null,
+        confidence: isLowConfidence ? 0.5 : 0.85,
+        flags,
+      }
+    })
+  }
+}

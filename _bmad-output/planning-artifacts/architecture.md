@@ -76,9 +76,9 @@ Three UX surfaces: public participant registration (mobile-first, zero-account),
 | IndexedDB | idb | latest | Offline scan queue for PWA |
 | Testing | Vitest + Testing Library | latest | Fast, Vite-based |
 | Containerization | Docker + Compose | latest | Dev environment only |
-| AI — ETL | OpenAI GPT-4o | via API | Contact normalization & classification |
-| AI — Analytics | Claude claude-sonnet-4-6 | via API | YoriMind event analysis |
-| AI — Smart Filter | claude-haiku-4-5-20251001 | via API | Autocomplete industry filter |
+| AI — ETL | `IEtlNormalizationService` adapter | configured via `ETL_AI_PROVIDER` | Contact normalization & classification; swap provider without code change |
+| AI — Analytics | `IYoriMindService` adapter | configured via `YORIMIND_AI_PROVIDER` | YoriMind event analysis; swap provider without code change |
+| AI — Smart Filter | `ISmartFilterService` adapter | configured via `SMART_FILTER_AI_PROVIDER` | Industry autocomplete; swap provider without code change |
 
 **Infrastructure:**
 
@@ -1628,7 +1628,7 @@ expect(parseInt(after.rows[0].count)).toBe(parseInt(before.rows[0].count) + 1)
 - Use Mongoose, Prisma, Knex, or any ORM — direct `pg` Pool for PostgreSQL, native `mongodb` driver
 - Use Express — Fastify only for backend
 - Use Pages Router in Next.js — App Router only
-- Make direct HTTP calls to OpenAI/Anthropic from route handlers — use service layer
+- Make direct HTTP calls to any AI provider from route handlers — always go through `IEtlNormalizationService` / `IYoriMindService` / `ISmartFilterService` adapters
 - Write to `audit_logs` via UPDATE/DELETE — INSERT only
 - Attempt database-level JOIN across PostgreSQL and MongoDB — Application Layer join only
 - Use auto-increment integer primary keys in PostgreSQL — UUID only
@@ -1967,8 +1967,9 @@ yorindo-app/
 **Service Boundaries:**
 - Everpro (external): only called from `blast.worker.ts` via `blast.service.ts`
 - Brevo (external): only called from `blast.worker.ts` via `blast.service.ts`
-- OpenAI (external): only called from `etl.service.ts` (GPT-4o batch normalization)
-- Anthropic (external): called from `yorimind.service.ts` (Claude Sonnet) and `app/api/smart-filter/industry/route.ts` (Claude Haiku)
+- AI ETL provider (external): only called from `etl.service.ts` via `IEtlNormalizationService` adapter — provider selected by `ETL_AI_PROVIDER` env var; concrete adapter in `services/adapters/real/`
+- AI YoriMind provider (external): called from `yorimind.service.ts` via `IYoriMindService` adapter — provider selected by `YORIMIND_AI_PROVIDER` env var
+- AI Smart Filter provider (external): called from `smartFilter.service.ts` via `ISmartFilterService` adapter — provider selected by `SMART_FILTER_AI_PROVIDER` env var
 
 ---
 
@@ -2149,5 +2150,206 @@ mkdir yorindo-api && cd yorindo-api
 npx create-next-app@14 yorindo-app --typescript --tailwind --eslint --app --src-dir --import-alias "@/*"
 # Run post-init setup (see Frontend Scaffold section)
 ```
+
+---
+
+## Repository Pattern (Expanded)
+
+> Revised 2026-03-21 — per Sprint Change Proposal v2. Enables concurrent FE+BE development with in-memory implementations before persistent storage is integrated.
+
+Cross-cutting concern #2 in this document establishes the Repository Pattern. This section provides implementation detail.
+
+### Interface Location
+
+All repository interfaces live in `src/interfaces/repositories/`. Each interface is the **only** thing that services import — never a concrete implementation directly.
+
+```
+src/
+  interfaces/
+    repositories/
+      IContactRepository.ts
+      IEventRepository.ts
+      IRegistrationRepository.ts
+      IUserRepository.ts
+      ISurveyRepository.ts
+      IFlaggedRecordsRepository.ts
+      ISuppressionRepository.ts
+    services/           ← See Service Adapter Pattern section below
+  repositories/
+    postgres/           ← Phase 2: real PostgreSQL implementations
+      ContactRepository.ts
+      EventRepository.ts
+      RegistrationRepository.ts
+      UserRepository.ts
+      FlaggedRecordsRepository.ts
+      SuppressionRepository.ts
+    mongo/              ← Phase 2: real MongoDB implementations
+      SurveyRepository.ts
+    memory/             ← Phase 1: in-memory implementations (test + dev without DB)
+      InMemoryContactRepository.ts
+      InMemoryEventRepository.ts
+      InMemoryRegistrationRepository.ts
+      InMemoryUserRepository.ts
+      InMemorySurveyRepository.ts
+      InMemoryFlaggedRecordsRepository.ts
+      InMemorySuppressionRepository.ts
+```
+
+### Example Interface
+
+```typescript
+// src/interfaces/repositories/IContactRepository.ts
+export interface IContactRepository {
+  findAll(filters: ContactFilters): Promise<PaginatedResult<Contact>>
+  findById(id: string): Promise<Contact | null>
+  upsertByPhone(contact: UpsertContactInput): Promise<Contact>
+  updateFlag(id: string, flagCategory: FlagCategory | null): Promise<Contact>
+  count(filters: ContactFilters): Promise<number>
+}
+```
+
+### DI Binding
+
+Dependency injection is done in `src/container.ts`. Phase is controlled by `REPOSITORY_IMPL=memory|postgres` env var (defaults to `memory` in development).
+
+```typescript
+// src/container.ts
+const impl = process.env.REPOSITORY_IMPL ?? 'memory'
+
+export const contactRepo: IContactRepository =
+  impl === 'postgres'
+    ? new PostgresContactRepository(pgPool)
+    : new InMemoryContactRepository()
+```
+
+Services receive the interface via constructor injection. Route handlers call services only — never repositories directly.
+
+### Phase Transition
+
+To promote a repository from in-memory to PostgreSQL:
+1. Implement `PostgresXRepository` (pass all existing unit tests)
+2. Change `REPOSITORY_IMPL=postgres` in `.env`
+3. Run `npx tsx scripts/migrate.ts`
+4. Run integration tests
+
+No service or route handler code changes required.
+
+---
+
+## Service Adapter Pattern
+
+> Added 2026-03-21 — per Sprint Change Proposal v2. Enables all external service dependencies (Brevo, Everpro, GPT-4o, Claude) to be mocked during Phase 1, swapped in Phase 2.
+
+### Interface Location
+
+All service interfaces live in `src/interfaces/services/`.
+
+```
+src/
+  interfaces/
+    services/
+      IEmailService.ts
+      IWhatsAppService.ts
+      IEtlNormalizationService.ts
+      IYoriMindService.ts
+      IQueueService.ts
+      IOtpService.ts
+  services/
+    adapters/
+      mock/             ← Phase 1: returns deterministic fixture data
+        MockEmailService.ts
+        MockWhatsAppService.ts
+        MockEtlNormalizationService.ts
+        MockYoriMindService.ts
+        MockQueueService.ts
+        MockOtpService.ts
+      real/             ← Phase 2: real external API calls
+        BrevoEmailService.ts
+        EverproWhatsAppService.ts
+        GptEtlNormalizationService.ts
+        ClaudeYoriMindService.ts
+        BullMQQueueService.ts
+        TwilioOtpService.ts  ← or SMS gateway of choice
+```
+
+### Interface Contracts
+
+```typescript
+// IEmailService.ts
+export interface IEmailService {
+  sendTransactional(to: string, templateId: string, params: Record<string, unknown>): Promise<void>
+  sendBlast(recipients: BlastRecipient[], templateId: string): Promise<BlastResult>
+}
+
+// IWhatsAppService.ts
+export interface IWhatsAppService {
+  sendMessage(to: string, templateName: string, params: Record<string, unknown>): Promise<void>
+  sendBlast(recipients: BlastRecipient[], templateName: string): Promise<BlastResult>
+}
+
+// IEtlNormalizationService.ts
+export interface IEtlNormalizationService {
+  normalizeRows(rows: RawContactRow[]): Promise<NormalizedContactRow[]>
+}
+
+// IYoriMindService.ts
+export interface IYoriMindService {
+  analyzeEvent(snapshot: EventSnapshot): Promise<YoriMindResult>
+}
+
+// IQueueService.ts
+export interface IQueueService {
+  enqueue(queueName: string, job: JobPayload): Promise<string>
+  getStatus(jobId: string): Promise<JobStatus>
+}
+```
+
+### Mock Implementations
+
+Mock implementations return deterministic, seeded fixture data — no network calls. They implement the same interface as the real adapters.
+
+```typescript
+// MockEmailService.ts — Phase 1
+export class MockEmailService implements IEmailService {
+  private sentEmails: Array<{ to: string; templateId: string; params: unknown }> = []
+
+  async sendTransactional(to: string, templateId: string, params: Record<string, unknown>) {
+    this.sentEmails.push({ to, templateId, params })
+    // No network call — records for test assertions
+  }
+
+  async sendBlast(recipients: BlastRecipient[], _templateId: string): Promise<BlastResult> {
+    return { sent: recipients.length, failed: 0, jobId: `mock-blast-${Date.now()}` }
+  }
+
+  // Test helper — not in interface
+  getSentEmails() { return this.sentEmails }
+}
+```
+
+### DI Binding
+
+Same pattern as repositories. Controlled by `SERVICE_IMPL=mock|real` env var (defaults to `mock`).
+
+```typescript
+// src/container.ts (extended)
+const svcImpl = process.env.SERVICE_IMPL ?? 'mock'
+
+export const emailService: IEmailService =
+  svcImpl === 'real'
+    ? new BrevoEmailService(config.brevoApiKey)
+    : new MockEmailService()
+```
+
+### Phase Transition
+
+To promote a service adapter from mock to real:
+1. Implement the real adapter class (implement interface, add integration test) — e.g. `OpenAIEtlAdapter`, `AnthropicYoriMindAdapter`, `GeminiSmartFilterAdapter`
+2. Change `SERVICE_IMPL=real` in `.env`
+3. Set AI provider env vars: `ETL_AI_PROVIDER`, `YORIMIND_AI_PROVIDER`, `SMART_FILTER_AI_PROVIDER` — accepted values: `openai`, `anthropic`, `google`, or any custom adapter registered in container.ts
+4. Configure provider API keys in `.env` — named by provider (e.g. `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`)
+4. Run integration tests
+
+No worker or service business logic changes required.
 
 Before writing any feature code: agree on `src/types/api.ts` contract between FE and BE teams.

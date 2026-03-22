@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Event Pipeline Hub — Design Directions</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: 'Inter', system-ui, sans-serif; background: #f8fafc; }
+  .direction-card { scroll-margin-top: 80px; }
+  .tab-active { border-bottom: 2px solid #0f172a; color: #0f172a; font-weight: 600; }
+  .tab-inactive { color: #64748b; border-bottom: 2px solid transparent; }
+  .tab-disabled { color: #cbd5e1; border-bottom: 2px solid transparent; cursor: not-allowed; }
+  .score-green { background: #dcfce7; color: #15803d; }
+  .score-amber { background: #fef3c7; color: #92400e; }
+  .score-red { background: #fee2e2; color: #b91c1c; }
+  .flag-badge { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+  .blocker-strip { background: #fffbeb; border-bottom: 1px solid #fde68a; color: #92400e; }
+  .funnel-stage { transition: width 0.3s ease; }
+  .nav-item { padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+  .nav-item:hover { background: #f1f5f9; }
+  .nav-item.active { background: #f1f5f9; font-weight: 600; }
+  .direction-nav { position: sticky; top: 0; z-index: 50; background: white; border-bottom: 1px solid #e2e8f0; padding: 12px 24px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .dir-btn { padding: 6px 14px; border-radius: 20px; font-size: 13px; cursor: pointer; border: 1px solid #e2e8f0; background: white; }
+  .dir-btn:hover { background: #f8fafc; }
+  .dir-btn.selected { background: #0f172a; color: white; border-color: #0f172a; }
+  .scan-overlay { background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); }
+  .scan-overlay-fail { background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); }
+  .confirm-btn { transition: all 0.3s ease; }
+</style>
+</head>
+<body>
+
+<!-- Direction Navigation -->
+<div class="direction-nav">
+  <span class="text-xs font-semibold text-slate-500 mr-2 self-center">DIRECTIONS:</span>
+  <button class="dir-btn selected" onclick="showDirection(1, this)">A — Command Bridge</button>
+  <button class="dir-btn" onclick="showDirection(2, this)">B — Focused Pipeline</button>
+  <button class="dir-btn" onclick="showDirection(3, this)">C — Cards-First</button>
+  <button class="dir-btn" onclick="showDirection(4, this)">D — Compact Ops</button>
+  <button class="dir-btn" onclick="showDirection(5, this)">E — Check-in Mobile</button>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     DIRECTION A — Command Bridge
+     Header with event meta + quick action. Horizontal funnel hero on Overview.
+     Prominent BlockerStrip. Full-width tab bar.
+════════════════════════════════════════════════════════════════ -->
+<div id="dir-1" class="direction-card max-w-6xl mx-auto mt-6 px-4 pb-12">
+  <div class="mb-4">
+    <h2 class="text-xl font-bold text-slate-800">Direction A — Command Bridge</h2>
+    <p class="text-sm text-slate-500 mt-1">Hero funnel + prominent blocker strip + action-forward tab content. Designed for time-pressured admins who need orientation in 2 seconds.</p>
+  </div>
+
+  <!-- Event Header -->
+  <div class="bg-white border border-slate-200 rounded-xl shadow-sm mb-0">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+      <div class="flex items-center gap-3">
+        <span class="text-xs text-slate-400">← Semua Event</span>
+        <span class="text-slate-300">|</span>
+        <div>
+          <h1 class="text-lg font-bold text-slate-900">Tech Summit Jakarta 2026</h1>
+          <div class="flex items-center gap-2 mt-0.5">
+            <span class="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full font-medium">● Published</span>
+            <span class="text-xs text-slate-400">15 April 2026 · Ritz-Carlton SCBD · Cap 200</span>
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-sm text-slate-500">200 kursi · <span class="font-semibold text-slate-700">58 disetujui</span></span>
+        <button class="bg-slate-900 text-white text-sm px-4 py-2 rounded-lg font-medium hover:bg-slate-800">Mulai Live →</button>
+      </div>
+    </div>
+
+    <!-- Tab Bar -->
+    <div class="flex border-b border-slate-100 px-6">
+      <button class="tab-active py-3 px-4 text-sm mr-1">Overview</button>
+      <button class="tab-inactive py-3 px-4 text-sm mr-1 hover:text-slate-700">Undangan</button>
+      <button class="tab-inactive py-3 px-4 text-sm mr-1 hover:text-slate-700">Registrasi <span class="ml-1 bg-amber-100 text-amber-700 text-xs px-1.5 py-0.5 rounded-full">62</span></button>
+      <button class="tab-inactive py-3 px-4 text-sm mr-1 hover:text-slate-700">Konfirmasi</button>
+      <button class="tab-disabled py-3 px-4 text-sm mr-1" title="Tersedia saat event Live">Check-in</button>
+      <button class="tab-inactive py-3 px-4 text-sm hover:text-slate-700">Laporan</button>
+    </div>
+
+    <!-- Blocker Strip -->
+    <div class="blocker-strip px-6 py-2 flex items-center gap-6 text-xs">
+      <span>⚡ <button class="underline font-medium hover:text-amber-900">62 menunggu persetujuan</button></span>
+      <span class="text-amber-300">|</span>
+      <span><button class="underline hover:text-amber-900">Blast terakhir: 5 hari lalu</button></span>
+      <span class="text-amber-300">|</span>
+      <span class="font-semibold text-amber-800">⏱ Event mulai dalam <span class="text-red-600">18 jam</span></span>
+    </div>
+
+    <!-- Overview Tab Content -->
+    <div class="p-6">
+
+      <!-- Funnel Visualization -->
+      <div class="mb-6">
+        <h3 class="text-sm font-semibold text-slate-700 mb-4">Pipeline Funnel</h3>
+        <div class="space-y-2">
+          <div class="flex items-center gap-3">
+            <span class="text-xs text-slate-500 w-24 text-right">Diundang</span>
+            <div class="flex-1 bg-slate-100 rounded-full h-8 relative">
+              <div class="bg-slate-800 h-8 rounded-full funnel-stage flex items-center pl-3" style="width:100%">
+                <span class="text-white text-sm font-semibold">200</span>
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="text-xs text-slate-500 w-24 text-right">Mendaftar</span>
+            <div class="flex-1 bg-slate-100 rounded-full h-8 relative">
+              <div class="bg-slate-600 h-8 rounded-full funnel-stage flex items-center pl-3" style="width:80%">
+                <span class="text-white text-sm font-semibold">62</span>
+                <span class="text-slate-300 text-xs ml-2">31% konversi</span>
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="text-xs text-slate-500 w-24 text-right">Disetujui</span>
+            <div class="flex-1 bg-slate-100 rounded-full h-8 relative">
+              <div class="bg-slate-400 h-8 rounded-full funnel-stage flex items-center pl-3" style="width:45%">
+                <span class="text-white text-sm font-semibold">0</span>
+                <span class="text-slate-200 text-xs ml-2">menunggu tindakan</span>
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="text-xs text-slate-500 w-24 text-right">Hadir</span>
+            <div class="flex-1 bg-slate-100 rounded-full h-8 relative">
+              <div class="bg-slate-200 h-8 rounded-full funnel-stage flex items-center pl-3" style="width:20%">
+                <span class="text-slate-500 text-sm font-semibold">—</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Next Action Card -->
+      <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-center justify-between">
+        <div>
+          <p class="text-sm font-semibold text-amber-900">62 registrasi menunggu persetujuan</p>
+          <p class="text-xs text-amber-700 mt-0.5">AI telah menilai 62 pendaftar · 58 direkomendasikan · 4 perlu tinjauan manual</p>
+        </div>
+        <button class="bg-amber-700 text-white text-sm px-4 py-2 rounded-lg font-medium hover:bg-amber-800 whitespace-nowrap">Tinjau Sekarang →</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     DIRECTION B — Focused Pipeline
+     Narrower sidebar nav replacing tabs. Content area wider.
+     More space for table-heavy Registrasi.
+════════════════════════════════════════════════════════════════ -->
+<div id="dir-2" class="direction-card max-w-6xl mx-auto mt-6 px-4 pb-12 hidden">
+  <div class="mb-4">
+    <h2 class="text-xl font-bold text-slate-800">Direction B — Focused Pipeline</h2>
+    <p class="text-sm text-slate-500 mt-1">Vertical sidebar navigation. Wider content area for table-heavy tabs (Registrasi). Works better when many columns need to show simultaneously.</p>
+  </div>
+
+  <div class="bg-white border border-slate-200 rounded-xl shadow-sm flex overflow-hidden" style="min-height:520px">
+
+    <!-- Sidebar Nav -->
+    <div class="w-48 bg-slate-50 border-r border-slate-200 flex-shrink-0">
+      <div class="p-4 border-b border-slate-200">
+        <p class="text-xs text-slate-400 font-medium uppercase tracking-wide">Tech Summit Jakarta</p>
+        <div class="flex items-center gap-1 mt-1">
+          <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+          <span class="text-xs text-slate-600">Published</span>
+        </div>
+      </div>
+      <nav class="p-2">
+        <div class="nav-item active flex items-center gap-2">
+          <span>📊</span><span>Overview</span>
+        </div>
+        <div class="nav-item flex items-center gap-2 mt-1">
+          <span>📢</span><span>Undangan</span>
+        </div>
+        <div class="nav-item flex items-center gap-2 mt-1">
+          <span>📋</span>
+          <span>Registrasi</span>
+          <span class="ml-auto bg-amber-100 text-amber-700 text-xs px-1.5 py-0.5 rounded-full">62</span>
+        </div>
+        <div class="nav-item flex items-center gap-2 mt-1">
+          <span>✉️</span><span>Konfirmasi</span>
+        </div>
+        <div class="nav-item text-slate-300 flex items-center gap-2 mt-1 cursor-not-allowed">
+          <span>📱</span><span>Check-in</span>
+        </div>
+        <div class="nav-item flex items-center gap-2 mt-1">
+          <span>📈</span><span>Laporan</span>
+        </div>
+      </nav>
+      <!-- Blocker strip vertical -->
+      <div class="mt-4 mx-2 bg-amber-50 border border-amber-200 rounded-lg p-3">
+        <p class="text-xs font-semibold text-amber-800 mb-1">Perlu Tindakan</p>
+        <p class="text-xs text-amber-700">• 62 pending approval</p>
+        <p class="text-xs text-amber-700 mt-0.5">• Event dalam <span class="font-bold text-red-600">18 jam</span></p>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="flex-1 p-6">
+      <!-- Funnel horizontal cards -->
+      <div class="grid grid-cols-4 gap-3 mb-6">
+        <div class="bg-slate-50 border border-slate-200 rounded-lg p-3 text-center">
+          <p class="text-2xl font-bold text-slate-800">200</p>
+          <p class="text-xs text-slate-500 mt-1">Diundang</p>
+        </div>
+        <div class="bg-slate-50 border border-slate-200 rounded-lg p-3 text-center">
+          <p class="text-2xl font-bold text-slate-800">62</p>
+          <p class="text-xs text-slate-500 mt-1">Mendaftar <span class="text-green-600">31%</span></p>
+        </div>
+        <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-center">
+          <p class="text-2xl font-bold text-amber-700">0</p>
+          <p class="text-xs text-amber-600 mt-1">Disetujui ⚡</p>
+        </div>
+        <div class="bg-slate-50 border border-slate-200 rounded-lg p-3 text-center">
+          <p class="text-2xl font-bold text-slate-400">—</p>
+          <p class="text-xs text-slate-400 mt-1">Hadir</p>
+        </div>
+      </div>
+      <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-center justify-between">
+        <p class="text-sm text-amber-900">AI telah menilai semua pendaftar · <strong>58 direkomendasikan</strong></p>
+        <button class="bg-slate-900 text-white text-sm px-4 py-2 rounded-lg">Buka Registrasi →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     DIRECTION C — Cards First
+     Overview = 3 action cards. Lighter, less dense.
+     Each card = one pipeline stage with its primary action.
+════════════════════════════════════════════════════════════════ -->
+<div id="dir-3" class="direction-card max-w-6xl mx-auto mt-6 px-4 pb-12 hidden">
+  <div class="mb-4">
+    <h2 class="text-xl font-bold text-slate-800">Direction C — Cards First</h2>
+    <p class="text-sm text-slate-500 mt-1">Overview = a grid of pipeline stage cards, each with its metric + primary CTA. Less dense, more action-forward. Good for admins who prefer guided workflows over raw data.</p>
+  </div>
+
+  <div class="bg-white border border-slate-200 rounded-xl shadow-sm">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+      <h1 class="text-lg font-bold text-slate-900">Tech Summit Jakarta 2026</h1>
+      <span class="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-1 rounded-full">● Published · 15 April · Cap 200</span>
+    </div>
+    <div class="flex border-b border-slate-100 px-6">
+      <button class="tab-active py-3 px-4 text-sm mr-1">Overview</button>
+      <button class="tab-inactive py-3 px-4 text-sm mr-1">Undangan</button>
+      <button class="tab-inactive py-3 px-4 text-sm mr-1">Registrasi <span class="ml-1 bg-amber-100 text-amber-700 text-xs px-1.5 rounded-full">62</span></button>
+      <button class="tab-inactive py-3 px-4 text-sm mr-1">Konfirmasi</button>
+      <button class="tab-disabled py-3 px-4 text-sm mr-1">Check-in</button>
+      <button class="tab-inactive py-3 px-4 text-sm">Laporan</button>
+    </div>
+    <!-- Blocker strip -->
+    <div class="blocker-strip px-6 py-2 text-xs flex gap-4">
+      <button class="underline font-medium">62 menunggu persetujuan</button>
+      <span>·</span>
+      <button class="underline">Blast terakhir 5 hari lalu</button>
+      <span>·</span>
+      <span class="font-semibold text-red-600">Event dalam 18 jam</span>
+    </div>
+
+    <div class="p-6 grid grid-cols-3 gap-4">
+      <!-- Card 1: Undangan -->
+      <div class="border border-slate-200 rounded-xl p-4">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Undangan</span>
+          <span class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">200 dikirim</span>
+        </div>
+        <p class="text-3xl font-bold text-slate-800 mb-1">31%</p>
+        <p class="text-xs text-slate-500 mb-4">tingkat respons · 62 dari 200 mendaftar</p>
+        <button class="w-full border border-slate-200 text-slate-700 text-sm py-2 rounded-lg hover:bg-slate-50">Kirim Blast Lagi</button>
+      </div>
+      <!-- Card 2: Registrasi — highlighted -->
+      <div class="border-2 border-amber-300 bg-amber-50 rounded-xl p-4">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs font-semibold text-amber-700 uppercase tracking-wide">Registrasi ⚡</span>
+          <span class="text-xs bg-amber-200 text-amber-800 px-2 py-0.5 rounded-full">Perlu tindakan</span>
+        </div>
+        <p class="text-3xl font-bold text-amber-800 mb-1">62</p>
+        <p class="text-xs text-amber-700 mb-4">menunggu persetujuan · 58 direkomendasikan AI</p>
+        <button class="w-full bg-amber-700 text-white text-sm py-2 rounded-lg hover:bg-amber-800">Tinjau Sekarang →</button>
+      </div>
+      <!-- Card 3: Konfirmasi -->
+      <div class="border border-slate-200 rounded-xl p-4 opacity-60">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Konfirmasi</span>
+          <span class="text-xs bg-slate-100 text-slate-400 px-2 py-0.5 rounded-full">Menunggu</span>
+        </div>
+        <p class="text-3xl font-bold text-slate-400 mb-1">0</p>
+        <p class="text-xs text-slate-400 mb-4">tiket terkirim · setujui registrasi dahulu</p>
+        <button class="w-full border border-slate-200 text-slate-400 text-sm py-2 rounded-lg cursor-not-allowed">Lihat Konfirmasi</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     DIRECTION D — Compact Ops
+     Dense information. Small type. Maximum data on screen.
+     For admins managing many events simultaneously.
+════════════════════════════════════════════════════════════════ -->
+<div id="dir-4" class="direction-card max-w-6xl mx-auto mt-6 px-4 pb-12 hidden">
+  <div class="mb-4">
+    <h2 class="text-xl font-bold text-slate-800">Direction D — Compact Ops</h2>
+    <p class="text-sm text-slate-500 mt-1">Maximum information density. Registrasi tab shown — BulkApproveBar with dual-mode button, inline summary, color-banded table. For power users who want everything visible at once.</p>
+  </div>
+
+  <div class="bg-white border border-slate-200 rounded-xl shadow-sm">
+    <!-- Compact header -->
+    <div class="flex items-center justify-between px-4 py-2.5 border-b border-slate-100 bg-slate-50">
+      <div class="flex items-center gap-2">
+        <span class="text-xs text-slate-400">←</span>
+        <h1 class="text-sm font-semibold text-slate-800">Tech Summit Jakarta 2026</h1>
+        <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">Published</span>
+        <span class="text-xs text-slate-400">· 200 kursi · 58/200 terisi</span>
+      </div>
+      <button class="bg-slate-800 text-white text-xs px-3 py-1.5 rounded-md">Mulai Live</button>
+    </div>
+    <!-- Compact tabs -->
+    <div class="flex border-b border-slate-100 px-4">
+      <button class="tab-inactive py-2 px-3 text-xs mr-1">Overview</button>
+      <button class="tab-inactive py-2 px-3 text-xs mr-1">Undangan</button>
+      <button class="tab-active py-2 px-3 text-xs mr-1">Registrasi <span class="ml-1 bg-amber-100 text-amber-700 text-xs px-1 rounded-full">62</span></button>
+      <button class="tab-inactive py-2 px-3 text-xs mr-1">Konfirmasi</button>
+      <button class="tab-disabled py-2 px-3 text-xs mr-1">Check-in</button>
+      <button class="tab-inactive py-2 px-3 text-xs">Laporan</button>
+    </div>
+    <!-- Compact blocker strip -->
+    <div class="blocker-strip px-4 py-1.5 text-xs flex gap-3">
+      <button class="underline font-medium">62 pending</button>
+      <span>·</span><button class="underline">Blast 5h lalu</button>
+      <span>·</span><span class="font-bold text-red-600">18 jam lagi</span>
+    </div>
+
+    <!-- Registrasi Tab — BulkApproveBar -->
+    <div class="px-4 pt-3 pb-2 border-b border-slate-100">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <span class="text-xs text-slate-500">58 direkomendasikan AI</span>
+          <span class="text-xs">·</span>
+          <span class="text-xs score-green px-1.5 py-0.5 rounded">42 hijau</span>
+          <span class="text-xs score-amber px-1.5 py-0.5 rounded">16 kuning</span>
+          <span class="text-xs score-red px-1.5 py-0.5 rounded">4 merah (tidak termasuk)</span>
+          <span class="text-xs">·</span>
+          <span class="text-xs flag-badge px-1.5 py-0.5 rounded">0 bermasalah</span>
+        </div>
+        <button class="bg-slate-900 text-white text-xs px-4 py-1.5 rounded-md font-medium hover:bg-slate-700 confirm-btn" id="compactApproveBtn" onclick="toggleConfirm(this)">
+          Terima 58 rekomendasi AI
+        </button>
+      </div>
+    </div>
+
+    <!-- Compact Table -->
+    <div class="overflow-x-auto">
+      <table class="w-full text-xs">
+        <thead>
+          <tr class="border-b border-slate-100 bg-slate-50">
+            <th class="px-3 py-2 text-left font-medium text-slate-500"><input type="checkbox" class="mr-1">Nama</th>
+            <th class="px-3 py-2 text-left font-medium text-slate-500">Perusahaan</th>
+            <th class="px-3 py-2 text-left font-medium text-slate-500">Jabatan</th>
+            <th class="px-3 py-2 text-left font-medium text-slate-500">Skor AI</th>
+            <th class="px-3 py-2 text-left font-medium text-slate-500">Status</th>
+            <th class="px-3 py-2 text-left font-medium text-slate-500">Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="border-b border-slate-100 hover:bg-slate-50">
+            <td class="px-3 py-2"><input type="checkbox" class="mr-1">Reza Mahendra</td>
+            <td class="px-3 py-2 text-slate-600">PT Astra Intl</td>
+            <td class="px-3 py-2 text-slate-600">IT Director</td>
+            <td class="px-3 py-2"><span class="score-green px-2 py-0.5 rounded text-xs font-medium">0.91 ✓</span></td>
+            <td class="px-3 py-2"><span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded">Pending</span></td>
+            <td class="px-3 py-2"><button class="text-slate-500 underline hover:text-slate-800">Lihat</button></td>
+          </tr>
+          <tr class="border-b border-slate-100 hover:bg-slate-50">
+            <td class="px-3 py-2"><input type="checkbox" class="mr-1">Siti Rahayu</td>
+            <td class="px-3 py-2 text-slate-600">Bank Mandiri</td>
+            <td class="px-3 py-2 text-slate-600">CTO</td>
+            <td class="px-3 py-2"><span class="score-green px-2 py-0.5 rounded text-xs font-medium">0.87 ✓</span></td>
+            <td class="px-3 py-2"><span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded">Pending</span></td>
+            <td class="px-3 py-2"><button class="text-slate-500 underline hover:text-slate-800">Lihat</button></td>
+          </tr>
+          <tr class="border-b border-slate-100 hover:bg-slate-50">
+            <td class="px-3 py-2"><input type="checkbox" class="mr-1">Budi Santoso</td>
+            <td class="px-3 py-2 text-slate-600">Telkom Ind.</td>
+            <td class="px-3 py-2 text-slate-600">Manajer IT</td>
+            <td class="px-3 py-2"><span class="score-amber px-2 py-0.5 rounded text-xs font-medium">0.63 ~</span></td>
+            <td class="px-3 py-2"><span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded">Pending</span></td>
+            <td class="px-3 py-2"><button class="text-slate-500 underline hover:text-slate-800">Lihat</button></td>
+          </tr>
+          <tr class="border-b border-slate-100 hover:bg-slate-50 bg-red-50">
+            <td class="px-3 py-2"><input type="checkbox" class="mr-1">Ahmad Fauzi</td>
+            <td class="px-3 py-2 text-slate-600">—</td>
+            <td class="px-3 py-2 text-slate-600">—</td>
+            <td class="px-3 py-2"><span class="score-red px-2 py-0.5 rounded text-xs font-medium">0.21 ✗</span></td>
+            <td class="px-3 py-2"><span class="flag-badge px-2 py-0.5 rounded text-xs">⚑ Spam</span></td>
+            <td class="px-3 py-2"><button class="text-slate-500 underline hover:text-slate-800">Lihat</button></td>
+          </tr>
+          <tr class="border-b border-slate-100 hover:bg-slate-50 opacity-50">
+            <td class="px-3 py-2 text-slate-400" colspan="6">+ 58 baris lainnya...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     DIRECTION E — Check-in Mobile View
+     Staff experience. Full-screen scan mode. No admin chrome.
+════════════════════════════════════════════════════════════════ -->
+<div id="dir-5" class="direction-card max-w-sm mx-auto mt-6 px-4 pb-12 hidden">
+  <div class="mb-4">
+    <h2 class="text-xl font-bold text-slate-800">Direction E — Check-in Mobile (Staff View)</h2>
+    <p class="text-sm text-slate-500 mt-1">Full-screen scan mode on mobile. Tab bar hidden. Viewfinder fills screen. Scan result auto-dismisses in 1.5s. Offline banner non-blocking.</p>
+  </div>
+
+  <!-- Phone frame -->
+  <div class="border-4 border-slate-800 rounded-3xl overflow-hidden shadow-xl bg-black" style="max-width:375px">
+    <!-- Offline banner -->
+    <div class="bg-amber-500 px-4 py-1.5 flex items-center gap-2">
+      <span class="text-white text-xs font-medium">📶 Mode Offline · 3 scan tersimpan</span>
+    </div>
+
+    <!-- Event info strip -->
+    <div class="bg-slate-900 px-4 py-2 flex items-center justify-between">
+      <div>
+        <p class="text-white text-xs font-semibold">Tech Summit Jakarta 2026</p>
+        <p class="text-slate-400 text-xs">Check-in · 147/200 hadir</p>
+      </div>
+      <div class="text-right">
+        <p class="text-green-400 text-xs font-bold">● LIVE</p>
+      </div>
+    </div>
+
+    <!-- Scan viewfinder -->
+    <div class="bg-slate-900 relative" style="height:300px">
+      <div class="absolute inset-0 flex items-center justify-center">
+        <!-- Corner markers -->
+        <div class="relative w-48 h-48">
+          <div class="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-white rounded-tl-lg"></div>
+          <div class="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-white rounded-tr-lg"></div>
+          <div class="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-white rounded-bl-lg"></div>
+          <div class="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-white rounded-br-lg"></div>
+          <!-- Scan line animation hint -->
+          <div class="absolute top-1/2 left-0 right-0 h-0.5 bg-green-400 opacity-70"></div>
+          <p class="absolute -bottom-8 left-1/2 transform -translate-x-1/2 text-slate-400 text-xs whitespace-nowrap">Arahkan kamera ke QR tiket</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scan success overlay (shown 1.5s then auto-dismisses) -->
+    <div class="scan-overlay px-6 py-8 text-center">
+      <div class="text-5xl mb-3">✓</div>
+      <p class="text-green-800 text-xl font-bold">Diizinkan Masuk</p>
+      <p class="text-green-700 text-base font-medium mt-1">Reza Mahendra</p>
+      <p class="text-green-600 text-sm mt-0.5">PT Astra International · IT Director</p>
+      <p class="text-green-500 text-xs mt-3">Scan berikutnya dalam 1.5s...</p>
+    </div>
+
+    <!-- Rejected overlay example (commented as alternative) -->
+    <!-- <div class="scan-overlay-fail px-6 py-8 text-center">
+      <div class="text-5xl mb-3">✗</div>
+      <p class="text-red-800 text-xl font-bold">Tiket Tidak Valid</p>
+      <p class="text-red-600 text-sm mt-2">Tiket sudah digunakan atau tidak terdaftar</p>
+    </div> -->
+
+    <!-- Bottom stats bar -->
+    <div class="bg-slate-900 px-4 py-3 flex justify-around">
+      <div class="text-center">
+        <p class="text-white text-lg font-bold">147</p>
+        <p class="text-slate-400 text-xs">Hadir</p>
+      </div>
+      <div class="text-center">
+        <p class="text-amber-400 text-lg font-bold">53</p>
+        <p class="text-slate-400 text-xs">Belum Hadir</p>
+      </div>
+      <div class="text-center">
+        <p class="text-green-400 text-lg font-bold">3</p>
+        <p class="text-slate-400 text-xs">Antrian Offline</p>
+      </div>
+    </div>
+
+    <!-- Manual search button -->
+    <div class="bg-slate-800 px-4 py-3">
+      <button class="w-full border border-slate-600 text-slate-300 text-sm py-2.5 rounded-lg">🔍 Cari nama peserta manual</button>
+    </div>
+  </div>
+</div>
+
+<!-- Evaluation Guide -->
+<div class="max-w-6xl mx-auto px-4 pb-12 mt-8">
+  <div class="bg-white border border-slate-200 rounded-xl p-6">
+    <h3 class="text-sm font-semibold text-slate-700 mb-4">Evaluation Guide — What to Look For</h3>
+    <div class="grid grid-cols-2 gap-6 text-sm">
+      <div>
+        <p class="font-medium text-slate-700 mb-2">Layout & Hierarchy</p>
+        <ul class="text-slate-500 space-y-1 text-xs">
+          <li>✓ Does the Overview communicate pipeline state in 2 seconds?</li>
+          <li>✓ Is the highest-priority action immediately obvious?</li>
+          <li>✓ Does the tab bar vs sidebar feel right for the workflow?</li>
+        </ul>
+      </div>
+      <div>
+        <p class="font-medium text-slate-700 mb-2">Approval Loop (Direction D)</p>
+        <ul class="text-slate-500 space-y-1 text-xs">
+          <li>✓ Is the BulkApproveBar summary readable at a glance?</li>
+          <li>✓ Are score bands and flag badges visually distinct?</li>
+          <li>✓ Does the table density feel right for 80 rows?</li>
+        </ul>
+      </div>
+      <div>
+        <p class="font-medium text-slate-700 mb-2">BlockerStrip</p>
+        <ul class="text-slate-500 space-y-1 text-xs">
+          <li>✓ Is it useful without being distracting?</li>
+          <li>✓ Are the 3 items easy to click and understand?</li>
+          <li>✓ Does the amber color communicate urgency appropriately?</li>
+        </ul>
+      </div>
+      <div>
+        <p class="font-medium text-slate-700 mb-2">Check-in Mobile (Direction E)</p>
+        <ul class="text-slate-500 space-y-1 text-xs">
+          <li>✓ Does the full-screen scan view feel native?</li>
+          <li>✓ Is the success overlay clear and fast to read?</li>
+          <li>✓ Is the offline banner informative without alarming?</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function showDirection(n, btn) {
+  for (let i = 1; i <= 5; i++) {
+    const el = document.getElementById('dir-' + i);
+    if (el) el.classList.add('hidden');
+  }
+  const target = document.getElementById('dir-' + n);
+  if (target) target.classList.remove('hidden');
+
+  document.querySelectorAll('.dir-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+}
+
+function toggleConfirm(btn) {
+  if (btn.dataset.state === 'confirming') {
+    btn.textContent = '58 kontak disetujui ✓';
+    btn.className = 'bg-green-700 text-white text-xs px-4 py-1.5 rounded-md font-medium confirm-btn';
+    btn.dataset.state = 'done';
+    return;
+  }
+  btn.dataset.state = 'confirming';
+  btn.className = 'bg-amber-600 text-white text-xs px-4 py-1.5 rounded-md font-medium confirm-btn';
+  let count = 3;
+  btn.textContent = `Konfirmasi? (${count}...)`;
+  const timer = setInterval(() => {
+    count--;
+    if (count <= 0) {
+      clearInterval(timer);
+      btn.textContent = 'Terima 58 rekomendasi AI';
+      btn.className = 'bg-slate-900 text-white text-xs px-4 py-1.5 rounded-md font-medium hover:bg-slate-700 confirm-btn';
+      btn.dataset.state = '';
+    } else {
+      btn.textContent = `Konfirmasi? (${count}...)`;
+    }
+  }, 1000);
+}
+</script>
+</body>
+</html>

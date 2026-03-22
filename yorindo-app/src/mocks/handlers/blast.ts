@@ -1,0 +1,100 @@
+import { http, HttpResponse, delay } from 'msw'
+
+export interface BlastJob {
+  jobId: string
+  eventId: string
+  channel: 'whatsapp' | 'email'
+  templateId: string
+  scheduledAt?: string
+  status: 'queued' | 'running' | 'completed' | 'failed' | 'scheduled'
+  sent: number
+  total: number
+  sentAt: string
+}
+
+// In-memory store of blast jobs (populated by POST /api/blast)
+export let blastJobsStore: BlastJob[] = [
+  {
+    jobId: 'blast-hist-001',
+    eventId: 'event-001',
+    channel: 'whatsapp',
+    templateId: 'tmpl-001',
+    status: 'completed',
+    sent: 312,
+    total: 312,
+    sentAt: '2026-03-20T09:00:00Z',
+  },
+  {
+    jobId: 'blast-hist-002',
+    eventId: 'event-001',
+    channel: 'email',
+    templateId: 'tmpl-002',
+    status: 'completed',
+    sent: 89,
+    total: 89,
+    sentAt: '2026-03-18T14:30:00Z',
+  },
+]
+
+export const blastHandlers = [
+  // GET /api/blast/history?eventId=:id
+  http.get('/api/blast/history', async ({ request }) => {
+    await delay(300)
+    const url = new URL(request.url)
+    const eventId = url.searchParams.get('eventId')
+    const results = eventId
+      ? blastJobsStore.filter((j) => j.eventId === eventId)
+      : blastJobsStore
+    return HttpResponse.json(
+      results.map((j) => ({
+        id: j.jobId,
+        channel: j.channel,
+        recipientCount: j.total,
+        sentAt: j.sentAt,
+        status: j.status,
+      }))
+    )
+  }),
+
+  // POST /api/blast
+  http.post('/api/blast', async ({ request }) => {
+    await delay(500)
+    const body = await request.json() as {
+      eventId: string
+      channel: 'whatsapp' | 'email'
+      templateId: string
+      scheduledAt?: string
+    }
+    const job: BlastJob = {
+      jobId: 'mock-job-1',
+      eventId: body.eventId,
+      channel: body.channel,
+      templateId: body.templateId,
+      scheduledAt: body.scheduledAt,
+      status: body.scheduledAt ? 'scheduled' : 'queued',
+      sent: 0,
+      total: 247,
+      sentAt: new Date().toISOString(),
+    }
+    blastJobsStore.push(job)
+    return HttpResponse.json({ jobId: job.jobId, status: job.status }, { status: 202 })
+  }),
+
+  // GET /api/blast/:jobId — status polling
+  http.get('/api/blast/:jobId', async ({ params }) => {
+    await delay(200)
+    const job = blastJobsStore.find((j) => j.jobId === params.jobId)
+    if (!job) {
+      return HttpResponse.json(
+        { error: { code: 'NOT_FOUND', message: 'Job not found', details: [] } },
+        { status: 404 }
+      )
+    }
+    return HttpResponse.json({
+      jobId: job.jobId,
+      status: job.status,
+      sent: job.sent,
+      total: job.total,
+    })
+  }),
+]

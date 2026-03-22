@@ -107,6 +107,22 @@ export interface PaginatedResponse<T> {
   }
 }
 
+// EventReport type — contract between Story 4.12 (stub) and Epic 8 (full implementation)
+export interface EventReport {
+  eventId: string
+  funnelMetrics: {
+    blast: number
+    registrations: number
+    approved: number
+    attended: number
+  }
+  demographics: {
+    byIndustry: Array<{ industry: string; count: number }>
+    byCity: Array<{ city: string; count: number }>
+  }
+  generatedAt: string
+}
+
 export interface Industry {
   id: string
   slug: string

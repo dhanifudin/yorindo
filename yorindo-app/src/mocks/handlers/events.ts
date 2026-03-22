@@ -46,16 +46,16 @@ export let eventsStore: Event[] = [
     id: 'event-003',
     name: 'Forum Kesehatan Digital Surabaya',
     slug: 'forum-kesehatan-digital-surabaya',
-    description: 'Forum diskusi transformasi digital di sektor kesehatan.',
+    description: 'Forum diskusi transformasi digital di sektor kesehatan Indonesia.',
     status: 'active',
-    eventDate: '2026-03-20T02:00:00.000Z',
+    eventDate: '2026-03-22T02:00:00.000Z',
     timezone: 'Asia/Jakarta',
-    capacity: 150,
+    capacity: 80,
     bannerUrl: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=1200&h=675&fit=crop',
-    industryTags: ['keuangan', 'teknologi'],
-    eventType: 'workshop',
-    topicTags: ['fintech'],
-    createdAt: new Date().toISOString(),
+    industryTags: ['kesehatan'],
+    eventType: 'conference',
+    topicTags: ['medtech', 'digitalisasi'],
+    createdAt: new Date(Date.now() - 30 * 86400000).toISOString(),
     updatedAt: new Date().toISOString(),
   },
   {
@@ -82,10 +82,26 @@ export let eventsStore: Event[] = [
     eventDate: '2026-02-28T02:00:00.000Z',
     timezone: 'Asia/Makassar',
     capacity: 100,
-    industryTags: ['manufaktur'],
-    eventType: 'webinar',
-    topicTags: ['industry40'],
-    createdAt: new Date().toISOString(),
+    industryTags: ['properti'],
+    eventType: 'conference',
+    topicTags: ['realestate', 'investasi'],
+    createdAt: new Date(Date.now() - 60 * 86400000).toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'event-006',
+    name: 'Networking Fintech Indonesia 2026',
+    slug: 'networking-fintech-indonesia-2026',
+    description: 'Pertemuan pelaku industri fintech, perbankan digital, dan investor untuk mendorong ekosistem keuangan digital Indonesia.',
+    status: 'active',
+    eventDate: '2026-03-22T07:00:00.000Z',
+    timezone: 'Asia/Jakarta',
+    capacity: 120,
+    bannerUrl: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1200&h=675&fit=crop',
+    industryTags: ['keuangan', 'teknologi'],
+    eventType: 'networking',
+    topicTags: ['fintech', 'banking', 'investasi'],
+    createdAt: new Date(Date.now() - 45 * 86400000).toISOString(),
     updatedAt: new Date().toISOString(),
   },
 ]
@@ -158,6 +174,32 @@ export const eventHandlers = [
     return HttpResponse.json(event)
   }),
 
+  http.get('/api/events/:id/overview', async ({ params }) => {
+    await delay(300)
+    const event = eventsStore.find((e) => e.id === params.id)
+    if (!event) {
+      return HttpResponse.json(
+        { error: { code: 'NOT_FOUND', message: 'Event not found', details: [] } },
+        { status: 404 }
+      )
+    }
+    const capacity = event.capacity ?? 200
+    const blastCount = 2000
+    const registrationCount = Math.floor(blastCount * 0.2)
+    const approvedCount = Math.floor(registrationCount * 0.75)
+    const attendedCount = event.status === 'completed' ? Math.floor(approvedCount * 0.85) : 0
+    return HttpResponse.json({
+      blastCount,
+      registrationCount,
+      approvedCount,
+      attendedCount,
+      lastBlastAt: '2026-04-01T09:00:00Z',
+      pendingApprovals: registrationCount - approvedCount,
+      seatsRemaining: Math.max(capacity - approvedCount, 0),
+      daysUntilEvent: Math.ceil((new Date(event.eventDate).getTime() - Date.now()) / 86400000),
+    })
+  }),
+
   http.get('/api/events/:id', async ({ params }) => {
     await delay(300)
     const event = eventsStore.find((e) => e.id === params.id)
@@ -192,6 +234,17 @@ export const eventHandlers = [
       eventsStore = eventsStore.filter((e) => e.id !== params.id)
     }
     return new HttpResponse(null, { status: 204 })
+  }),
+
+  http.get('/api/events/:id/checkin/stats', async ({ params }) => {
+    await delay(300)
+    const { registrationsStore } = await import('./registrations')
+    const eventId = params.id as string
+    const eventRegs = registrationsStore.filter((r) => r.eventId === eventId)
+    const approved = eventRegs.filter((r) => r.status === 'approved').length
+    const attended = eventRegs.filter((r) => r.status === 'attended').length
+    const total = eventRegs.filter((r) => ['approved', 'attended', 'confirmed'].includes(r.status)).length
+    return HttpResponse.json({ approved, attended, total })
   }),
 
   http.get('/api/events/:id/participants', async () => {
@@ -434,6 +487,21 @@ export const eventHandlers = [
     const lookupId = devToReal[userId] ?? userId
     const assignedEventIds = Array.from(userEventAssignments.get(lookupId) ?? [])
     return HttpResponse.json(eventsStore.filter((e) => assignedEventIds.includes(e.id)))
+  }),
+
+  // GET /api/events/:id/confirmation — Story 4.11
+  http.get('/api/events/:id/confirmation', async () => {
+    await delay(400)
+    return HttpResponse.json({
+      stats: { ticketSent: 180, pendingConfirmation: 45, waitlisted: 20 },
+      registrations: Array.from({ length: 30 }, (_, i) => ({
+        id: `reg-conf-${i}`,
+        contact: { name: `Peserta ${i + 1}`, company: `PT Maju ${i + 1}` },
+        channel: i % 2 === 0 ? 'whatsapp' : 'email',
+        ticketSentAt: i < 20 ? '2026-04-01T10:00:00Z' : null,
+        confirmationStatus: i < 15 ? 'confirmed' : i < 25 ? 'pending' : 'waitlisted',
+      })),
+    })
   }),
 
   http.get('/api/events/:id/report/download', async ({ request }) => {
