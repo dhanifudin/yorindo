@@ -7,31 +7,66 @@ import { djb2 } from '@/lib/djb2'
 type StoredRegistration = Registration & { flagOverride: boolean }
 
 // Distribute registrations across events for realistic mock data
-// event-001: published (upcoming) — pending/approved mix, not near capacity
-// event-003: active today — mostly approved, near capacity (80), some attended
-// event-006: active today — mix of approved/attended/pending, near capacity (120)
-// event-004: completed — all attended/approved
+// event-001: published (upcoming, Apr 2026) — pending/approved/waitlist mix, not near capacity
+// event-003: active today (Mar 22 2026) — heavy attended, near capacity (80), check-in ongoing
+// event-004: completed (Nov 2025) — all attended/cancelled/rejected; no pending/approved survivors
+// event-005: cancelled (Feb 2026) — small number of cancelled/rejected registrations
+// event-006: active today — mix of attended/approved/pending, near capacity (120)
+// event-002 (draft) intentionally has NO registrations — drafts are not open for registration
 
 type EventRegistrationConfig = {
   eventId: string
   count: number
   statusWeights: Registration['status'][]
+  /** Unix ms of event date — used to anchor attendedAt for past events */
+  eventDateMs: number
 }
 
 const EVENT_CONFIGS: EventRegistrationConfig[] = [
-  { eventId: 'event-001', count: 35, statusWeights: ['pending', 'pending', 'approved', 'approved', 'approved', 'rejected', 'confirmed', 'confirmed', 'waitlisted', 'cancelled'] },
-  { eventId: 'event-002', count: 12, statusWeights: ['pending', 'pending', 'pending', 'approved', 'rejected', 'cancelled'] },
-  { eventId: 'event-003', count: 75, statusWeights: ['attended', 'attended', 'attended', 'attended', 'approved', 'approved', 'pending', 'rejected', 'waitlisted', 'confirmed'] },
-  { eventId: 'event-004', count: 40, statusWeights: ['attended', 'attended', 'attended', 'approved', 'cancelled', 'rejected'] },
-  { eventId: 'event-006', count: 110, statusWeights: ['attended', 'attended', 'attended', 'approved', 'approved', 'pending', 'pending', 'confirmed', 'waitlisted', 'rejected'] },
+  {
+    eventId: 'event-001',
+    count: 35,
+    statusWeights: ['pending', 'pending', 'approved', 'approved', 'approved', 'rejected', 'confirmed', 'confirmed', 'waitlisted', 'cancelled'],
+    eventDateMs: new Date('2026-04-15T02:00:00Z').getTime(),
+  },
+  {
+    eventId: 'event-003',
+    count: 75,
+    statusWeights: ['attended', 'attended', 'attended', 'attended', 'approved', 'approved', 'pending', 'rejected', 'waitlisted', 'confirmed'],
+    eventDateMs: new Date('2026-03-22T02:00:00Z').getTime(),
+  },
+  {
+    eventId: 'event-004',
+    count: 40,
+    // Completed event: attendees checked in, rest cancelled or rejected — no pending/approved survivors
+    statusWeights: ['attended', 'attended', 'attended', 'attended', 'attended', 'cancelled', 'cancelled', 'rejected'],
+    eventDateMs: new Date('2025-11-10T02:00:00Z').getTime(),
+  },
+  {
+    eventId: 'event-005',
+    count: 18,
+    // Cancelled event: registrants who signed up before cancellation — all cancelled or rejected
+    statusWeights: ['cancelled', 'cancelled', 'cancelled', 'rejected', 'pending'],
+    eventDateMs: new Date('2026-02-28T02:00:00Z').getTime(),
+  },
+  {
+    eventId: 'event-006',
+    count: 110,
+    statusWeights: ['attended', 'attended', 'attended', 'approved', 'approved', 'pending', 'pending', 'confirmed', 'waitlisted', 'rejected'],
+    eventDateMs: new Date('2026-03-22T02:00:00Z').getTime(),
+  },
 ]
 
 let regCounter = 0
-export const registrationsStore: StoredRegistration[] = EVENT_CONFIGS.flatMap(({ eventId, count, statusWeights }) =>
+export const registrationsStore: StoredRegistration[] = EVENT_CONFIGS.flatMap(({ eventId, count, statusWeights, eventDateMs }) =>
   Array.from({ length: count }, (_, i) => {
     regCounter++
     const status = statusWeights[i % statusWeights.length]
     const daysAgo = count - i
+    // attendedAt is anchored to the event date (± minutes per slot) — not today's date
+    const attendedAt = status === 'attended'
+      ? new Date(eventDateMs + (i % 60) * 60_000).toISOString()
+      : null
     return {
       id: `reg-${String(regCounter).padStart(3, '0')}`,
       contactId: contactsPool[(regCounter - 1) % contactsPool.length].id,
@@ -39,7 +74,7 @@ export const registrationsStore: StoredRegistration[] = EVENT_CONFIGS.flatMap(({
       status,
       ticketToken: status === 'approved' || status === 'attended' || status === 'confirmed' ? `ticket-${faker.string.alphanumeric(20)}` : null,
       surveyAnswers: {},
-      attendedAt: status === 'attended' ? faker.date.recent({ days: 1 }).toISOString() : null,
+      attendedAt,
       createdAt: new Date(Date.now() - daysAgo * 86400000).toISOString(),
       flagOverride: false,
     }
@@ -160,6 +195,7 @@ export const registrationHandlers = [
         id: faker.string.uuid(),
         status: 'pending',
         eventName: 'Seminar ERP Jakarta',
+        eventSlug: 'seminar-erp-jakarta',
         participantName: 'Budi Santoso',
       },
     })

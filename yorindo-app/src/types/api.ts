@@ -30,6 +30,7 @@ export interface Event {
   bannerUrl?: string // Event banner image URL (Story 4.7)
   targetCriteria?: Record<string, unknown>
   surveySchema?: Record<string, unknown>
+  venue?: string            // e.g. 'Jakarta Convention Center'
   industryTags?: string[]   // e.g. ['teknologi', 'keuangan']
   eventType?: 'conference' | 'workshop' | 'networking' | 'seminar' | 'webinar'
   topicTags?: string[]      // e.g. ['fintech', 'digital-banking']
@@ -149,6 +150,7 @@ export interface CreateEventBody {
   timezone: Event['timezone']
   capacity?: number
   bannerUrl?: string
+  venue?: string
   industryTags?: string[]
   eventType?: Event['eventType']
   topicTags?: string[]
@@ -239,6 +241,17 @@ export interface BlastPrefilledAudience {
   eventId: string
   contactIds: string[]
   count: number
+}
+
+export interface EmergencyBlastBody {
+  message: string
+  channel: 'whatsapp' | 'email'
+}
+
+export interface EmergencyBlastResponse {
+  jobId: string
+  recipientCount: number
+  status: 'queued'
 }
 
 // ─── Contacts Health & Facets ─────────────────────────────────────────────────

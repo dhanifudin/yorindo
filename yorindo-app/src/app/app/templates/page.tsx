@@ -6,7 +6,7 @@ import { TemplateForm } from '@/components/features/templates/TemplateForm'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet'
 import {
   Table,
   TableBody,
@@ -71,11 +71,11 @@ export default function TemplatesPage() {
 
       {/* Template detail sheet (mobile) */}
       <Sheet open={!!detailTemplate} onOpenChange={(v) => !v && setDetailTemplate(null)}>
-        <SheetContent side="bottom" className="max-h-[60vh] overflow-y-auto">
+        <SheetContent side="bottom" className="flex flex-col max-h-[60vh] overflow-y-auto">
           <SheetHeader>
             <SheetTitle>{detailTemplate?.name}</SheetTitle>
           </SheetHeader>
-          <div className="space-y-3 mt-4 text-sm">
+          <div className="flex-1 px-4 space-y-3 overflow-y-auto text-sm">
             <div>
               <span className="text-muted-foreground">Channel: </span>
               {detailTemplate && (
@@ -97,7 +97,7 @@ export default function TemplatesPage() {
               <p className="text-foreground whitespace-pre-wrap text-xs bg-muted rounded p-2">{detailTemplate?.body}</p>
             </div>
           </div>
-          <div className="flex gap-2 mt-6">
+          <SheetFooter className="flex-row">
             <Button size="sm" variant="outline" onClick={() => { if (detailTemplate) { handleEdit(detailTemplate) } setDetailTemplate(null) }}>
               Edit
             </Button>
@@ -109,7 +109,7 @@ export default function TemplatesPage() {
             >
               Hapus
             </Button>
-          </div>
+          </SheetFooter>
         </SheetContent>
       </Sheet>
 

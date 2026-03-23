@@ -6,8 +6,24 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { toast } from 'sonner'
 import type { Event, Contact } from '@/types/api'
+
+const EVENT_TYPE_LABELS: Record<string, string> = {
+  conference: 'Conference',
+  workshop: 'Workshop',
+  networking: 'Networking',
+  seminar: 'Seminar',
+  webinar: 'Webinar',
+}
 
 interface RegistrationFormPageProps {
   params: Promise<{ eventSlug: string }>
@@ -101,6 +117,9 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
     : '#'
 
   if (submitted) {
+    const shareUrl = `${window.location.origin}/register/${eventSlug}`
+    const shareText = `Saya baru mendaftar ke ${event?.name ?? 'event ini'}! Daftar juga di: ${shareUrl}`
+
     return (
       <div className="max-w-md mx-auto px-4 py-8">
         <Card>
@@ -121,6 +140,29 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
                 + Tambahkan ke Google Calendar
               </a>
             </div>
+            <div className="pt-2 space-y-2">
+              <p className="text-xs text-muted-foreground font-medium">Bagikan ke teman:</p>
+              <div className="flex justify-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-green-700 border-green-200 hover:bg-green-50"
+                  onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank')}
+                >
+                  WhatsApp
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    navigator.clipboard.writeText(shareUrl)
+                    toast.success('Link disalin!')
+                  }}
+                >
+                  Salin Link
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -129,6 +171,33 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
 
   return (
     <div className="max-w-md mx-auto px-4 py-6">
+      {/* Event details banner */}
+      {event && (
+        <div className="mb-5 rounded-xl border border-border bg-card p-4 space-y-2">
+          <div>
+            <h1 className="text-base font-bold leading-snug">{event.name}</h1>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {new Date(event.eventDate).toLocaleDateString('id-ID', {
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+                timeZone: event.timezone,
+              })}
+            </p>
+          </div>
+          {(event.venue || event.eventType || event.industryTags?.length) && (
+            <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+              {event.venue && <span>{event.venue}</span>}
+              {event.venue && (event.eventType || event.industryTags?.length) && <span>·</span>}
+              {event.eventType && (
+                <Badge variant="outline" className="text-xs">{EVENT_TYPE_LABELS[event.eventType] ?? event.eventType}</Badge>
+              )}
+              {event.industryTags?.map((tag) => (
+                <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Step indicator */}
       <div className="flex items-center justify-between mb-6">
         {STEPS.map((label, idx) => (
@@ -155,40 +224,40 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
           {step === 0 && (
             <div className="space-y-4">
               <h2 className="text-lg font-semibold">Informasi Kontak</h2>
-              <div>
-                <label className="block text-sm font-medium mb-1">
+              <div className="space-y-1.5">
+                <Label htmlFor="phone">
                   Nomor Telepon <span className="text-destructive">*</span>
-                </label>
+                </Label>
                 <Input
+                  id="phone"
                   type="tel"
                   value={form.phone}
                   onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
                   onBlur={handlePhoneBlur}
                   placeholder="+628..."
-                  className="h-11"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">
+              <div className="space-y-1.5">
+                <Label htmlFor="name">
                   Nama Lengkap <span className="text-destructive">*</span>
-                </label>
+                </Label>
                 <Input
+                  id="name"
                   value={form.name}
                   onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
                   placeholder="Nama lengkap Anda"
-                  className="h-11"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">
+              <div className="space-y-1.5">
+                <Label htmlFor="email">
                   Email <span className="text-destructive">*</span>
-                </label>
+                </Label>
                 <Input
+                  id="email"
                   type="email"
                   value={form.email}
                   onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
                   placeholder="email@contoh.com"
-                  className="h-11"
                 />
               </div>
               <Button
@@ -208,13 +277,14 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
                 <p className="text-muted-foreground text-sm">Tidak ada pertanyaan survei untuk event ini.</p>
               ) : (
                 survey.fields.map((field) => (
-                  <div key={field.id}>
-                    <label className="block text-sm font-medium mb-1">
+                  <div key={field.id} className="space-y-1.5">
+                    <Label htmlFor={`survey-${field.id}`}>
                       {field.label}
                       {field.required && <span className="text-destructive ml-1">*</span>}
-                    </label>
+                    </Label>
                     {field.type === 'text' && (
                       <Input
+                        id={`survey-${field.id}`}
                         value={form.surveyAnswers[field.id] ?? ''}
                         onChange={(e) =>
                           setForm((p) => ({
@@ -222,25 +292,27 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
                             surveyAnswers: { ...p.surveyAnswers, [field.id]: e.target.value },
                           }))
                         }
-                        className="h-11"
                       />
                     )}
                     {(field.type === 'single-choice' || field.type === 'select') && (
-                      <select
+                      <Select
                         value={form.surveyAnswers[field.id] ?? ''}
-                        onChange={(e) =>
+                        onValueChange={(val) =>
                           setForm((p) => ({
                             ...p,
-                            surveyAnswers: { ...p.surveyAnswers, [field.id]: e.target.value },
+                            surveyAnswers: { ...p.surveyAnswers, [field.id]: val },
                           }))
                         }
-                        className="flex h-11 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
                       >
-                        <option value="">Pilih...</option>
-                        {field.options?.map((opt) => (
-                          <option key={opt} value={opt}>{opt}</option>
-                        ))}
-                      </select>
+                        <SelectTrigger id={`survey-${field.id}`}>
+                          <SelectValue placeholder="Pilih..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {field.options?.map((opt) => (
+                            <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     )}
                   </div>
                 ))

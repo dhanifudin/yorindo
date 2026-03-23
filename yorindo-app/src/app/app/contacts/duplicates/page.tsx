@@ -95,12 +95,12 @@ export default function DuplicatesPage() {
 
       {/* Duplicate group detail sheet */}
       <Sheet open={!!detailGroup} onOpenChange={(v) => !v && setDetailGroup(null)}>
-        <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto">
+        <SheetContent side="bottom" className="flex flex-col max-h-[85vh] overflow-y-auto">
           <SheetHeader>
             <SheetTitle>Bandingkan & Gabungkan</SheetTitle>
           </SheetHeader>
           {detailGroup && (
-            <div className="mt-4">
+            <div className="px-4">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex gap-2 flex-wrap">
                   {detailGroup.matchReasons.map((r) => (

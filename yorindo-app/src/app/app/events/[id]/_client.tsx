@@ -2,6 +2,7 @@
 
 import { use } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -138,6 +139,29 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                   </div>
                 )}
               </div>
+
+              {/* Registration link — only for open events */}
+              {(event.status === 'published' || event.status === 'active') && (
+                <div className="border-t pt-3">
+                  <p className="text-xs text-muted-foreground uppercase font-medium mb-1.5">Link Pendaftaran</p>
+                  <div className="flex items-center gap-2">
+                    <code className="text-xs bg-muted px-2 py-1 rounded flex-1 truncate min-w-0">
+                      {typeof window !== 'undefined' ? window.location.origin : ''}/register/{event.slug}
+                    </code>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs shrink-0"
+                      onClick={() => {
+                        navigator.clipboard.writeText(`${window.location.origin}/register/${event.slug}`)
+                        toast.success('Link disalin!')
+                      }}
+                    >
+                      Salin
+                    </Button>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 

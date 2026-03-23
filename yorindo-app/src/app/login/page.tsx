@@ -16,10 +16,10 @@ export default function LoginPage() {
   if (accessToken) return null
 
   return (
-    <div className="w-full max-w-sm bg-white rounded-lg shadow-md p-8">
+    <div className="w-full max-w-sm bg-card border border-border rounded-xl shadow-sm p-8">
       <div className="mb-8 text-center">
-        <div className="text-3xl font-bold text-blue-600 mb-1">Yorindo</div>
-        <p className="text-sm text-gray-500">Admin Portal</p>
+        <div className="text-3xl font-bold text-primary mb-1">Yorindo</div>
+        <p className="text-sm text-muted-foreground">Admin Portal</p>
       </div>
       <LoginForm />
     </div>

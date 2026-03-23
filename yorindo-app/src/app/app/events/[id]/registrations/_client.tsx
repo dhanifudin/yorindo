@@ -14,6 +14,16 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {
   Table,
   TableBody,
   TableCell,
@@ -71,6 +81,7 @@ export default function RegistrationsPage({ params }: RegistrationsPageProps) {
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({})
   const [sheetIndex, setSheetIndex] = useState<number | null>(null)
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 20 })
+  const [cancelTarget, setCancelTarget] = useState<{ id: string; name: string } | null>(null)
   const tableContainerRef = useRef<HTMLDivElement>(null)
 
   // Read event capacity from cache (loaded by layout)
@@ -85,6 +96,14 @@ export default function RegistrationsPage({ params }: RegistrationsPageProps) {
   })
 
   const allRows = rawData?.data ?? []
+
+  // FIFO waitlist rank map: { [regId]: position (1-based) } — O(1) lookup in column render
+  const waitlistRanks = useMemo<Record<string, number>>(() => {
+    const sorted = allRows
+      .filter((r) => r.status === 'waitlisted')
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+    return Object.fromEntries(sorted.map((r, i) => [r.id, i + 1]))
+  }, [allRows])
 
   // Derive quota status from current data
   const approvedCount = allRows.filter(
@@ -198,6 +217,59 @@ export default function RegistrationsPage({ params }: RegistrationsPageProps) {
     onError: () => toast.error('Gagal bulk approve'),
   })
 
+  const promoteMutation = useMutation({
+    mutationFn: (regId: string) => patchRegistrationStatus(regId, 'approved'),
+    onMutate: async (regId) => {
+      await queryClient.cancelQueries({ queryKey: ['event-registrations', id] })
+      const previous = queryClient.getQueryData(['event-registrations', id])
+      queryClient.setQueryData(
+        ['event-registrations', id],
+        (old: { data: RegistrationWithContact[] } | undefined) => ({
+          ...old,
+          data: (old?.data ?? []).map((r) =>
+            r.id === regId ? { ...r, status: 'approved' as const } : r
+          ),
+        })
+      )
+      return { previous }
+    },
+    onError: (_err, _regId, ctx) => {
+      queryClient.setQueryData(['event-registrations', id], ctx?.previous)
+      toast.error('Gagal mempromosikan peserta')
+    },
+    onSuccess: () => toast.success('Peserta dipromosikan dari waitlist', { duration: 4000 }),
+  })
+
+  const cancelMutation = useMutation({
+    mutationFn: async (regId: string) => {
+      const res = await fetch(`/api/registrations/${regId}/cancel`, { method: 'POST' })
+      if (!res.ok) throw new Error('Gagal membatalkan pendaftaran')
+      return res.json()
+    },
+    onMutate: async (regId) => {
+      await queryClient.cancelQueries({ queryKey: ['event-registrations', id] })
+      const previous = queryClient.getQueryData(['event-registrations', id])
+      queryClient.setQueryData(
+        ['event-registrations', id],
+        (old: { data: RegistrationWithContact[] } | undefined) => ({
+          ...old,
+          data: (old?.data ?? []).map((r) =>
+            r.id === regId ? { ...r, status: 'cancelled' as const } : r
+          ),
+        })
+      )
+      return { previous }
+    },
+    onError: (_err, _regId, ctx) => {
+      queryClient.setQueryData(['event-registrations', id], ctx?.previous)
+      toast.error('Gagal membatalkan pendaftaran')
+    },
+    onSuccess: () => {
+      toast.success('Pendaftaran dibatalkan')
+      setCancelTarget(null)
+    },
+  })
+
   // Column definitions — mutations are available via closure
   const columns = useMemo<ColumnDef<RegistrationWithContact>[]>(() => [
     {
@@ -269,9 +341,14 @@ export default function RegistrationsPage({ params }: RegistrationsPageProps) {
         return row.original.status === filterValue
       },
       cell: ({ row }) => (
-        <Badge className={`${STATUS_BADGE_CLASS[row.original.status]} text-xs`}>
-          {STATUS_LABEL[row.original.status]}
-        </Badge>
+        <div className="flex flex-col gap-0.5">
+          <Badge className={`${STATUS_BADGE_CLASS[row.original.status]} text-xs`}>
+            {STATUS_LABEL[row.original.status]}
+          </Badge>
+          {row.original.status === 'waitlisted' && waitlistRanks[row.original.id] && (
+            <span className="text-xs text-muted-foreground">#{waitlistRanks[row.original.id]}</span>
+          )}
+        </div>
       ),
     },
     {
@@ -292,38 +369,102 @@ export default function RegistrationsPage({ params }: RegistrationsPageProps) {
       header: 'Aksi',
       cell: ({ row }) => {
         const reg = row.original
-        if (reg.status !== 'pending') return null
-        return (
-          <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-            <Button
-              size="sm"
-              className="h-7 text-xs"
-              variant={quotaFull ? 'outline' : 'default'}
-              onClick={() => {
-                if (quotaFull) {
-                  waitlistMutation.mutate(reg.id)
-                } else {
-                  approveMutation.mutate(reg.id)
-                }
-              }}
-              disabled={approveMutation.isPending || waitlistMutation.isPending}
-            >
-              {quotaFull ? 'Waitlist' : 'Setujui'}
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-7 text-xs text-destructive"
-              onClick={() => rejectMutation.mutate(reg.id)}
-              disabled={rejectMutation.isPending}
-            >
-              Tolak
-            </Button>
-          </div>
-        )
+        // pending: approve/waitlist + reject
+        if (reg.status === 'pending') {
+          return (
+            <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+              <Button
+                size="sm"
+                className="h-7 text-xs"
+                variant={quotaFull ? 'outline' : 'default'}
+                onClick={() => quotaFull ? waitlistMutation.mutate(reg.id) : approveMutation.mutate(reg.id)}
+                disabled={approveMutation.isPending || waitlistMutation.isPending}
+              >
+                {quotaFull ? 'Waitlist' : 'Setujui'}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs text-destructive"
+                onClick={() => rejectMutation.mutate(reg.id)}
+                disabled={rejectMutation.isPending}
+              >
+                Tolak
+              </Button>
+            </div>
+          )
+        }
+        // waitlisted: promote + cancel
+        if (reg.status === 'waitlisted') {
+          return (
+            <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+              <Button
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => promoteMutation.mutate(reg.id)}
+                disabled={promoteMutation.isPending}
+              >
+                Promosikan
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs text-destructive"
+                onClick={() => setCancelTarget({ id: reg.id, name: reg.contactName })}
+              >
+                Batalkan
+              </Button>
+            </div>
+          )
+        }
+        // approved: cancel + ticket preview
+        if (reg.status === 'approved') {
+          return (
+            <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+              {reg.ticketToken && (
+                <Button
+                  asChild
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 text-xs"
+                >
+                  <a href={`/tickets/${reg.ticketToken}`} target="_blank" rel="noopener noreferrer">
+                    QR Tiket
+                  </a>
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs text-destructive"
+                onClick={() => setCancelTarget({ id: reg.id, name: reg.contactName })}
+              >
+                Batalkan
+              </Button>
+            </div>
+          )
+        }
+        // attended: ticket preview only
+        if (reg.status === 'attended' && reg.ticketToken) {
+          return (
+            <div onClick={(e) => e.stopPropagation()}>
+              <Button
+                asChild
+                size="sm"
+                variant="ghost"
+                className="h-7 text-xs"
+              >
+                <a href={`/tickets/${reg.ticketToken}`} target="_blank" rel="noopener noreferrer">
+                  QR Tiket
+                </a>
+              </Button>
+            </div>
+          )
+        }
+        return null
       },
     },
-  ], [quotaFull]) // eslint-disable-line react-hooks/exhaustive-deps
+  ], [quotaFull, waitlistRanks]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const table = useReactTable({
     data: allRows,
@@ -507,6 +648,28 @@ export default function RegistrationsPage({ params }: RegistrationsPageProps) {
         }}
         isPending={approveMutation.isPending || rejectMutation.isPending}
       />
+
+      <AlertDialog open={cancelTarget !== null} onOpenChange={(open: boolean) => { if (!open) setCancelTarget(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Batalkan Pendaftaran?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Anda akan membatalkan pendaftaran <strong>{cancelTarget?.name}</strong>.
+              Slot akan dibebaskan dan diberikan ke peserta waitlist berikutnya.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => cancelTarget && cancelMutation.mutate(cancelTarget.id)}
+              disabled={cancelMutation.isPending}
+            >
+              Ya, Batalkan
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

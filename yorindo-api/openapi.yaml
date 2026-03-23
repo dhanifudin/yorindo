@@ -289,6 +289,10 @@ components:
           type: object
           additionalProperties: true
           description: Survey template schema (JSONB)
+        venue:
+          type: string
+          example: Jakarta Convention Center, Hall A
+          description: Physical venue name and location
         industryTags:
           type: array
           items:
@@ -332,6 +336,9 @@ components:
         capacity:
           type: integer
           minimum: 1
+        venue:
+          type: string
+          description: Physical venue name and location
         industryTags:
           type: array
           items:

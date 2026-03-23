@@ -1,4 +1,6 @@
 import { http, HttpResponse, delay } from 'msw'
+import { registrationsStore } from './registrations'
+import type { EmergencyBlastBody } from '@/types/api'
 
 export interface BlastJob {
   jobId: string
@@ -78,6 +80,25 @@ export const blastHandlers = [
     }
     blastJobsStore.push(job)
     return HttpResponse.json({ jobId: job.jobId, status: job.status }, { status: 202 })
+  }),
+
+  // POST /api/events/:id/blast/emergency — emergency blast to approved registrants
+  http.post('/api/events/:id/blast/emergency', async ({ request, params }) => {
+    await delay(400)
+    const body = await request.json() as EmergencyBlastBody
+    if (!body.message?.trim()) {
+      return HttpResponse.json(
+        { error: { code: 'VALIDATION_ERROR', message: 'message required', details: [] } },
+        { status: 400 }
+      )
+    }
+    const recipientCount = registrationsStore.filter(
+      (r) => r.eventId === params.id && r.status === 'approved'
+    ).length
+    return HttpResponse.json(
+      { jobId: 'emergency-job-1', recipientCount, status: 'queued' },
+      { status: 202 }
+    )
   }),
 
   // GET /api/blast/:jobId — status polling

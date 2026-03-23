@@ -72,11 +72,11 @@ export function OTPRecoverySheet({ open, onClose, eventId, onSuccess }: OTPRecov
 
   return (
     <Sheet open={open} onOpenChange={(v) => !v && handleClose()}>
-      <SheetContent side="bottom" className="pb-8">
+      <SheetContent side="bottom" className="flex flex-col pb-8">
         <SheetHeader>
           <SheetTitle>Pemulihan via OTP</SheetTitle>
         </SheetHeader>
-        <div className="mt-4 space-y-4">
+        <div className="px-4 space-y-4">
           {!otpSent ? (
             <>
               <p className="text-sm text-muted-foreground">

@@ -2,8 +2,9 @@
 
 import { use, useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Search, CheckCircle, Clock, Users } from 'lucide-react'
+import { Search, CheckCircle, Clock, Users, QrCode } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -24,6 +25,7 @@ interface CheckinStats {
 export function CheckinAdminView({ params }: CheckinAdminViewProps) {
   const { id } = use(params)
   const queryClient = useQueryClient()
+  const router = useRouter()
   const [search, setSearch] = useState('')
 
   const { data: stats, isLoading: statsLoading } = useQuery<CheckinStats>({
@@ -88,6 +90,19 @@ export function CheckinAdminView({ params }: CheckinAdminViewProps) {
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
+      {/* Scanner shortcut */}
+      <div className="flex justify-end">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => router.push(`/app/scan?eventId=${id}`)}
+          className="gap-2"
+        >
+          <QrCode className="h-4 w-4" />
+          Buka Scanner
+        </Button>
+      </div>
+
       {/* Stats bar */}
       <div className="grid grid-cols-3 gap-3">
         <Card>

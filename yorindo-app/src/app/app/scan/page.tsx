@@ -15,7 +15,7 @@ import { ScanStatsBar } from '@/components/features/scan/ScanStatsBar'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { QrCode, Clock, ChevronDown, Key, Search, Wifi, WifiOff } from 'lucide-react'
+import { QrCode, ChevronDown, Key, Search, Wifi, WifiOff } from 'lucide-react'
 import { toast } from 'sonner'
 import { getQueueCount, flushScanQueue } from '@/lib/scanQueue'
 import { isToday } from '@/lib/dateUtils'
@@ -25,7 +25,7 @@ export default function ScanPage() {
   const [showEventSheet, setShowEventSheet] = useState(false)
   const [showOTPSheet, setShowOTPSheet] = useState(false)
   const [showSearchSheet, setShowSearchSheet] = useState(false)
-  const [activeTab, setActiveTab] = useState<'scan' | 'otp' | 'search'>('scan')
+  const [activeTab, setActiveTab] = useState<'scan' | 'search'>('scan')
   const [isOnline, setIsOnline] = useState(true)
   const [queueCount, setQueueCount] = useState(0)
   const [lastScan, setLastScan] = useState<{ contactName: string; time: Date } | null>(null)
@@ -43,14 +43,14 @@ export default function ScanPage() {
 
   const filteredEvents = isStaff
     ? (assignedEvents ?? []).filter((e) => e.status === 'active' && isToday(e.eventDate, e.timezone))
-    : (allEventsData?.data ?? [])
+    : (allEventsData?.data ?? []).filter((e) => e.status === 'active')
 
   useEffect(() => {
     if (!accessToken) {
       router.replace('/login')
       return
     }
-    if (user?.role === 'admin' || user?.role === 'viewer') {
+    if (user?.role === 'viewer') {
       router.replace('/app')
     }
   }, [accessToken, user, router])
@@ -158,7 +158,16 @@ export default function ScanPage() {
               {queueCount} pending
             </Badge>
           )}
-          <span className="text-xs text-muted-foreground">{user?.id}</span>
+          {selectedEventId && (
+            <button
+              onClick={() => setShowOTPSheet(true)}
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground border border-border rounded px-2 py-1"
+              title="OTP Recovery"
+            >
+              <Key className="h-3 w-3" />
+              OTP
+            </button>
+          )}
         </div>
       </header>
 
@@ -172,7 +181,7 @@ export default function ScanPage() {
       )}
 
       {/* Scanner fills remaining space */}
-      <div className="flex-1 relative pb-28">
+      <div className="flex-1 relative pb-20">
         {activeTab === 'scan' && (
           selectedEventId ? (
             <QRScanner eventId={selectedEventId} />
@@ -184,28 +193,21 @@ export default function ScanPage() {
             </div>
           )
         )}
-        {activeTab === 'otp' && selectedEventId && (
-          <div className="p-6 flex flex-col items-center justify-center h-full">
-            <p className="text-muted-foreground mb-4 text-sm">Pemulihan identitas via OTP</p>
-            <Button className="h-12 px-8" onClick={() => setShowOTPSheet(true)}>
-              Buka OTP Recovery
-            </Button>
-          </div>
-        )}
-        {activeTab === 'search' && selectedEventId && (
-          <div className="p-6 flex flex-col items-center justify-center h-full">
-            <p className="text-muted-foreground mb-4 text-sm">Cari peserta berdasarkan nama</p>
-            <Button className="h-12 px-8" onClick={() => setShowSearchSheet(true)}>
-              Cari Peserta
-            </Button>
-          </div>
-        )}
-        {(activeTab === 'otp' || activeTab === 'search') && !selectedEventId && (
-          <div className="h-full flex items-center justify-center p-8">
-            <Button onClick={() => setShowEventSheet(true)}>
-              Pilih Event untuk Mulai
-            </Button>
-          </div>
+        {activeTab === 'search' && (
+          selectedEventId ? (
+            <div className="p-6 flex flex-col items-center justify-center h-full">
+              <p className="text-muted-foreground mb-4 text-sm">Cari peserta berdasarkan nama</p>
+              <Button className="h-12 px-8" onClick={() => setShowSearchSheet(true)}>
+                Cari Peserta
+              </Button>
+            </div>
+          ) : (
+            <div className="h-full flex items-center justify-center p-8">
+              <Button onClick={() => setShowEventSheet(true)}>
+                Pilih Event untuk Mulai
+              </Button>
+            </div>
+          )
         )}
       </div>
 
@@ -226,25 +228,11 @@ export default function ScanPage() {
           <span className="text-[10px] font-medium">Scan</span>
         </button>
         <button
-          onClick={() => setActiveTab('otp')}
-          className={`flex flex-col items-center gap-1 flex-1 min-h-[44px] py-2 ${activeTab === 'otp' ? 'text-primary' : 'text-muted-foreground'}`}
-        >
-          <Key className="h-5 w-5" />
-          <span className="text-[10px] font-medium">OTP</span>
-        </button>
-        <button
           onClick={() => setActiveTab('search')}
           className={`flex flex-col items-center gap-1 flex-1 min-h-[44px] py-2 ${activeTab === 'search' ? 'text-primary' : 'text-muted-foreground'}`}
         >
           <Search className="h-5 w-5" />
           <span className="text-[10px] font-medium">Cari</span>
-        </button>
-        <button
-          onClick={() => {}}
-          className="flex flex-col items-center gap-1 flex-1 min-h-[44px] py-2 text-muted-foreground relative"
-        >
-          <Clock className="h-5 w-5" />
-          <span className="text-[10px] font-medium">Riwayat</span>
         </button>
       </nav>
 

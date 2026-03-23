@@ -9,6 +9,7 @@ import { AudiencePreviewCard } from '@/components/undangan/AudiencePreviewCard'
 import { BlastHistoryList, type BlastRecord } from '@/components/undangan/BlastHistoryList'
 import { BlastConfigSheet } from '@/components/undangan/BlastConfigSheet'
 import { BlastProgressBar, type BlastJobStatus } from '@/components/undangan/BlastProgressBar'
+import { EmergencyBlastSheet } from '@/components/undangan/EmergencyBlastSheet'
 import type { Event } from '@/types/api'
 
 interface BlastPageProps {
@@ -25,6 +26,7 @@ export default function BlastPage({ params }: BlastPageProps) {
   const { id } = use(params)
   const queryClient = useQueryClient()
   const [sheetOpen, setSheetOpen] = useState(false)
+  const [showEmergencySheet, setShowEmergencySheet] = useState(false)
   const [activeJobId, setActiveJobId] = useState<string | null>(null)
 
   // Fetch event for targetCriteria
@@ -54,6 +56,16 @@ export default function BlastPage({ params }: BlastPageProps) {
       fetch(`/api/blast/history?eventId=${id}`).then((r) => r.json()),
     staleTime: 30_000,
   })
+
+  // Approved registrant count for emergency blast
+  const { data: approvedCountData } = useQuery<{ pagination: { total: number } }>({
+    queryKey: ['event-registrations-count', id, 'approved'],
+    queryFn: () =>
+      fetch(`/api/registrations?eventId=${id}&status=approved&pageSize=1`).then((r) => r.json()),
+    enabled: !!id,
+    staleTime: 30_000,
+  })
+  const approvedCount = approvedCountData?.pagination.total ?? 0
 
   // Templates for sheet
   const { data: templates = [] } = useQuery<Template[]>({
@@ -120,6 +132,25 @@ export default function BlastPage({ params }: BlastPageProps) {
         </CardContent>
       </Card>
 
+      {/* Emergency blast section */}
+      <div className="border-t border-border pt-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium">Pemberitahuan Darurat</p>
+            <p className="text-xs text-muted-foreground">
+              Kirim pesan mendesak ke {approvedCount} peserta yang disetujui
+            </p>
+          </div>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => setShowEmergencySheet(true)}
+          >
+            Kirim Pemberitahuan Darurat
+          </Button>
+        </div>
+      </div>
+
       {/* Blast config sheet */}
       <BlastConfigSheet
         open={sheetOpen}
@@ -127,6 +158,14 @@ export default function BlastPage({ params }: BlastPageProps) {
         eventId={id}
         templates={templates}
         onSuccess={handleBlastSuccess}
+      />
+
+      {/* Emergency blast sheet */}
+      <EmergencyBlastSheet
+        open={showEmergencySheet}
+        onOpenChange={setShowEmergencySheet}
+        eventId={id}
+        approvedCount={approvedCount}
       />
     </div>
   )

@@ -38,6 +38,7 @@ const STATUS_BADGE: Record<Event['status'], { label: string; className: string }
 
 const UPCOMING_STATUSES: Event['status'][] = ['draft', 'published', 'active']
 const HISTORY_STATUSES: Event['status'][] = ['completed', 'cancelled', 'archived']
+const EDITABLE_STATUSES: Event['status'][] = ['draft', 'published', 'cancelled']
 
 type TabValue = 'upcoming' | 'history'
 
@@ -50,6 +51,7 @@ export default function EventsPage() {
   const [showDeleted, setShowDeleted] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Event | null>(null)
   const [detailEvent, setDetailEvent] = useState<Event | null>(null)
+  const [editEvent, setEditEvent] = useState<Event | null>(null)
   const [showFilterSheet, setShowFilterSheet] = useState(false)
   const [eventsPage, setEventsPage] = useState(0)
   const { data, isLoading } = useEvents()
@@ -251,13 +253,31 @@ export default function EventsPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Edit event sheet */}
+      <Sheet open={!!editEvent} onOpenChange={(v) => !v && setEditEvent(null)}>
+        <SheetContent side="right" className="flex flex-col w-full sm:max-w-lg overflow-y-auto max-h-screen">
+          <SheetHeader>
+            <SheetTitle>Edit Event</SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 px-4 overflow-y-auto">
+            {editEvent && (
+              <EventCreateForm
+                event={editEvent}
+                onSuccess={() => setEditEvent(null)}
+                onCancel={() => setEditEvent(null)}
+              />
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
+
       {/* Mobile filter sheet */}
       <Sheet open={showFilterSheet} onOpenChange={setShowFilterSheet}>
-        <SheetContent side="bottom" className="max-h-[70vh] overflow-y-auto">
+        <SheetContent side="bottom" className="flex flex-col max-h-[70vh] overflow-y-auto">
           <SheetHeader>
             <SheetTitle>Filter</SheetTitle>
           </SheetHeader>
-          <div className="space-y-4 mt-4">
+          <div className="flex-1 px-4 space-y-4 overflow-y-auto">
             <div>
               <Label className="text-xs text-muted-foreground uppercase tracking-wide mb-2 block">Cari Event</Label>
               <Input
@@ -311,7 +331,7 @@ export default function EventsPage() {
               </div>
             </div>
           </div>
-          <SheetFooter className="mt-6">
+          <SheetFooter>
             <Button
               variant="outline"
               className="w-full"
@@ -328,11 +348,11 @@ export default function EventsPage() {
 
       {/* Event detail sheet (mobile) */}
       <Sheet open={!!detailEvent} onOpenChange={(v) => !v && setDetailEvent(null)}>
-        <SheetContent side="bottom" className="max-h-[60vh] overflow-y-auto">
+        <SheetContent side="bottom" className="flex flex-col max-h-[70vh] overflow-y-auto">
           <SheetHeader>
             <SheetTitle>{detailEvent?.name}</SheetTitle>
           </SheetHeader>
-          <div className="space-y-3 mt-4 text-sm">
+          <div className="flex-1 px-4 space-y-3 overflow-y-auto text-sm">
             <div>
               <span className="text-muted-foreground">Status: </span>
               {detailEvent && (
@@ -348,12 +368,31 @@ export default function EventsPage() {
                 hour: '2-digit', minute: '2-digit', timeZone: detailEvent.timezone,
               })}
             </div>
+            {detailEvent?.venue && (
+              <div>
+                <span className="text-muted-foreground">Venue: </span>
+                {detailEvent.venue}
+              </div>
+            )}
             {detailEvent?.capacity && (
               <div>
                 <span className="text-muted-foreground">Kapasitas: </span>
                 {detailEvent.capacity}
               </div>
             )}
+            {detailEvent?.eventType && (
+              <div>
+                <span className="text-muted-foreground">Tipe: </span>
+                <span className="capitalize">{detailEvent.eventType}</span>
+              </div>
+            )}
+            {detailEvent?.industryTags?.length ? (
+              <div className="flex flex-wrap gap-1">
+                {detailEvent.industryTags.map((tag) => (
+                  <Badge key={tag} variant="outline" className="text-xs">{tag}</Badge>
+                ))}
+              </div>
+            ) : null}
             {detailEvent?.description && (
               <div>
                 <span className="text-muted-foreground">Deskripsi: </span>
@@ -361,7 +400,7 @@ export default function EventsPage() {
               </div>
             )}
           </div>
-          <div className="flex gap-2 mt-6">
+          <SheetFooter className="flex-row flex-wrap">
             <Button
               size="sm"
               onClick={() => {
@@ -374,18 +413,32 @@ export default function EventsPage() {
             >
               Lihat Detail
             </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="text-destructive hover:text-destructive"
-              onClick={() => {
-                if (detailEvent) setDeleteTarget(detailEvent)
-                setDetailEvent(null)
-              }}
-            >
-              Hapus
-            </Button>
-          </div>
+            {detailEvent && EDITABLE_STATUSES.includes(detailEvent.status) && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setEditEvent(detailEvent)
+                  setDetailEvent(null)
+                }}
+              >
+                Edit
+              </Button>
+            )}
+            {detailEvent?.status === 'draft' && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-destructive hover:text-destructive"
+                onClick={() => {
+                  if (detailEvent) setDeleteTarget(detailEvent)
+                  setDetailEvent(null)
+                }}
+              >
+                Hapus
+              </Button>
+            )}
+          </SheetFooter>
         </SheetContent>
       </Sheet>
 
@@ -571,19 +624,22 @@ export default function EventsPage() {
                             day: 'numeric',
                             timeZone: event.timezone,
                           })}
+                          {event.venue && ` · ${event.venue}`}
                           {event.capacity != null && ` · Kapasitas: ${event.capacity}`}
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-destructive hover:text-destructive -mr-2 h-7 px-2"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setDeleteTarget(event)
-                          }}
-                        >
-                          Hapus
-                        </Button>
+                        {event.status === 'draft' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive -mr-2 h-7 px-2"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setDeleteTarget(event)
+                            }}
+                          >
+                            Hapus
+                          </Button>
+                        )}
                       </div>
                     </div>
                   )
@@ -636,14 +692,27 @@ export default function EventsPage() {
                             {event.capacity ?? '\u2014'}
                           </TableCell>
                           <TableCell onClick={(e) => e.stopPropagation()}>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-destructive hover:text-destructive"
-                              onClick={() => setDeleteTarget(event)}
-                            >
-                              Hapus
-                            </Button>
+                            <div className="flex items-center gap-1">
+                              {EDITABLE_STATUSES.includes(event.status) && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setEditEvent(event)}
+                                >
+                                  Edit
+                                </Button>
+                              )}
+                              {event.status === 'draft' && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-destructive hover:text-destructive"
+                                  onClick={() => setDeleteTarget(event)}
+                                >
+                                  Hapus
+                                </Button>
+                              )}
+                            </div>
                           </TableCell>
                         </TableRow>
                       )

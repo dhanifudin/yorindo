@@ -2,7 +2,9 @@
 
 import { use } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 
 interface ConfirmPageProps {
   params: Promise<{ token: string }>
@@ -14,6 +16,7 @@ interface ConfirmResult {
     id: string
     status: string
     eventName: string
+    eventSlug: string
     participantName: string
   }
 }
@@ -69,6 +72,37 @@ export default function ConfirmPage({ params }: ConfirmPageProps) {
               <p className="text-sm text-muted-foreground">
                 Tim kami akan meninjau pendaftaran Anda dan memberitahu hasilnya melalui email.
               </p>
+              {/* Social share */}
+              {data?.registration.eventSlug && (
+                <div className="pt-2 space-y-2">
+                  <p className="text-xs text-muted-foreground font-medium">Bagikan ke teman:</p>
+                  <div className="flex justify-center gap-2 flex-wrap">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-green-700 border-green-200 hover:bg-green-50"
+                      onClick={() => {
+                        const url = `${window.location.origin}/register/${data.registration.eventSlug}`
+                        const text = `Saya baru mendaftar ke ${data.registration.eventName}! Daftar juga di: ${url}`
+                        window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
+                      }}
+                    >
+                      WhatsApp
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const url = `${window.location.origin}/register/${data.registration.eventSlug}`
+                        navigator.clipboard.writeText(url)
+                        toast.success('Link disalin!')
+                      }}
+                    >
+                      Salin Link
+                    </Button>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </CardContent>

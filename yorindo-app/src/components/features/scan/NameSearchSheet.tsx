@@ -84,11 +84,11 @@ export function NameSearchSheet({ open, onClose, eventId, onSuccess }: NameSearc
   return (
     <>
       <Sheet open={open} onOpenChange={(v) => !v && handleClose()}>
-        <SheetContent side="bottom" className="pb-8 max-h-[80vh] overflow-y-auto">
+        <SheetContent side="bottom" className="flex flex-col pb-8 max-h-[80vh] overflow-y-auto">
           <SheetHeader>
             <SheetTitle>Cari Peserta</SheetTitle>
           </SheetHeader>
-          <div className="mt-4 space-y-3">
+          <div className="px-4 space-y-3">
             <Input
               value={query}
               onChange={(e) => handleQueryChange(e.target.value)}

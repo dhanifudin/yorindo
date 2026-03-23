@@ -1,6 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { AudienceRecommendationsResponse, Event, PaginatedResponse, CreateEventBody } from '@/types/api'
 
+async function updateEvent(id: string, body: Partial<CreateEventBody>): Promise<Event> {
+  const res = await fetch(`/api/events/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) throw new Error('Failed to update event')
+  return res.json()
+}
+
 async function fetchEvents(): Promise<PaginatedResponse<Event>> {
   const res = await fetch('/api/events?pageSize=50')
   if (!res.ok) throw new Error('Failed to fetch events')
@@ -43,6 +53,17 @@ export function useCreateEvent() {
   return useMutation({
     mutationFn: createEvent,
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] })
+    },
+  })
+}
+
+export function useUpdateEvent(id: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (body: Partial<CreateEventBody>) => updateEvent(id, body),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(['events', id], updated)
       queryClient.invalidateQueries({ queryKey: ['events'] })
     },
   })

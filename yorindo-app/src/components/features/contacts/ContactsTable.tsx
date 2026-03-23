@@ -205,12 +205,13 @@ export function ContactsTable({ onSelectionChange, onToggleSelectMode, selectMod
           }
         }}
       >
-        <SheetContent side="right" className="sm:max-w-lg w-full overflow-y-auto">
+        <SheetContent side="right" className="flex flex-col sm:max-w-lg w-full overflow-y-auto">
           <SheetHeader>
             <SheetTitle>{detailContact?.name}</SheetTitle>
           </SheetHeader>
 
-          <Tabs defaultValue="info" className="mt-4">
+          <div className="flex-1 px-4 overflow-y-auto">
+          <Tabs defaultValue="info" className="mt-0">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="info">Info</TabsTrigger>
               <TabsTrigger value="riwayat">Riwayat</TabsTrigger>
@@ -404,6 +405,7 @@ export function ContactsTable({ onSelectionChange, onToggleSelectMode, selectMod
               </div>
             </TabsContent>
           </Tabs>
+          </div>
         </SheetContent>
       </Sheet>
 

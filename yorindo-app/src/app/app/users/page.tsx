@@ -8,7 +8,7 @@ import { EventAssignmentDialog } from '@/components/features/users/EventAssignme
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet'
 import {
   Table,
   TableBody,
@@ -79,11 +79,11 @@ export default function UsersPage() {
 
       {/* User detail sheet (mobile) */}
       <Sheet open={!!detailUser} onOpenChange={(v) => !v && setDetailUser(null)}>
-        <SheetContent side="bottom" className="max-h-[60vh] overflow-y-auto">
+        <SheetContent side="bottom" className="flex flex-col max-h-[60vh] overflow-y-auto">
           <SheetHeader>
             <SheetTitle>{detailUser?.name}</SheetTitle>
           </SheetHeader>
-          <div className="space-y-3 mt-4 text-sm">
+          <div className="flex-1 px-4 space-y-3 overflow-y-auto text-sm">
             <div><span className="text-muted-foreground">Email: </span>{detailUser?.email}</div>
             <div>
               <span className="text-muted-foreground">Role: </span>
@@ -95,7 +95,7 @@ export default function UsersPage() {
             </div>
           </div>
           {detailUser && currentUser?.id !== detailUser.id && (
-            <div className="flex gap-2 mt-6 flex-wrap">
+            <SheetFooter className="flex-row flex-wrap">
               {(detailUser.role === 'staff' || detailUser.role === 'viewer') && (
                 <Button size="sm" variant="outline" onClick={() => { setAssignUser(detailUser); setDetailUser(null) }}>
                   Assign Event
@@ -114,7 +114,7 @@ export default function UsersPage() {
               >
                 Nonaktifkan
               </Button>
-            </div>
+            </SheetFooter>
           )}
         </SheetContent>
       </Sheet>
