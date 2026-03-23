@@ -6,6 +6,9 @@ nginx/certs/
 .env.*
 !.env.example
 
+# Dependencies
+node_modules/
+
 # OS
 .DS_Store
 
