@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useAuthStore } from '@/store/authStore'
 import { AdminShell } from '@/components/layout/AdminShell'
+import { ParticipantShell } from '@/components/layout/ParticipantShell'
 import { PWAInstallBanner } from '@/components/features/scan/PWAInstallBanner'
 
 // Routes that viewers (read-only) are allowed to access
@@ -43,6 +44,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [accessToken, user, router, pathname])
 
   if (!accessToken) return null
+
+  if (user?.role === 'participant') {
+    return <ParticipantShell>{children}</ParticipantShell>
+  }
 
   return (
     <>

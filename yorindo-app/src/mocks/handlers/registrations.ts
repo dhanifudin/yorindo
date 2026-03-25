@@ -93,7 +93,23 @@ function enrichRegistration(reg: StoredRegistration, eventId: string): Registrat
   }
 }
 
+// Participant dashboard mock registrations (Story 11.6)
+// Mutable — cancel mutations update status in-place so re-fetches reflect the change
+type ParticipantReg = { id: string; eventId: string; eventName: string; eventDate: string; venue: string; status: 'approved' | 'pending' | 'waitlisted' | 'cancelled'; ticketToken: string }
+let participantRegistrations: ParticipantReg[] = [
+  { id: 'preg-001', eventId: 'event-001', eventName: 'Seminar ERP Jakarta', eventDate: '2026-04-15T09:00:00+07:00', venue: 'Jakarta Convention Center', status: 'approved', ticketToken: 'TICKET-PARTICIPANT-A1B2C3' },
+  { id: 'preg-002', eventId: 'event-007', eventName: 'Workshop Digital Marketing Bandung', eventDate: '2026-05-10T08:00:00+07:00', venue: 'Aula Gedung Sate, Bandung', status: 'pending', ticketToken: '' },
+  { id: 'preg-003', eventId: 'event-008', eventName: 'Konferensi Startup Indonesia 2026', eventDate: '2026-06-20T08:00:00+07:00', venue: 'Bali Nusa Dua Convention Center', status: 'waitlisted', ticketToken: '' },
+  { id: 'preg-004', eventId: 'event-009', eventName: 'Forum UMKM Nasional', eventDate: '2026-07-05T07:00:00+07:00', venue: 'Balai Sidang Jakarta', status: 'approved', ticketToken: 'TICKET-PARTICIPANT-X9Y8Z7' },
+]
+
 export const registrationHandlers = [
+  // GET /api/participants/me/registrations — Story 11.6 (Participant Dashboard)
+  http.get('/api/participants/me/registrations', async () => {
+    await delay(400)
+    return HttpResponse.json(participantRegistrations)
+  }),
+
   http.post('/api/registrations/:id/clear-flag', async ({ params }) => {
     await delay(300)
     const idx = registrationsStore.findIndex((r) => r.id === params.id)
@@ -205,7 +221,14 @@ export const registrationHandlers = [
 
   http.post('/api/registrations/:id/cancel', async ({ params }) => {
     await delay(400)
-    const idx = registrationsStore.findIndex((r) => r.id === params.id)
+    const id = params.id as string
+    // Also update participant registrations store (Story 11.6)
+    const pIdx = participantRegistrations.findIndex((r) => r.id === id)
+    if (pIdx !== -1) {
+      participantRegistrations[pIdx] = { ...participantRegistrations[pIdx], status: 'cancelled' }
+      return HttpResponse.json(participantRegistrations[pIdx])
+    }
+    const idx = registrationsStore.findIndex((r) => r.id === id)
     if (idx === -1) {
       return HttpResponse.json(
         { error: { code: 'NOT_FOUND', message: 'Registration not found', details: [] } },
