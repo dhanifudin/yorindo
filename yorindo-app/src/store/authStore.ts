@@ -2,7 +2,7 @@ import { create } from 'zustand'
 
 interface AuthStore {
   accessToken: string | null
-  user: { id: string; role: 'admin' | 'staff' | 'viewer' } | null
+  user: { id: string; role: 'admin' | 'staff' | 'viewer' | 'participant'; name?: string; email?: string } | null
   setAccessToken: (token: string, user: AuthStore['user']) => void
   clearAuth: () => void
 }

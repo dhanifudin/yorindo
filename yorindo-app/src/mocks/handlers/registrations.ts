@@ -197,6 +197,8 @@ export const registrationHandlers = [
         eventName: 'Seminar ERP Jakarta',
         eventSlug: 'seminar-erp-jakarta',
         participantName: 'Budi Santoso',
+        contactId: 'contact-001',
+        participantEmail: 'budi.santoso@email.com',
       },
     })
   }),

@@ -16,6 +16,8 @@ import {
 } from '@/components/ui/select'
 import { toast } from 'sonner'
 import type { Event, Contact } from '@/types/api'
+import { MockGoogleAuthDialog } from '@/components/auth/MockGoogleAuthDialog'
+import { GoogleIcon } from '@/components/icons/GoogleIcon'
 
 const EVENT_TYPE_LABELS: Record<string, string> = {
   conference: 'Conference',
@@ -45,6 +47,8 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
   const [form, setForm] = useState<FormData>({ name: '', email: '', phone: '', surveyAnswers: {}, consent: false })
   const [submitted, setSubmitted] = useState(false)
   const [regId, setRegId] = useState<string | null>(null)
+  const [ssoFilled, setSsoFilled] = useState(false)
+  const [showSsoDialog, setShowSsoDialog] = useState(false)
   const phoneDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const { data: event } = useQuery<Event>({
@@ -65,7 +69,7 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
       return res.json() as Promise<Contact | null>
     },
     onSuccess: (contact) => {
-      if (contact) {
+      if (contact && !ssoFilled) {
         setForm((p) => ({
           ...p,
           name: contact.name || p.name,
@@ -170,6 +174,15 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
   }
 
   return (
+    <>
+    <MockGoogleAuthDialog
+      open={showSsoDialog}
+      onOpenChange={setShowSsoDialog}
+      onSuccess={(name, email) => {
+        setForm((p) => ({ ...p, name, email }))
+        setSsoFilled(true)
+      }}
+    />
     <div className="max-w-md mx-auto px-4 py-6">
       {/* Event details banner */}
       {event && (
@@ -224,6 +237,23 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
           {step === 0 && (
             <div className="space-y-4">
               <h2 className="text-lg font-semibold">Informasi Kontak</h2>
+
+              {/* Gmail SSO pre-fill */}
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full flex items-center gap-2"
+                onClick={() => setShowSsoDialog(true)}
+              >
+                <GoogleIcon />
+                Lanjutkan dengan Google
+              </Button>
+              <div className="relative flex items-center gap-2">
+                <div className="flex-1 h-px bg-border" />
+                <span className="text-xs text-muted-foreground">atau isi manual</span>
+                <div className="flex-1 h-px bg-border" />
+              </div>
+
               <div className="space-y-1.5">
                 <Label htmlFor="phone">
                   Nomor Telepon <span className="text-destructive">*</span>
@@ -241,24 +271,42 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
                 <Label htmlFor="name">
                   Nama Lengkap <span className="text-destructive">*</span>
                 </Label>
-                <Input
-                  id="name"
-                  value={form.name}
-                  onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-                  placeholder="Nama lengkap Anda"
-                />
+                <div className="relative">
+                  <Input
+                    id="name"
+                    value={form.name}
+                    onChange={(e) => !ssoFilled && setForm((p) => ({ ...p, name: e.target.value }))}
+                    placeholder="Nama lengkap Anda"
+                    readOnly={ssoFilled}
+                    className={ssoFilled ? 'pr-20 bg-muted/40' : ''}
+                  />
+                  {ssoFilled && (
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-green-600 font-medium">
+                      ✓ Terisi dari Google
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="email">
                   Email <span className="text-destructive">*</span>
                 </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
-                  placeholder="email@contoh.com"
-                />
+                <div className="relative">
+                  <Input
+                    id="email"
+                    type="email"
+                    value={form.email}
+                    onChange={(e) => !ssoFilled && setForm((p) => ({ ...p, email: e.target.value }))}
+                    placeholder="email@contoh.com"
+                    readOnly={ssoFilled}
+                    className={ssoFilled ? 'pr-20 bg-muted/40' : ''}
+                  />
+                  {ssoFilled && (
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-green-600 font-medium">
+                      ✓ Terisi dari Google
+                    </span>
+                  )}
+                </div>
               </div>
               <Button
                 className="w-full h-11"
@@ -359,5 +407,6 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
         </CardContent>
       </Card>
     </div>
+    </>
   )
 }

@@ -1,10 +1,12 @@
 'use client'
 
-import { use } from 'react'
+import { use, useState, useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { useAuthStore } from '@/store/authStore'
 
 interface ConfirmPageProps {
   params: Promise<{ token: string }>
@@ -18,11 +20,17 @@ interface ConfirmResult {
     eventName: string
     eventSlug: string
     participantName: string
+    contactId: string
+    participantEmail: string
   }
 }
 
 export default function ConfirmPage({ params }: ConfirmPageProps) {
   const { token } = use(params)
+  const { setAccessToken } = useAuthStore()
+  const router = useRouter()
+  const [participantAuthDone, setParticipantAuthDone] = useState(false)
+  const authAttemptedRef = useRef(false)
 
   const { data, isLoading, isError, error } = useQuery<ConfirmResult>({
     queryKey: ['confirm-registration', token],
@@ -35,7 +43,34 @@ export default function ConfirmPage({ params }: ConfirmPageProps) {
       return res.json()
     },
     retry: false,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
   })
+
+  useEffect(() => {
+    if (!data?.registration || participantAuthDone || authAttemptedRef.current) return
+    authAttemptedRef.current = true
+    const createAccount = async () => {
+      try {
+        const res = await fetch('/api/auth/google', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contactId: data.registration.contactId,
+            participantEmail: data.registration.participantEmail,
+            participantName: data.registration.participantName,
+          }),
+        })
+        if (!res.ok) return
+        const authData = await res.json()
+        setAccessToken(authData.accessToken, authData.user)
+        setParticipantAuthDone(true)
+      } catch {
+        // Silent fail — participant auth is a UX enhancement, not a blocker
+      }
+    }
+    createAccount()
+  }, [data, participantAuthDone, setAccessToken])
 
   if (isLoading) {
     return (
@@ -72,6 +107,12 @@ export default function ConfirmPage({ params }: ConfirmPageProps) {
               <p className="text-sm text-muted-foreground">
                 Tim kami akan meninjau pendaftaran Anda dan memberitahu hasilnya melalui email.
               </p>
+              {/* Dashboard entry */}
+              {participantAuthDone && (
+                <Button className="w-full" onClick={() => router.push('/app')}>
+                  Masuk ke Dashboard →
+                </Button>
+              )}
               {/* Social share */}
               {data?.registration.eventSlug && (
                 <div className="pt-2 space-y-2">

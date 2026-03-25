@@ -16,6 +16,13 @@ function isViewerAllowed(pathname: string): boolean {
   return false
 }
 
+// Participants can only access their dashboard
+const PARTICIPANT_ALLOWED_PATHS = ['/app']
+
+function isParticipantAllowed(pathname: string): boolean {
+  return PARTICIPANT_ALLOWED_PATHS.includes(pathname)
+}
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const accessToken = useAuthStore((s) => s.accessToken)
   const user = useAuthStore((s) => s.user)
@@ -29,6 +36,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
     if (user?.role === 'viewer' && !isViewerAllowed(pathname)) {
       router.replace('/app/events')
+    }
+    if (user?.role === 'participant' && !isParticipantAllowed(pathname)) {
+      router.replace('/app')
     }
   }, [accessToken, user, router, pathname])
 

@@ -23,7 +23,7 @@ import { useAuthStore } from '@/store/authStore'
 const SIDEBAR_KEY = 'yorindo-sidebar-collapsed'
 
 const NAV_ITEMS = [
-  { href: '/app',              label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'viewer', 'staff'] },
+  { href: '/app',              label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'viewer', 'staff', 'participant'] },
   { href: '/app/events',       label: 'Event',     icon: Calendar,        roles: ['admin', 'viewer'] },
   { href: '/app/contacts',     label: 'Kontak',    icon: Users,           roles: ['admin'] },
   { href: '/app/yorimind',     label: 'YoriMind',  icon: Sparkles,        roles: ['admin'] },

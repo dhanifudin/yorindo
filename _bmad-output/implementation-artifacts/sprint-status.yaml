@@ -51,7 +51,7 @@
 # - 6-8-social-og-meta-tags-event-pages.md is an orphaned story file (not tracked in current Epic 6)
 
 generated: 2026-03-19
-last_updated: 2026-03-22 (story files created for all 12 backlog stories)
+last_updated: 2026-03-25 (sprint-change-proposal-2026-03-25: added 6-8 gmail-sso-participant-account, 11-6 participant-dashboard; authStore role union expanded to include participant)
 project: yorindo
 project_key: NOKEY
 tracking_system: file-system
@@ -160,6 +160,7 @@ development_status:
   6-5-waitlist-management-auto-promotion: review
   6-6-qr-ticket-generation-delivery: review
   6-7-participant-self-cancellation: review
+  6-8-gmail-sso-participant-account: review
   epic-6-retrospective: optional
 
   # ─────────────────────────────────────────────
@@ -229,4 +230,5 @@ development_status:
   11-3-role-based-personalized-dashboards: review
   11-4-staff-checkin-dashboard-assigned-event-scan-filter: review
   11-5-event-list-filtering-upcoming-history-split: review
+  11-6-participant-dashboard: ready-for-dev
   epic-11-retrospective: optional

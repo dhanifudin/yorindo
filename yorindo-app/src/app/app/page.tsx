@@ -6,6 +6,7 @@ import { useAuthStore } from '@/store/authStore'
 import { AdminDashboard } from '@/components/features/dashboard/AdminDashboard'
 import { ViewerDashboard } from '@/components/features/dashboard/ViewerDashboard'
 import { StaffDashboard } from '@/components/features/dashboard/StaffDashboard'
+import { ParticipantDashboard } from '@/components/features/dashboard/ParticipantDashboard'
 
 export default function DashboardPage() {
   const accessToken = useAuthStore((s) => s.accessToken)
@@ -21,6 +22,7 @@ export default function DashboardPage() {
   if (user.role === 'admin') return <AdminDashboard />
   if (user.role === 'viewer') return <ViewerDashboard />
   if (user.role === 'staff') return <StaffDashboard />
+  if (user.role === 'participant') return <ParticipantDashboard />
 
   router.replace('/login')
   return null

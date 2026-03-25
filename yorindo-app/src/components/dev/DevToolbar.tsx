@@ -3,9 +3,10 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAuthStore } from '@/store/authStore'
 
 const MOCK_USERS = {
-  admin: { id: 'dev-admin', role: 'admin' as const },
-  staff: { id: 'dev-staff', role: 'staff' as const },
-  viewer: { id: 'dev-viewer', role: 'viewer' as const },
+  admin:       { id: 'dev-admin',       role: 'admin'       as const },
+  staff:       { id: 'dev-staff',       role: 'staff'       as const },
+  viewer:      { id: 'dev-viewer',      role: 'viewer'      as const },
+  participant: { id: 'dev-participant', role: 'participant' as const, name: 'Budi Peserta', email: 'budi.peserta@gmail.com' },
 }
 
 const MOCKS_ENABLED =
@@ -59,7 +60,7 @@ export function DevToolbar() {
       >
         DEV &times;
       </button>
-      {(['admin', 'staff', 'viewer'] as const).map((role) => (
+      {(['admin', 'staff', 'viewer', 'participant'] as const).map((role) => (
         <button
           key={role}
           aria-pressed={user?.role === role}
