@@ -36,6 +36,11 @@ services:
     expose:
       - "3000"
     env_file: .env
+    environment:
+      # Experimental features are disabled in production deployments by default.
+      # To enable participant SSO login, set NEXT_PUBLIC_ENABLE_EXPERIMENTAL=true
+      # at image build time (NEXT_PUBLIC_* vars are baked in at build, not runtime).
+      NEXT_PUBLIC_ENABLE_EXPERIMENTAL: ""
     restart: unless-stopped
 
   postgres:

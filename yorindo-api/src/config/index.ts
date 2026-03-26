@@ -18,6 +18,9 @@ export const config = {
   jwtSecret: required('JWT_SECRET'),
   jwtRefreshSecret: required('JWT_REFRESH_SECRET'),
 
+  // Feature flags — disabled by default; enable per environment as features mature
+  enableExperimental: optional('ENABLE_EXPERIMENTAL', 'false') === 'true',  // gates participant SSO login (Phase 2)
+
   // Service adapter selection — defaults drive Phase 1 (in-memory / mock)
   repositoryImpl: optional('REPOSITORY_IMPL', 'memory'),   // 'memory' | 'postgres'
   serviceImpl: optional('SERVICE_IMPL', 'mock'),            // 'mock' | 'real'

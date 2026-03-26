@@ -2,13 +2,13 @@
 
 Admin can create, configure, clone, publish, and manage events through their full lifecycle — with capacity management, survey template builder, segmentation criteria preview, state machine controls, soft delete with recovery, and event cancellation.
 
-> **Phase 1 (FE):** Event creation form (RHF + Zod, all fields); event list with status badges + lifecycle action buttons; clone modal; survey builder (drag-and-drop field config); audience count preview (debounced preview call); soft delete + restore UI with recovery countdown; event cancellation confirmation dialog — all wired to MSW events handler
+> **Phase 1 (FE):** Event creation form (RHF + Zod, all fields); event list with status badges + lifecycle action buttons; clone modal; survey builder (JSON Schema editor — adds/reorders fields with rjsf widget type selection: text, textarea, radio, select, checkboxes, range, date, time); audience count preview (debounced preview call); soft delete + restore UI with recovery countdown; event cancellation confirmation dialog — all wired to MSW events handler
 > **Phase 2 (BE):** `POST/PATCH/GET/DELETE /api/events`, state machine service (Draft→Published→Live→Completed→Archived), `POST /api/events/:id/clone`, survey schema JSONB storage, capacity preview endpoint, soft delete cron (purge after 30d), state-override endpoint (super admin), all event repositories, audit trail writes
 
 ## Story 4.1: Event Creation with Full Configuration
 
 As an admin,
-I want to create a new event with complete configuration including name, date, venue, capacity, approval mode, notification channel, and scan format,
+I want to create a new event with complete configuration including name, start date, end date, venue, capacity, approval mode, notification channel, and scan format,
 So that the event is fully set up before I publish it for registrations.
 
 **Acceptance Criteria:**
@@ -21,9 +21,29 @@ So that the event is fully set up before I publish it for registrations.
 **When** `POST /api/events` is called with the same name,
 **Then** a suffix is appended to make the slug unique (e.g., `erp-seminar-jakarta-2`)
 
-**Given** a missing required field (e.g., no `date`),
+**Given** an event is in `draft` status and I am on the event edit form,
+**When** I manually edit the slug field,
+**Then** on blur, `GET /api/events/check-slug?slug={value}&excludeId={eventId}` is called; if the slug is taken, an inline error "Slug sudah digunakan" is shown and the form cannot be saved; if the slug is available, a green checkmark is shown
+
+**Given** a valid edited slug,
+**When** `PATCH /api/events/:id` is called with the new slug,
+**Then** the slug updates and the public registration URL at `/register/{newSlug}` becomes active; the old slug no longer resolves
+
+**Given** a missing required field (e.g., no `start_date`),
 **When** `POST /api/events` is called,
-**Then** it returns HTTP 400 `{ error: { code: 'VALIDATION_ERROR', details: [{ field: 'date', message: 'Required' }] } }`
+**Then** it returns HTTP 400 `{ error: { code: 'VALIDATION_ERROR', details: [{ field: 'start_date', message: 'Required' }] } }`
+
+**Given** the event creation form,
+**When** I fill in `start_date` and `start_time`,
+**Then** an "Event satu hari" checkbox is shown; if checked, `end_date` is locked to the same date as `start_date` and only `end_time` is required; if unchecked, both `end_date` and `end_time` fields are shown and required
+
+**Given** `end_date` is before `start_date`,
+**When** `POST /api/events` is called,
+**Then** it returns HTTP 400 `{ error: { code: 'VALIDATION_ERROR', details: [{ field: 'end_date', message: 'Must be after start_date' }] } }`
+
+**Given** `end_date` equals `start_date` (single-day event) and `end_time` is before or equal to `start_time`,
+**When** `POST /api/events` is called,
+**Then** it returns HTTP 400 `{ error: { code: 'VALIDATION_ERROR', details: [{ field: 'end_time', message: 'Must be after start_time' }] } }`
 
 **Given** the event is created,
 **Then** an `event.created` audit entry is written with `actor_id`, `event_id`, and `created_at`
@@ -68,7 +88,7 @@ So that events move predictably through states and invalid transitions are preve
 
 As an admin,
 I want to clone an existing event and inherit all its configuration with editable overrides,
-So that I can quickly set up recurring events without re-entering all configuration from scratch.
+So that I can quickly set up a new event that is similar to a previous one without re-entering all configuration from scratch.
 
 **Acceptance Criteria:**
 
@@ -77,38 +97,65 @@ So that I can quickly set up recurring events without re-entering all configurat
 **Then** a new event is created in `draft` status with all configuration copied from the source event, a new unique slug (`{original-slug}-copy`), and the original event's registrations and attendees are NOT copied
 
 **Given** the cloned event,
-**When** I update the `name` and `date` fields,
-**Then** only those fields change — all other config (approval mode, notification channel, survey schema ID) is preserved from the source
+**Then** the following fields are copied from the source: `name`, `venue`, `description`, `capacity`, `waitlist_buffer`, `approval_mode`, `notification_channel`, `scan_format`, `target_criteria`, `survey_schema_id`, `banner_url`, `start_date`, `start_time`, `end_date`, `end_time`
+
+**Given** the cloned event's edit form,
+**When** it opens after cloning,
+**Then** `start_date`, `start_time`, `end_date`, and `end_time` are pre-filled from the source event and highlighted for the admin to update before publishing; all other copied fields are editable as normal
+
+**Given** the cloned event,
+**When** I update any field (e.g. `name`, `start_date`),
+**Then** only those fields change — all other copied config is preserved from the source
 
 **Given** the clone action in the FE (event list → kebab menu → Clone),
 **When** I click Clone,
-**Then** I am navigated to the cloned event's edit form with a success toast notification
+**Then** I am navigated to the cloned event's edit form with a success toast notification: "Event berhasil diduplikasi — perbarui tanggal sebelum mempublikasikan"
 
 ---
 
 ## Story 4.4: Survey Template Builder
 
 As an admin,
-I want to build a custom survey template for each event using a drag-and-drop form builder,
-So that I can capture event-specific participant intent signals beyond standard registration fields.
+I want to build a custom survey template for each event using a JSON Schema field editor,
+So that I can capture event-specific participant intent signals beyond the standard registration fields.
 
 **Acceptance Criteria:**
 
 **Given** I am on the survey builder page (`/admin/events/:id/builder`),
-**When** I add a field of type `dropdown` with the label "Solutions Currently Evaluating" and options,
-**Then** `PUT /api/events/:id/survey` saves the schema to MongoDB `survey_schemas` collection with the correct structure
+**When** I add a custom field with a label, widget type, and optional choices,
+**Then** the field is appended to the `properties` map in the JSON Schema and the `ui:order` array in the UISchema; supported widget types mirror Google Forms (excluding file upload):
+- `text` — short answer (single-line free text)
+- `textarea` — paragraph (multi-line free text)
+- `radio` — multiple choice (select one via radio buttons)
+- `select` — dropdown (select one via dropdown)
+- `checkboxes` — checkboxes (multi-select)
+- `range` — linear scale (numeric min/max configurable, e.g. 1–5 or 1–10)
+- `date` — date picker
+- `time` — time picker
 
-**Given** a survey schema exists for an event,
-**When** `GET /api/events/:id/survey` is called,
-**Then** it returns the full schema with all fields, types, labels, required flags, and options
+**Given** I save the survey schema,
+**When** `PUT /api/events/:id/survey` is called,
+**Then** the payload `{ schema: JSONSchema7, uiSchema: UISchema }` is stored in MongoDB `survey_schemas` collection; `GET /api/events/:id/survey` returns the same structure
 
-**Given** I reorder fields in the builder via drag-and-drop,
+**Given** I reorder custom fields in the builder,
 **When** I save,
-**Then** the field order in the MongoDB document matches the displayed order
+**Then** the `uiSchema["ui:order"]` array reflects the displayed order; the rendered participant form respects this order
+
+**Given** a field of type `radio`, `select`, or `checkboxes`,
+**When** I add it,
+**Then** I can define the list of options (label + value pairs); the schema stores them as `enum` (radio/select) or `items.enum` (checkboxes) respectively
+
+**Given** a field of type `range`,
+**When** I add it,
+**Then** I can configure `minimum` and `maximum` (default 1–5); the schema stores them as `{ type: 'integer', minimum, maximum }`
 
 **Given** the event's survey schema,
 **When** a participant visits `/register/{slug}`,
-**Then** only the fields enabled in the survey schema are rendered — no hardcoded fields appear outside the schema
+**Then** rjsf renders the custom fields after the fixed registration fields; only schema-defined fields appear — no hardcoded custom fields outside the schema
+
+**Given** I am on the survey builder page and have added or modified fields,
+**When** I click "Preview Formulir",
+**Then** a modal or side panel opens rendering the complete registration form via rjsf — fixed fields first (phone, name, email, company_email, company_name, company_location, position, industry_type), followed by the current custom survey fields in their defined order; the preview is read-only and updates live as fields are added/reordered
 
 ---
 
@@ -280,6 +327,10 @@ So that I can bulk-accept the AI recommendation list or review and act on indivi
 **When** the clear action is taken,
 **Then** `PATCH /api/registrations/:id/clear-flag` is called; the badge disappears for this registration only; the contact's `flagCategory` is NOT modified
 
+**Given** I click on a registration row in the Registrasi tab,
+**When** the row expands or a side drawer opens,
+**Then** the participant's full registration details are shown including: all fixed registration fields (name, company_name, company_location, position, email, company_email, industry_type) and all custom survey responses rendered as question → answer pairs in the order defined by the event's survey schema; if no survey was configured for the event, the survey section is hidden
+
 ---
 
 ## Story 4.11: Event Pipeline Hub — Konfirmasi Tab
@@ -310,29 +361,65 @@ So that I know which approved registrants have confirmed their attendance and re
 
 ---
 
-## Story 4.12: Event Pipeline Hub — Laporan Tab (Stub)
+## Story 4.12: Event Pipeline Hub — Laporan Tab
 
 > **Added 2026-03-21** — Sprint Change Proposal v2
-> This story creates the Laporan tab shell. Full analytics content is delivered in Epic 8.
+> **Updated 2026-03-26** — Sprint Change Proposal 2026-03-26c: promoted from stub to full tab hosting analytics dashboard (Story 8.3) + YoriMind panel (Story 8.4)
 
 As an admin,
-I want the Laporan tab to be present in the Event Pipeline Hub with a stub state during Phase 1,
-So that the navigation is complete and the tab can be progressively filled in by Epic 8.
+I want the Laporan tab to host the full analytics dashboard and YoriMind insights panel within the Event Pipeline Hub,
+So that I can access event performance data and AI-generated recommendations without leaving the event workspace.
 
 **Acceptance Criteria:**
 
-**Given** I am on the Laporan tab (`/app/events/:id/report`),
-**When** the event has `status: 'completed'` or `'live'`,
-**Then** the tab shows a loading skeleton for 500ms then renders: placeholder funnel chart (Recharts skeleton with seeded data), YoriMind panel placeholder with "Analisis tersedia setelah event selesai" copy, and a disabled "Unduh Laporan PDF" button
+**Given** I am on the Laporan tab (`/app/events/:id/report`) and the event has `status: 'completed'` or `'live'`,
+**When** the tab loads,
+**Then** it renders two stacked sections:
+  1. **Analytics section** — three metric cards (Total Undangan, Total Mendaftar, Total Peserta) + Recharts funnel chart + demographic charts with position/industry/location filter pills (Story 8.3 content)
+  2. **YoriMind section** — AI insights panel with analysis narrative, root causes, recommendations table, and "Refresh Insights" button (Story 8.4 content)
 
-**Given** the event has any other status,
+**Given** the event has any status other than `'completed'` or `'live'`,
 **When** the Laporan tab is viewed,
-**Then** it shows an empty state: "Laporan tersedia setelah event berlangsung" with the expected event date
+**Then** it shows an empty state: "Laporan tersedia setelah event berlangsung" with the event's start date
 
-**Given** `GET /api/events/:id/report` returns report data (Epic 8 implements the real endpoint),
-**Then** the MSW handler returns deterministic seeded analytics data matching the `EventReport` type in `src/types/api.ts`
+**Given** the YoriMind section loads,
+**When** the Redis cache key `yorimind:event:{id}` has a valid entry (TTL 7 days),
+**Then** the cached AI insights are displayed immediately without a new API call; the last-refreshed timestamp is shown below the panel
 
-**Given** the Laporan tab renders,
-**Then** it imports the `<YoriMindPanel>` component (Epic 8 implements the panel content); if the component is not yet available, a `<Suspense>` boundary with a skeleton fallback is shown — no hard import crash
+**Given** no cached YoriMind data exists (cache miss or first load),
+**When** the section mounts,
+**Then** a skeleton loader shows for up to 2000ms while `GET /api/events/:id/yorimind` is called; if the snapshot is not yet available, the section shows "Analisis tersedia setelah snapshot harian dibuat (02:00 WIB)"
+
+---
+
+## Story 4.13: Event Banner / Poster Upload
+
+> **Added 2026-03-26** — Sprint Change Proposal 2026-03-26
+
+As an admin,
+I want to upload a banner or poster image for an event, or reuse one from a previous event,
+So that the public registration page and blast templates have consistent event branding.
+
+**Acceptance Criteria:**
+
+**Given** I am on the event creation or edit form,
+**When** I click "Upload Banner",
+**Then** a file picker opens accepting JPEG, PNG, and WebP up to 5MB; on selection the image is uploaded via `POST /api/media/upload` and a preview thumbnail is shown in the form
+
+**Given** a previously uploaded banner exists (from any event),
+**When** I click "Pilih dari Galeri",
+**Then** a modal shows a paginated grid of previously uploaded banners; selecting one sets that image's URL as the event banner without re-uploading
+
+**Given** a banner is set on the event,
+**When** `GET /api/events/:slug/public` is called,
+**Then** the response includes `banner_url` pointing to the VPS-served image path; the public registration landing page renders it as the event hero image
+
+**Given** no banner is uploaded,
+**When** the public registration page renders,
+**Then** a default placeholder banner is shown — the page does not break
+
+**Given** an uploaded image,
+**When** stored on the VPS filesystem,
+**Then** it is placed in `UPLOADS_DIR/banners/{eventId}/` with the original filename sanitized; the stored path is saved to `events.banner_url`
 
 ---

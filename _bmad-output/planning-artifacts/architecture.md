@@ -61,6 +61,7 @@ Three UX surfaces: public participant registration (mobile-first, zero-account),
 | PWA | serwist | 9.x | Turbopack-compatible service worker |
 | State management | Zustand | 4.x | Lightweight, no Redux overhead |
 | Form handling | React Hook Form + Zod | latest | Client + server validation |
+| Dynamic form rendering | @rjsf/core + @rjsf/shadcn | latest | rjsf renders JSON Schema → participant registration form + admin survey preview; supported widgets: text, textarea, radio, select, checkboxes, range, date, time (mirrors Google Forms, excludes file upload) |
 | QR generate | react-qr-code | latest | Encode JWT → QR image |
 | QR scan | html5-qrcode | latest | Camera, cross-browser |
 | Data tables | TanStack Table | 8.x | Server-side pagination, headless |
@@ -132,7 +133,17 @@ Three UX surfaces: public participant registration (mobile-first, zero-account),
 
 7. **ETL pipeline** — 7-step process: upload → VPS local temp storage (`/tmp/uploads/`) → BullMQ job → GPT-4o batch normalization (50 rows/batch) → Zod validation → upsert valid to PostgreSQL → flagged records to `flagged_records` table. Temp file deleted after ETL job completes. Admin reviews flagged records at `/admin/contacts/flagged`.
 
-8. **YoriMind snapshot pattern** — Cron job at 02:00 WIB queries Core DB, generates JSON snapshot `{ event, funnel_data, historical_comparison, attendee_segments }`, saves to VPS filesystem at `/data/snapshots/event_{id}_{date}.json` (Docker volume `snapshots_data`). YoriMind reads latest snapshot (never live DB), calls Claude API, caches result in Redis with TTL 24h.
+8. **YoriMind snapshot pattern** — Cron job at 02:00 WIB queries Core DB, generates JSON snapshot `{ event, funnel_data, historical_comparison, attendee_segments }`, saves to VPS filesystem at `/data/snapshots/event_{id}_{date}.json` (Docker volume `snapshots_data`). YoriMind reads latest snapshot (never live DB), calls Claude API, caches result in Redis with TTL 7 days. Cache key: `yorimind:event:{id}`. Invalidated manually via "Refresh Insights" action only — never auto-invalidated (snapshot data doesn't change until next cron run; AI output is deterministic for the same snapshot input).
+
+15. **Redis read cache** — High-load read endpoints and AI analysis results are cached in Redis to avoid redundant DB aggregations and AI API calls. Cache-aside pattern: check Redis → on miss, query DB/AI → write to Redis → return. All cache writes use `SET key value EX ttl`. `filterHash` = stable SHA-1 of sorted serialized query params. Cache layer lives in the service layer only — never in route handlers.
+
+    | Endpoint | Cache key | TTL | Invalidation trigger |
+    |---|---|---|---|
+    | `GET /api/events/:id/analytics` | `analytics:event:{id}:{filterHash}` | 5 min | Any registration status change for this event |
+    | `GET /api/events/:id/report` | `report:event:{id}` | 24h | `report.regenerate` job completes |
+    | `GET /api/events/:id/overview` | `overview:event:{id}` | 2 min | Any registration or blast update for this event |
+    | `POST /api/events/:id/audience-preview` | `audience-preview:event:{id}:{filterHash}` | 10 min | New contact upsert or bulk ETL job completes |
+    | `GET /api/events/:id/yorimind` | `yorimind:event:{id}` | 7 days | Manual "Refresh Insights" only |
 
 9. **QR ticket JWT** — HS256, `JWT_SECRET` (min 32 chars). Payload: `{ sub: registrationId, eventId, type: 'ticket', iat, exp: eventDate+1day }`. Single-use enforced by checking `registrations.status !== 'attended'` on scan. Backend generates token only when status changes to `'approved'`.
 

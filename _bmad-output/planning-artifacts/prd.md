@@ -776,7 +776,7 @@ All external service calls (Everpro, Brevo, AI provider) are abstracted behind s
 
 - **FR22:** Participant can view event details and availability on a public event landing page before registering
 - **FR23:** Participant can register for a published event via a public web form
-- **FR24:** System pre-fills registration form fields for returning participants identified by their phone number
+- **FR24:** System pre-fills registration form fields for returning participants identified by their phone number; pre-filled fields: name, email, company_name, position; additional fields (company_email, company_location, industry_type) pre-filled when available in the contact record
 - **FR25:** System captures configurable participant intent signals during registration (e.g., solutions currently being evaluated)
 - **FR26:** System processes each registration through the event-configured approval workflow (automatic, hybrid, or manual)
 - **FR27:** System scores registrations using rule-based criteria and surfaces confidence indicators explaining each approval decision to the reviewing admin
@@ -878,7 +878,7 @@ All external service calls (Everpro, Brevo, AI provider) are abstracted behind s
 | **NFR-S11** | All secrets stored in environment variables; never committed to version control |
 | **NFR-S12** | Vendor report magic link: maximum 7-day expiry; triggers file download (not browser-viewable page) to prevent screenshot/copy exposure |
 | **NFR-S13** | Every vendor report magic link access (IP address, timestamp, user agent) logged for UU PDP audit accountability |
-| **NFR-S14** | Registration form fields are configurable per event — admin enables only fields required for that event's stated purpose; no personal data field collected by default if not required (UU PDP Art. 16 — data minimization) |
+| **NFR-S14** | The registration form always collects a fixed baseline set (phone, name, email, company_email, company_name, company_location, position, industry_type); admin-configured custom survey fields are additive — rendered via rjsf from the event's JSON Schema; no custom field is shown that wasn't explicitly enabled by the admin (UU PDP Art. 16 — data minimization applies to custom fields, not the fixed baseline) |
 | **NFR-S15** | Participant consent withdrawal (unsubscribe) completable in ≤ 2 taps/clicks from any notification message, without requiring login (UU PDP Art. 9(2) — withdrawal as easy as giving) |
 | **NFR-S16** | All admin access to bulk participant data exports logged; logs retained for minimum 1 year for breach investigation (UU PDP Art. 46 — breach notification readiness) |
 
