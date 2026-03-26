@@ -44,7 +44,7 @@ Then the batch is retried up to 3 times with exponential backoff before being ma
 Then `contacts.completeness_score` is computed as the percentage of non-null profile fields (`name`, `phone`, `email`, `company`, `industry_id`, `job_title_id`, `city`, `company_size`) and persisted alongside the upsert
 
 **AC7:** Given the ETL job completes,
-Then a `raw_uploads` document is created in MongoDB with `{ filename, uploaded_by, row_count, status: 'completed', flagged_rows }` and a `contact.imported` audit entry is written to `audit_logs`
+Then a row is inserted in `raw_uploads` (PostgreSQL) with `{ id: CUID2, filename, uploaded_by, row_count, status: 'completed', flagged_rows }` and a `contact.imported` audit entry is written to `audit_logs`
 
 ## Dev Notes
 
@@ -54,7 +54,7 @@ Then a `raw_uploads` document is created in MongoDB with `{ filename, uploaded_b
 - **File parsing:** `xlsx` package (already in package.json)
 - **AI:** `IEtlNormalizationService` adapter — Phase 1: `MockEtlNormalizationService`; Phase 2: real adapter (e.g., `openai` SDK) configured via `ETL_AI_PROVIDER` env var
 - **Validation:** Zod 3.x for normalized row schema
-- **DB:** PostgreSQL via `IContactRepository`, `IFlaggedRecordsRepository`; MongoDB via `ISurveyRepository` (for raw_uploads log)
+- **DB:** PostgreSQL only — `IContactRepository`, `IFlaggedRecordsRepository`, `IRawUploadsRepository` (for upload log)
 - **Queue:** `etlQueue` from `lib/queue.ts`
 - **Retry:** BullMQ built-in retry with backoff — configure on the worker, not the job
 
@@ -186,14 +186,14 @@ For each row output: { name, phone (format: +62XXXXXXXXXX), email, industry_slug
 Indonesian phone numbers: strip spaces/dashes, add +62 prefix, remove leading 0.`
 ```
 
-### MongoDB raw_uploads Document
+### raw_uploads PostgreSQL Row
 
 ```typescript
-// Inserted to MongoDB 'raw_uploads' collection after job completes
+// Inserted to PostgreSQL 'raw_uploads' table after job completes
 {
-  _id: ObjectId,
+  id: string,          // CUID2, generated application-side
   filename: string,
-  uploaded_by: string,  // user ID
+  uploaded_by: string, // user ID (CUID2)
   row_count: number,
   upserted_count: number,
   flagged_count: number,
@@ -246,7 +246,7 @@ Use `InMemoryContactRepository` and `InMemoryFlaggedRecordsRepository` from cont
   - [ ] Subtask 1.6: Route rows: confidence >= 0.7 → `contactRepo.upsert()`, < 0.7 → `flaggedRepo.create()`
   - [ ] Subtask 1.7: Compute `completeness_score` per upserted row
   - [ ] Subtask 1.8: Delete temp file via `storage.deleteFile()`
-  - [ ] Subtask 1.9: Write `raw_uploads` MongoDB document on completion
+  - [ ] Subtask 1.9: Insert `raw_uploads` PostgreSQL row on completion
   - [ ] Subtask 1.10: Write `contact.imported` audit log entry
 
 - [ ] Task 2: Create `src/workers/etl.worker.ts`

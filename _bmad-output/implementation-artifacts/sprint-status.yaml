@@ -51,7 +51,7 @@
 # - 6-8-social-og-meta-tags-event-pages.md is an orphaned story file (not tracked in current Epic 6)
 
 generated: 2026-03-19
-last_updated: 2026-03-25 (11-6-participant-dashboard: review)
+last_updated: 2026-03-26 (Sprint Change Proposal 2026-03-26d: CUID2 PKs, PostgreSQL only, Phase 1 memory contract; stories 1-1, 1-2, 1-7, 1-8, 3-3, 4-4 reset to ready-for-dev)
 project: yorindo
 project_key: NOKEY
 tracking_system: file-system
@@ -66,14 +66,14 @@ development_status:
   # Stories 1.3–1.7: FE foundation (all in review)
   # ─────────────────────────────────────────────
   epic-1: in-progress
-  1-1-backend-repository-scaffold-docker-compose: review
-  1-2-database-schema-migrations: review
+  1-1-backend-repository-scaffold-docker-compose: ready-for-dev
+  1-2-database-schema-migrations: ready-for-dev
   1-3-frontend-repository-scaffold: review
   1-4-openapi-30-specification: review
   1-5-fe-type-definitions-msw-foundation-devtoolbar: review
   1-6-msw-mock-handlers-for-all-api-domains: review
-  1-7-cicd-pipeline: review
-  1-8-service-adapter-scaffold-in-memory-repository-scaffold: review
+  1-7-cicd-pipeline: ready-for-dev
+  1-8-service-adapter-scaffold-in-memory-repository-scaffold: ready-for-dev
   epic-1-retrospective: optional
 
   # ─────────────────────────────────────────────
@@ -98,7 +98,7 @@ development_status:
   epic-3: in-progress
   3-1-contact-list-with-server-side-pagination-filtering: review
   3-2-excelcsv-upload-etl-job-trigger: review
-  3-3-etl-processing-ai-normalization-database-upsert: review
+  3-3-etl-processing-ai-normalization-database-upsert: ready-for-dev
   3-4-flagged-records-review-resolution: review
   3-5-duplicate-profile-detection-merge: review
   3-6-smart-filter-ai-industry-autocomplete: review

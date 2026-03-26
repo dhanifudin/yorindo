@@ -135,7 +135,7 @@ So that I can capture event-specific participant intent signals beyond the stand
 
 **Given** I save the survey schema,
 **When** `PUT /api/events/:id/survey` is called,
-**Then** the payload `{ schema: JSONSchema7, uiSchema: UISchema }` is stored in MongoDB `survey_schemas` collection; `GET /api/events/:id/survey` returns the same structure
+**Then** the payload `{ schema: JSONSchema7, uiSchema: UISchema }` is stored in `events.survey_schema JSONB` column in PostgreSQL; `GET /api/events/:id/survey` returns the same structure
 
 **Given** I reorder custom fields in the builder,
 **When** I save,

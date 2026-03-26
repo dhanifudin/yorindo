@@ -12,7 +12,7 @@ review
 
 ## Context
 
-This is a Phase 1 BE Foundation story — it can be worked in parallel with FE Phase 1 stories. It depends on Story 1.1 (Docker Compose must be running with PostgreSQL). The authoritative schema is defined in `architecture.md` and must be followed exactly — do not deviate. UUIDs everywhere, no auto-increment IDs. The schema defines the data contracts that both the in-memory repositories (Story 1.8) and the real Postgres repositories (Phase 2) must implement.
+This is a Phase 1 BE Foundation story — it can be worked in parallel with FE Phase 1 stories. It depends on Story 1.1 (Docker Compose must be running with PostgreSQL). The authoritative schema is defined in `architecture.md` and must be followed exactly — do not deviate. CUID2 TEXT primary keys everywhere (application-generated), no auto-increment IDs. The schema defines the data contracts that both the in-memory repositories (Story 1.8) and the real Postgres repositories (Phase 2) must implement.
 
 The `scripts/migrate.ts` runner is idempotent — running it twice on a clean database must succeed without errors (use `CREATE TABLE IF NOT EXISTS` and `CREATE INDEX IF NOT EXISTS` throughout). A `scripts/seed.ts` provides realistic dev data and must exit immediately if `NODE_ENV=production`.
 
@@ -23,7 +23,7 @@ When `npx tsx scripts/migrate.ts` is run,
 Then all 4 migration files execute in order (001→002→003→004) with a success log per file and zero errors
 
 **AC2:** Given migration 001 runs,
-Then tables `contacts`, `events`, `registrations`, `vendors`, `industries`, `job_titles` exist with UUID PKs (`gen_random_uuid()`), correct column types, and FK constraints as per the authoritative schema in architecture.md
+Then tables `contacts`, `events`, `registrations`, `vendors`, `industries`, `job_titles` exist with CUID2 TEXT PKs, correct column types, and FK constraints as per the authoritative schema in architecture.md
 
 **AC3:** Given migration 002 runs,
 Then tables `users` (id, email, password_hash, role, name, timestamps) and `user_events` (id, user_id FK, event_id FK, granted_by FK, granted_at, UNIQUE(user_id, event_id)) exist
@@ -66,7 +66,7 @@ yorindo-api/
 
 ### Architecture Constraints (MUST FOLLOW)
 
-1. **UUID primary keys everywhere** — use `gen_random_uuid()` on ALL tables. No `SERIAL` or `BIGSERIAL`.
+1. **CUID2 primary keys everywhere** — `id TEXT PRIMARY KEY`, generated application-side via `createId()` from `@paralleldrive/cuid2`. No `SERIAL`, `BIGSERIAL`, or `gen_random_uuid()`.
 2. **Idempotent** — `CREATE TABLE IF NOT EXISTS`, `CREATE INDEX IF NOT EXISTS`, `DO $$ BEGIN ... EXCEPTION WHEN duplicate_object THEN NULL; END $$` for enum types.
 3. **Direct SQL** — no migration framework (no Flyway, no Knex migrations). Simple sequential file execution.
 4. **Authoritative schema** — follows architecture.md exactly. Do not add columns not listed there.
@@ -75,26 +75,25 @@ yorindo-api/
 ### PostgreSQL Schema — Migration 001: Core Schema
 
 ```sql
--- Enable UUID generation
-CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+-- Primary keys are CUID2 TEXT strings, generated application-side via @paralleldrive/cuid2
 
 -- Industries lookup
 CREATE TABLE IF NOT EXISTS industries (
-  id    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id    TEXT PRIMARY KEY,
   slug  VARCHAR(100) UNIQUE NOT NULL,
   name  VARCHAR(200) NOT NULL
 );
 
 -- Job Titles lookup
 CREATE TABLE IF NOT EXISTS job_titles (
-  id    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id    TEXT PRIMARY KEY,
   slug  VARCHAR(100) UNIQUE NOT NULL,
   name  VARCHAR(200) NOT NULL
 );
 
 -- Vendors
 CREATE TABLE IF NOT EXISTS vendors (
-  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id         TEXT PRIMARY KEY,
   name       VARCHAR(200) NOT NULL,
   contact    VARCHAR(200),
   phone      VARCHAR(20),
@@ -104,12 +103,12 @@ CREATE TABLE IF NOT EXISTS vendors (
 
 -- Contacts
 CREATE TABLE IF NOT EXISTS contacts (
-  id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id                TEXT PRIMARY KEY,
   name              VARCHAR(200) NOT NULL,
   phone             VARCHAR(20) UNIQUE NOT NULL,  -- normalized: +62XXXXXXXXXX
   email             VARCHAR(200) UNIQUE,
-  industry_id       UUID REFERENCES industries(id),
-  job_title_id      UUID REFERENCES job_titles(id),
+  industry_id       TEXT REFERENCES industries(id),
+  job_title_id      TEXT REFERENCES job_titles(id),
   city              VARCHAR(100),
   company           VARCHAR(200),
   company_size      VARCHAR(20),                  -- '<50', '50-200', '200-1000', '>1000'
@@ -129,7 +128,7 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- Events
 CREATE TABLE IF NOT EXISTS events (
-  id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id               TEXT PRIMARY KEY,
   name             VARCHAR(300) NOT NULL,
   slug             VARCHAR(150) UNIQUE NOT NULL,
   date             TIMESTAMPTZ NOT NULL,
@@ -143,8 +142,8 @@ CREATE TABLE IF NOT EXISTS events (
   notification_channel VARCHAR(20) DEFAULT 'email', -- 'email', 'whatsapp'
   scan_format      VARCHAR(20) DEFAULT 'qr',        -- 'qr'
   target_criteria  JSONB,
-  survey_schema_id TEXT,                            -- MongoDB ObjectId as string
-  vendor_id        UUID REFERENCES vendors(id),
+  survey_schema    JSONB,                            -- { schema: JSONSchema7, uiSchema: UISchema }
+  vendor_id        TEXT REFERENCES vendors(id),
   status           event_status NOT NULL DEFAULT 'draft',
   deleted_at       TIMESTAMPTZ,
   created_at       TIMESTAMPTZ DEFAULT NOW(),
@@ -158,9 +157,9 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- Registrations
 CREATE TABLE IF NOT EXISTS registrations (
-  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  contact_id   UUID REFERENCES contacts(id) ON DELETE CASCADE,
-  event_id     UUID REFERENCES events(id) ON DELETE CASCADE,
+  id           TEXT PRIMARY KEY,
+  contact_id   TEXT REFERENCES contacts(id) ON DELETE CASCADE,
+  event_id     TEXT REFERENCES events(id) ON DELETE CASCADE,
   status       reg_status NOT NULL DEFAULT 'pending',
   ticket_token TEXT,
   ai_score     NUMERIC(4,3),
@@ -177,7 +176,7 @@ CREATE TABLE IF NOT EXISTS registrations (
 ```sql
 -- Users
 CREATE TABLE IF NOT EXISTS users (
-  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id            TEXT PRIMARY KEY,
   email         VARCHAR(200) UNIQUE NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
   role          VARCHAR(20) NOT NULL,  -- 'super_admin', 'event_admin', 'staff', 'vendor_client', 'participant'
@@ -188,10 +187,10 @@ CREATE TABLE IF NOT EXISTS users (
 
 -- User-Event access assignments (staff/viewer event scoping)
 CREATE TABLE IF NOT EXISTS user_events (
-  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id    UUID REFERENCES users(id) ON DELETE CASCADE,
-  event_id   UUID REFERENCES events(id) ON DELETE CASCADE,
-  granted_by UUID REFERENCES users(id),
+  id         TEXT PRIMARY KEY,
+  user_id    TEXT REFERENCES users(id) ON DELETE CASCADE,
+  event_id   TEXT REFERENCES events(id) ON DELETE CASCADE,
+  granted_by TEXT REFERENCES users(id),
   granted_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(user_id, event_id)
 );
@@ -200,26 +199,39 @@ CREATE TABLE IF NOT EXISTS user_events (
 ### Migration 003: Audit & Flagged Records
 
 ```sql
+-- ETL upload log (replaces former MongoDB raw_uploads collection)
+CREATE TABLE IF NOT EXISTS raw_uploads (
+  id             TEXT PRIMARY KEY,
+  filename       TEXT NOT NULL,
+  uploaded_by    TEXT REFERENCES users(id),
+  row_count      INTEGER NOT NULL DEFAULT 0,
+  upserted_count INTEGER NOT NULL DEFAULT 0,
+  flagged_count  INTEGER NOT NULL DEFAULT 0,
+  failed_count   INTEGER NOT NULL DEFAULT 0,
+  status         VARCHAR(20) DEFAULT 'pending', -- 'pending', 'completed', 'failed'
+  created_at     TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Flagged Records (from ETL)
 CREATE TABLE IF NOT EXISTS flagged_records (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id          TEXT PRIMARY KEY,
   raw_data    JSONB NOT NULL,
   flags       JSONB NOT NULL,             -- array of flag reasons
   status      VARCHAR(20) DEFAULT 'pending', -- 'pending', 'resolved', 'discarded'
-  upload_id   TEXT,                        -- MongoDB raw_upload _id reference
-  resolved_by UUID REFERENCES users(id),
+  upload_id   TEXT,                        -- raw_uploads.id reference (CUID2)
+  resolved_by TEXT REFERENCES users(id),
   resolved_at TIMESTAMPTZ,
   created_at  TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Audit Logs (INSERT only — never UPDATE or DELETE)
 CREATE TABLE IF NOT EXISTS audit_logs (
-  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id         TEXT PRIMARY KEY,
   action     VARCHAR(100) NOT NULL,        -- '{resource}.{verb}'
-  actor_id   UUID REFERENCES users(id),
+  actor_id   TEXT REFERENCES users(id),
   actor_role VARCHAR(20) NOT NULL,
-  event_id   UUID REFERENCES events(id),
-  target_id  UUID,                         -- flexible target (contact, registration, etc.)
+  event_id   TEXT REFERENCES events(id),
+  target_id  TEXT,                         -- flexible target (contact, registration, etc.) — CUID2 string
   target_type VARCHAR(50),
   metadata   JSONB,
   created_at TIMESTAMPTZ DEFAULT NOW()
@@ -227,8 +239,8 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 
 -- Suppression / Consent records
 CREATE TABLE IF NOT EXISTS consent_records (
-  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  contact_id     UUID REFERENCES contacts(id) ON DELETE CASCADE,
+  id             TEXT PRIMARY KEY,
+  contact_id     TEXT REFERENCES contacts(id) ON DELETE CASCADE,
   consent_status VARCHAR(30) NOT NULL,
   purpose        TEXT,
   recorded_at    TIMESTAMPTZ DEFAULT NOW()
@@ -289,7 +301,7 @@ Seed must insert:
 
 ### Anti-Patterns (NEVER DO)
 
-- NEVER use `SERIAL` or `BIGSERIAL` — always `UUID DEFAULT gen_random_uuid()`
+- NEVER use `SERIAL`, `BIGSERIAL`, or `gen_random_uuid()` — always `TEXT PRIMARY KEY` with CUID2 generated application-side
 - NEVER use `CREATE TABLE` without `IF NOT EXISTS`
 - NEVER create indexes without `IF NOT EXISTS`
 - NEVER run seed in production — guard with `NODE_ENV` check

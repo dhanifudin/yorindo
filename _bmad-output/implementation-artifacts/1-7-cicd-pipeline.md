@@ -81,21 +81,20 @@ Then `VPS_SSH_KEY`, `VPS_HOST`, `VPS_USER`, `GHCR_TOKEN` are sourced exclusively
 
 - [x] **Task 5: Create docker-compose.yml (production)**
   - [x] Create `docker-compose.yml` at monorepo root
-  - [x] Define services: `nginx`, `api`, `app`, `postgres`, `mongodb`, `redis`
+  - [x] Define services: `nginx`, `api`, `app`, `postgres`, `redis`
   - [x] All services: `restart: unless-stopped`
   - [x] `api` and `app`: `expose` internal port only (not `ports`); `env_file: .env`
   - [x] `nginx`: `ports: ["80:80", "443:443"]`; SSL certs volume
   - [x] `postgres`: `image: postgres:16-alpine`; `volumes: [postgres_data:/var/lib/postgresql/data]`
-  - [x] `mongodb`: `image: mongo:7`; `volumes: [mongo_data:/data/db]`
   - [x] `redis`: `image: redis:7-alpine`; `command: redis-server --appendonly yes`
-  - [x] Define all named volumes: `postgres_data`, `mongo_data`, `redis_data`, `snapshots_data`, `uploads_tmp`
+  - [x] Define all named volumes: `postgres_data`, `redis_data`, `snapshots_data`, `uploads_tmp`
   - [x] Add JSON logging for `api`: `max-size: "50m", max-file: "5"`
 
 - [x] **Task 6: Create docker-compose.dev.yml (development override)**
   - [x] Create `docker-compose.dev.yml` at monorepo root
   - [x] Override `api` service: bind mount `./yorindo-api:/app` for hot reload
   - [x] Override `app` service: bind mount `./yorindo-app:/app`
-  - [x] Expose `postgres:5432`, `mongodb:27017`, `redis:6379` to host (for dev tools)
+  - [x] Expose `postgres:5432`, `redis:6379` to host (for dev tools)
   - [x] Set `NODE_ENV: development` for api and app
 
 - [x] **Task 7: Create nginx configuration**
@@ -330,7 +329,7 @@ services:
     volumes:
       - snapshots_data:/data/snapshots
       - uploads_tmp:/tmp/uploads
-    depends_on: [postgres, mongodb, redis]
+    depends_on: [postgres, redis]
     restart: unless-stopped
     logging:
       driver: json-file
@@ -352,12 +351,6 @@ services:
     volumes: [postgres_data:/var/lib/postgresql/data]
     restart: unless-stopped
 
-  mongodb:
-    image: mongo:7
-    expose: ["27017"]
-    volumes: [mongo_data:/data/db]
-    restart: unless-stopped
-
   redis:
     image: redis:7-alpine
     expose: ["6379"]
@@ -367,7 +360,6 @@ services:
 
 volumes:
   postgres_data:
-  mongo_data:
   redis_data:
   snapshots_data:
   uploads_tmp:
@@ -391,9 +383,6 @@ services:
 
   postgres:
     ports: ["5432:5432"]
-
-  mongodb:
-    ports: ["27017:27017"]
 
   redis:
     ports: ["6379:6379"]
@@ -447,7 +436,6 @@ http {
 ```env
 # Database
 DATABASE_URL=postgresql://yorindo:CHANGE_ME@postgres:5432/yorindo
-MONGODB_URL=mongodb://mongodb:27017/yorindo
 REDIS_URL=redis://redis:6379
 
 # Auth

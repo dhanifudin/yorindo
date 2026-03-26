@@ -68,8 +68,8 @@ Three UX surfaces: public participant registration (mobile-first, zero-account),
 | Charts | Recharts | 2.x | TypeScript-friendly |
 | Backend framework | Fastify | 4.x | Faster than Express, plugin ecosystem |
 | Backend runtime | Node.js | 20 LTS | LTS, Docker-compatible |
-| DB query (SQL) | node-postgres (pg) | latest | Direct SQL, no ORM |
-| DB client (NoSQL) | mongodb | 6.x | Official driver, TypeScript support |
+| DB query (SQL) | node-postgres (pg) | latest | Direct SQL, no ORM; JSONB columns for schema/response storage |
+| ID generation | @paralleldrive/cuid2 | latest | CUID2 primary keys — collision-resistant, URL-safe, ~24 chars, no hyphens |
 | Queue | BullMQ | 3.x | Redis-backed, reliable job processing |
 | Validation | Zod | 3.x | Runtime type safety, schema inference |
 | Auth | jsonwebtoken + bcrypt | latest | Custom JWT, HS256, httpOnly cookie refresh |
@@ -87,8 +87,7 @@ Three UX surfaces: public participant registration (mobile-first, zero-account),
 |---|---|---|
 | App hosting | VPS (any provider) | Docker Compose on Linux |
 | Reverse proxy / SSL | Nginx | SSL via Let's Encrypt/Certbot, static serving, API proxy |
-| PostgreSQL | Docker (postgres:16-alpine) | VPS volume-mounted data |
-| MongoDB | Docker (mongo:7) | VPS volume-mounted data |
+| PostgreSQL | Docker (postgres:16-alpine) | VPS volume-mounted data; sole persistent store — relational tables + JSONB columns |
 | Redis / Queue | Docker (redis:7-alpine) | AOF persistence enabled |
 | File Storage | VPS filesystem | Docker volume; MinIO S3-compatible upgrade path |
 | Email Blast | Brevo | External — REST API, 300 free/day |
@@ -113,7 +112,7 @@ Three UX surfaces: public participant registration (mobile-first, zero-account),
 
 7. **Phone as primary identity:** UNIQUE constraint on `contacts.phone`. ETL normalizes to `+62XXXXXXXXXX` format; conflict on phone = upsert, not duplicate.
 
-8. **UUID primary keys throughout PostgreSQL:** All tables use `gen_random_uuid()`. Enables DB merge without ID conflicts in future migration to RDS.
+8. **CUID2 primary keys throughout PostgreSQL:** All tables generate IDs via `@paralleldrive/cuid2` (`createId()`). CUID2 is collision-resistant, URL-safe, ~24 chars, no hyphens. Generated in the application layer (not DB-side) — no `gen_random_uuid()` dependency. Enables DB merge without ID conflicts.
 
 ---
 
@@ -147,9 +146,20 @@ Three UX surfaces: public participant registration (mobile-first, zero-account),
 
 9. **QR ticket JWT** — HS256, `JWT_SECRET` (min 32 chars). Payload: `{ sub: registrationId, eventId, type: 'ticket', iat, exp: eventDate+1day }`. Single-use enforced by checking `registrations.status !== 'attended'` on scan. Backend generates token only when status changes to `'approved'`.
 
-10. **Hybrid DB join** — Cross-DB join at Application Layer only. Backend queries PostgreSQL for registrations, then queries MongoDB for survey_responses by `registration_id`. No database-level join. Never attempt JOIN across engines.
+10. **JSONB for document storage** — Survey schemas (`events.survey_schema JSONB`), survey responses (`registrations.survey_responses JSONB`), and blast templates body (`templates.body JSONB`) are stored as JSONB columns in PostgreSQL. Standard SQL queries with JSONB operators (`->`, `->>`); no separate document store needed.
 
-11. **UUID serialization** — PostgreSQL UUIDs returned as plain strings in all API responses. No transformation needed (pg returns UUIDs as strings natively).
+11. **CUID2 serialization** — CUID2 IDs are plain strings (~24 chars) returned as-is in all API responses. No type casting needed — `node-postgres` returns text columns as strings natively.
+
+16. **Phase 1 memory-first contract** — Phase 1 builds entirely against in-memory storage; no real DB or external service connection required:
+
+    | Layer | Phase 1 implementation | Swap to (Phase 2) |
+    |---|---|---|
+    | `yorindo-api` repositories | In-memory arrays (`REPOSITORY_IMPL=memory`) — seeded with deterministic fixture data | PostgreSQL via `node-postgres` |
+    | `yorindo-api` services | Mock implementations (`SERVICE_IMPL=mock`) — no Brevo, Everpro, or AI calls | Real adapters keyed by `*_AI_PROVIDER` env vars |
+    | `yorindo-app` API layer | MSW (`NEXT_PUBLIC_ENABLE_MOCKS=true`) intercepts all `fetch` calls — no network requests leave the browser | Real API at `NEXT_PUBLIC_API_URL` |
+    | `yorindo-app` state | Zustand in-memory store — state resets on hard refresh in Phase 1; no `localStorage` persistence | Session persistence added in Growth Phase |
+
+    The in-memory repos and MSW handlers are the authoritative Phase 1 data contracts. They must stay in sync with the API types in `yorindo-api/src/types/`. Any story that adds a new endpoint must add a corresponding MSW handler before the FE story is considered `done`.
 
 12. **Multi-timezone handling** — UTC storage, event-timezone display; affects blast scheduling, deadline jobs, snapshot cron timing.
 
@@ -181,7 +191,7 @@ TypeScript type definitions for shared API contracts live in `yorindo-api/src/ty
 mkdir yorindo-api && cd yorindo-api
 npm init -y
 npm install fastify @fastify/cors @fastify/helmet @fastify/rate-limit @fastify/cookie @fastify/multipart
-npm install pg mongodb bullmq ioredis zod dotenv pino pino-http
+npm install pg @paralleldrive/cuid2 bullmq ioredis zod dotenv pino pino-http
 npm install jsonwebtoken bcrypt xlsx node-cron qrcode
 npm install openai @anthropic-ai/sdk
 npm install -D typescript tsx vitest @vitest/coverage-v8
