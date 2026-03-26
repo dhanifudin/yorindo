@@ -90,7 +90,10 @@ export class EtlService {
     // 1. Parse xlsx/csv
     const fileBuffer = await fs.readFile(filePath)
     const workbook = XLSX.read(fileBuffer, { type: 'buffer' })
-    const sheet = workbook.Sheets[workbook.SheetNames[0]]
+    const sheetName = workbook.SheetNames[0]
+    if (!sheetName) throw new Error('No sheets found in workbook')
+    const sheet = workbook.Sheets[sheetName]
+    if (!sheet) throw new Error('Sheet not found')
     const rows: RawContactRow[] = XLSX.utils.sheet_to_json(sheet, { defval: null })
 
     const result: EtlResult = { processed: rows.length, upserted: 0, flagged: 0, failed: 0 }

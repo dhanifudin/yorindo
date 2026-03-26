@@ -237,40 +237,40 @@ Use `InMemoryContactRepository` and `InMemoryFlaggedRecordsRepository` from cont
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create `src/services/etl.service.ts`
-  - [ ] Subtask 1.1: Constructor accepts IContactRepository, IFlaggedRecordsRepository, IEtlNormalizationService
-  - [ ] Subtask 1.2: `processFile()` — parse xlsx/csv using `xlsx` package
-  - [ ] Subtask 1.3: Chunk rows into batches of 50
-  - [ ] Subtask 1.4: Call `normalizer.normalizeBatch()` per chunk; validate via Zod
-  - [ ] Subtask 1.5: Retry logic — up to 3 attempts with 2s/4s/8s exponential backoff on JSON parse or Zod failure
-  - [ ] Subtask 1.6: Route rows: confidence >= 0.7 → `contactRepo.upsert()`, < 0.7 → `flaggedRepo.create()`
-  - [ ] Subtask 1.7: Compute `completeness_score` per upserted row
-  - [ ] Subtask 1.8: Delete temp file via `storage.deleteFile()`
-  - [ ] Subtask 1.9: Insert `raw_uploads` PostgreSQL row on completion
-  - [ ] Subtask 1.10: Write `contact.imported` audit log entry
+- [x] Task 1: Create `src/services/etl.service.ts`
+  - [x] Subtask 1.1: Constructor accepts IContactRepository, IFlaggedRecordsRepository, IEtlNormalizationService
+  - [x] Subtask 1.2: `processFile()` — parse xlsx/csv using `xlsx` package
+  - [x] Subtask 1.3: Chunk rows into batches of 50
+  - [x] Subtask 1.4: Call `normalizer.normalizeBatch()` per chunk; validate via Zod
+  - [x] Subtask 1.5: Retry logic — up to 3 attempts with 2s/4s/8s exponential backoff on JSON parse or Zod failure
+  - [x] Subtask 1.6: Route rows: confidence >= 0.7 → `contactRepo.upsert()`, < 0.7 → `flaggedRepo.create()`
+  - [x] Subtask 1.7: Compute `completeness_score` per upserted row
+  - [x] Subtask 1.8: Delete temp file via `storage.deleteFile()`
+  - [x] Subtask 1.9: Insert `raw_uploads` PostgreSQL row on completion
+  - [x] Subtask 1.10: Write `contact.imported` audit log entry
 
-- [ ] Task 2: Create `src/workers/etl.worker.ts`
-  - [ ] Subtask 2.1: BullMQ Worker on queue 'etl' using redis from lib
-  - [ ] Subtask 2.2: Instantiate EtlService from container imports
-  - [ ] Subtask 2.3: Call `etlService.processFile(job.data.filePath, job.data.uploadedBy)`
-  - [ ] Subtask 2.4: Worker error/completion event logging
+- [x] Task 2: Create `src/workers/etl.worker.ts`
+  - [x] Subtask 2.1: BullMQ Worker on queue 'etl' using redis from lib
+  - [x] Subtask 2.2: Instantiate EtlService from container imports
+  - [x] Subtask 2.3: Call `etlService.processFile(job.data.filePath, job.data.uploadedBy)`
+  - [x] Subtask 2.4: Worker error/completion event logging
 
-- [ ] Task 3: Create `src/services/adapters/real/OpenAiEtlNormalizationService.ts`
-  - [ ] Subtask 3.1: Implement `IEtlNormalizationService`
-  - [ ] Subtask 3.2: System prompt per spec above
-  - [ ] Subtask 3.3: Call the AI provider API with the normalization prompt (e.g., openai.chat.completions.create())
-  - [ ] Subtask 3.4: Parse JSON response; throw on invalid JSON (caller handles retry)
+- [x] Task 3: Create `src/services/adapters/real/OpenAiEtlNormalizationService.ts`
+  - [x] Subtask 3.1: Implement `IEtlNormalizationService`
+  - [x] Subtask 3.2: System prompt per spec above
+  - [x] Subtask 3.3: Call the AI provider API with the normalization prompt (e.g., openai.chat.completions.create())
+  - [x] Subtask 3.4: Parse JSON response; throw on invalid JSON (caller handles retry)
 
-- [ ] Task 4: Update `src/container.ts`
-  - [ ] Subtask 4.1: Add `etlNormalizationService: IEtlNormalizationService` binding
-  - [ ] Subtask 4.2: `SERVICE_IMPL=mock` → `MockEtlNormalizationService`; `SERVICE_IMPL=real` → `OpenAiEtlNormalizationService`
+- [x] Task 4: Update `src/container.ts`
+  - [x] Subtask 4.1: Add `etlNormalizationService: IEtlNormalizationService` binding
+  - [x] Subtask 4.2: `SERVICE_IMPL=mock` → `MockEtlNormalizationService`; `SERVICE_IMPL=real` → `OpenAiEtlNormalizationService`
 
-- [ ] Task 5: Write vitest tests
-  - [ ] Subtask 5.1: Test valid batch path (50 high-confidence rows → 50 contacts upserted)
-  - [ ] Subtask 5.2: Test low-confidence flagging (10 rows < 0.7 → 10 flagged_records, 0 contacts)
-  - [ ] Subtask 5.3: Test retry logic (mock throws twice, succeeds third)
-  - [ ] Subtask 5.4: Test completeness score computation
-  - [ ] Subtask 5.5: Test temp file deletion called after processing
+- [x] Task 5: Write vitest tests
+  - [x] Subtask 5.1: Test valid batch path (50 high-confidence rows → 50 contacts upserted)
+  - [x] Subtask 5.2: Test low-confidence flagging (10 rows < 0.7 → 10 flagged_records, 0 contacts)
+  - [x] Subtask 5.3: Test retry logic (mock throws twice, succeeds third)
+  - [x] Subtask 5.4: Test completeness score computation
+  - [x] Subtask 5.5: Test temp file deletion called after processing
 
 ## Dev Agent Record
 
