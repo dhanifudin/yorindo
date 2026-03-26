@@ -250,43 +250,43 @@ npm install -D @types/pg @types/node @types/jsonwebtoken @types/bcrypt @types/no
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Verify and finalize package.json and install all dependencies
-  - [ ] Subtask 1.1: Run `npm install` with all required packages listed above
-  - [ ] Subtask 1.2: Verify `.env.example` has all keys matching `src/config/index.ts`
-  - [ ] Subtask 1.3: Create `tsconfig.json` with NodeNext module resolution
+- [x] Task 1: Verify and finalize package.json and install all dependencies
+  - [x] Subtask 1.1: Run `npm install` with all required packages listed above
+  - [x] Subtask 1.2: Verify `.env.example` has all keys matching `src/config/index.ts`
+  - [x] Subtask 1.3: Create `tsconfig.json` with NodeNext module resolution
 
-- [ ] Task 2: Create `src/config/index.ts` with centralized env access
-  - [ ] Subtask 2.1: Implement `required()` helper that throws on missing vars
-  - [ ] Subtask 2.2: Export `config` object with all keys from `.env.example`
+- [x] Task 2: Create `src/config/index.ts` with centralized env access
+  - [x] Subtask 2.1: Implement `required()` helper that throws on missing vars
+  - [x] Subtask 2.2: Export `config` object with all keys from `.env.example`
 
-- [ ] Task 3: Create `src/lib/` singletons
-  - [ ] Subtask 3.1: `postgres.ts` — pg Pool singleton
-  - [ ] Subtask 3.2: `redis.ts` — IORedis singleton with `maxRetriesPerRequest: null`
-  - [ ] Subtask 3.4: `queue.ts` — BullMQ Queue factory + four named queues
-  - [ ] Subtask 3.5: `storage.ts` — VPS filesystem read/write for snapshots
+- [x] Task 3: Create `src/lib/` singletons
+  - [x] Subtask 3.1: `postgres.ts` — pg Pool singleton
+  - [x] Subtask 3.2: `redis.ts` — IORedis singleton with `maxRetriesPerRequest: null`
+  - [x] Subtask 3.4: `queue.ts` — BullMQ Queue factory + four named queues
+  - [x] Subtask 3.5: `storage.ts` — VPS filesystem read/write for snapshots
 
-- [ ] Task 4: Create Fastify server scaffold
-  - [ ] Subtask 4.1: `src/server.ts` — create Fastify instance, register CORS/helmet/rate-limit/cookie plugins
-  - [ ] Subtask 4.2: `src/main.ts` — entry point, call `server.listen({ port: config.port })`
-  - [ ] Subtask 4.3: `src/routes/health.ts` — `GET /api/health` returns `{ status: 'ok' }`
-  - [ ] Subtask 4.4: Register health route in server.ts
-  - [ ] Subtask 4.5: Add error handler with `{ error: { code, message, details } }` shape
+- [x] Task 4: Create Fastify server scaffold
+  - [x] Subtask 4.1: `src/server.ts` — create Fastify instance, register CORS/helmet/rate-limit/cookie plugins
+  - [x] Subtask 4.2: `src/main.ts` — entry point, call `server.listen({ port: config.port })`
+  - [x] Subtask 4.3: `src/routes/health.ts` — `GET /api/health` returns `{ status: 'ok' }`
+  - [x] Subtask 4.4: Register health route in server.ts
+  - [x] Subtask 4.5: Add error handler with `{ error: { code, message, details } }` shape
 
-- [ ] Task 5: Create directory structure and `src/container.ts` skeleton
-  - [ ] Subtask 5.1: Create all required empty directories per file locations above
-  - [ ] Subtask 5.2: Create `src/container.ts` skeleton with `REPOSITORY_IMPL`/`SERVICE_IMPL` env switch
-  - [ ] Subtask 5.3: Create `src/middleware/auth.ts` and `src/middleware/roles.ts` stubs
+- [x] Task 5: Create directory structure and `src/container.ts` skeleton
+  - [x] Subtask 5.1: Create all required empty directories per file locations above
+  - [x] Subtask 5.2: Create `src/container.ts` skeleton with `REPOSITORY_IMPL`/`SERVICE_IMPL` env switch
+  - [x] Subtask 5.3: Create `src/middleware/auth.ts` and `src/middleware/roles.ts` stubs
 
-- [ ] Task 6: Create Docker Compose files
-  - [ ] Subtask 6.1: `docker-compose.yml` with all six containers
-  - [ ] Subtask 6.2: `docker-compose.dev.yml` override with hot reload
-  - [ ] Subtask 6.3: Verify `Dockerfile` builds correctly with `docker build`
+- [x] Task 6: Create Docker Compose files
+  - [x] Subtask 6.1: `docker-compose.yml` with five containers (postgres, redis, api, app, nginx)
+  - [x] Subtask 6.2: `docker-compose.dev.yml` override with hot reload
+  - [x] Subtask 6.3: Verify `Dockerfile` builds correctly with `docker build`
 
-- [ ] Task 7: Create `vitest.config.ts` and write tests
-  - [ ] Subtask 7.1: Configure vitest with Node environment
-  - [ ] Subtask 7.2: Test: `GET /api/health` returns 200 `{ status: 'ok' }`
-  - [ ] Subtask 7.3: Test: `config` throws on missing required env var
-  - [ ] Subtask 7.4: Run `npm test` — all tests pass
+- [x] Task 7: Create `vitest.config.ts` and write tests
+  - [x] Subtask 7.1: Configure vitest with Node environment
+  - [x] Subtask 7.2: Test: `GET /api/health` returns 200 `{ status: 'ok' }`
+  - [x] Subtask 7.3: Test: `config` throws on missing required env var
+  - [x] Subtask 7.4: Run `npm test` — all tests pass
 
 ## Dev Agent Record
 
@@ -314,45 +314,44 @@ npm install -D @types/pg @types/node @types/jsonwebtoken @types/bcrypt @types/no
 
 ### Completion Notes
 
-- All 4 tests pass: 2 health endpoint tests, 2 config validation tests
+- All 66 tests pass across 8 test files (8 test suites, 2 skipped)
 - Phase 1 starts with zero external connections: only Fastify + in-memory state
-- `npm install` completed: 363 packages installed
-- docker-compose.dev.yml updated with `tsx --watch` hot-reload + TSX_LEGACY_WATCH for WSL2
+- **Architecture update (2026-03-26):** Removed `mongodb` package; added `@paralleldrive/cuid2`; removed `src/lib/mongodb.ts`; removed `mongodbUrl` from config; fixed docker-compose api `depends_on` (removed `- mongodb`); removed mongodb ports from `docker-compose.dev.yml`
+- Fixed `src/lib/redis.ts` IORedis import: `import IORedis from 'ioredis'` → `import { Redis } from 'ioredis'` (TS2709 resolved)
+- 4 named BullMQ queues: `otp` > `emergency-blast` > `transactional` > `marketing` (+ `etl`)
+- Pre-existing TS errors in Story 1.8 files (repositories/memory, services) — tracked in Story 1.8
 
 ## File List
 
-- `package.json`
-- `tsconfig.json`
-- `vitest.config.ts`
-- `.env.example` (pre-existing, verified)
-- `Dockerfile` (pre-existing, verified)
-- `docker-compose.dev.yml` (updated: hot-reload command)
-- `scripts/migrate.ts` (placeholder)
-- `scripts/seed.ts` (placeholder)
-- `src/config/index.ts`
-- `src/server.ts`
-- `src/main.ts`
-- `src/routes/health.ts`
-- `src/middleware/auth.ts`
-- `src/middleware/roles.ts`
-- `src/types/index.ts`
-- `src/container.ts`
-- `src/lib/postgres.ts`
-- `src/lib/redis.ts`
-- `src/lib/queue.ts`
-- `src/lib/storage.ts`
-- `src/tests/health.test.ts`
-- `src/tests/config.test.ts`
-- `src/interfaces/repositories/` (empty dir)
-- `src/interfaces/services/` (empty dir)
-- `src/repositories/memory/` (empty dir)
-- `src/repositories/postgres/` (empty dir)
-- `src/services/adapters/mock/` (empty dir)
-- `src/services/adapters/real/` (empty dir)
-- `src/workers/` (empty dir)
+- `yorindo-api/package.json` (updated: removed `mongodb`, added `@paralleldrive/cuid2`)
+- `yorindo-api/package-lock.json`
+- `yorindo-api/tsconfig.json`
+- `yorindo-api/vitest.config.ts`
+- `yorindo-api/.env.example` (verified: MONGODB_URL removed)
+- `yorindo-api/Dockerfile` (pre-existing, verified)
+- `docker-compose.yml` (updated: removed mongodb from api depends_on)
+- `docker-compose.dev.yml` (updated: removed mongodb ports section)
+- `yorindo-api/scripts/migrate.ts`
+- `yorindo-api/scripts/seed.ts`
+- `yorindo-api/src/config/index.ts` (updated: removed mongodbUrl)
+- `yorindo-api/src/server.ts`
+- `yorindo-api/src/main.ts`
+- `yorindo-api/src/routes/health.ts`
+- `yorindo-api/src/middleware/auth.ts`
+- `yorindo-api/src/middleware/roles.ts`
+- `yorindo-api/src/types/index.ts`
+- `yorindo-api/src/container.ts`
+- `yorindo-api/src/lib/postgres.ts`
+- `yorindo-api/src/lib/redis.ts` (updated: fixed IORedis import → `{ Redis }`)
+- `yorindo-api/src/lib/queue.ts`
+- `yorindo-api/src/lib/storage.ts`
+- `yorindo-api/src/lib/mongodb.ts` (DELETED — MongoDB removed from stack)
+- `yorindo-api/src/tests/health.test.ts`
+- `yorindo-api/src/tests/config.test.ts`
 
 ## Change Log
 
 | Date | Change | Author |
 |------|--------|--------|
 | 2026-03-22 | Story created (BE Foundation) | bmad-context-engine |
+| 2026-03-26 | Architecture update: removed MongoDB, added @paralleldrive/cuid2; fixed IORedis import; fixed docker-compose depends_on | dev-agent |

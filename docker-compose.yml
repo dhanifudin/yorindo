@@ -22,7 +22,6 @@ services:
       - uploads_tmp:/tmp/uploads
     depends_on:
       - postgres
-      - mongodb
       - redis
     restart: unless-stopped
     logging:

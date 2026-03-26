@@ -32,7 +32,6 @@ export const config = {
 
   // Phase 2 only — optional strings; empty in Phase 1
   databaseUrl: optional('DATABASE_URL'),
-  mongodbUrl: optional('MONGODB_URL'),
   redisUrl: optional('REDIS_URL'),
   snapshotDir: optional('SNAPSHOT_DIR', '/data/snapshots'),
   uploadsDir: optional('UPLOADS_DIR', '/tmp/uploads'),
