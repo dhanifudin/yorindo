@@ -1,5 +1,6 @@
 import type { IAuditLogRepository } from '../../interfaces/repositories/IAuditLogRepository.js'
 import type { AuditLog } from '../../types/domain.js'
+
 import { createId } from '@paralleldrive/cuid2'
 
 export class InMemoryAuditLogRepository implements IAuditLogRepository {

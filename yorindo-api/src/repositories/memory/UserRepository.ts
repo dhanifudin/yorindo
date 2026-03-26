@@ -12,18 +12,20 @@ export class InMemoryUserRepository implements IUserRepository {
 
   private _seed(): void {
     const admin: User = {
-      id: crypto.randomUUID(),
+      id: 'admin-seed-user-001',
       email: 'admin@yorindo.id',
-      passwordHash: '$2b$10$placeholderhashforadmin',
+      // bcrypt hash for 'admin1234'
+      passwordHash: '$2b$10$dYeTOklhtx6w41wl0syPOu84F8l5sVge8d5XakiWi4LbWLRm3ES52',
       role: 'event_admin',
       name: 'Admin Yorindo',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
     const staff: User = {
-      id: crypto.randomUUID(),
+      id: 'staff-seed-user-001',
       email: 'staff@yorindo.id',
-      passwordHash: '$2b$10$placeholderhashforstaff',
+      // bcrypt hash for 'staff1234'
+      passwordHash: '$2b$10$weXhMzQqu9xk3du12vwgquu2RUCTI.NEIskjmTOFxVdRfZkfawnCC',
       role: 'staff',
       name: 'Staff Yorindo',
       createdAt: new Date().toISOString(),

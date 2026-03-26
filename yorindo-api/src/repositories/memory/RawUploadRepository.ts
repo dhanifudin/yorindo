@@ -1,5 +1,6 @@
 import type { IRawUploadRepository } from '../../interfaces/repositories/IRawUploadRepository.js'
 import type { RawUpload } from '../../types/domain.js'
+
 import { createId } from '@paralleldrive/cuid2'
 
 export class InMemoryRawUploadRepository implements IRawUploadRepository {

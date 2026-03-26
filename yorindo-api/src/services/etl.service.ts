@@ -174,7 +174,7 @@ export class EtlService {
     await this.auditLogRepo.create({
       action: 'contact.imported',
       actorId: uploadedBy,
-      actorRole: 'system',
+      actorRole: 'system', // or whatever role represents the uploader
       eventId: null,
       targetId: null,
       targetType: 'contact_batch',

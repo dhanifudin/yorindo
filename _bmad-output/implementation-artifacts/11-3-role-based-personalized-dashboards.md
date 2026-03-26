@@ -67,59 +67,59 @@ So that admins see management stats, viewers see read-only summaries, and staff 
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Add MSW handlers (AC: 7, 8)**
-  - [ ] Add `GET /api/users/me` to `src/mocks/handlers/users.ts`
-  - [ ] Add `GET /api/users/me/assigned-events` to `src/mocks/handlers/users.ts`
-  - [ ] Verify handlers are exported from `src/mocks/handlers/index.ts`
+- [x] **Task 1 — Add MSW handlers (AC: 7, 8)**
+  - [x] Add `GET /api/users/me` to `src/mocks/handlers/users.ts`
+  - [x] Add `GET /api/users/me/assigned-events` to `src/mocks/handlers/users.ts`
+  - [x] Verify handlers are exported from `src/mocks/handlers/index.ts`
 
-- [ ] **Task 2 — Create `useCurrentUser` hook (AC: 6)**
-  - [ ] Add `src/hooks/useCurrentUser.ts`
-  - [ ] Hook calls `GET /api/users/me` with the `Authorization: Bearer {accessToken}` header
-  - [ ] When `accessToken === 'dev-token'`, also send `X-User-Id: {user.id}` header
-  - [ ] Uses TanStack Query `useQuery` with key `['users', 'me']`
-  - [ ] Returns `{ data: User | undefined, isLoading: boolean }`
+- [x] **Task 2 — Create `useCurrentUser` hook (AC: 6)**
+  - [x] Add `src/hooks/useCurrentUser.ts`
+  - [x] Hook calls `GET /api/users/me` with the `Authorization: Bearer {accessToken}` header
+  - [x] When `accessToken === 'dev-token'`, also send `X-User-Id: {user.id}` header
+  - [x] Uses TanStack Query `useQuery` with key `['users', 'me']`
+  - [x] Returns `{ data: User | undefined, isLoading: boolean }`
 
-- [ ] **Task 3 — Create `AdminDashboard` component (AC: 2, 5)**
-  - [ ] Create `src/components/features/dashboard/AdminDashboard.tsx`
-  - [ ] Use `useCurrentUser()` for greeting name
-  - [ ] Use `useEvents()` for stats (total events, active events, recent 5)
-  - [ ] Use `useContacts()` / existing hooks for total contacts (if available; use `data?.pagination?.total` or equivalent)
-  - [ ] For pending registrations: use a simple count from `useQuery(['registrations', 'pending'])` calling `GET /api/registrations?status=pending` — returns mock count
-  - [ ] Stats row: 4 metric cards (total events, active events, total contacts, pending registrations)
-  - [ ] Recent events table: last 5 by `createdAt` desc, columns Name + Status + Date
-  - [ ] Quick links: `<Link href="/app/events">`, `<Link href="/app/contacts/upload">`, `<Link href="/app/events">`
-  - [ ] Skeleton: 4 metric card skeletons + 5 row table skeleton
+- [x] **Task 3 — Create `AdminDashboard` component (AC: 2, 5)**
+  - [x] Create `src/components/features/dashboard/AdminDashboard.tsx`
+  - [x] Use `useCurrentUser()` for greeting name
+  - [x] Use `useEvents()` for stats (total events, active events, recent 5)
+  - [x] Use `useContacts()` / existing hooks for total contacts (if available; use `data?.pagination?.total` or equivalent)
+  - [x] For pending registrations: use a simple count from `useQuery(['registrations', 'pending'])` calling `GET /api/registrations?status=pending` — returns mock count
+  - [x] Stats row: 4 metric cards (total events, active events, total contacts, pending registrations)
+  - [x] Recent events table: last 5 by `createdAt` desc, columns Name + Status + Date
+  - [x] Quick links: `<Link href="/app/events">`, `<Link href="/app/contacts/upload">`, `<Link href="/app/events">`
+  - [x] Skeleton: 4 metric card skeletons + 5 row table skeleton
 
-- [ ] **Task 4 — Create `ViewerDashboard` component (AC: 3, 5)**
-  - [ ] Create `src/components/features/dashboard/ViewerDashboard.tsx`
-  - [ ] Same greeting + stats row as AdminDashboard
-  - [ ] Same recent events table, but no "Buat Event" or action buttons
-  - [ ] No quick links section
+- [x] **Task 4 — Create `ViewerDashboard` component (AC: 3, 5)**
+  - [x] Create `src/components/features/dashboard/ViewerDashboard.tsx`
+  - [x] Same greeting + stats row as AdminDashboard
+  - [x] Same recent events table, but no "Buat Event" or action buttons
+  - [x] No quick links section
 
-- [ ] **Task 5 — Create `StaffDashboard` component (AC: 4, 5, 8)**
-  - [ ] Create `src/components/features/dashboard/StaffDashboard.tsx`
-  - [ ] Use `useCurrentUser()` for greeting name
-  - [ ] Call `GET /api/users/me/assigned-events` via a new hook `useAssignedEvents()`
-  - [ ] Client-filter: keep only events where `status === 'active'` AND `eventDate` falls on today's date in the event's timezone
-  - [ ] For each event, show: name, formatted time, attendance count (from `GET /api/events/:id/attendance-stats`), "Mulai Scan" → `/app/scan?eventId={id}`
-  - [ ] Empty state card: "Tidak ada event yang ditugaskan hari ini."
-  - [ ] Skeleton: 2 event card skeletons
+- [x] **Task 5 — Create `StaffDashboard` component (AC: 4, 5, 8)**
+  - [x] Create `src/components/features/dashboard/StaffDashboard.tsx`
+  - [x] Use `useCurrentUser()` for greeting name
+  - [x] Call `GET /api/users/me/assigned-events` via a new hook `useAssignedEvents()`
+  - [x] Client-filter: keep only events where `status === 'active'` AND `eventDate` falls on today's date in the event's timezone
+  - [x] For each event, show: name, formatted time, attendance count (from `GET /api/events/:id/attendance-stats`), "Mulai Scan" → `/app/scan?eventId={id}`
+  - [x] Empty state card: "Tidak ada event yang ditugaskan hari ini."
+  - [x] Skeleton: 2 event card skeletons
 
-- [ ] **Task 6 — Create `useAssignedEvents` hook (AC: 8)**
-  - [ ] Add `src/hooks/useAssignedEvents.ts`
-  - [ ] Calls `GET /api/users/me/assigned-events`
-  - [ ] Returns `{ data: Event[] | undefined, isLoading: boolean }`
+- [x] **Task 6 — Create `useAssignedEvents` hook (AC: 8)**
+  - [x] Add `src/hooks/useAssignedEvents.ts`
+  - [x] Calls `GET /api/users/me/assigned-events`
+  - [x] Returns `{ data: Event[] | undefined, isLoading: boolean }`
 
-- [ ] **Task 7 — Update `src/app/app/page.tsx` (AC: 1, 10)**
-  - [ ] Add `'use client'` directive
-  - [ ] Read `user` and `accessToken` from `useAuthStore`
-  - [ ] Redirect to `/login` if no `accessToken` (useEffect + router.replace)
-  - [ ] Render `<AdminDashboard />`, `<ViewerDashboard />`, or `<StaffDashboard />` based on `user.role`
-  - [ ] Return null while redirecting (unknown role or no token)
-  - [ ] Remove the old `<Metadata>` export (metadata in client components is not supported; add a `layout.tsx` for dashboard title if needed, or remove it)
+- [x] **Task 7 — Update `src/app/app/page.tsx` (AC: 1, 10)**
+  - [x] Add `'use client'` directive
+  - [x] Read `user` and `accessToken` from `useAuthStore`
+  - [x] Redirect to `/login` if no `accessToken` (useEffect + router.replace)
+  - [x] Render `<AdminDashboard />`, `<ViewerDashboard />`, or `<StaffDashboard />` based on `user.role`
+  - [x] Return null while redirecting (unknown role or no token)
+  - [x] Remove the old `<Metadata>` export (metadata in client components is not supported; add a `layout.tsx` for dashboard title if needed, or remove it)
 
-- [ ] **Task 8 — Verify build (AC: 11)**
-  - [ ] `npm run build` — 0 TypeScript errors
+- [x] **Task 8 — Verify build (AC: 11)**
+  - [x] `npm run build` — 0 TypeScript errors
 
 ---
 

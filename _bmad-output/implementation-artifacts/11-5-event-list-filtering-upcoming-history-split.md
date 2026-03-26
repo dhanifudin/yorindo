@@ -36,38 +36,38 @@ Split the event list page into "Mendatang" (upcoming) and "Riwayat" (history) ta
 ## Acceptance Criteria
 
 ### Tab Navigation
-- [ ] `/app/events` page has tab navigation: "Mendatang" | "Riwayat"
-- [ ] Default tab: Mendatang
-- [ ] Event count badge on each tab: "Mendatang (5)" | "Riwayat (12)"
-- [ ] Tab state preserved in URL: `?tab=upcoming` (default) or `?tab=history`
+- [x] `/app/events` page has tab navigation: "Mendatang" | "Riwayat"
+- [x] Default tab: Mendatang
+- [x] Event count badge on each tab: "Mendatang (5)" | "Riwayat (12)"
+- [x] Tab state preserved in URL: `?tab=upcoming` (default) or `?tab=history`
 
 ### Mendatang (Upcoming) Tab
-- [ ] Shows events with status: `draft`, `published`, `active`
-- [ ] Sorted by `eventDate` ascending (soonest first)
-- [ ] Empty state: "Tidak ada event mendatang"
+- [x] Shows events with status: `draft`, `published`, `active`
+- [x] Sorted by `eventDate` ascending (soonest first)
+- [x] Empty state: "Tidak ada event mendatang"
 
 ### Riwayat (History) Tab
-- [ ] Shows events with status: `completed`, `cancelled`, `archived`
-- [ ] Sorted by `eventDate` descending (most recent first)
-- [ ] Empty state: "Belum ada riwayat event"
+- [x] Shows events with status: `completed`, `cancelled`, `archived`
+- [x] Sorted by `eventDate` descending (most recent first)
+- [x] Empty state: "Belum ada riwayat event"
 
 ### Filter Controls
-- [ ] Status filter: multi-select chips matching the active tab's valid statuses
+- [x] Status filter: multi-select chips matching the active tab's valid statuses
   - Mendatang chips: Draft, Dipublikasi, Berlangsung
   - Riwayat chips: Selesai, Dibatalkan, Diarsipkan
-- [ ] Date range filter: start date → end date picker
-- [ ] Search: text search on event name (client-side filter)
-- [ ] Filters reset when switching tabs
+- [x] Date range filter: start date → end date picker
+- [x] Search: text search on event name (client-side filter)
+- [x] Filters reset when switching tabs
 
 ### Filter Persistence
-- [ ] Filter state preserved in URL search params
+- [x] Filter state preserved in URL search params
   - Example: `?tab=history&status=completed&search=jakarta`
-- [ ] Bookmarkable/shareable filter URLs
+- [x] Bookmarkable/shareable filter URLs
 
 ### Mobile UX
-- [ ] Filters collapse into a filter sheet (bottom drawer) on mobile
-- [ ] Filter button with active-filter count badge
-- [ ] Tabs remain visible (horizontal scroll if needed)
+- [x] Filters collapse into a filter sheet (bottom drawer) on mobile
+- [x] Filter button with active-filter count badge
+- [x] Tabs remain visible (horizontal scroll if needed)
 
 ---
 

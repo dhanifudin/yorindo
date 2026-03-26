@@ -330,9 +330,18 @@ Existing tests (62 total) test logic and MSW handlers, never CSS class names. Th
 - AC2: `src/lib/utils.ts` exists with `cn()` from `clsx` + `tailwind-merge`
 - AC3: All 9 components in `src/components/ui/`: button, input, card, badge, select, table, dialog, sheet, sonner
 - AC4: tailwind.config.ts design system handled via `@import "shadcn/tailwind.css"` (v4 approach)
-- AC5: `globals.css` has full oklch variable palette + dark mode + `@layer base`
-- AC6: 62/62 tests pass
+- AC5: `globals.css` has full HSL blue brand palette + dark mode + `@layer base` (updated per CC-2026-03-26f)
+- AC6: 127/128 tests pass (1 pre-existing failure in useEvents.test.ts unrelated to CSS changes)
 - AC7: `clsx`, `tailwind-merge`, `class-variance-authority`, `lucide-react`, `shadcn` in `package.json`
+
+**Theme update (CC-2026-03-26f — 2026-03-26):**
+- Replaced oklch neutral palette with HSL blue brand tokens (primary: `hsl(217 73% 35%)`)
+- Switched font: Geist → Inter (`next/font/google`)
+- Updated `themeColor` metadata: `#2563eb` → `#184A9A`
+- Added `--surface` / `--surface-foreground` tokens to `@theme inline`
+- Added blue-themed dark mode palette
+- Added `@layer components`: `.card-elevated`, `.gradient-text`, `.section-label`, `.icon-container`
+- Removed unused `localFont` imports (GeistVF.woff, GeistMonoVF.woff) from layout.tsx
 
 ---
 
@@ -353,18 +362,19 @@ Existing tests (62 total) test logic and MSW handlers, never CSS class names. Th
 
 **Modified files:**
 - `yorindo-app/package.json` (added: clsx, tailwind-merge, class-variance-authority, lucide-react, radix-ui, shadcn, tw-animate-css)
-- `yorindo-app/src/app/globals.css` (shadcn oklch variables + dark mode + @imports)
-- `yorindo-app/src/app/layout.tsx` (Geist font + cn() import added by shadcn init)
+- `yorindo-app/src/app/globals.css` (HSL blue brand palette + --surface token + utility classes; replaces oklch neutral)
+- `yorindo-app/src/app/layout.tsx` (Inter font replaces Geist; unused localFont declarations removed)
 
 ---
 
 ## Change Log
 
 - 2026-03-21: Story 10.1 implemented — shadcn v4.0.8 initialized (radix-nova preset), 9 core components installed, cn() utility created, CSS variable theming established. 62/62 tests pass.
+- 2026-03-26: Theme revamp applied (CC-2026-03-26f) — blue brand HSL palette, Inter font, --surface token, utility classes (.card-elevated, .gradient-text, .section-label, .icon-container). 127/128 tests pass (pre-existing useEvents failure unrelated).
 
 ---
 
 ## Completion Status
 
 - **Status:** review
-- **Note:** shadcn/ui v4.0.8 foundation fully established. All 9 core UI components available. cn() utility ready. CSS variable design tokens in place. Zero test regressions.
+- **Note:** shadcn/ui v4.0.8 foundation + Yorindo blue brand theme applied. Primary: hsl(217 73% 35%). Font: Inter. Radius: 0.75rem. Surface token + card/text utilities ready for Epic 10 stories.
