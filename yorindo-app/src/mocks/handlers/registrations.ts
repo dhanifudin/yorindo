@@ -96,7 +96,7 @@ function enrichRegistration(reg: StoredRegistration, eventId: string): Registrat
 // Participant dashboard mock registrations (Story 11.6)
 // Mutable — cancel mutations update status in-place so re-fetches reflect the change
 type ParticipantReg = { id: string; eventId: string; eventName: string; eventDate: string; venue: string; status: 'approved' | 'pending' | 'waitlisted' | 'cancelled'; ticketToken: string }
-let participantRegistrations: ParticipantReg[] = [
+const participantRegistrations: ParticipantReg[] = [
   { id: 'preg-001', eventId: 'event-001', eventName: 'Seminar ERP Jakarta', eventDate: '2026-04-15T09:00:00+07:00', venue: 'Jakarta Convention Center', status: 'approved', ticketToken: 'TICKET-PARTICIPANT-A1B2C3' },
   { id: 'preg-002', eventId: 'event-007', eventName: 'Workshop Digital Marketing Bandung', eventDate: '2026-05-10T08:00:00+07:00', venue: 'Aula Gedung Sate, Bandung', status: 'pending', ticketToken: '' },
   { id: 'preg-003', eventId: 'event-008', eventName: 'Konferensi Startup Indonesia 2026', eventDate: '2026-06-20T08:00:00+07:00', venue: 'Bali Nusa Dua Convention Center', status: 'waitlisted', ticketToken: '' },

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
 import { Html5Qrcode } from 'html5-qrcode'
 import { toast } from 'sonner'
 import { useAuthStore } from '@/store/authStore'
@@ -45,7 +45,7 @@ function _patchApplied(): boolean {
 export function QRScanner({ eventId }: QRScannerProps) {
   const accessToken = useAuthStore((s) => s.accessToken)
   const accessTokenRef = useRef(accessToken)
-  accessTokenRef.current = accessToken
+  useLayoutEffect(() => { accessTokenRef.current = accessToken })
 
   useEffect(() => {
     const elementId = 'qr-reader'
