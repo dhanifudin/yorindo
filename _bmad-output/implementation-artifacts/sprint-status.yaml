@@ -67,13 +67,13 @@ development_status:
   # ─────────────────────────────────────────────
   epic-1: in-progress
   1-1-backend-repository-scaffold-docker-compose: review
-  1-2-database-schema-migrations: ready-for-dev
+  1-2-database-schema-migrations: in-progress
   1-3-frontend-repository-scaffold: review
   1-4-openapi-30-specification: review
   1-5-fe-type-definitions-msw-foundation-devtoolbar: review
   1-6-msw-mock-handlers-for-all-api-domains: review
-  1-7-cicd-pipeline: ready-for-dev
-  1-8-service-adapter-scaffold-in-memory-repository-scaffold: ready-for-dev
+  1-7-cicd-pipeline: review
+  1-8-service-adapter-scaffold-in-memory-repository-scaffold: review
   epic-1-retrospective: optional
 
   # ─────────────────────────────────────────────
