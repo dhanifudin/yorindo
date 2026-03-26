@@ -6,6 +6,7 @@ import cookie from '@fastify/cookie'
 import multipart from '@fastify/multipart'
 import { healthRoutes } from './routes/health.js'
 import { participantRoutes } from './routes/participants.routes.js'
+import { authRoutes } from './routes/auth.routes.js'
 
 export async function buildServer() {
   const fastify = Fastify({
@@ -54,6 +55,7 @@ export async function buildServer() {
   // Routes
   await fastify.register(healthRoutes)
   await fastify.register(participantRoutes)
+  await fastify.register(authRoutes)
 
   return fastify
 }
