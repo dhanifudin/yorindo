@@ -1,12 +1,25 @@
 services:
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "127.0.0.1:${NGINX_PORT:-8080}:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - api
+      - app
+    restart: unless-stopped
+
   api:
     image: dhanifudin/yorindo-api:latest
-    ports:
-      - "127.0.0.1:5001:3000"
+    expose:
+      - "3000"
     env_file: .env
     environment:
       # Phase 1: in-memory repositories — set to 'postgres' when BE is ready
       REPOSITORY_MODE: memory
+      DATABASE_URL: postgresql://yorindo:${POSTGRES_PASSWORD}@postgres:5432/yorindo
+      REDIS_URL: redis://redis:6379
     depends_on:
       - postgres
       - redis
@@ -19,8 +32,8 @@ services:
 
   app:
     image: dhanifudin/yorindo-app:latest
-    ports:
-      - "127.0.0.1:5000:3000"
+    expose:
+      - "3000"
     env_file: .env
     environment:
       NEXT_PUBLIC_ENABLE_EXPERIMENTAL: ""
