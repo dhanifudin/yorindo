@@ -18,6 +18,8 @@ services:
     environment:
       # Phase 1: in-memory repositories — set to 'postgres' when BE is ready
       REPOSITORY_MODE: memory
+      DATABASE_URL: postgresql://yorindo:${POSTGRES_PASSWORD}@postgres:5432/yorindo
+      REDIS_URL: redis://redis:6379
     depends_on:
       - postgres
       - redis
