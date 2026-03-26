@@ -1,8 +1,17 @@
 name: CI
 
 on:
-  # Postponed
+  pull_request:
+    branches: ['**']
+  push:
+    branches: ['**']
   workflow_dispatch:
+
+# Cancel redundant runs — prevents double-fire when a push triggers both
+# the push event and a pull_request event for the same commit.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   lint-typecheck:
