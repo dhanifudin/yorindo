@@ -91,7 +91,7 @@ describe('EtlService', () => {
   let flaggedRepo: InMemoryFlaggedRecordsRepository
   let rawUploadRepo: InMemoryRawUploadRepository
   let auditLogRepo: InMemoryAuditLogRepository
-  const initialContactCount = 50
+  const initialContactCount = 247
   const initialFlaggedCount = 10
 
   beforeEach(() => {

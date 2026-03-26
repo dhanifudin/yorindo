@@ -13,15 +13,30 @@ describe('InMemoryContactRepository', () => {
 
   beforeEach(() => { repo = new InMemoryContactRepository() })
 
-  it('seeds 50 contacts on construction', async () => {
+  it('seeds 247 contacts on construction', async () => {
     const { total } = await repo.findAll({ page: 1, pageSize: 100 })
-    expect(total).toBe(50)
+    expect(total).toBe(247)
   })
 
   it('findAll paginates correctly', async () => {
     const { data, total } = await repo.findAll({ page: 1, pageSize: 10 })
     expect(data.length).toBe(10)
-    expect(total).toBe(50)
+    expect(total).toBe(247)
+  })
+
+  it('findAll filters by industry', async () => {
+    const { data, total } = await repo.findAll(
+      { page: 1, pageSize: 20 },
+      { industry: 'teknologi' },
+    )
+    expect(total).toBeGreaterThan(0)
+    expect(data.every((contact) => contact.industryId === 'teknologi')).toBe(true)
+  })
+
+  it('findAll sorts by name ascending', async () => {
+    const { data } = await repo.findAll({ page: 1, pageSize: 5, sortBy: 'name', sortDir: 'asc' })
+    const names = data.map((contact) => contact.name)
+    expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b)))
   })
 
   it('findById returns contact by id', async () => {
@@ -82,7 +97,7 @@ describe('InMemoryContactRepository', () => {
     const { data } = await repo.findAll({ page: 1, pageSize: 1 })
     await repo.softDelete(data[0].id)
     const { total } = await repo.findAll({ page: 1, pageSize: 100 })
-    expect(total).toBe(49)
+    expect(total).toBe(246)
   })
 
   it('countHealth returns correct health stats', async () => {
