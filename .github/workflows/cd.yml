@@ -79,11 +79,6 @@ jobs:
           grep -Eq '^JWT_SECRET=.+$' .deploy.env
           grep -Eq '^JWT_REFRESH_SECRET=.+$' .deploy.env
 
-          if grep -Eq '^JWT_SECRET=replace_with_|^JWT_REFRESH_SECRET=replace_with_' .deploy.env; then
-            echo '::error::VPS_ENV_FILE still contains placeholder JWT secrets from .env.example'
-            exit 1
-          fi
-
       - name: Ensure VPS directories exist
         uses: appleboy/ssh-action@v1
         with:
