@@ -17,7 +17,7 @@ export class InMemoryEventRepository implements IEventRepository {
   private _seed(): void {
     for (let i = 0; i < 5; i++) {
       const id = crypto.randomUUID()
-      const status = STATUSES[i % STATUSES.length]
+      const status = STATUSES[i % STATUSES.length]!
       const isPast = status === 'completed' || status === 'cancelled'
       const event: Event = {
         id,
@@ -27,7 +27,7 @@ export class InMemoryEventRepository implements IEventRepository {
           ? new Date(Date.now() - (i + 1) * 30 * 86400000).toISOString()
           : new Date(Date.now() + (i + 1) * 30 * 86400000).toISOString(),
         timezone: 'Asia/Jakarta',
-        city: ['Jakarta', 'Bandung', 'Surabaya'][i % 3],
+        city: ['Jakarta', 'Bandung', 'Surabaya'][i % 3]!,
         venue: faker.location.streetAddress(),
         description: faker.lorem.paragraph(),
         capacity: (i + 1) * 50,
