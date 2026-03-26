@@ -51,4 +51,29 @@ describe('public event endpoint', () => {
 
     expect((result.current.error as Error).message).toBe('NOT_FOUND')
   })
+
+  it('returns sponsors array for event-001 (seminar-erp-jakarta)', async () => {
+    const { result } = renderHook(
+      () => usePublicEvent('seminar-erp-jakarta'),
+      { wrapper: makeWrapper() }
+    )
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 3000 })
+
+    expect(result.current.data?.sponsors).toHaveLength(2)
+    expect(result.current.data?.sponsors[0]).toHaveProperty('name')
+    expect(result.current.data?.sponsors[0]).toHaveProperty('tier')
+    expect(result.current.data?.sponsors[0]).toHaveProperty('display_order')
+  })
+
+  it('returns empty sponsors array for events with no sponsors', async () => {
+    const { result } = renderHook(
+      () => usePublicEvent('forum-kesehatan-digital-surabaya'),
+      { wrapper: makeWrapper() }
+    )
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 3000 })
+
+    expect(result.current.data?.sponsors).toHaveLength(0)
+  })
 })

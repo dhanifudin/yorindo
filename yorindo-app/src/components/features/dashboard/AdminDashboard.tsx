@@ -5,10 +5,11 @@ import { useQuery } from '@tanstack/react-query'
 import {
   Calendar, Zap, Users, Clock,
   CalendarDays, TrendingUp, ArrowUpRight,
-  Upload, Plus,
+  Upload, Plus, Building2,
 } from 'lucide-react'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useEvents } from '@/hooks/useEvents'
+import { useVendors } from '@/hooks/useVendors'
 import { useAuthStore } from '@/store/authStore'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -44,6 +45,7 @@ export function AdminDashboard() {
   const { data: currentUser, isLoading: userLoading } = useCurrentUser()
   const { data: eventsData, isLoading: eventsLoading } = useEvents()
   const { data: contactsData, isLoading: contactsLoading } = useTotalContacts()
+  const { data: vendorsData } = useVendors()
 
   const accessToken = useAuthStore((s) => s.accessToken)
   const isLoading = userLoading || eventsLoading || contactsLoading
@@ -54,6 +56,7 @@ export function AdminDashboard() {
   const draftEvents   = allEvents.filter((e) => e.status === 'draft').length
   const doneEvents    = allEvents.filter((e) => e.status === 'completed').length
   const totalContacts = contactsData?.pagination?.total ?? 0
+  const totalVendors = vendorsData?.data?.length ?? 0
   const pendingRegistrations = 42
 
   const recentEvents = [...allEvents]
@@ -64,10 +67,10 @@ export function AdminDashboard() {
   const today = formatIndonesianDate(new Date())
 
   const STAT_PILLS = [
-    { icon: Calendar,  label: 'Total Event',        value: totalEvents,          sub: 'semua event'        },
-    { icon: Zap,       label: 'Event Aktif',         value: activeEvents,         sub: 'sedang berjalan'    },
-    { icon: Users,     label: 'Total Kontak',        value: totalContacts,        sub: 'dalam database'     },
-    { icon: Clock,     label: 'Registrasi Pending',  value: pendingRegistrations, sub: 'menunggu approval'  },
+    { icon: Calendar,   label: 'Total Event',        value: totalEvents,          sub: 'semua event'        },
+    { icon: Zap,        label: 'Event Aktif',         value: activeEvents,         sub: 'sedang berjalan'    },
+    { icon: Users,      label: 'Total Kontak',        value: totalContacts,        sub: 'dalam database'     },
+    { icon: Building2,  label: 'Vendor',              value: totalVendors,         sub: 'terdaftar'          },
   ]
 
   // Pipeline funnel from real event counts
@@ -217,6 +220,12 @@ export function AdminDashboard() {
                 <Link href="/app/contacts/upload">
                   <Upload className="h-3.5 w-3.5" />
                   Upload Kontak
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="w-full justify-start gap-2.5 h-9 text-[13px]">
+                <Link href="/app/vendors">
+                  <Building2 className="h-3.5 w-3.5" />
+                  Kelola Vendor
                 </Link>
               </Button>
               <Button asChild variant="outline" className="w-full justify-start gap-2.5 h-9 text-[13px]">

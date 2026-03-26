@@ -8,6 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { FunnelVisualization, getWorstHealth } from '@/components/hub/FunnelVisualization'
 import { ActionCard } from '@/components/hub/ActionCard'
+import { SponsorPanel } from '@/components/features/vendors/SponsorPanel'
+import { SurveyBuilder } from '@/components/features/events/SurveyBuilder'
 import { getHealth } from '@/lib/benchmarks'
 import Link from 'next/link'
 import type { Event } from '@/types/api'
@@ -173,8 +175,17 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
               blastCount={metrics.blastCount}
             />
           )}
+
+          {/* Vendor panel */}
+          <Card>
+            <CardContent className="pt-4">
+              <SponsorPanel eventId={id} />
+            </CardContent>
+          </Card>
         </div>
       </div>
+      {/* Survey builder */}
+      <SurveyBuilder eventId={id} />
     </div>
   )
 }

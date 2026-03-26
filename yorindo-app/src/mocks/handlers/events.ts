@@ -1,6 +1,6 @@
 import { http, HttpResponse, delay } from 'msw'
 import { faker } from '@faker-js/faker'
-import type { AudienceRecommendationsResponse, BlastPayload, Event, PaginatedResponse, RegistrationWithContact } from '@/types/api'
+import type { AudienceRecommendationsResponse, AttachSponsorBody, BlastPayload, Event, EventSponsor, PaginatedResponse, RegistrationWithContact } from '@/types/api'
 import { djb2 } from '@/lib/djb2'
 import { usersStore, userEventAssignments } from './users'
 
@@ -8,6 +8,14 @@ const TIMEZONES: Event['timezone'][] = ['Asia/Jakarta', 'Asia/Makassar', 'Asia/J
 
 // In-memory mutable store — mutations persist within session
 let deletedEventsStore: (Event & { deletedAt: string })[] = []
+
+// ─── Event Sponsors In-Memory Store ──────────────────────────────────────────
+export const eventSponsorsStore = new Map<string, EventSponsor[]>([
+  ['event-001', [
+    { id: 'es-001-1', event_id: 'event-001', vendor_id: 'vendor-001', vendor_name: 'Alibaba Cloud', tier: 'premium', display_order: 0 },
+    { id: 'es-001-2', event_id: 'event-001', vendor_id: 'vendor-003', vendor_name: 'PT Mandiri Sekuritas', tier: 'standard', display_order: 1 },
+  ]],
+])
 
 export let eventsStore: Event[] = [
   {
@@ -170,14 +178,24 @@ export const eventHandlers = [
 
   http.get('/api/events/public/:slug', async ({ params }) => {
     await delay(200)
-    const event = eventsStore.find((e) => e.slug === params.slug && e.status === 'published')
+    const event = eventsStore.find((e) => e.slug === params.slug && (e.status === 'published' || e.status === 'active'))
     if (!event) {
       return HttpResponse.json(
         { error: { code: 'NOT_FOUND', message: 'Event not found', details: [] } },
         { status: 404 }
       )
     }
-    return HttpResponse.json(event)
+    const sponsors = (eventSponsorsStore.get(event.id) ?? [])
+      .map((s) => ({
+        vendor_id: s.vendor_id,
+        name: s.vendor_name,
+        logo_url: undefined,
+        website: undefined,
+        tier: s.tier,
+        display_order: s.display_order,
+      }))
+      .sort((a, b) => a.display_order - b.display_order)
+    return HttpResponse.json({ ...event, sponsors })
   }),
 
   http.get('/api/events/:id/overview', async ({ params }) => {
@@ -204,6 +222,72 @@ export const eventHandlers = [
       seatsRemaining: Math.max(capacity - approvedCount, 0),
       daysUntilEvent: Math.ceil((new Date(event.eventDate).getTime() - Date.now()) / 86400000),
     })
+  }),
+
+  // ── Sponsor sub-resource — must be before GET /api/events/:id wildcard ──
+  http.get('/api/events/:id/sponsors', async ({ params }) => {
+    await delay(300)
+    const sponsors = eventSponsorsStore.get(params.id as string) ?? []
+    return HttpResponse.json(sponsors)
+  }),
+
+  http.post('/api/events/:id/sponsors', async ({ params, request }) => {
+    await delay(400)
+    const body = await request.json() as AttachSponsorBody
+    const eventId = params.id as string
+    const { vendorsStore } = await import('./vendors')
+    const vendor = vendorsStore.find((v) => v.id === body.vendorId)
+    if (!vendor) {
+      return HttpResponse.json(
+        { error: { code: 'NOT_FOUND', message: 'Vendor not found', details: [] } },
+        { status: 404 }
+      )
+    }
+    const existing = eventSponsorsStore.get(eventId) ?? []
+    if (existing.some((s) => s.vendor_id === body.vendorId)) {
+      return HttpResponse.json(
+        { error: { code: 'DUPLICATE', message: 'Vendor already attached to this event', details: [] } },
+        { status: 409 }
+      )
+    }
+    const newSponsor: EventSponsor = {
+      id: faker.string.uuid(),
+      event_id: eventId,
+      vendor_id: body.vendorId,
+      vendor_name: vendor.name,
+      tier: body.tier,
+      display_order: body.displayOrder ?? existing.length,
+    }
+    eventSponsorsStore.set(eventId, [...existing, newSponsor])
+    return HttpResponse.json(newSponsor, { status: 201 })
+  }),
+
+  http.patch('/api/events/:id/sponsors/:vendorId', async ({ params, request }) => {
+    await delay(300)
+    const body = await request.json() as Partial<Pick<EventSponsor, 'tier' | 'display_order'>>
+    const eventId = params.id as string
+    const vendorId = params.vendorId as string
+    const sponsors = eventSponsorsStore.get(eventId) ?? []
+    const idx = sponsors.findIndex((s) => s.vendor_id === vendorId)
+    if (idx === -1) {
+      return HttpResponse.json(
+        { error: { code: 'NOT_FOUND', message: 'Sponsor not found', details: [] } },
+        { status: 404 }
+      )
+    }
+    sponsors[idx] = { ...sponsors[idx], ...body }
+    eventSponsorsStore.set(eventId, sponsors)
+    return HttpResponse.json(sponsors[idx])
+  }),
+
+  http.delete('/api/events/:id/sponsors/:vendorId', async ({ params }) => {
+    await delay(300)
+    const eventId = params.id as string
+    const vendorId = params.vendorId as string
+    const sponsors = eventSponsorsStore.get(eventId) ?? []
+    const updated = sponsors.filter((s) => s.vendor_id !== vendorId)
+    eventSponsorsStore.set(eventId, updated)
+    return new HttpResponse(null, { status: 204 })
   }),
 
   http.get('/api/events/:id', async ({ params }) => {
@@ -335,14 +419,23 @@ export const eventHandlers = [
   http.get('/api/events/:id/survey', async () => {
     await delay(300)
     return HttpResponse.json({
-      fields: [
-        { id: 'q1', type: 'text', label: 'Apa jabatan Anda?', required: true },
-        { id: 'q2', type: 'select', label: 'Industri perusahaan Anda?', options: ['Teknologi', 'Kesehatan', 'Manufaktur'], required: true },
-      ],
+      schema: {
+        type: 'object',
+        properties: {
+          jabatan: { type: 'string', title: 'Apa jabatan Anda?' },
+          industri: {
+            type: 'string',
+            title: 'Industri perusahaan Anda?',
+            enum: ['Teknologi', 'Kesehatan', 'Manufaktur'],
+          },
+        },
+        required: ['jabatan', 'industri'],
+      },
+      uiSchema: {},
     })
   }),
 
-  http.put('/api/events/:id/survey', async ({ params }) => {
+  http.put('/api/events/:id/survey', async ({ request, params }) => {
     await delay(400)
     const event = eventsStore.find((e) => e.id === params.id)
     if (!event) {
@@ -351,7 +444,8 @@ export const eventHandlers = [
         { status: 404 }
       )
     }
-    return HttpResponse.json(event)
+    const body = await request.json() as { schema: unknown; uiSchema: unknown }
+    return HttpResponse.json({ ...body })
   }),
 
   http.post('/api/events/:id/blast', async ({ request }) => {

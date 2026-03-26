@@ -1,13 +1,16 @@
-import type { Event } from '@/types/api'
+import type { Event, PublicEventSponsor } from '@/types/api'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { SponsorStrip } from '@/components/features/registration/SponsorStrip'
+import { EXPERIMENTAL_ENABLED } from '@/lib/featureFlags'
 
 interface EventLandingCardProps {
-  event: Event
+  event: Event & { sponsors?: PublicEventSponsor[] }
 }
 
 export function EventLandingCard({ event }: EventLandingCardProps) {
+  const sponsors = event.sponsors ?? []
   const formattedDate = new Intl.DateTimeFormat('id-ID', {
     dateStyle: 'long',
     timeStyle: 'short',
@@ -48,7 +51,7 @@ export function EventLandingCard({ event }: EventLandingCardProps) {
         <CardContent className="px-6 pb-6 pt-0">
           {isFull ? (
             <Button disabled variant="outline" className="w-full py-4 text-base">
-              Registrasi Penuh — Daftarkan ke Waiting List
+              {EXPERIMENTAL_ENABLED ? 'Registrasi Penuh — Daftarkan ke Waiting List' : 'Kapasitas Penuh'}
             </Button>
           ) : (
             <Button asChild size="lg" className="w-full text-base">
@@ -56,6 +59,10 @@ export function EventLandingCard({ event }: EventLandingCardProps) {
             </Button>
           )}
         </CardContent>
+
+        {sponsors.length > 0 && (
+          <SponsorStrip sponsors={sponsors} />
+        )}
       </Card>
     </div>
   )

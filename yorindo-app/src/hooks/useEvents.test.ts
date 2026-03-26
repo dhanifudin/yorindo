@@ -13,12 +13,12 @@ function makeWrapper() {
 }
 
 describe('useEvents', () => {
-  it('returns 5 seeded events from MSW', async () => {
+  it('returns 6 seeded events from MSW', async () => {
     const { result } = renderHook(() => useEvents(), { wrapper: makeWrapper() })
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 3000 })
 
-    expect(result.current.data?.data).toHaveLength(5)
+    expect(result.current.data?.data).toHaveLength(6)
   })
 
   it('includes events with all expected statuses', async () => {

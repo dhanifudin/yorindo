@@ -34,7 +34,12 @@ export function EventCloneDialog({ event }: EventCloneDialogProps) {
 
   return (
     <>
-      <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+      <Button
+        variant="outline"
+        size="sm"
+        className="border-violet-300 text-violet-700 hover:bg-violet-50 hover:border-violet-400"
+        onClick={() => setOpen(true)}
+      >
         Salin Event
       </Button>
 

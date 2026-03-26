@@ -1,15 +1,29 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { Check, ChevronsUpDown, X } from 'lucide-react'
 import { useCreateEvent, useUpdateEvent } from '@/hooks/useEvents'
 import { useTemplates } from '@/hooks/useTemplates'
+import { useVendors } from '@/hooks/useVendors'
+import { useEventSponsors } from '@/hooks/useEventSponsors'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command'
+import { cn } from '@/lib/utils'
 import type { Event } from '@/types/api'
 
 const INDUSTRIES = [
@@ -33,12 +47,11 @@ const EVENT_TYPES = [
   { value: 'webinar', label: 'Webinar' },
 ]
 
-const EDITABLE_STATUSES: Event['status'][] = ['draft', 'published', 'cancelled']
-
 const schema = z.object({
   name: z.string().min(1, 'Nama event wajib diisi'),
   description: z.string().optional(),
-  eventDate: z.string().min(1, 'Tanggal event wajib diisi'),
+  eventDateOnly: z.string().min(1, 'Tanggal wajib diisi'),
+  eventTime: z.string().min(1, 'Waktu wajib diisi'),
   timezone: z.enum(['Asia/Jakarta', 'Asia/Makassar', 'Asia/Jayapura']),
   capacity: z.string().optional(),
   venue: z.string().optional(),
@@ -63,13 +76,24 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
   const isError = isEdit ? isUpdateError : isCreateError
 
   const { data: templates = [], isLoading: isLoadingTemplates } = useTemplates()
+  const { data: vendorsData, isLoading: isLoadingVendors } = useVendors()
+  const { data: existingSponsors } = useEventSponsors(event?.id ?? '')
 
-  // Local state for uncontrolled selectors (consistent with existing form pattern)
+  // Local state
   const [bannerUrl, setBannerUrl] = useState(event?.bannerUrl ?? '')
   const [blastTemplateId, setBlastTemplateId] = useState('')
   const [confirmationTemplateId, setConfirmationTemplateId] = useState('')
   const [rejectionTemplateId, setRejectionTemplateId] = useState('')
   const [industryTags, setIndustryTags] = useState<string[]>(event?.industryTags ?? [])
+  const [selectedVendorIds, setSelectedVendorIds] = useState<string[]>([])
+  const [vendorPopoverOpen, setVendorPopoverOpen] = useState(false)
+
+  // Pre-populate vendor selection in edit mode once sponsors load
+  useEffect(() => {
+    if (isEdit && existingSponsors) {
+      setSelectedVendorIds(existingSponsors.map((s) => s.vendor_id))
+    }
+  }, [isEdit, existingSponsors])
 
   const {
     register,
@@ -80,8 +104,8 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
     defaultValues: {
       name: event?.name ?? '',
       description: event?.description ?? '',
-      // datetime-local requires "YYYY-MM-DDTHH:mm" format
-      eventDate: event?.eventDate ? event.eventDate.slice(0, 16) : '',
+      eventDateOnly: event?.eventDate ? event.eventDate.slice(0, 10) : '',
+      eventTime: event?.eventDate ? event.eventDate.slice(11, 16) : '',
       timezone: event?.timezone ?? 'Asia/Jakarta',
       capacity: event?.capacity != null ? String(event.capacity) : '',
       venue: event?.venue ?? '',
@@ -94,10 +118,40 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
   const confirmationTemplates = useMemo(() => templates.filter((t) => t.type === 'confirmation'), [templates])
   const rejectionTemplates = useMemo(() => templates.filter((t) => t.type === 'rejection'), [templates])
 
+  const allVendors = vendorsData?.data ?? []
+  const selectedVendors = allVendors.filter((v) => selectedVendorIds.includes(v.id))
+
+  const toggleVendor = (vendorId: string) => {
+    setSelectedVendorIds((prev) =>
+      prev.includes(vendorId) ? prev.filter((id) => id !== vendorId) : [...prev, vendorId]
+    )
+  }
+
   const toggleIndustry = (slug: string) => {
     setIndustryTags((prev) =>
       prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug]
     )
+  }
+
+  const syncVendors = async (eventId: string) => {
+    const originalIds = new Set((existingSponsors ?? []).map((s) => s.vendor_id))
+    const nextIds = new Set(selectedVendorIds)
+
+    const toAdd = selectedVendorIds.filter((id) => !originalIds.has(id))
+    const toRemove = [...originalIds].filter((id) => !nextIds.has(id))
+
+    await Promise.allSettled([
+      ...toAdd.map((vendorId) =>
+        fetch(`/api/events/${eventId}/sponsors`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ vendorId, tier: 'standard' }),
+        })
+      ),
+      ...toRemove.map((vendorId) =>
+        fetch(`/api/events/${eventId}/sponsors/${vendorId}`, { method: 'DELETE' })
+      ),
+    ])
   }
 
   const onSubmit = (values: FormValues) => {
@@ -110,7 +164,7 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
     const body = {
       name: values.name,
       description: values.description,
-      eventDate: new Date(values.eventDate).toISOString(),
+      eventDate: new Date(`${values.eventDateOnly}T${values.eventTime}`).toISOString(),
       timezone: values.timezone,
       ...(capacity !== undefined && { capacity }),
       ...(bannerUrl && { bannerUrl }),
@@ -124,9 +178,19 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
     }
 
     if (isEdit) {
-      updateEvent(body, { onSuccess })
+      updateEvent(body, {
+        onSuccess: async () => {
+          await syncVendors(event!.id)
+          onSuccess()
+        },
+      })
     } else {
-      createEvent(body, { onSuccess })
+      createEvent(body, {
+        onSuccess: async (created) => {
+          await syncVendors(created.id)
+          onSuccess()
+        },
+      })
     }
   }
 
@@ -161,19 +225,32 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
         />
       </div>
 
-      {/* Date & Timezone */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {/* Date, Time & Timezone */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div>
-          <Label htmlFor="eventDate">
-            Tanggal & Waktu <span className="text-destructive">*</span>
+          <Label htmlFor="eventDateOnly">
+            Tanggal <span className="text-destructive">*</span>
           </Label>
           <Input
-            id="eventDate"
-            type="datetime-local"
-            {...register('eventDate')}
-            aria-invalid={!!errors.eventDate}
+            id="eventDateOnly"
+            type="date"
+            {...register('eventDateOnly')}
+            aria-invalid={!!errors.eventDateOnly}
           />
-          {errors.eventDate && <p className="mt-1 text-xs text-destructive">{errors.eventDate.message}</p>}
+          {errors.eventDateOnly && <p className="mt-1 text-xs text-destructive">{errors.eventDateOnly.message}</p>}
+        </div>
+        <div>
+          <Label htmlFor="eventTime">
+            Waktu (HH:MM) <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id="eventTime"
+            type="time"
+            step="60"
+            {...register('eventTime')}
+            aria-invalid={!!errors.eventTime}
+          />
+          {errors.eventTime && <p className="mt-1 text-xs text-destructive">{errors.eventTime.message}</p>}
         </div>
         <div>
           <Label htmlFor="timezone">Zona Waktu</Label>
@@ -253,6 +330,89 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
           placeholder="Contoh: fintech, digital-banking, ai"
         />
         <p className="mt-1 text-xs text-muted-foreground">Pisahkan dengan koma</p>
+      </div>
+
+      {/* Vendor */}
+      <div>
+        <Label>Vendor (Opsional)</Label>
+        <div className="mt-1.5 space-y-2">
+          <Popover open={vendorPopoverOpen} onOpenChange={setVendorPopoverOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                role="combobox"
+                aria-expanded={vendorPopoverOpen}
+                disabled={isLoadingVendors}
+                className="w-full justify-between font-normal"
+              >
+                <span className="text-muted-foreground">
+                  {isLoadingVendors
+                    ? 'Memuat vendor...'
+                    : selectedVendors.length > 0
+                    ? `${selectedVendors.length} vendor dipilih`
+                    : 'Cari dan pilih vendor...'}
+                </span>
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-full p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Cari vendor..." />
+                <CommandList>
+                  <CommandEmpty>
+                    {allVendors.length === 0
+                      ? 'Belum ada vendor terdaftar.'
+                      : 'Vendor tidak ditemukan.'}
+                  </CommandEmpty>
+                  <CommandGroup>
+                    {allVendors.map((vendor) => {
+                      const isSelected = selectedVendorIds.includes(vendor.id)
+                      return (
+                        <CommandItem
+                          key={vendor.id}
+                          value={vendor.name}
+                          onSelect={() => toggleVendor(vendor.id)}
+                        >
+                          <Check
+                            className={cn(
+                              'mr-2 h-4 w-4',
+                              isSelected ? 'opacity-100' : 'opacity-0'
+                            )}
+                          />
+                          <span className="flex-1">{vendor.name}</span>
+                          {vendor.industry && (
+                            <span className="ml-2 text-xs text-muted-foreground">{vendor.industry}</span>
+                          )}
+                        </CommandItem>
+                      )
+                    })}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+
+          {/* Selected vendor chips */}
+          {selectedVendors.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {selectedVendors.map((vendor) => (
+                <Badge key={vendor.id} variant="secondary" className="gap-1 pr-1">
+                  {vendor.name}
+                  <button
+                    type="button"
+                    onClick={() => toggleVendor(vendor.id)}
+                    className="ml-1 rounded-full hover:bg-muted-foreground/20 p-0.5"
+                    aria-label={`Hapus ${vendor.name}`}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              ))}
+            </div>
+          )}
+          <p className="text-xs text-muted-foreground">Tier dapat diubah setelah event dibuat</p>
+        </div>
       </div>
 
       {/* Banner URL */}

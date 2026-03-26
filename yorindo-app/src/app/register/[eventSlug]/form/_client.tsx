@@ -2,19 +2,16 @@
 
 import { use, useState, useRef } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
+import Form from '@rjsf/core'
+import validator from '@rjsf/validator-ajv8'
+import type { RJSFSchema, UiSchema } from '@rjsf/utils'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { toast } from 'sonner'
+// Select no longer needed — RJSF renders survey inputs
 import type { Event, Contact } from '@/types/api'
 import { MockGoogleAuthDialog } from '@/components/auth/MockGoogleAuthDialog'
 import { GoogleIcon } from '@/components/icons/GoogleIcon'
@@ -56,7 +53,7 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
     queryFn: () => fetch(`/api/events/public/${eventSlug}`).then((r) => r.json()),
   })
 
-  const { data: survey } = useQuery<{ fields: Array<{ id: string; type: string; label: string; required: boolean; options?: string[] }> }>({
+  const { data: survey } = useQuery<{ schema: RJSFSchema; uiSchema: UiSchema }>({
     queryKey: ['survey-public', event?.id],
     queryFn: () => fetch(`/api/events/${event!.id}/survey`).then((r) => r.json()),
     enabled: !!event?.id && step === 1,
@@ -321,54 +318,35 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
           {step === 1 && (
             <div className="space-y-4">
               <h2 className="text-lg font-semibold">Survei Event</h2>
-              {!survey?.fields.length ? (
-                <p className="text-muted-foreground text-sm">Tidak ada pertanyaan survei untuk event ini.</p>
-              ) : (
-                survey.fields.map((field) => (
-                  <div key={field.id} className="space-y-1.5">
-                    <Label htmlFor={`survey-${field.id}`}>
-                      {field.label}
-                      {field.required && <span className="text-destructive ml-1">*</span>}
-                    </Label>
-                    {field.type === 'text' && (
-                      <Input
-                        id={`survey-${field.id}`}
-                        value={form.surveyAnswers[field.id] ?? ''}
-                        onChange={(e) =>
-                          setForm((p) => ({
-                            ...p,
-                            surveyAnswers: { ...p.surveyAnswers, [field.id]: e.target.value },
-                          }))
-                        }
-                      />
-                    )}
-                    {(field.type === 'single-choice' || field.type === 'select') && (
-                      <Select
-                        value={form.surveyAnswers[field.id] ?? ''}
-                        onValueChange={(val) =>
-                          setForm((p) => ({
-                            ...p,
-                            surveyAnswers: { ...p.surveyAnswers, [field.id]: val },
-                          }))
-                        }
-                      >
-                        <SelectTrigger id={`survey-${field.id}`}>
-                          <SelectValue placeholder="Pilih..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {field.options?.map((opt) => (
-                            <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
+              {!survey?.schema?.properties || Object.keys(survey.schema.properties).length === 0 ? (
+                <div className="space-y-4">
+                  <p className="text-muted-foreground text-sm">Tidak ada pertanyaan survei untuk event ini.</p>
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={() => setStep(0)}>← Kembali</Button>
+                    <Button className="flex-1" onClick={() => setStep(2)}>Lanjut →</Button>
                   </div>
-                ))
+                </div>
+              ) : (
+                <Form
+                  schema={survey.schema}
+                  uiSchema={survey.uiSchema}
+                  formData={form.surveyAnswers}
+                  validator={validator}
+                  onSubmit={({ formData }) => {
+                    setForm((p) => ({ ...p, surveyAnswers: formData as Record<string, string> }))
+                    setStep(2)
+                  }}
+                >
+                  <div className="flex gap-2 pt-2">
+                    <Button type="button" variant="outline" onClick={() => setStep(0)}>
+                      ← Kembali
+                    </Button>
+                    <Button type="submit" className="flex-1">
+                      Lanjut →
+                    </Button>
+                  </div>
+                </Form>
               )}
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setStep(0)}>← Kembali</Button>
-                <Button className="flex-1" onClick={() => setStep(2)}>Lanjut →</Button>
-              </div>
             </div>
           )}
 
