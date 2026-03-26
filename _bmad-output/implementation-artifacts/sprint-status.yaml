@@ -122,7 +122,7 @@ development_status:
   4-1-event-creation-with-full-configuration: review
   4-2-event-lifecycle-management-state-machine: review
   4-3-event-clone: review
-  4-4-survey-template-builder: review
+  4-4-survey-template-builder: done
   4-13-event-banner-poster-upload: backlog
   4-5-event-capacity-target-criteria-with-audience-preview: review
   4-6-soft-delete-recovery-for-events-and-records: review

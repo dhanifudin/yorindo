@@ -75,6 +75,18 @@ And no story in Epic 2 or later begins until this story is marked done
 - [x] **Task 13: Add reusable pagination parameters** (PageParam, PageSizeParam, SortByParam, SortDirParam)
 - [x] **Task 14: Lint and validate** — `npx @redocly/cli lint openapi.yaml` → 0 errors
 
+### Review Findings
+
+- [ ] [Review][Patch] Missing required `/api/blast` endpoint group [`yorindo-api/openapi.yaml:1851`]
+- [ ] [Review][Patch] Multiple operations omit AC2-required response schemas/status coverage [`yorindo-api/openapi.yaml:973`]
+- [ ] [Review][Patch] Several collection endpoints do not meet the required pagination and sorting contract [`yorindo-api/openapi.yaml:1204`]
+- [ ] [Review][Patch] `Contact.industryId` and `Contact.jobTitleId` conflict with the global UUID ID rule [`yorindo-api/openapi.yaml:175`]
+- [ ] [Review][Patch] `/auth/refresh` does not document the refresh-cookie security requirement [`yorindo-api/openapi.yaml:1032`]
+- [ ] [Review][Patch] `BlastConfigBody` does not constrain `filters` vs `contactIds` selection [`yorindo-api/openapi.yaml:825`]
+- [ ] [Review][Patch] Audience recommendations response shape conflicts with the endpoint `limit` parameter [`yorindo-api/openapi.yaml:1798`]
+- [ ] [Review][Patch] `/scan/verify` mixes invalid-token handling between `200` result states and `401` errors [`yorindo-api/openapi.yaml:2176`]
+- [ ] [Review][Patch] Attendance and check-in stats endpoints do not declare documented `403` failures [`yorindo-api/openapi.yaml:1650`]
+
 ---
 
 ## Dev Notes

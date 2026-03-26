@@ -10,4 +10,4 @@ As an admin, I want to build a custom survey for each event using an add/remove/
 - [x] PUT /api/events/:id/survey saves schema
 - [x] GET /api/events/:id/survey loads existing schema
 
-## Status: review
+## Status: done
