@@ -143,6 +143,16 @@ Then 62/62 tests pass with zero regressions. No form logic, validation (zod), ho
 
 ## Dev Notes
 
+> **Theme constraint (Sprint Change Proposal 2026-03-26f):**
+> All components must use the blue brand token palette:
+> - Primary: `hsl(217 73% 35%)` via `bg-primary` / `text-primary`
+> - Accent/secondary: `hsl(217 60% 96%)` via `bg-secondary` / `bg-accent`
+> - Surface: `bg-surface` for section backgrounds
+> - Elevated cards: use `.card-elevated` utility class
+> - Radius: `0.75rem` base (`rounded-lg`)
+> - Font: Inter (`font-sans`)
+> Reference: `src/app/globals.css` `:root` tokens (see Sprint Change Proposal 2026-03-26f)
+
 ### PublicShell Component
 
 ```tsx

@@ -74,6 +74,16 @@ all existing `vitest` tests pass with no regressions (`npm test` passes).
 
 ## Dev Notes
 
+> **Theme constraint (Sprint Change Proposal 2026-03-26f):**
+> All components must use the blue brand token palette:
+> - Primary: `hsl(217 73% 35%)` via `bg-primary` / `text-primary`
+> - Accent/secondary: `hsl(217 60% 96%)` via `bg-secondary` / `bg-accent`
+> - Surface: `bg-surface` for section backgrounds
+> - Elevated cards: use `.card-elevated` utility class
+> - Radius: `0.75rem` base (`rounded-lg`)
+> - Font: Inter (`font-sans`)
+> Reference: `src/app/globals.css` `:root` tokens (see Sprint Change Proposal 2026-03-26f)
+
 ### shadcn init — CLI Answers
 
 When `npx shadcn@latest init` prompts, answer:
