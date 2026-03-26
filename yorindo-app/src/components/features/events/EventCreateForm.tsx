@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -88,12 +88,13 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
   const [selectedVendorIds, setSelectedVendorIds] = useState<string[]>([])
   const [vendorPopoverOpen, setVendorPopoverOpen] = useState(false)
 
-  // Pre-populate vendor selection in edit mode once sponsors load
-  useEffect(() => {
-    if (isEdit && existingSponsors) {
-      setSelectedVendorIds(existingSponsors.map((s) => s.vendor_id))
-    }
-  }, [isEdit, existingSponsors])
+  // Pre-populate vendor selection in edit mode once sponsors load (update-state-while-rendering)
+  const sponsorKey = isEdit && existingSponsors ? existingSponsors.map((s) => s.vendor_id).sort().join() : null
+  const [loadedSponsorKey, setLoadedSponsorKey] = useState<string | null>(null)
+  if (sponsorKey !== null && sponsorKey !== loadedSponsorKey) {
+    setLoadedSponsorKey(sponsorKey)
+    setSelectedVendorIds(existingSponsors!.map((s) => s.vendor_id))
+  }
 
   const {
     register,

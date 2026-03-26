@@ -8,7 +8,7 @@
  * This worker is only started when the worker process is explicitly launched.
  */
 
-import { Worker } from 'bullmq'
+import { Worker, type ConnectionOptions } from 'bullmq'
 import { getRedis } from '../lib/redis.js'
 import { contactRepository, flaggedRecordsRepository, rawUploadRepository, auditLogRepository, etlNormalizationService } from '../container.js'
 import { EtlService } from '../services/etl.service.js'
@@ -25,7 +25,7 @@ export function startEtlWorker(): Worker {
       return await etlService.processFile(filePath, uploadedBy)
     },
     {
-      connection: redis,
+      connection: redis as unknown as ConnectionOptions,
       concurrency: 1, // One ETL job at a time to avoid AI provider rate limits
     },
   )

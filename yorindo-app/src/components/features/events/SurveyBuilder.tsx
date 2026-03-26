@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import Form from '@rjsf/core'
 import validator from '@rjsf/validator-ajv8'
@@ -107,11 +107,14 @@ export function SurveyBuilder({ eventId }: SurveyBuilderProps) {
     enabled: isExpanded,
   })
 
-  useEffect(() => {
+  // Sync fields from server data (update-state-while-rendering pattern)
+  const [loadedSurveyData, setLoadedSurveyData] = useState<typeof surveyData>(undefined)
+  if (surveyData !== loadedSurveyData) {
+    setLoadedSurveyData(surveyData)
     if (surveyData?.schema) {
       setFields(jsonSchemaToFields(surveyData.schema, surveyData.uiSchema ?? {}))
     }
-  }, [surveyData])
+  }
 
   const validateFields = (): boolean => {
     for (const f of fields) {
@@ -238,7 +241,7 @@ export function SurveyBuilder({ eventId }: SurveyBuilderProps) {
             <>
               {fields.length === 0 && (
                 <p className="text-sm text-muted-foreground italic">
-                  Belum ada pertanyaan. Klik "Tambah Pertanyaan" untuk mulai.
+                  Belum ada pertanyaan. Klik &quot;Tambah Pertanyaan&quot; untuk mulai.
                 </p>
               )}
 

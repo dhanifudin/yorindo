@@ -20,11 +20,11 @@ export class InMemoryRegistrationRepository implements IRegistrationRepository {
 
     for (let i = 0; i < 20; i++) {
       const id = crypto.randomUUID()
-      const status = statuses[i % statuses.length]
+      const status = statuses[i % statuses.length]!
       const reg: Registration = {
         id,
-        contactId: cIds[i % cIds.length],
-        eventId: eIds[i % eIds.length],
+        contactId: cIds[i % cIds.length]!,
+        eventId: eIds[i % eIds.length]!,
         status,
         ticketToken: status === 'approved' || status === 'attended' ? crypto.randomUUID() : null,
         aiScore: Math.round((0.3 + (i % 8) * 0.09) * 1000) / 1000,

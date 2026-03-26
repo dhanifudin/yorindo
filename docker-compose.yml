@@ -13,13 +13,13 @@ services:
     restart: unless-stopped
 
   api:
-    image: ghcr.io/YOUR_ORG/yorindo-api:latest
+    image: dhanifudin/yorindo-api:latest
     expose:
       - "3000"
     env_file: .env
-    volumes:
-      - snapshots_data:/data/snapshots
-      - uploads_tmp:/tmp/uploads
+    environment:
+      # Phase 1: in-memory repositories — set to 'postgres' when BE is ready
+      REPOSITORY_MODE: memory
     depends_on:
       - postgres
       - redis
@@ -31,14 +31,11 @@ services:
         max-file: "5"
 
   app:
-    image: ghcr.io/YOUR_ORG/yorindo-app:latest
+    image: dhanifudin/yorindo-app:latest
     expose:
       - "3000"
     env_file: .env
     environment:
-      # Experimental features are disabled in production deployments by default.
-      # To enable participant SSO login, set NEXT_PUBLIC_ENABLE_EXPERIMENTAL=true
-      # at image build time (NEXT_PUBLIC_* vars are baked in at build, not runtime).
       NEXT_PUBLIC_ENABLE_EXPERIMENTAL: ""
     restart: unless-stopped
 
@@ -66,5 +63,3 @@ services:
 volumes:
   postgres_data:
   redis_data:
-  snapshots_data:
-  uploads_tmp:

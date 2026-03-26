@@ -27,7 +27,7 @@ export class InMemoryFlaggedRecordsRepository implements IFlaggedRecordsReposito
           phone: `08${faker.number.int({ min: 10000000, max: 99999999 })}`,
           email: faker.internet.email(),
         },
-        flags: flagReasons[i % flagReasons.length],
+        flags: flagReasons[i % flagReasons.length]!,
         status: 'pending',
         uploadId: crypto.randomUUID(),
         resolvedBy: null,

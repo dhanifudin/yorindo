@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -30,11 +30,14 @@ export function EventAssignmentDialog({ user, open, onClose }: EventAssignmentDi
     enabled: open,
   })
 
-  useEffect(() => {
+  // Sync pending set from server data (update-state-while-rendering pattern)
+  const [loadedAssignmentData, setLoadedAssignmentData] = useState<typeof assignmentData>(undefined)
+  if (assignmentData !== loadedAssignmentData) {
+    setLoadedAssignmentData(assignmentData)
     if (assignmentData?.eventIds) {
       setPending(new Set(assignmentData.eventIds))
     }
-  }, [assignmentData])
+  }
 
   const assignMutation = useMutation({
     mutationFn: (eventId: string) =>
