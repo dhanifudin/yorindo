@@ -51,7 +51,7 @@
 # - 6-8-social-og-meta-tags-event-pages.md is an orphaned story file (not tracked in current Epic 6)
 
 generated: 2026-03-19
-last_updated: 2026-03-26 (Sprint Change Proposal 2026-03-26d: CUID2 PKs, PostgreSQL only, Phase 1 memory contract; stories 1-1, 1-2, 1-7, 1-8, 3-3, 4-4 reset to ready-for-dev)
+last_updated: 2026-03-26 (Sprint Change Proposal 2026-03-26e: Admin Intelligence Dashboard; Epic 12 added; story 3-8 reset to ready-for-dev)
 project: yorindo
 project_key: NOKEY
 tracking_system: file-system
@@ -103,7 +103,7 @@ development_status:
   3-5-duplicate-profile-detection-merge: review
   3-6-smart-filter-ai-industry-autocomplete: review
   3-7-healthbar-database-quality-pulse: review
-  3-8-filterbar-enhancements-facet-counts-url-state-activefilter-pills: review
+  3-8-filterbar-enhancements-facet-counts-url-state-activefilter-pills: ready-for-dev
   3-9-actiontoolbar-segment-blast-entry-point: review
   3-10-triagepanel-inline-flagged-and-duplicate-records: review
   3-11-eventbanner-pre-event-blast-shortcut: review
@@ -233,3 +233,16 @@ development_status:
   11-5-event-list-filtering-upcoming-history-split: review
   11-6-participant-dashboard: review
   epic-11-retrospective: optional
+
+  # ─────────────────────────────────────────────
+  # EPIC 12: Admin Intelligence Dashboard
+  # Sprint Change Proposal 2026-03-26e — FE+BE; /app/dashboard revamp + company view
+  # Planning epic file: epics/epic-10-admin-intelligence-dashboard.md
+  # Phase 1 (FE): /app/dashboard with stat cards, quick filter, vendor-event widget,
+  #               recent events with vendor col, company view at /app/contacts/companies
+  # Phase 2 (BE): GET /api/dashboard/stats, GET /api/contacts/companies, extended facets
+  # ─────────────────────────────────────────────
+  epic-12: backlog
+  12-1-admin-intelligence-dashboard-page: backlog
+  12-2-company-intelligence-view: backlog
+  epic-12-retrospective: optional

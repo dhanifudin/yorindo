@@ -236,11 +236,19 @@ So that I know segment size before applying a filter, can share or restore filte
 
 **Given** the FilterBar renders,
 **When** `GET /api/contacts/facets` has resolved,
-**Then** each `SelectItem` in Industry, City, and Company Size dropdowns shows a count suffix — e.g., "Teknologi (47)"
+**Then** each `SelectItem` in Industry, City, Company Size, and Company Name dropdowns shows a count suffix — e.g., "Teknologi (47)" or "PT Infomedia (12)"
 
 **Given** `GET /api/contacts/facets` is called,
 **When** the MSW handler responds,
-**Then** it returns `{ industry: [{ slug, label, count }], city: [{ slug, label, count }], companySize: [{ slug, label, count }] }` with HTTP 200; counts reflect the total contacts matching each facet value
+**Then** it returns `{ industry: [{ slug, label, count }], city: [{ slug, label, count }], companySize: [{ slug, label, count }], company: [{ name, count }] }` with HTTP 200; `company` returns top 20 companies by contact count; counts reflect the total contacts matching each facet value
+
+**Given** I select a company from the Company Name dropdown,
+**When** the Select onChange fires,
+**Then** `?company={name}` is added to the URL; the contacts table re-fetches showing only contacts from that company; the `ActiveFilterPills` component renders a pill "Perusahaan: PT Infomedia [×]"
+
+**Given** the page loads with `?company=PT+Infomedia` in the URL,
+**When** the FilterBar mounts,
+**Then** the Company Name dropdown is pre-selected to "PT Infomedia" using `useSearchParams`
 
 **Given** I select a filter value from a dropdown,
 **When** the Select onChange fires,
@@ -268,7 +276,7 @@ So that I know segment size before applying a filter, can share or restore filte
 
 **Given** AI search is active and I clear the AI search input,
 **When** the input value is cleared,
-**Then** only the `q` URL query param is removed; all instant filter params (industry, city, companySize) remain unchanged
+**Then** only the `q` URL query param is removed; all instant filter params (industry, city, companySize, company) remain unchanged
 
 **Given** filters are active and I click "Simpan Segmen" in the FilterBar,
 **When** the `Popover` opens,

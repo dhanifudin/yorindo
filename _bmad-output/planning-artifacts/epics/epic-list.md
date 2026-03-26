@@ -52,4 +52,9 @@ Participants can exercise their UU PDP data rights — requesting a copy of thei
 **FRs covered:** FR56, FR57, FR58
 **NFRs:** NFR-DI3, NFR-DI4, NFR-S16, NFR-R1
 
+## Epic 10: Admin Intelligence Dashboard
+Admin gets a personalized intelligence command center at `/app/dashboard` — showing live participant composition (filterable by event, job title, industry/manufacture sector, and location), events-by-vendor/sponsor breakdown, company-level contact aggregation, and contextual quick-filter entry points — replacing the current basic stat-card overview at `/app`.
+**FRs covered:** FR-D1 (dashboard intelligence view), FR-D2 (company aggregation view), FR-D3 (vendor-event breakdown)
+**Architecture requirements:** New route `/app/dashboard`; `/app` redirects to `/app/dashboard`; new MSW handlers for `GET /api/dashboard/stats`, `GET /api/contacts/companies`; reuses existing `events.vendor_id` FK for vendor grouping
+
 ---

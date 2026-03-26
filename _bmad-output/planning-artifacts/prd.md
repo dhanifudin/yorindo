@@ -829,6 +829,9 @@ All external service calls (Everpro, Brevo, AI provider) are abstracted behind s
 - **FR61:** Before saving event target criteria configuration, system displays the count of participant database records matching the configured filters (industry, job title, city) — enabling admin to validate criteria scope before committing or sending any blast
 - **FR62:** System detects duplicate registration attempts (same participant identifier + same event) and redirects the participant to their existing registration status rather than creating a second submission
 - **FR63:** Admin can manually requeue a rejected registration for re-review, or promote it directly to waitlisted or approved status, with the action logged in the audit trail
+- **FR-D1:** The system shall provide a personalized admin intelligence dashboard at `/app/dashboard` showing: (a) live metric cards for total contacts, events, companies, and pending registrations; (b) a participant quick-filter panel filterable by event, job title, industry type, and city with live matching contact count; (c) a vendor/sponsor event breakdown showing top vendors by event count using the existing `events.vendor_id` relation
+- **FR-D2:** The system shall provide a company intelligence view at `/app/contacts/companies` displaying contacts aggregated by company name — showing per-company: contact headcount, primary industry, distinct events attended, and most common city; the view shall support filtering by industry and city and click-through navigation to the contact list pre-filtered by company
+- **FR-D3:** The contact list filter bar shall support a Company Name filter dimension with facet counts, URL state persistence, and dismissible ActiveFilterPills — consistent with existing industry/city/companySize filter behavior; `GET /api/contacts/facets` shall return top 20 companies by contact count in addition to existing facets
 
 ---
 
