@@ -3,21 +3,21 @@
  * NOT imported at startup. Imported only by real BullMQ workers
  * when SERVICE_IMPL=real or REPOSITORY_IMPL=postgres.
  */
-import IORedis from 'ioredis'
+import { Redis } from 'ioredis'
 import { config } from '../config/index.js'
 
-let _redis: IORedis | undefined
+let _redis: Redis | undefined
 
-export function getRedis(): IORedis {
+export function getRedis(): Redis {
   if (!config.redisUrl) {
     throw new Error('REDIS_URL is required for real queue/redis operations')
   }
   if (!_redis) {
-    _redis = new IORedis(config.redisUrl, {
+    _redis = new Redis(config.redisUrl, {
       maxRetriesPerRequest: null,
       enableReadyCheck: false,
     })
-    _redis.on('error', (err) => {
+    _redis.on('error', (err: Error) => {
       console.error('Redis connection error', err.message)
     })
   }
