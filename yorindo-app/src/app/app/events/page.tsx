@@ -450,7 +450,7 @@ export default function EventsPage() {
           ) : (
             <div className="space-y-3">
               {deletedData.data.map((event) => (
-                <Card key={event.id}>
+                <Card key={event.id} className="card-elevated">
                   <CardContent className="py-4 flex items-center justify-between">
                     <div>
                       <h3 className="font-medium">{event.name}</h3>

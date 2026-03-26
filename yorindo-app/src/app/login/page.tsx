@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+
 import { useAuthStore } from '@/store/authStore'
 import { LoginForm } from '@/components/forms/LoginForm'
 import { MockGoogleAuthDialog } from '@/components/auth/MockGoogleAuthDialog'
@@ -32,7 +33,6 @@ export default function LoginPage() {
       if (!res.ok) throw new Error('Login gagal')
       const data = await res.json()
       setAccessToken(data.accessToken, data.user)
-      // The useEffect above will redirect to /app once accessToken is set
     } catch {
       toast.error('Login peserta gagal. Silakan coba lagi.')
     }
@@ -47,10 +47,18 @@ export default function LoginPage() {
           onSuccess={handleParticipantLogin}
         />
       )}
-      <div className="w-full max-w-sm bg-card border border-border rounded-xl shadow-sm p-8">
+      <div className="w-full max-w-[420px] bg-card rounded-2xl shadow-sm p-8 md:p-10">
+        {/* Admin Portal badge */}
+        <div className="mb-6 flex justify-center">
+          <div className="inline-flex items-center gap-1.5 rounded-full bg-secondary border border-primary/20 px-3 py-1 text-xs font-semibold text-secondary-foreground">
+            <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+            Admin Portal
+          </div>
+        </div>
+
         <div className="mb-8 text-center">
           <div className="text-3xl font-bold text-primary mb-1">Yorindo</div>
-          <p className="text-sm text-muted-foreground">Admin Portal</p>
+          <p className="text-sm text-muted-foreground">Masuk ke akun admin Anda</p>
         </div>
         <LoginForm />
         {ssoEnabled && (
@@ -65,6 +73,13 @@ export default function LoginPage() {
             </Button>
           </div>
         )}
+
+        {/* Footer note */}
+        <div className="mt-6 flex items-center justify-center gap-1.5 text-xs text-muted-foreground/60">
+          <div className="w-1 h-1 rounded-full bg-muted-foreground/40" />
+          Restricted to authorized personnel only
+          <div className="w-1 h-1 rounded-full bg-muted-foreground/40" />
+        </div>
       </div>
     </>
   )

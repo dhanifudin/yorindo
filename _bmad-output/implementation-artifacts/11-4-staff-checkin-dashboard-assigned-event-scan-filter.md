@@ -60,44 +60,44 @@ While the first stats fetch is pending, the stats bar shows a single-line skelet
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Role-conditional event source (AC: 1, 2)**
-  - [ ] In `src/app/app/scan/page.tsx`, import `useAssignedEvents` from `@/hooks/useAssignedEvents`
-  - [ ] Call both `useEvents()` and `useAssignedEvents()` conditionally: call `useAssignedEvents` only when `user?.role === 'staff'`; call `useEvents` otherwise (or always call both and pick based on role — choose whichever avoids conditional hook call issues)
-  - [ ] Build `filteredEvents` array: for staff = `useAssignedEvents.data` filtered by `status === 'active'` AND `isToday(eventDate, timezone)`; for admin/viewer = `useEvents.data?.data`
+- [x] **Task 1 — Role-conditional event source (AC: 1, 2)**
+  - [x] In `src/app/app/scan/page.tsx`, import `useAssignedEvents` from `@/hooks/useAssignedEvents`
+  - [x] Call both `useEvents()` and `useAssignedEvents()` conditionally: call `useAssignedEvents` only when `user?.role === 'staff'`; call `useEvents` otherwise (or always call both and pick based on role — choose whichever avoids conditional hook call issues)
+  - [x] Build `filteredEvents` array: for staff = `useAssignedEvents.data` filtered by `status === 'active'` AND `isToday(eventDate, timezone)`; for admin/viewer = `useEvents.data?.data`
 
-- [ ] **Task 2 — Empty state (AC: 3)**
-  - [ ] When `user.role === 'staff'` and `filteredEvents.length === 0` (after loading), replace the scan viewport with empty state UI:
+- [x] **Task 2 — Empty state (AC: 3)**
+  - [x] When `user.role === 'staff'` and `filteredEvents.length === 0` (after loading), replace the scan viewport with empty state UI:
     - Centered message: "Tidak ada event aktif yang ditugaskan hari ini."
     - `<Button asChild><Link href="/app">Kembali ke Dashboard</Link></Button>`
-  - [ ] Show skeleton while loading (not empty state)
+  - [x] Show skeleton while loading (not empty state)
 
-- [ ] **Task 3 — Auto-select single event (AC: 4)**
-  - [ ] After `filteredEvents` resolves, if `filteredEvents.length === 1` and no `selectedEventId` is set, auto-call `setSelectedEventId(filteredEvents[0].id)`
+- [x] **Task 3 — Auto-select single event (AC: 4)**
+  - [x] After `filteredEvents` resolves, if `filteredEvents.length === 1` and no `selectedEventId` is set, auto-call `setSelectedEventId(filteredEvents[0].id)`
 
-- [ ] **Task 4 — URL param pre-select (AC: 6)**
-  - [ ] Use `useSearchParams()` to read `eventId` query param on mount
-  - [ ] In a `useEffect` that runs after `filteredEvents` is loaded, if `eventId` param is present AND it's in `filteredEvents`, set it as the selected event
-  - [ ] This `useEffect` runs once (depend on `filteredEvents` loading state)
+- [x] **Task 4 — URL param pre-select (AC: 6)**
+  - [x] Use `useSearchParams()` to read `eventId` query param on mount
+  - [x] In a `useEffect` that runs after `filteredEvents` is loaded, if `eventId` param is present AND it's in `filteredEvents`, set it as the selected event
+  - [x] This `useEffect` runs once (depend on `filteredEvents` loading state)
 
-- [ ] **Task 5 — Stats bar component (AC: 7, 8, 9)**
-  - [ ] Create `src/components/features/scan/ScanStatsBar.tsx`
-  - [ ] Props: `eventId: string`, `lastScan: { contactName: string; time: Date } | null`
-  - [ ] Fetches `GET /api/events/:id/attendance-stats` via `useQuery` with `refetchInterval: 10_000`
-  - [ ] Renders: "Check-in: {attended} / {total}", progress bar, last scan info
-  - [ ] While loading: single skeleton line (no 0/0 flash)
-  - [ ] Collapses on scroll (see Scroll Collapse Pattern in Dev Notes)
+- [x] **Task 5 — Stats bar component (AC: 7, 8, 9)**
+  - [x] Create `src/components/features/scan/ScanStatsBar.tsx`
+  - [x] Props: `eventId: string`, `lastScan: { contactName: string; time: Date } | null`
+  - [x] Fetches `GET /api/events/:id/attendance-stats` via `useQuery` with `refetchInterval: 10_000`
+  - [x] Renders: "Check-in: {attended} / {total}", progress bar, last scan info
+  - [x] While loading: single skeleton line (no 0/0 flash)
+  - [x] Collapses on scroll (see Scroll Collapse Pattern in Dev Notes)
 
-- [ ] **Task 6 — Integrate stats bar into scan page (AC: 7)**
-  - [ ] Import and render `<ScanStatsBar>` in `src/app/app/scan/page.tsx` above the scanner viewport when `selectedEventId` is set
-  - [ ] Pass `lastScan` state from `handleCheckInSuccess` callback (update it with `{ contactName, time: new Date() }`)
-  - [ ] Update `handleCheckInSuccess` callback to also set `lastScan` state
+- [x] **Task 6 — Integrate stats bar into scan page (AC: 7)**
+  - [x] Import and render `<ScanStatsBar>` in `src/app/app/scan/page.tsx` above the scanner viewport when `selectedEventId` is set
+  - [x] Pass `lastScan` state from `handleCheckInSuccess` callback (update it with `{ contactName, time: new Date() }`)
+  - [x] Update `handleCheckInSuccess` callback to also set `lastScan` state
 
-- [ ] **Task 7 — Update event picker for staff (AC: 5)**
-  - [ ] When `user.role === 'staff'`, change `<SheetTitle>` from "Pilih Event" to "Pilih Event Hari Ini"
-  - [ ] The Sheet renders `filteredEvents` (already filtered) — no further change needed
+- [x] **Task 7 — Update event picker for staff (AC: 5)**
+  - [x] When `user.role === 'staff'`, change `<SheetTitle>` from "Pilih Event" to "Pilih Event Hari Ini"
+  - [x] The Sheet renders `filteredEvents` (already filtered) — no further change needed
 
-- [ ] **Task 8 — Verify build (AC: 10)**
-  - [ ] `npm run build` — 0 TypeScript errors
+- [x] **Task 8 — Verify build (AC: 10)**
+  - [x] `npm run build` — 0 TypeScript errors
 
 ---
 

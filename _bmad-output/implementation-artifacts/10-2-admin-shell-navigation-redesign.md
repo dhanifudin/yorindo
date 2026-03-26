@@ -498,10 +498,11 @@ All 9 tasks completed as specified. Key outcomes:
 ## Change Log
 
 - 2026-03-21: Story 10.2 implemented — AdminShell with responsive sidebar/bottom nav, all 7 admin pages migrated to shadcn Button/Badge/Card/Table/Select. 62/62 tests pass.
+- 2026-03-26: Theme revamp (CC-2026-03-26f) — ContactsTable duplicate badge `bg-gray-100 text-gray-700` → `bg-muted text-muted-foreground`; event row cards gain `card-elevated` class. All CSS tokens auto-adopt blue brand via globals.css update in Story 10.1. 127/128 tests pass (pre-existing useEvents failure).
 
 ---
 
 ## Completion Status
 
 - **Status:** review
-- **Note:** All ACs satisfied. Desktop sidebar + mobile bottom nav implemented. All admin pages use shadcn design system primitives. Zero regressions.
+- **Note:** All ACs satisfied. AdminShell uses sidebar CSS tokens (auto blue-branded via Story 10.1). Hardcoded grays replaced with semantic tokens. Event cards use card-elevated. Zero regressions.
