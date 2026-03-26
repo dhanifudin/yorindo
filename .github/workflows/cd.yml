@@ -60,6 +60,58 @@ jobs:
     needs: build-and-push
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare deploy env file
+        env:
+          VPS_ENV_FILE: ${{ secrets.VPS_ENV_FILE }}
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import os
+
+          Path('.deploy.env').write_text(os.environ['VPS_ENV_FILE'], encoding='utf-8')
+          PY
+
+          test -s .deploy.env
+          grep -q '^JWT_SECRET=' .deploy.env
+          grep -q '^JWT_REFRESH_SECRET=' .deploy.env
+          grep -Eq '^JWT_SECRET=.+$' .deploy.env
+          grep -Eq '^JWT_REFRESH_SECRET=.+$' .deploy.env
+
+          if grep -Eq '^JWT_SECRET=replace_with_|^JWT_REFRESH_SECRET=replace_with_' .deploy.env; then
+            echo '::error::VPS_ENV_FILE still contains placeholder JWT secrets from .env.example'
+            exit 1
+          fi
+
+      - name: Ensure VPS directories exist
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            mkdir -p /var/www/yorindo/nginx
+
+      - name: Upload compose and env files to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: docker-compose.yml,.deploy.env
+          target: /var/www/yorindo
+
+      - name: Upload VPS nginx site config reference
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: nginx/nginx.conf
+          target: /var/www/yorindo/nginx
+          strip_components: 1
+
       - name: Deploy to VPS via SSH
         uses: appleboy/ssh-action@v1
         with:
@@ -67,16 +119,44 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            cd /var/www/yorindo
-            docker compose pull
-            docker compose up -d
+            restore_previous_env() {
+              if [ -f /var/www/yorindo/.env.previous ]; then
+                cp /var/www/yorindo/.env.previous /var/www/yorindo/.env
+              fi
+            }
 
-      - name: Health check
-        run: |
-          sleep 15
-          response=$(curl -s -o /dev/null -w "%{http_code}" https://demo.dhanifudin.com/api/health)
-          if [ "$response" != "200" ]; then
-            echo "Health check failed: HTTP $response"
-            exit 1
-          fi
-          echo "Health check passed: HTTP $response"
+            test -s /var/www/yorindo/.deploy.env
+            chmod 600 /var/www/yorindo/.deploy.env
+            if ! grep -Rqs '127.0.0.1:5000' /etc/nginx/sites-enabled /etc/nginx/conf.d 2>/dev/null; then
+              echo 'VPS nginx is not configured for app port 5000 yet. Install nginx/nginx.conf on the server before deploying.'
+              exit 1
+            fi
+            if ! grep -Rqs '127.0.0.1:5001' /etc/nginx/sites-enabled /etc/nginx/conf.d 2>/dev/null; then
+              echo 'VPS nginx is not configured for API port 5001 yet. Install nginx/nginx.conf on the server before deploying.'
+              exit 1
+            fi
+            if [ -f /var/www/yorindo/.env ]; then
+              cp /var/www/yorindo/.env /var/www/yorindo/.env.previous
+            fi
+            mv /var/www/yorindo/.deploy.env /var/www/yorindo/.env
+            chmod 600 /var/www/yorindo/.env
+            cd /var/www/yorindo
+            if ! docker compose pull; then
+              restore_previous_env
+              exit 1
+            fi
+            if ! docker compose up -d; then
+              restore_previous_env
+              docker compose up -d
+              exit 1
+            fi
+
+            sleep 15
+            response=$(curl -s -o /dev/null -w "%{http_code}" https://demo.dhanifudin.com/api/health)
+            if [ "$response" != "200" ]; then
+              restore_previous_env
+              docker compose up -d
+              echo "Health check failed: HTTP $response"
+              exit 1
+            fi
+            echo "Health check passed: HTTP $response"

@@ -1,21 +1,8 @@
 services:
-  nginx:
-    image: nginx:alpine
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/certs:/etc/nginx/certs:ro
-    depends_on:
-      - api
-      - app
-    restart: unless-stopped
-
   api:
     image: dhanifudin/yorindo-api:latest
-    expose:
-      - "3000"
+    ports:
+      - "127.0.0.1:5001:3000"
     env_file: .env
     environment:
       # Phase 1: in-memory repositories — set to 'postgres' when BE is ready
@@ -32,8 +19,8 @@ services:
 
   app:
     image: dhanifudin/yorindo-app:latest
-    expose:
-      - "3000"
+    ports:
+      - "127.0.0.1:5000:3000"
     env_file: .env
     environment:
       NEXT_PUBLIC_ENABLE_EXPERIMENTAL: ""
