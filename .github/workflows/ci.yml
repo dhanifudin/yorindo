@@ -40,7 +40,7 @@ jobs:
       - uses: actions/setup-node@v4
         if: steps.pkg-check.outputs.has_pkg == 'true'
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'npm'
           cache-dependency-path: '${{ matrix.repo }}/package-lock.json'
 
@@ -82,7 +82,7 @@ jobs:
       - uses: actions/setup-node@v4
         if: steps.pkg-check.outputs.has_pkg == 'true'
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'npm'
           cache-dependency-path: '${{ matrix.repo }}/package-lock.json'
 
