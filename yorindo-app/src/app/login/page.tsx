@@ -8,8 +8,7 @@ import { LoginForm } from '@/components/forms/LoginForm'
 import { MockGoogleAuthDialog } from '@/components/auth/MockGoogleAuthDialog'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
-
-const ssoEnabled = process.env.NEXT_PUBLIC_ENABLE_EXPERIMENTAL === 'true'
+import { EXPERIMENTAL_ENABLED } from '@/lib/featureFlags'
 
 export default function LoginPage() {
   const accessToken = useAuthStore((s) => s.accessToken)
@@ -40,7 +39,7 @@ export default function LoginPage() {
 
   return (
     <>
-      {ssoEnabled && (
+      {EXPERIMENTAL_ENABLED && (
         <MockGoogleAuthDialog
           open={showSsoDialog}
           onOpenChange={setShowSsoDialog}
@@ -61,7 +60,7 @@ export default function LoginPage() {
           <p className="text-sm text-muted-foreground">Masuk ke akun admin Anda</p>
         </div>
         <LoginForm />
-        {ssoEnabled && (
+        {EXPERIMENTAL_ENABLED && (
           <div className="mt-4 text-center">
             <Button
               variant="link"

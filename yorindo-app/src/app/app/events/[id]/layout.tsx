@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { BlockerStrip } from '@/components/hub/BlockerStrip'
 import { EventCreateForm } from '@/components/features/events/EventCreateForm'
+import { EventCloneDialog } from '@/components/features/events/EventCloneDialog'
 import { cn } from '@/lib/utils'
 import type { Event } from '@/types/api'
 
@@ -206,10 +207,12 @@ export default function EventHubLayout({ children, params }: HubLayoutProps) {
                 </p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
+                <EventCloneDialog event={event} />
                 {isEditable && (
                   <Button
                     size="sm"
                     variant="outline"
+                    className="border-blue-300 text-blue-700 hover:bg-blue-50 hover:border-blue-400"
                     onClick={() => setShowEditSheet(true)}
                   >
                     Edit Event

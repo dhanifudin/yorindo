@@ -18,6 +18,7 @@ import {
   Search,
   Bell,
   Plus,
+  Building2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -30,6 +31,7 @@ const NAV_ITEMS = [
   { href: '/app/events',       label: 'Event',     icon: Calendar,        roles: ['admin', 'viewer'] },
   { href: '/app/contacts',     label: 'Kontak',    icon: Users,           roles: ['admin'] },
   { href: '/app/yorimind',     label: 'YoriMind',  icon: Sparkles,        roles: ['admin'] },
+  { href: '/app/vendors',      label: 'Vendor',    icon: Building2,       roles: ['admin'] },
   { href: '/app/templates',    label: 'Template',  icon: FileText,        roles: ['admin'] },
   { href: '/app/users',        label: 'Akun',      icon: UserCog,         roles: ['admin'] },
   { href: '/app/scan',         label: 'Scan',      icon: QrCode,          roles: ['staff', 'admin'] },

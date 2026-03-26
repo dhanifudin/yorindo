@@ -294,3 +294,51 @@ export interface UpcomingUncontactedEvent {
   daysUntil?: number
   uncontactedCount?: number
 }
+
+// ─── Vendor / Sponsorship ─────────────────────────────────────────────────────
+
+export interface Vendor {
+  id: string
+  name: string
+  logo_url?: string
+  website?: string
+  contact_email: string
+  industry?: string
+  notes?: string
+  linked_event_count: number
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateVendorBody {
+  name: string
+  contact_email: string
+  website?: string
+  logo_url?: string
+  industry?: string
+  notes?: string
+}
+
+export interface EventSponsor {
+  id: string
+  event_id: string
+  vendor_id: string
+  vendor_name: string
+  tier: 'standard' | 'premium' | 'lead_intelligence'
+  display_order: number
+}
+
+export interface AttachSponsorBody {
+  vendorId: string
+  tier: EventSponsor['tier']
+  displayOrder?: number
+}
+
+export interface PublicEventSponsor {
+  vendor_id: string
+  name: string
+  logo_url?: string
+  website?: string
+  tier: EventSponsor['tier']
+  display_order: number
+}
