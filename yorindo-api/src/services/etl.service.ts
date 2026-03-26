@@ -19,6 +19,8 @@ import { z } from 'zod'
 import { promises as fs } from 'fs'
 import type { IContactRepository } from '../interfaces/repositories/IContactRepository.js'
 import type { IFlaggedRecordsRepository } from '../interfaces/repositories/IFlaggedRecordsRepository.js'
+import type { IRawUploadRepository } from '../interfaces/repositories/IRawUploadRepository.js'
+import type { IAuditLogRepository } from '../interfaces/repositories/IAuditLogRepository.js'
 import type { IEtlNormalizationService, RawContactRow } from '../interfaces/services/IEtlNormalizationService.js'
 
 // ─── Zod Schema for normalized row ───────────────────────────────────────────
@@ -78,6 +80,8 @@ export class EtlService {
   constructor(
     private contactRepo: IContactRepository,
     private flaggedRepo: IFlaggedRecordsRepository,
+    private rawUploadRepo: IRawUploadRepository,
+    private auditLogRepo: IAuditLogRepository,
     private normalizer: IEtlNormalizationService,
     private batchSize = 50,
   ) {}
@@ -86,7 +90,10 @@ export class EtlService {
     // 1. Parse xlsx/csv
     const fileBuffer = await fs.readFile(filePath)
     const workbook = XLSX.read(fileBuffer, { type: 'buffer' })
-    const sheet = workbook.Sheets[workbook.SheetNames[0]]
+    const sheetName = workbook.SheetNames[0]
+    if (!sheetName) throw new Error('No sheets found in workbook')
+    const sheet = workbook.Sheets[sheetName]
+    if (!sheet) throw new Error('Sheet not found')
     const rows: RawContactRow[] = XLSX.utils.sheet_to_json(sheet, { defval: null })
 
     const result: EtlResult = { processed: rows.length, upserted: 0, flagged: 0, failed: 0 }
@@ -151,6 +158,28 @@ export class EtlService {
     } catch {
       // Non-fatal — file may already be gone
     }
+
+    // Insert raw_uploads PostgreSQL row on completion
+    await this.rawUploadRepo.create({
+      filename: filePath.split('/').pop() || 'unknown.xlsx',
+      uploadedBy,
+      rowCount: result.processed,
+      upsertedCount: result.upserted,
+      flaggedCount: result.flagged,
+      failedCount: result.failed,
+      status: 'completed'
+    })
+
+    // Write contact.imported audit log entry
+    await this.auditLogRepo.create({
+      action: 'contact.imported',
+      actorId: uploadedBy,
+      actorRole: 'system',
+      eventId: null,
+      targetId: null,
+      targetType: 'contact_batch',
+      metadata: { ...result, filename: filePath.split('/').pop() }
+    })
 
     return result
   }

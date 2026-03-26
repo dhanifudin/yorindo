@@ -218,3 +218,31 @@ export interface FacetResult {
   cities: Array<{ city: string; count: number }>
   companySizes: Array<{ size: string; count: number }>
 }
+
+// ─── Raw Upload ──────────────────────────────────────────────────────────────
+
+export interface RawUpload {
+  id: UUID
+  filename: string
+  uploadedBy: UUID | null
+  rowCount: number
+  upsertedCount: number
+  flaggedCount: number
+  failedCount: number
+  status: 'pending' | 'completed' | 'failed'
+  createdAt: ISODateString
+}
+
+// ─── Audit Log ───────────────────────────────────────────────────────────────
+
+export interface AuditLog {
+  id: UUID
+  action: string
+  actorId: UUID | null
+  actorRole: string
+  eventId: UUID | null
+  targetId: UUID | null
+  targetType: string | null
+  metadata: Record<string, unknown> | null
+  createdAt: ISODateString
+}
