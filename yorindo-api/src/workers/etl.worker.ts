@@ -10,10 +10,10 @@
 
 import { Worker } from 'bullmq'
 import { getRedis } from '../lib/redis.js'
-import { contactRepository, flaggedRecordsRepository, etlNormalizationService } from '../container.js'
+import { contactRepository, flaggedRecordsRepository, rawUploadRepository, auditLogRepository, etlNormalizationService } from '../container.js'
 import { EtlService } from '../services/etl.service.js'
 
-const etlService = new EtlService(contactRepository, flaggedRecordsRepository, etlNormalizationService)
+const etlService = new EtlService(contactRepository, flaggedRecordsRepository, rawUploadRepository, auditLogRepository, etlNormalizationService)
 
 export function startEtlWorker(): Worker {
   const redis = getRedis()
