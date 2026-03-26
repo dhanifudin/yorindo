@@ -51,7 +51,7 @@
 # - 6-8-social-og-meta-tags-event-pages.md is an orphaned story file (not tracked in current Epic 6)
 
 generated: 2026-03-19
-last_updated: 2026-03-26 (Sprint Change Proposal 2026-03-26e: Admin Intelligence Dashboard; Epic 12 added; story 3-8 reset to ready-for-dev)
+last_updated: 2026-03-26 (Sprint Change Proposal 2026-03-26f: Blue brand theme revamp; Epic 10 stories 10-1 through 10-5 reset to ready-for-dev)
 project: yorindo
 project_key: NOKEY
 tracking_system: file-system
@@ -213,11 +213,11 @@ development_status:
   # (Not in planning epics — tracked here as implementation-only epic)
   # ─────────────────────────────────────────────
   epic-10: in-progress
-  10-1-shadcnui-foundation-setup: review
-  10-2-admin-shell-navigation-redesign: review
-  10-3-scan-pwa-mobile-native-redesign: review
-  10-4-public-pages-redesign: review
-  10-5-responsive-table-redesign: review
+  10-1-shadcnui-foundation-setup: ready-for-dev
+  10-2-admin-shell-navigation-redesign: ready-for-dev
+  10-3-scan-pwa-mobile-native-redesign: ready-for-dev
+  10-4-public-pages-redesign: ready-for-dev
+  10-5-responsive-table-redesign: ready-for-dev
   epic-10-retrospective: optional
 
   # ─────────────────────────────────────────────
