@@ -15,6 +15,9 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Sparkles,
+  Search,
+  Bell,
+  Plus,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -166,7 +169,42 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Main content */}
-      <div className={cn('flex-1', hydrated && 'transition-[margin] duration-200', contentMargin)}>
+      <div className={cn('flex-1 flex flex-col', hydrated && 'transition-[margin] duration-200', contentMargin)}>
+        {/* Topbar — hidden on scan page */}
+        {!pathname.startsWith('/app/scan') && (
+          <header className="sticky top-0 z-30 h-14 flex items-center gap-3 px-4 md:px-6 border-b border-border bg-background/95 backdrop-blur shrink-0">
+            {/* Search placeholder */}
+            <div className="flex items-center gap-2 flex-1 max-w-sm h-8 px-3 rounded-md border border-border bg-muted/50 text-xs text-muted-foreground cursor-default">
+              <Search className="h-3.5 w-3.5 shrink-0" />
+              <span>Cari atau ketik...</span>
+            </div>
+
+            <div className="flex-1" />
+
+            {/* Buat Event — admin only */}
+            {user?.role === 'admin' && (
+              <Button asChild size="sm" className="gap-1.5 shrink-0">
+                <Link href="/app/events">
+                  <Plus className="h-3.5 w-3.5" />
+                  Buat Event
+                </Link>
+              </Button>
+            )}
+
+            {/* Bell */}
+            <button className="flex items-center justify-center w-8 h-8 rounded-md hover:bg-muted transition-colors text-muted-foreground">
+              <Bell className="h-4 w-4" />
+            </button>
+
+            {/* Avatar chip */}
+            <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold shrink-0">
+              {user?.role
+                ? ({ admin: 'A', staff: 'S', viewer: 'V', participant: 'P' } as Record<string, string>)[user.role] ?? '?'
+                : '?'}
+            </div>
+          </header>
+        )}
+
         <main className="max-w-7xl mx-auto px-4 md:px-6 py-6 pb-24 md:pb-6">
           {children}
         </main>

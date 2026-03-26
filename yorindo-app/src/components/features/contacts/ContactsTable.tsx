@@ -34,7 +34,7 @@ const FLAG_LABELS: Record<NonNullable<FlagCategory>, { label: string; className:
   spam: { label: 'Spam', className: 'bg-red-100 text-red-700' },
   'not-potential': { label: 'Tidak Potensial', className: 'bg-orange-100 text-orange-700' },
   'invalid-data': { label: 'Data Invalid', className: 'bg-yellow-100 text-yellow-700' },
-  duplicate: { label: 'Duplikat', className: 'bg-gray-100 text-gray-700' },
+  duplicate: { label: 'Duplikat', className: 'bg-muted text-muted-foreground' },
 }
 
 const STATUS_BADGE: Record<ContactHistoryItem['status'], string> = {

@@ -4,7 +4,7 @@
 **Story Key:** 10-4-public-pages-redesign
 **Epic:** Epic 10 — UI Design System & Mobile-Native Redesign
 **Phase:** Phase 1 (FE) — UI-only, zero logic/API changes
-**Status:** ready-for-dev
+**Status:** review
 **Created:** 2026-03-21
 
 ---
