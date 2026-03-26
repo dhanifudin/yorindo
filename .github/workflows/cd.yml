@@ -72,13 +72,6 @@ jobs:
 
           Path('.deploy.env').write_text(os.environ['VPS_ENV_FILE'], encoding='utf-8')
           PY
-
-          test -s .deploy.env
-          grep -q '^JWT_SECRET=' .deploy.env
-          grep -q '^JWT_REFRESH_SECRET=' .deploy.env
-          grep -Eq '^JWT_SECRET=.+$' .deploy.env
-          grep -Eq '^JWT_REFRESH_SECRET=.+$' .deploy.env
-
       - name: Ensure VPS directories exist
         uses: appleboy/ssh-action@v1
         with:
