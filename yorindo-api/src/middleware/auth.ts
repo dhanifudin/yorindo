@@ -2,6 +2,7 @@ import type { FastifyRequest, FastifyReply, FastifyPluginAsync } from 'fastify'
 import fp from 'fastify-plugin'
 import jwt from 'jsonwebtoken'
 import { config } from '../config/index.js'
+import { getRedisOptional } from '../lib/redis.js'
 
 export interface JwtPayload {
   sub: string
@@ -36,6 +37,18 @@ export async function requireAuth(
 
   try {
     const payload = jwt.verify(token, config.jwtSecret) as JwtPayload
+
+    // Check Redis blacklist (revoked tokens via logout)
+    const redis = getRedisOptional()
+    if (redis) {
+      const blacklisted = await redis.exists(`blacklist:${payload.jti}`)
+      if (blacklisted) {
+        return reply.status(401).send({
+          error: { code: 'TOKEN_REVOKED', message: 'Token has been revoked', details: [] },
+        })
+      }
+    }
+
     request.user = payload
   } catch {
     return reply.status(401).send({
