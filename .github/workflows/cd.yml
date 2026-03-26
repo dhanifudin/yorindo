@@ -92,6 +92,7 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             mkdir -p /var/www/yorindo/nginx
+            chmod 755 /var/www/yorindo/nginx
 
       - name: Upload compose and env files to VPS
         uses: appleboy/scp-action@v0.1.7
@@ -102,15 +103,14 @@ jobs:
           source: docker-compose.yml,.deploy.env
           target: /var/www/yorindo
 
-      - name: Upload VPS nginx site config reference
+      - name: Upload nginx config
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          source: nginx/nginx.conf
-          target: /var/www/yorindo/nginx
-          strip_components: 1
+          source: "nginx/nginx.conf,nginx/vps.conf"
+          target: /var/www/yorindo
 
       - name: Deploy to VPS via SSH
         uses: appleboy/ssh-action@v1
@@ -127,12 +127,9 @@ jobs:
 
             test -s /var/www/yorindo/.deploy.env
             chmod 600 /var/www/yorindo/.deploy.env
-            if ! grep -Rqs '127.0.0.1:5000' /etc/nginx/sites-enabled /etc/nginx/conf.d 2>/dev/null; then
-              echo 'VPS nginx is not configured for app port 5000 yet. Install nginx/nginx.conf on the server before deploying.'
-              exit 1
-            fi
-            if ! grep -Rqs '127.0.0.1:5001' /etc/nginx/sites-enabled /etc/nginx/conf.d 2>/dev/null; then
-              echo 'VPS nginx is not configured for API port 5001 yet. Install nginx/nginx.conf on the server before deploying.'
+            NGINX_PORT=$(grep -E '^NGINX_PORT=' /var/www/yorindo/.deploy.env 2>/dev/null | cut -d= -f2 || echo '8080')
+            if ! grep -Rqs "127.0.0.1:${NGINX_PORT}" /etc/nginx/sites-enabled /etc/nginx/conf.d 2>/dev/null; then
+              echo "VPS nginx is not configured to proxy port ${NGINX_PORT}. Update the VPS nginx config before deploying."
               exit 1
             fi
             if [ -f /var/www/yorindo/.env ]; then
