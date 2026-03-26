@@ -6,6 +6,7 @@
  * POST /api/auth/logout   — blacklist current access token jti
  */
 
+import '@fastify/cookie'
 import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
 import { AuthService } from '../services/auth.service.js'

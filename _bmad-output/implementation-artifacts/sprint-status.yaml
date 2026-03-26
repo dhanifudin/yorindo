@@ -118,7 +118,7 @@ development_status:
   #               Pipeline Hub API endpoints
   # ─────────────────────────────────────────────
   epic-4: in-progress
-  4-1-event-creation-with-full-configuration: ready-for-dev
+  4-1-event-creation-with-full-configuration: review
   4-2-event-lifecycle-management-state-machine: review
   4-3-event-clone: ready-for-dev
   4-4-survey-template-builder: ready-for-dev
