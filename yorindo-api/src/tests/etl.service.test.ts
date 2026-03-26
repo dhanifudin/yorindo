@@ -6,6 +6,8 @@ import * as XLSX from 'xlsx'
 import { EtlService } from '../services/etl.service.js'
 import { InMemoryContactRepository } from '../repositories/memory/ContactRepository.js'
 import { InMemoryFlaggedRecordsRepository } from '../repositories/memory/FlaggedRecordsRepository.js'
+import { InMemoryRawUploadRepository } from '../repositories/memory/RawUploadRepository.js'
+import { InMemoryAuditLogRepository } from '../repositories/memory/AuditLogRepository.js'
 import type { IEtlNormalizationService, RawContactRow, NormalizedRow } from '../interfaces/services/IEtlNormalizationService.js'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -87,19 +89,23 @@ function makeRetryNormalizer(failTimes: number): IEtlNormalizationService {
 describe('EtlService', () => {
   let contactRepo: InMemoryContactRepository
   let flaggedRepo: InMemoryFlaggedRecordsRepository
+  let rawUploadRepo: InMemoryRawUploadRepository
+  let auditLogRepo: InMemoryAuditLogRepository
   const initialContactCount = 50
   const initialFlaggedCount = 10
 
   beforeEach(() => {
     contactRepo = new InMemoryContactRepository()
     flaggedRepo = new InMemoryFlaggedRecordsRepository()
+    rawUploadRepo = new InMemoryRawUploadRepository()
+    auditLogRepo = new InMemoryAuditLogRepository()
   })
 
   it('upserts high-confidence rows into contacts', async () => {
     const rowData = Array.from({ length: 5 }, (_, i) => ({ name: `Test ${i}`, phone: `0812345${i}` }))
     const filePath = await createTempXlsx(rowData)
 
-    const svc = new EtlService(contactRepo, flaggedRepo, makeHighConfidenceNormalizer(), 50)
+    const svc = new EtlService(contactRepo, flaggedRepo, rawUploadRepo, auditLogRepo, makeHighConfidenceNormalizer(), 50)
     const result = await svc.processFile(filePath, 'user-1')
 
     expect(result.processed).toBe(5)
@@ -114,7 +120,7 @@ describe('EtlService', () => {
     const rowData = Array.from({ length: 3 }, (_, i) => ({ name: `Low ${i}` }))
     const filePath = await createTempXlsx(rowData)
 
-    const svc = new EtlService(contactRepo, flaggedRepo, makeLowConfidenceNormalizer(), 50)
+    const svc = new EtlService(contactRepo, flaggedRepo, rawUploadRepo, auditLogRepo, makeLowConfidenceNormalizer(), 50)
     const result = await svc.processFile(filePath, 'user-1')
 
     expect(result.upserted).toBe(0)
@@ -139,7 +145,7 @@ describe('EtlService', () => {
     })
 
     try {
-      const svc = new EtlService(contactRepo, flaggedRepo, makeRetryNormalizer(2), 50)
+      const svc = new EtlService(contactRepo, flaggedRepo, rawUploadRepo, auditLogRepo, makeRetryNormalizer(2), 50)
       const result = await svc.processFile(filePath, 'user-1')
       expect(result.upserted).toBe(1)
       expect(result.failed).toBe(0)
@@ -164,7 +170,7 @@ describe('EtlService', () => {
     })
 
     try {
-      const svc = new EtlService(contactRepo, flaggedRepo, alwaysFailNormalizer, 50)
+      const svc = new EtlService(contactRepo, flaggedRepo, rawUploadRepo, auditLogRepo, alwaysFailNormalizer, 50)
       const result = await svc.processFile(filePath, 'user-1')
       expect(result.failed).toBe(3)
     } finally {
@@ -193,7 +199,7 @@ describe('EtlService', () => {
       },
     }
 
-    const svc = new EtlService(contactRepo, flaggedRepo, fullFieldsNormalizer, 50)
+    const svc = new EtlService(contactRepo, flaggedRepo, rawUploadRepo, auditLogRepo, fullFieldsNormalizer, 50)
     await svc.processFile(filePath, 'user-1')
 
     const contact = await contactRepo.findByPhone('+6281234567890')
@@ -205,7 +211,7 @@ describe('EtlService', () => {
     const rowData = [{ name: 'Test', phone: '081111111111' }]
     const filePath = await createTempXlsx(rowData)
 
-    const svc = new EtlService(contactRepo, flaggedRepo, makeHighConfidenceNormalizer(), 50)
+    const svc = new EtlService(contactRepo, flaggedRepo, rawUploadRepo, auditLogRepo, makeHighConfidenceNormalizer(), 50)
     await svc.processFile(filePath, 'user-1')
 
     // File should be deleted

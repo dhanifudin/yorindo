@@ -23,3 +23,12 @@ export function getRedis(): Redis {
   }
   return _redis
 }
+
+/**
+ * Returns a Redis client when REDIS_URL is configured,
+ * or null for Phase 1 / test environments without Redis.
+ */
+export function getRedisOptional(): Redis | null {
+  if (!config.redisUrl) return null
+  return getRedis()
+}
