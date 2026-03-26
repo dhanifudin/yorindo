@@ -18,7 +18,11 @@ services:
       - "3000"
     env_file: .env
     environment:
+      # Phase 1: in-memory repositories — set to 'postgres' when BE is ready
       REPOSITORY_MODE: memory
+    depends_on:
+      - postgres
+      - redis
     restart: unless-stopped
     logging:
       driver: json-file
@@ -34,3 +38,28 @@ services:
     environment:
       NEXT_PUBLIC_ENABLE_EXPERIMENTAL: ""
     restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    expose:
+      - "5432"
+    environment:
+      POSTGRES_DB: yorindo
+      POSTGRES_USER: yorindo
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    expose:
+      - "6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
