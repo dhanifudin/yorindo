@@ -98,7 +98,7 @@ development_status:
   epic-3: in-progress
   3-1-contact-list-with-server-side-pagination-filtering: review
   3-2-excelcsv-upload-etl-job-trigger: review
-  3-3-etl-processing-ai-normalization-database-upsert: ready-for-dev
+  3-3-etl-processing-ai-normalization-database-upsert: review
   3-4-flagged-records-review-resolution: review
   3-5-duplicate-profile-detection-merge: review
   3-6-smart-filter-ai-industry-autocomplete: review
