@@ -385,53 +385,53 @@ export const emailService: IEmailService = /* similar pattern for SVC */
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Define domain types in `src/types/domain.ts`
-  - [ ] Subtask 1.1: Contact, Event, Registration, User, FlaggedRecord, SurveySchema, SurveyResponse
-  - [ ] Subtask 1.2: All status enums and lookup types
+- [x] Task 1: Define domain types in `src/types/domain.ts`
+  - [x] Subtask 1.1: Contact, Event, Registration, User, FlaggedRecord, SurveySchema, SurveyResponse
+  - [x] Subtask 1.2: All status enums and lookup types
 
-- [ ] Task 2: Create all 7 repository interfaces in `src/interfaces/repositories/`
-  - [ ] Subtask 2.1: IContactRepository (findAll, findById, findByPhone, upsert, update, softDelete, countHealth, findFacets)
-  - [ ] Subtask 2.2: IEventRepository (findAll, findById, findBySlug, create, update, softDelete, restore, getOverviewMetrics, getUpcomingUncontacted)
-  - [ ] Subtask 2.3: IRegistrationRepository (findByEvent, findById, create, updateStatus, bulkApprove, getConfirmationStats, getBlastHistory)
-  - [ ] Subtask 2.4: IUserRepository (findAll, findById, findByEmail, create, update, delete, assignEvent, getAssignedEvents)
-  - [ ] Subtask 2.5: ISurveyRepository (findByEventId, upsert, saveResponse, getResponsesByEvent)
-  - [ ] Subtask 2.6: IFlaggedRecordsRepository (findAll, findById, create, resolve, discard)
-  - [ ] Subtask 2.7: ISuppressionRepository (isSuppressed, suppress, findAll)
+- [x] Task 2: Create all 7 repository interfaces in `src/interfaces/repositories/`
+  - [x] Subtask 2.1: IContactRepository (findAll, findById, findByPhone, upsert, update, softDelete, countHealth, findFacets)
+  - [x] Subtask 2.2: IEventRepository (findAll, findById, findBySlug, create, update, softDelete, restore, getOverviewMetrics, getUpcomingUncontacted)
+  - [x] Subtask 2.3: IRegistrationRepository (findByEvent, findById, create, updateStatus, bulkApprove, getConfirmationStats, getBlastHistory)
+  - [x] Subtask 2.4: IUserRepository (findAll, findById, findByEmail, create, update, delete, assignEvent, getAssignedEvents)
+  - [x] Subtask 2.5: ISurveyRepository (findByEventId, upsert, saveResponse, getResponsesByEvent)
+  - [x] Subtask 2.6: IFlaggedRecordsRepository (findAll, findById, create, resolve, discard)
+  - [x] Subtask 2.7: ISuppressionRepository (isSuppressed, suppress, findAll)
 
-- [ ] Task 3: Create all 6 service interfaces in `src/interfaces/services/`
-  - [ ] Subtask 3.1: IEmailService (send, sendBatch)
-  - [ ] Subtask 3.2: IWhatsAppService (send, sendBatch)
-  - [ ] Subtask 3.3: IEtlNormalizationService (normalizeBatch — accepts raw rows, returns NormalizedRow[])
-  - [ ] Subtask 3.4: IYoriMindService (analyze — accepts snapshot JSON, returns YoriMindResult)
-  - [ ] Subtask 3.5: IQueueService (enqueue, getStatus)
-  - [ ] Subtask 3.6: IOtpService (send, verify — placeholder; unused after KTP decision but interface remains)
+- [x] Task 3: Create all 6 service interfaces in `src/interfaces/services/`
+  - [x] Subtask 3.1: IEmailService (send, sendBatch)
+  - [x] Subtask 3.2: IWhatsAppService (send, sendBatch)
+  - [x] Subtask 3.3: IEtlNormalizationService (normalizeBatch — accepts raw rows, returns NormalizedRow[])
+  - [x] Subtask 3.4: IYoriMindService (analyze — accepts snapshot JSON, returns YoriMindResult)
+  - [x] Subtask 3.5: IQueueService (enqueue, getStatus)
+  - [x] Subtask 3.6: IOtpService (send, verify — placeholder; unused after KTP decision but interface remains)
 
-- [ ] Task 4: Implement 7 in-memory repositories in `src/repositories/memory/`
-  - [ ] Subtask 4.1: InMemoryContactRepository — Map-backed, faker.seed(42) seed data (50 contacts)
-  - [ ] Subtask 4.2: InMemoryEventRepository — faker-seeded (5 events, varied statuses)
-  - [ ] Subtask 4.3: InMemoryRegistrationRepository — faker-seeded (20 registrations across events)
-  - [ ] Subtask 4.4: InMemoryUserRepository — hardcoded (admin + staff from seed.ts)
-  - [ ] Subtask 4.5: InMemorySurveyRepository — Map-backed by eventId
-  - [ ] Subtask 4.6: InMemoryFlaggedRecordsRepository — faker-seeded (10 pending flagged records)
-  - [ ] Subtask 4.7: InMemorySuppressionRepository — empty Map by default
+- [x] Task 4: Implement 7 in-memory repositories in `src/repositories/memory/`
+  - [x] Subtask 4.1: InMemoryContactRepository — Map-backed, faker.seed(42) seed data (50 contacts)
+  - [x] Subtask 4.2: InMemoryEventRepository — faker-seeded (5 events, varied statuses)
+  - [x] Subtask 4.3: InMemoryRegistrationRepository — faker-seeded (20 registrations across events)
+  - [x] Subtask 4.4: InMemoryUserRepository — hardcoded (admin + staff from seed.ts)
+  - [x] Subtask 4.5: InMemorySurveyRepository — Map-backed by eventId
+  - [x] Subtask 4.6: InMemoryFlaggedRecordsRepository — faker-seeded (10 pending flagged records)
+  - [x] Subtask 4.7: InMemorySuppressionRepository — empty Map by default
 
-- [ ] Task 5: Implement 6 mock service adapters in `src/services/adapters/mock/`
-  - [ ] Subtask 5.1: MockEmailService — records calls, getSentEmails(), reset()
-  - [ ] Subtask 5.2: MockWhatsAppService — records calls, getSentMessages(), reset()
-  - [ ] Subtask 5.3: MockEtlNormalizationService — returns deterministic normalized rows (confidence >= 0.7 for 80% of rows, < 0.7 for 20%)
-  - [ ] Subtask 5.4: MockYoriMindService — returns hardcoded YoriMindResult in Indonesian
-  - [ ] Subtask 5.5: MockQueueService — records enqueued jobs, getEnqueuedJobs(), reset()
-  - [ ] Subtask 5.6: MockOtpService — records sends, always returns success verify
+- [x] Task 5: Implement 6 mock service adapters in `src/services/adapters/mock/`
+  - [x] Subtask 5.1: MockEmailService — records calls, getSentEmails(), reset()
+  - [x] Subtask 5.2: MockWhatsAppService — records calls, getSentMessages(), reset()
+  - [x] Subtask 5.3: MockEtlNormalizationService — returns deterministic normalized rows (confidence >= 0.7 for 80% of rows, < 0.7 for 20%)
+  - [x] Subtask 5.4: MockYoriMindService — returns hardcoded YoriMindResult in Indonesian
+  - [x] Subtask 5.5: MockQueueService — records enqueued jobs, getEnqueuedJobs(), reset()
+  - [x] Subtask 5.6: MockOtpService — records sends, always returns success verify
 
-- [ ] Task 6: Update `src/container.ts` with full wiring
-  - [ ] Subtask 6.1: Wire all 7 repositories via REPOSITORY_IMPL env var
-  - [ ] Subtask 6.2: Wire all 6 services via SERVICE_IMPL env var
-  - [ ] Subtask 6.3: Verify all exports typed to interface, not concrete class
+- [x] Task 6: Update `src/container.ts` with full wiring
+  - [x] Subtask 6.1: Wire all 7 repositories via REPOSITORY_IMPL env var
+  - [x] Subtask 6.2: Wire all 6 services via SERVICE_IMPL env var
+  - [x] Subtask 6.3: Verify all exports typed to interface, not concrete class
 
-- [ ] Task 7: Write unit tests
-  - [ ] Subtask 7.1: Test all in-memory repository CRUD operations
-  - [ ] Subtask 7.2: Test all mock service adapter call recording
-  - [ ] Subtask 7.3: Run `npm test` — all pass without Docker running
+- [x] Task 7: Write unit tests
+  - [x] Subtask 7.1: Test all in-memory repository CRUD operations
+  - [x] Subtask 7.2: Test all mock service adapter call recording
+  - [x] Subtask 7.3: Run `npm test` — all pass without Docker running
 
 ## Dev Agent Record
 

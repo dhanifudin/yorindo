@@ -20,6 +20,8 @@ import type { IUserRepository } from './interfaces/repositories/IUserRepository.
 import type { ISurveyRepository } from './interfaces/repositories/ISurveyRepository.js'
 import type { IFlaggedRecordsRepository } from './interfaces/repositories/IFlaggedRecordsRepository.js'
 import type { ISuppressionRepository } from './interfaces/repositories/ISuppressionRepository.js'
+import type { IRawUploadRepository } from './interfaces/repositories/IRawUploadRepository.js'
+import type { IAuditLogRepository } from './interfaces/repositories/IAuditLogRepository.js'
 
 // ─── Service interface types ──────────────────────────────────────────────────
 import type { IEmailService } from './interfaces/services/IEmailService.js'
@@ -37,6 +39,8 @@ import { InMemoryUserRepository } from './repositories/memory/UserRepository.js'
 import { InMemorySurveyRepository } from './repositories/memory/SurveyRepository.js'
 import { InMemoryFlaggedRecordsRepository } from './repositories/memory/FlaggedRecordsRepository.js'
 import { InMemorySuppressionRepository } from './repositories/memory/SuppressionRepository.js'
+import { InMemoryRawUploadRepository } from './repositories/memory/RawUploadRepository.js'
+import { InMemoryAuditLogRepository } from './repositories/memory/AuditLogRepository.js'
 
 // ─── Mock service adapters (Phase 1) ─────────────────────────────────────────
 import { MockEmailService } from './services/adapters/mock/EmailService.js'
@@ -61,6 +65,8 @@ function resolveRepositories(): {
   surveyRepository: ISurveyRepository
   flaggedRecordsRepository: IFlaggedRecordsRepository
   suppressionRepository: ISuppressionRepository
+  rawUploadRepository: IRawUploadRepository
+  auditLogRepository: IAuditLogRepository
 } {
   if (config.repositoryImpl === 'memory') {
     return {
@@ -71,6 +77,8 @@ function resolveRepositories(): {
       surveyRepository: new InMemorySurveyRepository(),
       flaggedRecordsRepository: new InMemoryFlaggedRecordsRepository(),
       suppressionRepository: new InMemorySuppressionRepository(),
+      rawUploadRepository: new InMemoryRawUploadRepository(),
+      auditLogRepository: new InMemoryAuditLogRepository(),
     }
   }
   if (config.repositoryImpl === 'postgres') {
@@ -126,6 +134,8 @@ export const userRepository: IUserRepository = repos.userRepository
 export const surveyRepository: ISurveyRepository = repos.surveyRepository
 export const flaggedRecordsRepository: IFlaggedRecordsRepository = repos.flaggedRecordsRepository
 export const suppressionRepository: ISuppressionRepository = repos.suppressionRepository
+export const rawUploadRepository: IRawUploadRepository = repos.rawUploadRepository
+export const auditLogRepository: IAuditLogRepository = repos.auditLogRepository
 
 // ─── Service exports (typed to interface, never to concrete class) ─────────────
 
