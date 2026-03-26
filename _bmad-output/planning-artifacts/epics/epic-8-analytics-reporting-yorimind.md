@@ -85,12 +85,24 @@ So that I can understand event performance and participant composition at a glan
 **When** admin loads any event's analytics dashboard,
 **Then** load time remains ≤ 2 seconds (NFR-SC2)
 
+**Given** I am on the Laporan tab for a completed event,
+**When** the analytics section renders,
+**Then** three metric summary cards are shown at the top: "Total Undangan" (blast recipient count), "Total Mendaftar" (total registrations submitted), "Total Peserta" (attended count); each card shows the absolute number and its conversion rate relative to the previous stage
+
+**Given** the analytics dashboard,
+**When** I apply a filter (position, industry, or location/area),
+**Then** `GET /api/events/:id/analytics?position={v}&industry={v}&location={v}` is called; all charts and the participant breakdown table update to reflect only the filtered subset; filter pills show the active filters with a clear (×) action
+
+**Given** the analytics response is cached,
+**When** the same filter combination is requested again within 5 minutes,
+**Then** the Redis cache (`analytics:event:{id}:{filterHash}`) is returned without hitting the database
+
 ---
 
 ## Story 8.4: YoriMind AI Analysis Panel
 
 As an admin,
-I want to view AI-generated insights about event performance with specific root causes and actionable recommendations,
+I want to view AI-generated insights about event performance directly within the event report tab, without navigating to a separate page,
 So that I can improve future events based on data-driven intelligence rather than intuition.
 
 **Acceptance Criteria:**
@@ -99,9 +111,9 @@ So that I can improve future events based on data-driven intelligence rather tha
 **When** `snapshot.service.ts` executes,
 **Then** a JSON snapshot is generated for each event with `{ event, funnel_data, historical_comparison, attendee_segments }` and saved to `$SNAPSHOT_DIR/event_{id}_{date}.json`
 
-**Given** I open `/admin/events/:id/yorimind`,
-**When** `GET /api/events/:id/yorimind` is called,
-**Then** Redis is checked for key `yorimind:event:{id}`; on cache hit the cached response is returned immediately
+**Given** I am on the Laporan tab (`/app/events/:id/report`) and the YoriMind section is visible,
+**When** the section mounts,
+**Then** `GET /api/events/:id/yorimind` is called; Redis is checked for key `yorimind:event:{id}`; on cache hit (TTL 7 days) the cached response is returned immediately — no separate navigation or menu entry is needed
 
 **Given** a cache miss,
 **When** the latest snapshot file is read,

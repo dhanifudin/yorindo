@@ -4,7 +4,7 @@
 
 **As a** BE developer,
 **I want** all repository interfaces, in-memory implementations, service adapter interfaces, and mock service implementations scaffolded,
-**So that** all BE feature stories can be implemented in Phase 1 without any dependency on PostgreSQL, MongoDB, Redis, Brevo, Everpro, GPT-4o, or Claude.
+**So that** all BE feature stories can be implemented in Phase 1 without any dependency on PostgreSQL, Redis, Brevo, Everpro, or external AI APIs.
 
 ## Status
 
@@ -82,7 +82,7 @@ yorindo-api/src/
       EventRepository.ts          ← InMemoryEventRepository
       RegistrationRepository.ts   ← InMemoryRegistrationRepository
       UserRepository.ts           ← InMemoryUserRepository
-      SurveyRepository.ts         ← InMemorySurveyRepository (MongoDB shape)
+      SurveyRepository.ts         ← InMemorySurveyRepository (JSONB shape — stored in events.survey_schema)
       FlaggedRecordsRepository.ts ← InMemoryFlaggedRecordsRepository
       SuppressionRepository.ts    ← InMemorySuppressionRepository
     postgres/                     ← Empty — Phase 2 only
@@ -286,7 +286,7 @@ interface IUserRepository {
 }
 ```
 
-**ISurveyRepository (MongoDB shape):**
+**ISurveyRepository (PostgreSQL JSONB — `events.survey_schema` column):**
 ```typescript
 interface ISurveyRepository {
   findByEventId(eventId: string): Promise<SurveySchema | null>

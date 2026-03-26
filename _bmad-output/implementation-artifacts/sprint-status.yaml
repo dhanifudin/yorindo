@@ -51,7 +51,7 @@
 # - 6-8-social-og-meta-tags-event-pages.md is an orphaned story file (not tracked in current Epic 6)
 
 generated: 2026-03-19
-last_updated: 2026-03-25 (11-6-participant-dashboard: review)
+last_updated: 2026-03-26 (Sprint Change Proposal 2026-03-26d: CUID2 PKs, PostgreSQL only, Phase 1 memory contract; stories 1-1, 1-2, 1-7, 1-8, 3-3, 4-4 reset to ready-for-dev)
 project: yorindo
 project_key: NOKEY
 tracking_system: file-system
@@ -66,14 +66,14 @@ development_status:
   # Stories 1.3–1.7: FE foundation (all in review)
   # ─────────────────────────────────────────────
   epic-1: in-progress
-  1-1-backend-repository-scaffold-docker-compose: review
-  1-2-database-schema-migrations: review
+  1-1-backend-repository-scaffold-docker-compose: ready-for-dev
+  1-2-database-schema-migrations: ready-for-dev
   1-3-frontend-repository-scaffold: review
   1-4-openapi-30-specification: review
   1-5-fe-type-definitions-msw-foundation-devtoolbar: review
   1-6-msw-mock-handlers-for-all-api-domains: review
-  1-7-cicd-pipeline: review
-  1-8-service-adapter-scaffold-in-memory-repository-scaffold: review
+  1-7-cicd-pipeline: ready-for-dev
+  1-8-service-adapter-scaffold-in-memory-repository-scaffold: ready-for-dev
   epic-1-retrospective: optional
 
   # ─────────────────────────────────────────────
@@ -98,7 +98,7 @@ development_status:
   epic-3: in-progress
   3-1-contact-list-with-server-side-pagination-filtering: review
   3-2-excelcsv-upload-etl-job-trigger: review
-  3-3-etl-processing-ai-normalization-database-upsert: review
+  3-3-etl-processing-ai-normalization-database-upsert: ready-for-dev
   3-4-flagged-records-review-resolution: review
   3-5-duplicate-profile-detection-merge: review
   3-6-smart-filter-ai-industry-autocomplete: review
@@ -118,18 +118,19 @@ development_status:
   #               Pipeline Hub API endpoints
   # ─────────────────────────────────────────────
   epic-4: in-progress
-  4-1-event-creation-with-full-configuration: review
+  4-1-event-creation-with-full-configuration: ready-for-dev
   4-2-event-lifecycle-management-state-machine: review
-  4-3-event-clone: review
-  4-4-survey-template-builder: review
+  4-3-event-clone: ready-for-dev
+  4-4-survey-template-builder: ready-for-dev
+  4-13-event-banner-poster-upload: backlog
   4-5-event-capacity-target-criteria-with-audience-preview: review
   4-6-soft-delete-recovery-for-events-and-records: review
   4-7-event-pipeline-hub-shell-navigation: review
   4-8-event-pipeline-hub-overview-tab: review
   4-9-event-pipeline-hub-undangan-tab-blast: review
-  4-10-event-pipeline-hub-registrasi-tab-approval-queue: review
+  4-10-event-pipeline-hub-registrasi-tab-approval-queue: ready-for-dev
   4-11-event-pipeline-hub-konfirmasi-tab: review
-  4-12-event-pipeline-hub-laporan-tab-stub: review
+  4-12-event-pipeline-hub-laporan-tab: ready-for-dev
   epic-4-retrospective: optional
 
   # ─────────────────────────────────────────────
@@ -138,7 +139,7 @@ development_status:
   # Phase 2 (BE): Blast API, BullMQ blast worker (4 queues), Everpro + Brevo integrations
   # ─────────────────────────────────────────────
   epic-5: in-progress
-  5-1-notification-message-template-management: review
+  5-1-notification-message-template-management: ready-for-dev
   5-2-segmented-blast-configuration-audience-targeting: review
   5-3-blast-scheduling-delivery-via-brevo-everpro: review
   5-4-emergency-blast: review
@@ -154,10 +155,10 @@ development_status:
   # ─────────────────────────────────────────────
   epic-6: in-progress
   6-1-public-event-landing-page: review
-  6-2-participant-registration-form-mobile-first: review
+  6-2-participant-registration-form-mobile-first: ready-for-dev
   6-3-double-opt-in-confirmation-flow: review
   6-4-registration-approval-queue-admin-review: review
-  6-5-waitlist-management-auto-promotion: review
+  6-5-waitlist-management-auto-promotion: ready-for-dev
   6-6-qr-ticket-generation-delivery: review
   6-7-participant-self-cancellation: review
   6-8-gmail-sso-participant-account: review
@@ -190,8 +191,8 @@ development_status:
   epic-8: in-progress
   8-1-post-event-attendance-report-generation: review
   8-2-vendor-report-access-via-magic-link-dpa: review
-  8-3-analytics-dashboard-funnel-demographics: review
-  8-4-yorimind-ai-analysis-panel: review
+  8-3-analytics-dashboard-funnel-demographics: ready-for-dev
+  8-4-yorimind-ai-analysis-panel: ready-for-dev
   8-5-report-download-pdf-excel: review
   epic-8-retrospective: optional
 

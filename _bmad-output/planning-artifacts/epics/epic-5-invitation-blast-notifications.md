@@ -27,7 +27,11 @@ So that all outbound communications use consistent, personalized messaging.
 
 **Given** a template preview action in the FE,
 **When** I click "Preview",
-**Then** the template renders with sample data substituted into all `{{variable}}` placeholders
+**Then** the template renders with sample data substituted into all `{{variable}}` placeholders; for templates of type `invitation`, `confirmation`, or `rejection`, the preview uses a representative sample participant so the rendered output reflects realistic content
+
+**Given** a template of type `ticket_delivery` or `confirmation`,
+**When** I insert the `{{qr_code}}` variable in the template body,
+**Then** on preview, a sample QR code image is rendered inline; when the blast worker sends the message, the participant's actual ticket QR code image is embedded at that position (base64 inline for email; image attachment for WhatsApp)
 
 ---
 

@@ -24,7 +24,7 @@ Then all packages install without errors and `npx tsx src/main.ts` starts the Fa
 
 **AC2:** Given Docker Compose is installed,
 When `docker compose -f docker-compose.yml -f docker-compose.dev.yml up` is run,
-Then all six containers start (postgres:16-alpine, mongo:7, redis:7-alpine, api, app, nginx) without errors
+Then all five containers start (postgres:16-alpine, redis:7-alpine, api, app, nginx) without errors
 
 **AC3:** Given the API container is running,
 When `GET http://localhost:3000/api/health` is called,
@@ -55,8 +55,7 @@ Then it exports all repository and service instances resolved from `REPOSITORY_I
 - **Runtime:** Node.js 20 LTS
 - **Framework:** Fastify 4.x (NOT Express — no `express` package ever)
 - **Language:** TypeScript 5.x strict mode
-- **SQL:** `pg` Pool — direct SQL queries (no ORM, no Prisma, no Knex)
-- **NoSQL:** native `mongodb` driver (no Mongoose)
+- **SQL:** `pg` Pool — direct SQL queries (no ORM, no Prisma, no Knex); JSONB columns for document-style storage
 - **Auth:** `jsonwebtoken` + `bcrypt`
 - **Queue:** BullMQ + IORedis
 - **Validation:** Zod 3.x
@@ -89,7 +88,6 @@ yorindo-api/
         real/                    ← Empty dir — Phase 2 only
     lib/
       postgres.ts                ← Singleton pg Pool
-      mongodb.ts                 ← Singleton MongoClient
       redis.ts                   ← Singleton IORedis
       queue.ts                   ← BullMQ Queue factory
       storage.ts                 ← Local filesystem read/write
@@ -114,7 +112,7 @@ yorindo-api/
 ### Architecture Constraints (MUST FOLLOW)
 
 1. **No Express** — Fastify only. If any PR contains `import express` it is a blocker.
-2. **No ORM** — `pg` Pool with raw SQL for PostgreSQL; native `mongodb` driver for MongoDB.
+2. **No ORM** — `pg` Pool with raw SQL for PostgreSQL. JSONB columns replace any document-store needs (no MongoDB).
 3. **No `process.env` outside `src/config/index.ts`** — all env access goes through the config module which throws on missing required vars.
 4. **Interface-first typing** — `src/container.ts` exports typed to interfaces (e.g., `IContactRepository`), never to concrete class (e.g., `InMemoryContactRepository`). Route handlers import interface types only.
 5. **Repository Pattern** — All DB queries live exclusively in `repositories/` files. Services call repositories only; route handlers call services only. Never query DB directly from a route handler.
@@ -137,7 +135,6 @@ function required(key: string): string {
 export const config = {
   port: parseInt(process.env.PORT || '3000'),
   databaseUrl: required('DATABASE_URL'),
-  mongodbUrl: required('MONGODB_URL'),
   redisUrl: required('REDIS_URL'),
   jwtSecret: required('JWT_SECRET'),
   jwtRefreshSecret: required('JWT_REFRESH_SECRET'),
@@ -211,16 +208,15 @@ export const contactRepository: IContactRepository = (() => {
 
 - NEVER import Express or any Express middleware
 - NEVER use Prisma, Knex, Sequelize, or any ORM
-- NEVER use Mongoose — use native `mongodb` driver only
+- NEVER use Mongoose or any MongoDB driver — PostgreSQL only (JSONB for document-style storage)
 - NEVER access `process.env` directly outside `src/config/index.ts`
 - NEVER query the database from a route handler directly — always go through service → repository
 - NEVER export a concrete class type from `container.ts` — only interface types
 
 ### Docker Compose Requirements
 
-Six containers in `docker-compose.yml`:
+Five containers in `docker-compose.yml`:
 - `postgres:16-alpine` — port 5432, volume `postgres_data`
-- `mongo:7` — port 27017, volume `mongo_data`
 - `redis:7-alpine` — port 6379, AOF persistence (`appendonly yes`), volume `redis_data`
 - `api` — yorindo-api Fastify server, port 3000
 - `app` — yorindo-app Next.js, port 3001
@@ -245,7 +241,7 @@ No prerequisite stories. This is the foundation story.
 Required packages (install these):
 ```bash
 npm install fastify @fastify/cors @fastify/helmet @fastify/rate-limit @fastify/cookie @fastify/multipart
-npm install pg mongodb bullmq ioredis zod dotenv pino pino-http
+npm install pg @paralleldrive/cuid2 bullmq ioredis zod dotenv pino pino-http
 npm install jsonwebtoken bcrypt xlsx node-cron qrcode
 npm install openai @anthropic-ai/sdk
 npm install -D typescript tsx vitest @vitest/coverage-v8
@@ -265,8 +261,7 @@ npm install -D @types/pg @types/node @types/jsonwebtoken @types/bcrypt @types/no
 
 - [ ] Task 3: Create `src/lib/` singletons
   - [ ] Subtask 3.1: `postgres.ts` — pg Pool singleton
-  - [ ] Subtask 3.2: `mongodb.ts` — MongoClient singleton
-  - [ ] Subtask 3.3: `redis.ts` — IORedis singleton with `maxRetriesPerRequest: null`
+  - [ ] Subtask 3.2: `redis.ts` — IORedis singleton with `maxRetriesPerRequest: null`
   - [ ] Subtask 3.4: `queue.ts` — BullMQ Queue factory + four named queues
   - [ ] Subtask 3.5: `storage.ts` — VPS filesystem read/write for snapshots
 
@@ -297,7 +292,7 @@ npm install -D @types/pg @types/node @types/jsonwebtoken @types/bcrypt @types/no
 
 ### Implementation Plan
 
-1. Create `package.json` with all required deps (Fastify, pg, mongodb, bullmq, ioredis, zod, jwt, bcrypt, vitest, etc.)
+1. Create `package.json` with all required deps (Fastify, pg, @paralleldrive/cuid2, bullmq, ioredis, zod, jwt, bcrypt, vitest, etc.)
 2. Create `tsconfig.json` with NodeNext module resolution and strict mode
 3. Create `src/config/index.ts` — Phase 1 constraint: only `JWT_SECRET` and `JWT_REFRESH_SECRET` are required; all DB URLs and API keys use `optional()` helper
 4. Create `src/lib/` singletons as lazy getters (NOT imported at startup — Phase 2 only)
@@ -314,7 +309,7 @@ npm install -D @types/pg @types/node @types/jsonwebtoken @types/bcrypt @types/no
 ### Debug Log
 
 - **Phase 1 constraint applied:** config.ts originally had all env vars as `required()`. Revised to use `optional()` for all DB URLs and API keys — only `JWT_SECRET` and `JWT_REFRESH_SECRET` throw on startup.
-- **Lazy lib singletons:** postgres.ts, mongodb.ts, redis.ts, queue.ts all use lazy getter pattern (`getPool()`, `getRedis()`, etc.) — not imported at startup. Prevents connection errors when running Phase 1 without DB.
+- **Lazy lib singletons:** postgres.ts, redis.ts, queue.ts all use lazy getter pattern (`getPool()`, `getRedis()`, etc.) — not imported at startup. Prevents connection errors when running Phase 1 without DB.
 - **Config test isolation:** Used `vi.resetModules()` to clear module cache between test cases so each test re-evaluates the config module with a fresh env state.
 
 ### Completion Notes
@@ -343,7 +338,6 @@ npm install -D @types/pg @types/node @types/jsonwebtoken @types/bcrypt @types/no
 - `src/types/index.ts`
 - `src/container.ts`
 - `src/lib/postgres.ts`
-- `src/lib/mongodb.ts`
 - `src/lib/redis.ts`
 - `src/lib/queue.ts`
 - `src/lib/storage.ts`

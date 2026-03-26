@@ -15,7 +15,7 @@ So that I can make an informed decision about whether to register.
 
 **Given** an event with `status: 'published'`,
 **When** `GET /register/{eventSlug}` is accessed (no authentication required),
-**Then** the event name, date, venue, description, and remaining capacity are displayed
+**Then** the event name, start date, end date, venue, description, and remaining capacity are displayed
 
 **Given** the event has reached full capacity (approved registrations = capacity),
 **When** the landing page is accessed,
@@ -39,9 +39,13 @@ So that I can register quickly without re-entering information I've already prov
 
 **Acceptance Criteria:**
 
+**Given** the registration form renders,
+**Then** it always displays these fixed fields in this order, all required unless noted:
+`phone`, `name`, `email`, `company_email`, `company_name`, `company_location`, `position` (jabatan), `industry_type`
+
 **Given** a participant enters their phone number,
 **When** the field loses focus and `GET /api/contacts/lookup?phone={phone}` is called,
-**Then** if a matching contact exists, their name, email, company, and job title are pre-filled (FR24)
+**Then** if a matching contact exists, the following fields are pre-filled from the contact record: `name`, `email`, `company_name`, `position`; remaining fixed fields (`company_email`, `company_location`, `industry_type`) are pre-filled if available in the contact record (FR24)
 
 **Given** the registration form is submitted,
 **When** `POST /api/registrations` is called (unprotected, rate-limited 10/IP/hour),
@@ -51,9 +55,13 @@ So that I can register quickly without re-entering information I've already prov
 **When** `POST /api/registrations` is called again,
 **Then** it returns HTTP 200 with the existing registration status and a message "Your registration is already pending" — no duplicate created (FR62)
 
-**Given** the survey schema has custom fields for this event,
+**Given** the event has a custom survey schema,
 **When** the form renders,
-**Then** only those configured fields are displayed in addition to the standard fields; no field is shown that wasn't enabled by the admin (NFR-S14)
+**Then** rjsf renders the custom survey fields after the fixed fields in the order defined by `uiSchema["ui:order"]`; no custom field appears that wasn't defined in the schema (NFR-S14)
+
+**Given** the complete form (fixed fields + custom survey fields),
+**When** rendered on mobile (375px width),
+**Then** all fields are legible, tappable, and laid out in a single column without horizontal scroll
 
 **Given** the form is submitted,
 **Then** participant consent is captured: `{ consent_status: 'confirmed', event_id, purpose: '...', captured_at }` linked to the registration (FR54)
@@ -145,6 +153,10 @@ So that I have a fair chance to attend even if I registered late.
 **Given** the waitlist queue,
 **When** viewed by admin,
 **Then** participants are listed in FIFO order with their queue position displayed
+
+**Given** `ENABLE_EXPERIMENTAL` is `false` or unset,
+**When** a registration is submitted for a full-capacity event,
+**Then** the registration is rejected with HTTP 409 `{ error: { code: 'EVENT_FULL', message: 'Pendaftaran sudah penuh' } }` — no waitlist slot is created and no `waitlisted` status is assigned; the public registration page shows "Registrasi Penuh" with no waitlist CTA
 
 ---
 

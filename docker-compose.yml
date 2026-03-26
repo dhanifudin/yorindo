@@ -36,6 +36,11 @@ services:
     expose:
       - "3000"
     env_file: .env
+    environment:
+      # Experimental features are disabled in production deployments by default.
+      # To enable participant SSO login, set NEXT_PUBLIC_ENABLE_EXPERIMENTAL=true
+      # at image build time (NEXT_PUBLIC_* vars are baked in at build, not runtime).
+      NEXT_PUBLIC_ENABLE_EXPERIMENTAL: ""
     restart: unless-stopped
 
   postgres:
@@ -50,14 +55,6 @@ services:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
 
-  mongodb:
-    image: mongo:7
-    expose:
-      - "27017"
-    volumes:
-      - mongo_data:/data/db
-    restart: unless-stopped
-
   redis:
     image: redis:7-alpine
     expose:
@@ -69,7 +66,6 @@ services:
 
 volumes:
   postgres_data:
-  mongo_data:
   redis_data:
   snapshots_data:
   uploads_tmp:

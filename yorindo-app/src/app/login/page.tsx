@@ -8,6 +8,8 @@ import { MockGoogleAuthDialog } from '@/components/auth/MockGoogleAuthDialog'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 
+const ssoEnabled = process.env.NEXT_PUBLIC_ENABLE_EXPERIMENTAL === 'true'
+
 export default function LoginPage() {
   const accessToken = useAuthStore((s) => s.accessToken)
   const setAccessToken = useAuthStore((s) => s.setAccessToken)
@@ -38,27 +40,31 @@ export default function LoginPage() {
 
   return (
     <>
-      <MockGoogleAuthDialog
-        open={showSsoDialog}
-        onOpenChange={setShowSsoDialog}
-        onSuccess={handleParticipantLogin}
-      />
+      {ssoEnabled && (
+        <MockGoogleAuthDialog
+          open={showSsoDialog}
+          onOpenChange={setShowSsoDialog}
+          onSuccess={handleParticipantLogin}
+        />
+      )}
       <div className="w-full max-w-sm bg-card border border-border rounded-xl shadow-sm p-8">
         <div className="mb-8 text-center">
           <div className="text-3xl font-bold text-primary mb-1">Yorindo</div>
           <p className="text-sm text-muted-foreground">Admin Portal</p>
         </div>
         <LoginForm />
-        <div className="mt-4 text-center">
-          <Button
-            variant="link"
-            size="sm"
-            className="text-muted-foreground hover:text-primary"
-            onClick={() => setShowSsoDialog(true)}
-          >
-            Masuk sebagai Peserta (Google)
-          </Button>
-        </div>
+        {ssoEnabled && (
+          <div className="mt-4 text-center">
+            <Button
+              variant="link"
+              size="sm"
+              className="text-muted-foreground hover:text-primary"
+              onClick={() => setShowSsoDialog(true)}
+            >
+              Masuk sebagai Peserta (Google)
+            </Button>
+          </div>
+        )}
       </div>
     </>
   )
