@@ -53,7 +53,7 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
     queryFn: () => fetch(`/api/events/public/${eventSlug}`).then((r) => r.json()),
   })
 
-  const { data: survey } = useQuery<{ schema: RJSFSchema; uiSchema: UiSchema }>({
+  const { data: survey, isLoading: surveyLoading } = useQuery<{ schema: RJSFSchema; uiSchema: UiSchema }>({
     queryKey: ['survey-public', event?.id],
     queryFn: () => fetch(`/api/events/${event!.id}/survey`).then((r) => r.json()),
     enabled: !!event?.id && step === 1,
@@ -318,7 +318,9 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
           {step === 1 && (
             <div className="space-y-4">
               <h2 className="text-lg font-semibold">Survei Event</h2>
-              {!survey?.schema?.properties || Object.keys(survey.schema.properties).length === 0 ? (
+              {surveyLoading ? (
+                <div className="h-24 bg-muted rounded animate-pulse" />
+              ) : !survey?.schema?.properties || Object.keys(survey.schema.properties).length === 0 ? (
                 <div className="space-y-4">
                   <p className="text-muted-foreground text-sm">Tidak ada pertanyaan survei untuk event ini.</p>
                   <div className="flex gap-2">

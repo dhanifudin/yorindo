@@ -825,6 +825,11 @@ components:
     BlastConfigBody:
       type: object
       required: [templateId, channel]
+      description: >
+        Blast configuration for sending event invitations.
+        `filters` and `contactIds` are **mutually exclusive** — provide exactly one or neither
+        (omitting both targets all non-flagged contacts matching the event's targetCriteria).
+        Providing both will result in a 400 validation error.
       properties:
         templateId:
           type: string
@@ -838,13 +843,13 @@ components:
               type: string
             companySize:
               type: string
-          description: Manual audience filter criteria (omit when using contactIds)
+          description: "Manual audience filter criteria. Mutually exclusive with contactIds — omit when using contactIds."
         contactIds:
           type: array
           items:
             type: string
             format: uuid
-          description: AI-curated contact list from audience recommendations (omit when using filters)
+          description: "AI-curated contact list from audience recommendations. Mutually exclusive with filters — omit when using filters."
         scheduledAt:
           type: string
           format: date-time
@@ -966,6 +971,668 @@ components:
         totalMatched:
           type: integer
 
+    # ─── Vendor ────────────────────────────────────────────────────────────────
+    Vendor:
+      type: object
+      required: [id, name, contact_email, industry, linked_event_count, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+        name:
+          type: string
+          example: Alibaba Cloud
+        contact_email:
+          type: string
+          format: email
+          example: sponsor@alibabacloud.com
+        industry:
+          type: string
+          example: teknologi
+          description: Industry slug
+        logo_url:
+          type: string
+          format: uri
+          nullable: true
+          example: null
+        website:
+          type: string
+          format: uri
+          nullable: true
+          example: https://alibabacloud.com
+        notes:
+          type: string
+          example: ""
+        linked_event_count:
+          type: integer
+          example: 2
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateVendorBody:
+      type: object
+      required: [name, contact_email, industry]
+      properties:
+        name:
+          type: string
+        contact_email:
+          type: string
+          format: email
+        industry:
+          type: string
+        logo_url:
+          type: string
+          format: uri
+          nullable: true
+        website:
+          type: string
+          format: uri
+          nullable: true
+        notes:
+          type: string
+
+    PaginatedVendors:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Vendor'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    # ─── Sponsor ───────────────────────────────────────────────────────────────
+    EventSponsor:
+      type: object
+      required: [id, event_id, vendor_id, vendor_name, tier, display_order]
+      properties:
+        id:
+          type: string
+          format: uuid
+        event_id:
+          type: string
+          format: uuid
+        vendor_id:
+          type: string
+          format: uuid
+        vendor_name:
+          type: string
+          example: Alibaba Cloud
+        tier:
+          type: string
+          enum: [premium, standard, supporter]
+          nullable: true
+          example: premium
+        display_order:
+          type: integer
+          example: 0
+
+    AttachSponsorBody:
+      type: object
+      required: [vendorId]
+      properties:
+        vendorId:
+          type: string
+          format: uuid
+        tier:
+          type: string
+          enum: [premium, standard, supporter]
+          nullable: true
+        displayOrder:
+          type: integer
+          nullable: true
+
+    # ─── Template ──────────────────────────────────────────────────────────────
+    Template:
+      type: object
+      required: [id, name, type, channel, body, createdAt]
+      properties:
+        id:
+          type: string
+          example: tmpl-001
+        name:
+          type: string
+          example: Undangan Event
+        type:
+          type: string
+          enum: [invitation, confirmation, rejection, cancellation]
+          example: invitation
+        channel:
+          type: string
+          enum: [email, whatsapp]
+          example: whatsapp
+        body:
+          type: string
+          example: "Halo {{name}}, Anda diundang ke {{event_title}} pada {{date}}."
+        variables:
+          type: array
+          items:
+            type: string
+          example: [name, event_title, date]
+        createdAt:
+          type: string
+          format: date-time
+
+    CreateTemplateBody:
+      type: object
+      required: [name, channel, body]
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum: [invitation, confirmation, rejection, cancellation]
+        channel:
+          type: string
+          enum: [email, whatsapp]
+        body:
+          type: string
+        variables:
+          type: array
+          items:
+            type: string
+
+    # ─── Contact Health & Facets ────────────────────────────────────────────────
+    ContactHealth:
+      type: object
+      required: [flagged, duplicates, missingEmail]
+      properties:
+        flagged:
+          type: integer
+          example: 34
+        duplicates:
+          type: integer
+          example: 12
+        missingEmail:
+          type: integer
+          example: 58
+
+    FacetItem:
+      type: object
+      required: [slug, label, count]
+      properties:
+        slug:
+          type: string
+          example: teknologi
+        label:
+          type: string
+          example: Teknologi
+        count:
+          type: integer
+          example: 42
+
+    ContactFacets:
+      type: object
+      required: [industry, city, companySize]
+      properties:
+        industry:
+          type: array
+          items:
+            $ref: '#/components/schemas/FacetItem'
+        city:
+          type: array
+          items:
+            $ref: '#/components/schemas/FacetItem'
+        companySize:
+          type: array
+          items:
+            $ref: '#/components/schemas/FacetItem'
+
+    IndustrySuggestion:
+      type: object
+      required: [slug, label, confidence]
+      properties:
+        slug:
+          type: string
+          example: teknologi
+        label:
+          type: string
+          example: Teknologi
+        confidence:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          example: 0.85
+
+    IndustrySuggestionsResponse:
+      type: object
+      required: [suggestions]
+      properties:
+        suggestions:
+          type: array
+          items:
+            $ref: '#/components/schemas/IndustrySuggestion'
+        matchedSlug:
+          type: string
+          nullable: true
+          example: teknologi
+        fallback:
+          type: boolean
+          example: false
+
+    # ─── Suppression ───────────────────────────────────────────────────────────
+    SuppressionEntry:
+      type: object
+      required: [id, suppressedAt, reason]
+      properties:
+        id:
+          type: string
+          example: sup-1
+        name:
+          type: string
+          nullable: true
+          example: Budi Santoso
+        email:
+          type: string
+          format: email
+          nullable: true
+          example: budi@example.com
+        phone:
+          type: string
+          nullable: true
+          example: "+6281234567890"
+        suppressedAt:
+          type: string
+          format: date-time
+        reason:
+          type: string
+          enum: [unsubscribed, erasure_request, manually_added]
+          example: manually_added
+
+    PaginatedSuppressions:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SuppressionEntry'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    AddSuppressionBody:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        reason:
+          type: string
+          enum: [unsubscribed, erasure_request, manually_added]
+          default: manually_added
+
+    # ─── Duplicates ────────────────────────────────────────────────────────────
+    DuplicatePair:
+      type: object
+      required: [id, primary, duplicate, matchScore, matchReasons]
+      properties:
+        id:
+          type: string
+          example: dup-group-1
+        primary:
+          $ref: '#/components/schemas/Contact'
+        duplicate:
+          $ref: '#/components/schemas/Contact'
+        matchScore:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          example: 0.92
+        matchReasons:
+          type: array
+          items:
+            type: string
+          example: [same_phone, similar_name]
+
+    PaginatedDuplicates:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DuplicatePair'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    # ─── Contact History ────────────────────────────────────────────────────────
+    ContactHistoryEntry:
+      type: object
+      required: [eventId, eventName, eventDate, status]
+      properties:
+        eventId:
+          type: string
+          format: uuid
+        eventName:
+          type: string
+          example: Seminar ERP Jakarta
+        eventDate:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [approved, attended, cancelled, pending, rejected]
+          example: attended
+
+    ContactHistoryResponse:
+      type: object
+      required: [registrations]
+      properties:
+        registrations:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContactHistoryEntry'
+
+    # ─── Event Overview ─────────────────────────────────────────────────────────
+    EventOverview:
+      type: object
+      required: [blastCount, registrationCount, approvedCount, attendedCount, pendingApprovals, seatsRemaining, daysUntilEvent]
+      properties:
+        blastCount:
+          type: integer
+          example: 2000
+        registrationCount:
+          type: integer
+          example: 400
+        approvedCount:
+          type: integer
+          example: 300
+        attendedCount:
+          type: integer
+          example: 255
+        lastBlastAt:
+          type: string
+          format: date-time
+          nullable: true
+        pendingApprovals:
+          type: integer
+          example: 100
+        seatsRemaining:
+          type: integer
+          example: 0
+        daysUntilEvent:
+          type: integer
+          example: 20
+
+    # ─── Event Report ───────────────────────────────────────────────────────────
+    EventReport:
+      type: object
+      required: [eventId, totalInvited, registered, approved, attended, attendanceRate, noShowRate, industryBreakdown, cityBreakdown, jobTitleBreakdown]
+      properties:
+        eventId:
+          type: string
+          format: uuid
+        totalInvited:
+          type: integer
+          example: 500
+        registered:
+          type: integer
+          example: 180
+        approved:
+          type: integer
+          example: 120
+        attended:
+          type: integer
+          example: 95
+        attendanceRate:
+          type: string
+          example: "79.2"
+        noShowRate:
+          type: string
+          example: "20.8"
+        industryBreakdown:
+          type: array
+          items:
+            type: object
+            properties:
+              industry:
+                type: string
+              count:
+                type: integer
+        cityBreakdown:
+          type: array
+          items:
+            type: object
+            properties:
+              city:
+                type: string
+              count:
+                type: integer
+        jobTitleBreakdown:
+          type: array
+          items:
+            type: object
+            properties:
+              level:
+                type: string
+              count:
+                type: integer
+
+    # ─── Vendor Report ──────────────────────────────────────────────────────────
+    VendorReport:
+      type: object
+      required: [token, eventName, dpaVersion, dpaAccepted]
+      properties:
+        token:
+          type: string
+          example: magic-token-valid
+        eventName:
+          type: string
+          example: Seminar ERP Jakarta
+        dpaVersion:
+          type: string
+          example: v2.1
+        dpaAccepted:
+          type: boolean
+          example: false
+        report:
+          nullable: true
+          description: Full report data; null if DPA not yet accepted
+          allOf:
+            - $ref: '#/components/schemas/EventReport'
+
+    # ─── Participant ────────────────────────────────────────────────────────────
+    ParticipantRegistration:
+      type: object
+      required: [id, eventId, eventName, eventDate, venue, status, ticketToken]
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: preg-001
+        eventId:
+          type: string
+          format: uuid
+        eventName:
+          type: string
+          example: Seminar ERP Jakarta
+        eventDate:
+          type: string
+          format: date-time
+          example: "2026-04-15T09:00:00+07:00"
+        venue:
+          type: string
+          example: Jakarta Convention Center
+        status:
+          type: string
+          enum: [approved, pending, waitlisted, cancelled]
+          example: approved
+        ticketToken:
+          type: string
+          example: TICKET-A1B2C3
+
+    # ─── Blast ─────────────────────────────────────────────────────────────────
+    BlastHistoryItem:
+      type: object
+      required: [id, channel, recipientCount, sentAt, status]
+      properties:
+        id:
+          type: string
+          example: blast-hist-001
+        channel:
+          type: string
+          enum: [email, whatsapp]
+        recipientCount:
+          type: integer
+          example: 312
+        sentAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [queued, running, completed, failed, scheduled]
+          example: completed
+
+    StandaloneBlastBody:
+      type: object
+      required: [eventId, channel, templateId]
+      description: >
+        Send a blast for a specific event. Provide either `filters` for manual audience selection
+        or `contactIds` for an AI-curated list — these are mutually exclusive.
+        If neither is provided, the blast targets all non-flagged contacts matching the event's targetCriteria.
+      properties:
+        eventId:
+          type: string
+          format: uuid
+        channel:
+          type: string
+          enum: [email, whatsapp]
+        templateId:
+          type: string
+          format: uuid
+        filters:
+          type: object
+          description: Manual audience filter criteria (mutually exclusive with contactIds)
+          properties:
+            industry:
+              type: string
+            city:
+              type: string
+            companySize:
+              type: string
+        contactIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: AI-curated contact list (mutually exclusive with filters)
+        scheduledAt:
+          type: string
+          format: date-time
+          description: Optional scheduled delivery time (ISO 8601 UTC, must be >= now + 5 minutes)
+
+    EmergencyBlastBody:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+          description: Emergency message text
+          example: "Perubahan lokasi acara — silakan cek aplikasi untuk detail terbaru."
+        channels:
+          type: array
+          items:
+            type: string
+            enum: [email, whatsapp]
+          description: Channels to send on; defaults to all approved channels
+          example: [whatsapp, email]
+
+    # ─── Upcoming Uncontacted ───────────────────────────────────────────────────
+    UpcomingUncontactedResponse:
+      type: object
+      required: [event, daysUntil, uncontactedCount]
+      properties:
+        event:
+          type: object
+          required: [id, name, eventDate]
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+              example: Konferensi Teknologi 2026
+            eventDate:
+              type: string
+              format: date-time
+            industryTags:
+              type: array
+              items:
+                type: string
+        daysUntil:
+          type: integer
+          example: 8
+        uncontactedCount:
+          type: integer
+          example: 45
+
+    # ─── Audience Preview ──────────────────────────────────────────────────────
+    AudiencePreviewResponse:
+      type: object
+      required: [count]
+      properties:
+        count:
+          type: integer
+          example: 147
+
+    # ─── Participants PWA Cache ─────────────────────────────────────────────────
+    ParticipantCacheEntry:
+      type: object
+      required: [id, name, phone, ticketToken, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: Budi Santoso
+        phone:
+          type: string
+          example: "+6281234567890"
+        ticketToken:
+          type: string
+          example: ABC123XYZ
+        status:
+          type: string
+          enum: [approved, attended]
+          example: approved
+
+    ParticipantCacheResponse:
+      type: object
+      required: [data, total]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ParticipantCacheEntry'
+        total:
+          type: integer
+          example: 50
+
+    # ─── Data Rights ───────────────────────────────────────────────────────────
+    DataRightsResponse:
+      type: object
+      required: [message, requestId]
+      properties:
+        message:
+          type: string
+          example: Request queued
+        requestId:
+          type: string
+          format: uuid
+
 paths:
   # ─────────────────────────────────────────────────────────────────────────────
   # HEALTH
@@ -1035,6 +1702,17 @@ paths:
       operationId: refreshToken
       tags: [Auth]
       security: []
+      description: >
+        The server reads the refresh token from the `refresh_token` httpOnly cookie set during login.
+        No request body is required. The cookie is sent automatically by the browser on same-origin requests.
+        The response sets a new `refresh_token` httpOnly cookie alongside the new access token.
+      parameters:
+        - name: Cookie
+          in: header
+          description: "httpOnly cookie containing the refresh token: `refresh_token=<jwt>`"
+          required: false
+          schema:
+            type: string
       responses:
         '200':
           description: Token refreshed
@@ -1043,7 +1721,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/AuthResponse'
         '401':
-          description: Invalid or expired refresh token
+          description: Invalid or expired refresh token cookie
           content:
             application/json:
               schema:
@@ -1674,6 +2352,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Insufficient role (admin/staff only)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
         '404':
           description: Event not found
           content:
@@ -1704,6 +2388,12 @@ paths:
                 $ref: '#/components/schemas/CheckinStats'
         '401':
           description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Insufficient role (admin/staff only)
           content:
             application/json:
               schema:
@@ -2177,6 +2867,12 @@ paths:
     post:
       summary: Verify QR ticket and mark attendance (admin/staff)
       operationId: scanVerify
+      description: >
+        Verifies the QR ticket JWT and marks the participant as attended.
+        A `200` response is always returned for a structurally valid request — the `status` field in the body
+        indicates the scan outcome (`success`, `already_attended`, or `invalid`).
+        A `401` is returned only when the caller's **staff/admin Bearer token** is missing or expired,
+        not for invalid ticket tokens (those return 200 with status: invalid).
       tags: [Scan]
       security:
         - BearerAuth: []
@@ -2188,19 +2884,21 @@ paths:
               $ref: '#/components/schemas/ScanVerifyBody'
       responses:
         '200':
-          description: Scan result
+          description: >
+            Scan processed. Check `status` field: `success` = attendance marked,
+            `already_attended` = duplicate scan, `invalid` = bad/expired ticket JWT.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ScanResult'
         '400':
-          description: Validation error
+          description: Validation error (missing token field)
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiError'
         '401':
-          description: Invalid or expired ticket
+          description: Caller's Bearer token is missing or expired
           content:
             application/json:
               schema:

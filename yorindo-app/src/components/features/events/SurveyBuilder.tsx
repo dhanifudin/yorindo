@@ -72,7 +72,7 @@ function jsonSchemaToFields(schema: RJSFSchema, uiSchema: UiSchema): FieldDescri
 
     if (isMultiple) {
       type = 'multiple-choice'
-      options = ((p as any).items?.enum ?? []) as string[]
+      options = ((p.items as RJSFSchema)?.enum ?? []) as string[]
     } else if (isSingle) {
       type = 'single-choice'
       options = (p.enum ?? []) as string[]
@@ -112,6 +112,20 @@ export function SurveyBuilder({ eventId }: SurveyBuilderProps) {
       setFields(jsonSchemaToFields(surveyData.schema, surveyData.uiSchema ?? {}))
     }
   }, [surveyData])
+
+  const validateFields = (): boolean => {
+    for (const f of fields) {
+      if (!f.title.trim()) {
+        toast.error('Semua pertanyaan harus memiliki label')
+        return false
+      }
+      if ((f.type === 'single-choice' || f.type === 'multiple-choice') && f.options.length === 0) {
+        toast.error(`Pertanyaan "${f.title}" harus memiliki minimal satu opsi`)
+        return false
+      }
+    }
+    return true
+  }
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -322,7 +336,7 @@ export function SurveyBuilder({ eventId }: SurveyBuilderProps) {
                 <Button variant="outline" size="sm" onClick={addField}>
                   + Tambah Pertanyaan
                 </Button>
-                <Button size="sm" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+                <Button size="sm" onClick={() => validateFields() && saveMutation.mutate()} disabled={saveMutation.isPending}>
                   {saveMutation.isPending ? 'Menyimpan…' : 'Simpan Survey'}
                 </Button>
               </div>
