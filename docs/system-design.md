@@ -201,7 +201,7 @@ sequenceDiagram
 ```mermaid
 flowchart TD
     A(["Admin uploads Excel / CSV"]) --> B["POST /api/contacts/upload\nmultipart form"]
-    B --> C["API: validate file\nstore in /tmp/uploads"]
+    B --> C["API: validate file\nstore in /app/uploads (Docker) or uploads/ (local)"]
     C --> D[["etl queue\nBullMQ job enqueued"]]
     D --> E["etl.worker picks up job"]
 
@@ -455,7 +455,7 @@ Volumes:
   mongo_data     – MongoDB data persistence
   redis_data     – Redis AOF persistence
   snapshots_data – /data/snapshots (API snapshots)
-  uploads_tmp    – /tmp/uploads (ETL file staging)
+  api_uploads    – /app/uploads (Docker ETL file staging) / uploads (local)
 ```
 
 ### Development (`docker-compose.dev.yml`)

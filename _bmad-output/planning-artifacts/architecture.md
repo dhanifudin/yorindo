@@ -146,7 +146,7 @@ Three UX surfaces: public participant registration (mobile-first, zero-account),
 
 6. **Redis always available** — Redis runs in Docker Compose on both dev and production. `REDIS_URL=redis://redis:6379` in compose network. BullMQ connects directly — no QUEUE_DRIVER abstraction needed. AOF persistence (`appendonly yes`) required in production compose.
 
-7. **ETL pipeline** — 7-step process: upload → VPS local temp storage (`/tmp/uploads/`) → BullMQ job → GPT-4o batch normalization (50 rows/batch) → Zod validation → upsert valid to PostgreSQL → flagged records to `flagged_records` table. Temp file deleted after ETL job completes. Admin reviews flagged records at `/app/contacts/flagged`.
+7. **ETL pipeline** — 7-step process: upload → app upload storage (`/app/uploads/` in Docker, `uploads/` locally) → BullMQ job → GPT-4o batch normalization (50 rows/batch) → Zod validation → upsert valid to PostgreSQL → flagged records to `flagged_records` table. Temp file deleted after ETL job completes. Admin reviews flagged records at `/app/contacts/flagged`.
 
 8. **YoriMind snapshot pattern** — Cron job at 02:00 WIB queries Core DB, generates JSON snapshot `{ event, funnel_data, historical_comparison, attendee_segments }`, saves to VPS filesystem at `/data/snapshots/event_{id}_{date}.json` (Docker volume `snapshots_data`). YoriMind reads latest snapshot (never live DB), calls Claude API, caches result in Redis with TTL 7 days. Cache key: `yorimind:event:{id}`. Invalidated manually via "Refresh Insights" action only — never auto-invalidated (snapshot data doesn't change until next cron run; AI output is deterministic for the same snapshot input).
 
@@ -899,9 +899,9 @@ Polling every 5 seconds from client. Dashboard at `/app/events/[id]/check-in` po
 
 **7-step process (must be followed exactly):**
 
-1. Admin uploads Excel/CSV at `/app/contacts/upload` → file saved to VPS `/tmp/uploads/` (Docker `uploads_tmp` volume) via multipart upload
+1. Admin uploads Excel/CSV at `/app/contacts/upload` → file saved to `/app/uploads/` in Docker (named volume `api_uploads`) via multipart upload
 2. Upload triggers `POST /api/etl/upload` → BullMQ ETL job enqueued with `{ filePath, uploadedBy, uploadedAt }`
-3. `etl.worker.ts` dequeues job, reads file from `uploads_tmp` volume, parses to array of objects via `xlsx` library; deletes temp file after parsing
+3. `etl.worker.ts` dequeues job, reads file from the `api_uploads` volume, parses to array of objects via `xlsx` library; deletes temp file after parsing
 4. Send batch of 50 rows to GPT-4o with standard system prompt: normalize formats, map to lookup table slugs, output JSON array with `confidence` score per field
 5. Validate GPT-4o response with Zod schema. If validation fails → retry batch (max 3 retries)
 6. Records with confidence < 0.7 (any field) → insert to `flagged_records` table. Valid records → `ContactRepository.upsert()` to PostgreSQL (insert new or update existing by phone)
@@ -980,7 +980,7 @@ services:
     env_file: .env
     volumes:
       - snapshots_data:/data/snapshots
-      - uploads_tmp:/tmp/uploads
+      - api_uploads:/app/uploads
     depends_on: [postgres, redis]
     restart: unless-stopped
     logging:
@@ -1014,7 +1014,7 @@ volumes:
   mongo_data:
   redis_data:
   snapshots_data:
-  uploads_tmp:
+  api_uploads:
   app_build:
 ```
 
@@ -1111,7 +1111,7 @@ Application audit logs stored in PostgreSQL `audit_logs` table — not in applic
 6. FE and BE develop against shared TypeScript types
 
 **Cross-Component Dependencies:**
-- ETL pipeline depends on: `uploads_tmp` Docker volume, BullMQ worker, GPT-4o API key, flagged_records table
+- ETL pipeline depends on: `api_uploads` Docker volume mounted at `/app/uploads`, BullMQ worker, GPT-4o API key, flagged_records table
 - QR ticket generation depends on: JWT_SECRET, `registrations.status` → `'approved'` trigger
 - YoriMind depends on: cron job, `snapshots_data` Docker volume, Anthropic API key, Redis cache
 - Smart Filter depends on: Anthropic API key, industries lookup table populated
@@ -1665,7 +1665,7 @@ expect(parseInt(after.rows[0].count)).toBe(parseInt(before.rows[0].count) + 1)
 - Scatter persistence logic outside repositories or introduce a second operational database without an explicit architecture decision
 - Use auto-increment integer primary keys in PostgreSQL — UUID only
 - Import `@supabase/ssr`, `@supabase/supabase-js`, or any Supabase package — not used in this stack
-- Upload files to VPS disk directly without Docker volume — always use the `uploads_tmp` volume path
+- Upload files to VPS disk directly without Docker volume — always use the `/app/uploads` mounted volume path
 
 ---
 
@@ -1993,7 +1993,7 @@ yorindo-app/
 - PostgreSQL owns: survey_schemas, survey_responses, raw_uploads
 - Redis owns: JWT blacklist (`jti:{jti}`), YoriMind cache (`yorimind:event:{id}`), BullMQ queue state
 - VPS filesystem (`snapshots_data` volume): YoriMind JSON snapshots only
-- VPS filesystem (`uploads_tmp` volume): temporary ETL files only (deleted after worker processes)
+- VPS filesystem (`api_uploads` volume): temporary ETL files only (deleted after worker processes)
 - IndexedDB (browser): offline scan queue only (`yorindo-scan` database)
 
 **Service Boundaries:**

@@ -46,7 +46,7 @@ So that I can import bulk data into the contact database without manual entry.
 
 **Given** I am authenticated as `admin`,
 **When** `POST /api/etl/upload` is called with a multipart file upload (`.xlsx` or `.csv`),
-**Then** the file is saved to the `uploads_tmp` Docker volume and a BullMQ ETL job is enqueued; the endpoint returns HTTP 202 `{ jobId, status: 'queued' }`
+**Then** the file is saved to the `uploads` Docker volume and a BullMQ ETL job is enqueued; the endpoint returns HTTP 202 `{ jobId, status: 'queued' }`
 
 **Given** a file larger than the configured max size,
 **When** the upload is attempted,
@@ -75,7 +75,7 @@ So that raw imported data becomes clean, standardized participant records automa
 **Acceptance Criteria:**
 
 **Given** an ETL job is dequeued by `etl.worker.ts`,
-**When** the file is read from `uploads_tmp`,
+**When** the file is read from `uploads`,
 **Then** `xlsx` parses it into an array of row objects and the temp file is deleted after parsing
 
 **Given** 50 rows are sent to the AI normalization service (`IEtlNormalizationService`) with the standard system prompt,

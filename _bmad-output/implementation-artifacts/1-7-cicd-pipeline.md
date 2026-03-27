@@ -87,7 +87,7 @@ Then `VPS_SSH_KEY`, `VPS_HOST`, `VPS_USER`, `GHCR_TOKEN` are sourced exclusively
   - [x] `nginx`: `ports: ["80:80", "443:443"]`; SSL certs volume
   - [x] `postgres`: `image: postgres:16-alpine`; `volumes: [postgres_data:/var/lib/postgresql/data]`
   - [x] `redis`: `image: redis:7-alpine`; `command: redis-server --appendonly yes`
-  - [x] Define all named volumes: `postgres_data`, `redis_data`, `snapshots_data`, `uploads_tmp`
+  - [x] Define all named volumes: `postgres_data`, `redis_data`, `snapshots_data`, `api_uploads`
   - [x] Add JSON logging for `api`: `max-size: "50m", max-file: "5"`
 
 - [x] **Task 6: Create docker-compose.dev.yml (development override)**
@@ -328,7 +328,7 @@ services:
     env_file: .env
     volumes:
       - snapshots_data:/data/snapshots
-      - uploads_tmp:/tmp/uploads
+      - api_uploads:/app/uploads
     depends_on: [postgres, redis]
     restart: unless-stopped
     logging:
@@ -362,7 +362,7 @@ volumes:
   postgres_data:
   redis_data:
   snapshots_data:
-  uploads_tmp:
+  api_uploads:
 ```
 
 ### Development docker-compose.dev.yml

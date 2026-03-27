@@ -49,8 +49,8 @@ export async function etlRoutes(fastify: FastifyInstance): Promise<void> {
         })
       }
 
-      // Save the file to uploads_tmp
-      const uploadsDir = path.join(process.cwd(), 'uploads_tmp')
+      // Save the file to uploads
+      const uploadsDir = path.join(process.cwd(), 'uploads')
       await fs.mkdir(uploadsDir, { recursive: true })
 
       const uniqueFilename = `${randomUUID()}${extension}`
