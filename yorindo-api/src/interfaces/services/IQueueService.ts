@@ -9,7 +9,7 @@ export type JobStatus = 'queued' | 'processing' | 'completed' | 'failed'
 
 export interface JobInfo {
   status: JobStatus
-  progress?: number | object
+  progress?: unknown
 }
 
 export interface IQueueService {

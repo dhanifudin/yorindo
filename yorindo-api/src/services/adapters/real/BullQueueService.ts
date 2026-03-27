@@ -22,11 +22,12 @@ export class BullQueueService implements IQueueService {
 
   async enqueue(queueName: QueueName, jobData: object, opts?: EnqueueOptions): Promise<string> {
     const queue = this.getQueueInstance(queueName)
-    const bullJob = await queue.add(queueName, jobData, {
-      delay: opts?.delay,
-      priority: opts?.priority,
-    })
-    
+    const bullOpts: any = {}
+    if (opts?.delay !== undefined) bullOpts.delay = opts.delay
+    if (opts?.priority !== undefined) bullOpts.priority = opts.priority
+
+    const bullJob = await queue.add(queueName, jobData, bullOpts)
+
     if (!bullJob.id) {
       throw new Error(`Failed to enqueue job in ${queueName}: missing job.id`)
     }
