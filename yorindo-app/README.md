@@ -113,7 +113,7 @@ npm run test:coverage # coverage report
 ```
 src/
   app/
-    app/              # Role-guarded admin shell (admin, staff, viewer, participant)
+    app/              # Role-guarded admin shell (admin, staff, viewer)
       contacts/
       events/[id]/
       scan/

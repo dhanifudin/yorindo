@@ -1,7 +1,7 @@
 /**
  * Auth Routes Tests — Story 2.1 Phase 2 BE
  *
- * Tests use InMemoryUserRepository (seeded with admin/staff users).
+ * Tests use InMemoryUserRepository (seeded with admin/viewer/staff users).
  * No real Redis or DB needed — REDIS_URL not set → blacklist is no-op.
  */
 
@@ -25,11 +25,9 @@ afterAll(async () => {
 describe('POST /api/auth/login', () => {
   it('returns 200 for all seeded roles with Password123!', async () => {
     const seededUsers = [
-      ['super@yorindo.id', 'super_admin'],
-      ['admin@yorindo.id', 'event_admin'],
+      ['admin@yorindo.id', 'admin'],
       ['staff@yorindo.id', 'staff'],
-      ['vendor@yorindo.id', 'vendor_client'],
-      ['participant@yorindo.id', 'participant'],
+      ['viewer@yorindo.id', 'viewer'],
     ] as const
 
     for (const [email, role] of seededUsers) {
@@ -53,7 +51,7 @@ describe('POST /api/auth/login', () => {
     const body = res.json()
     expect(body).toHaveProperty('accessToken')
     expect(typeof body.accessToken).toBe('string')
-    expect(body.user.role).toBe('event_admin')
+    expect(body.user.role).toBe('admin')
   })
 
   it('returns 200 with accessToken for valid staff credentials', async () => {

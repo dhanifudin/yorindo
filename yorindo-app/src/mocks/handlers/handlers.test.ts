@@ -146,7 +146,7 @@ describe('Auth handler', () => {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'admin@yorindo.app', password: 'password123' }),
+        body: JSON.stringify({ email: 'admin@yorindo.id', password: 'Password123!' }),
     })
     const data = await res.json()
 
@@ -159,7 +159,7 @@ describe('Auth handler', () => {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'budi@yorindo.app', password: 'password123' }),
+        body: JSON.stringify({ email: 'staff@yorindo.id', password: 'Password123!' }),
     })
     const data = await res.json()
     expect(data.user.role).toBe('staff')

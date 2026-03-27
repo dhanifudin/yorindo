@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 import type { IContactRepository } from '../interfaces/repositories/IContactRepository.js'
 import type { ISuppressionRepository } from '../interfaces/repositories/ISuppressionRepository.js'
 import type { IAuditLogger } from './blast.service.js'
+import { createId } from '@paralleldrive/cuid2'
 
 export interface ErasureRequest {
   phone: string
@@ -84,7 +85,7 @@ export class ErasureService {
     })
 
     return {
-      jobId: `erasure-${crypto.randomUUID()}`,
+      jobId: `erasure-${createId()}`,
       status: 'completed',
       message: 'Permintaan penghapusan diterima',
     }

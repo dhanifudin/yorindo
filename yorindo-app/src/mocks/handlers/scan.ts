@@ -1,5 +1,6 @@
 import { http, HttpResponse, delay } from 'msw'
 import { faker } from '@faker-js/faker'
+import { makeMockCuid2 } from './id'
 
 export const scanHandlers = [
   http.post('/api/scan/otp/request', async ({ request }) => {
@@ -26,7 +27,7 @@ export const scanHandlers = [
     return HttpResponse.json({
       status: 'success',
       registration: {
-        id: faker.string.uuid(),
+        id: makeMockCuid2(),
         contactName: faker.person.fullName(),
         eventName: 'Seminar ERP Jakarta',
       },
@@ -82,7 +83,7 @@ export const scanHandlers = [
     return HttpResponse.json({
       status: 'success',
       registration: {
-        id: faker.string.uuid(),
+        id: makeMockCuid2(),
         contactName: faker.person.fullName(),
         eventName: 'Seminar ERP Jakarta',
       },

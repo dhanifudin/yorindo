@@ -148,7 +148,7 @@ export interface BlastHistoryEntry {
 
 // ─── User ────────────────────────────────────────────────────────────────────
 
-export type UserRole = 'super_admin' | 'event_admin' | 'staff' | 'vendor_client' | 'participant'
+export type UserRole = 'admin' | 'viewer' | 'staff'
 
 export interface User {
   id: UUID

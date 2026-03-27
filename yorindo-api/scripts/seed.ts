@@ -48,16 +48,16 @@ async function seed(): Promise<void> {
     console.log('✓ Seeded job_titles')
 
     // Users
-    const adminHash = await bcrypt.hash('admin123', 10)
-    const staffHash = await bcrypt.hash('staff123', 10)
+    const sharedHash = await bcrypt.hash('Password123!', 10)
 
     await client.query(`
       INSERT INTO users (email, password_hash, role, name) VALUES
-        ('admin@yorindo.id', $1, 'event_admin', 'Admin Yorindo'),
-        ('staff@yorindo.id', $2, 'staff', 'Staff Yorindo')
+        ('admin@yorindo.id', $1, 'admin', 'Admin Yorindo'),
+        ('staff@yorindo.id', $1, 'staff', 'Staff Yorindo'),
+        ('viewer@yorindo.id', $1, 'viewer', 'Viewer Yorindo')
       ON CONFLICT (email) DO NOTHING
-    `, [adminHash, staffHash])
-    console.log('✓ Seeded users (admin + staff)')
+    `, [sharedHash])
+    console.log('✓ Seeded users (admin + staff + viewer)')
 
     // Events
     const now = new Date()

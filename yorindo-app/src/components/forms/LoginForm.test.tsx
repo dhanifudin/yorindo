@@ -33,7 +33,7 @@ describe('LoginForm', () => {
     render(<LoginForm />)
 
     await user.type(screen.getByLabelText('Email'), 'notanemail')
-    await user.type(screen.getByLabelText('Password'), 'password123')
+    await user.type(screen.getByLabelText('Password'), 'Password123!')
     await user.click(screen.getByRole('button', { name: /masuk/i }))
 
     await waitFor(() => {
@@ -45,8 +45,8 @@ describe('LoginForm', () => {
     const user = userEvent.setup()
     render(<LoginForm />)
 
-    await user.type(screen.getByLabelText('Email'), 'admin@yorindo.app')
-    await user.type(screen.getByLabelText('Password'), 'password123')
+    await user.type(screen.getByLabelText('Email'), 'admin@yorindo.id')
+    await user.type(screen.getByLabelText('Password'), 'Password123!')
     await user.click(screen.getByRole('button', { name: /masuk/i }))
 
     await waitFor(() => {
@@ -62,8 +62,8 @@ describe('LoginForm', () => {
     const user = userEvent.setup()
     render(<LoginForm />)
 
-    await user.type(screen.getByLabelText('Email'), 'admin@yorindo.app')
-    await user.type(screen.getByLabelText('Password'), 'password123')
+    await user.type(screen.getByLabelText('Email'), 'admin@yorindo.id')
+    await user.type(screen.getByLabelText('Password'), 'Password123!')
 
     const button = screen.getByRole('button', { name: /masuk/i })
     await user.click(button)

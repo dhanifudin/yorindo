@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
+import { createId } from '@paralleldrive/cuid2'
 import { InMemoryContactRepository } from '../repositories/memory/ContactRepository.js'
 import { InMemoryEventRepository } from '../repositories/memory/EventRepository.js'
 import { InMemoryRegistrationRepository } from '../repositories/memory/RegistrationRepository.js'
@@ -162,7 +163,7 @@ describe('InMemoryRegistrationRepository', () => {
 
   it('create and findById work', async () => {
     const reg = await repo.create({
-      contactId: crypto.randomUUID(),
+      contactId: createId(),
       eventId: 'test-event-id',
       status: 'pending',
       ticketToken: null,
@@ -178,7 +179,7 @@ describe('InMemoryRegistrationRepository', () => {
 
   it('updateStatus changes status', async () => {
     const reg = await repo.create({
-      contactId: crypto.randomUUID(),
+      contactId: createId(),
       eventId: 'test-event-id',
       status: 'pending',
       ticketToken: null, aiScore: 0.8, flagOverride: false,
@@ -191,8 +192,8 @@ describe('InMemoryRegistrationRepository', () => {
 
   it('bulkApprove updates multiple registrations', async () => {
     const ids = await Promise.all([
-      repo.create({ contactId: crypto.randomUUID(), eventId: 'evt', status: 'pending', ticketToken: null, aiScore: null, flagOverride: false, approvedAt: null, attendedAt: null }),
-      repo.create({ contactId: crypto.randomUUID(), eventId: 'evt', status: 'pending', ticketToken: null, aiScore: null, flagOverride: false, approvedAt: null, attendedAt: null }),
+      repo.create({ contactId: createId(), eventId: createId(), status: 'pending', ticketToken: null, aiScore: null, flagOverride: false, approvedAt: null, attendedAt: null }),
+      repo.create({ contactId: createId(), eventId: createId(), status: 'pending', ticketToken: null, aiScore: null, flagOverride: false, approvedAt: null, attendedAt: null }),
     ])
     const { approved } = await repo.bulkApprove(ids.map(r => r.id))
     expect(approved).toBe(2)
@@ -206,26 +207,26 @@ describe('InMemoryUserRepository', () => {
 
   beforeEach(() => { repo = new InMemoryUserRepository() })
 
-  it('seeds five role-based users', async () => {
+  it('seeds three role-based users', async () => {
     const { total } = await repo.findAll({ page: 1, pageSize: 10 })
-    expect(total).toBe(5)
+    expect(total).toBe(3)
   })
 
   it('findByEmail returns correct user', async () => {
     const user = await repo.findByEmail('admin@yorindo.id')
     expect(user).not.toBeNull()
-    expect(user!.role).toBe('event_admin')
+    expect(user!.role).toBe('admin')
   })
 
   it('create adds a new user', async () => {
     await repo.create({ email: 'new@example.com', passwordHash: 'hash', role: 'staff', name: 'New User' })
     const { total } = await repo.findAll({ page: 1, pageSize: 10 })
-    expect(total).toBe(6)
+    expect(total).toBe(4)
   })
 
   it('assignEvent and getAssignedEvents work', async () => {
     const user = await repo.findByEmail('staff@yorindo.id')
-    const eventId = crypto.randomUUID()
+    const eventId = createId()
     await repo.assignEvent(user!.id, eventId, user!.id)
     const events = await repo.getAssignedEvents(user!.id)
     expect(events).toContain(eventId)
@@ -246,14 +247,14 @@ describe('InMemoryFlaggedRecordsRepository', () => {
 
   it('resolve changes status to resolved', async () => {
     const { data } = await repo.findAll({ page: 1, pageSize: 1 }, 'pending')
-    await repo.resolve(data[0].id, {}, crypto.randomUUID())
+    await repo.resolve(data[0].id, {}, createId())
     const found = await repo.findById(data[0].id)
     expect(found?.status).toBe('resolved')
   })
 
   it('discard changes status to discarded', async () => {
     const { data } = await repo.findAll({ page: 1, pageSize: 1 }, 'pending')
-    await repo.discard(data[0].id, crypto.randomUUID())
+    await repo.discard(data[0].id, createId())
     const found = await repo.findById(data[0].id)
     expect(found?.status).toBe('discarded')
   })

@@ -48,7 +48,7 @@ export class InMemoryFlaggedRecordsRepository implements IFlaggedRecordsReposito
         flags: FLAG_REASON_SETS[i % FLAG_REASON_SETS.length]!,
         status,
         uploadId: i < 10 ? SEED_UPLOAD_IDS[0]! : SEED_UPLOAD_IDS[2]!,
-        resolvedBy: isResolved ? SEED_USER_IDS.event_admin : null,
+        resolvedBy: isResolved ? SEED_USER_IDS.admin : null,
         resolvedAt: isResolved ? new Date(now - (20 - i) * 3600000).toISOString() : null,
         createdAt: new Date(now - i * 3600000 * 3).toISOString(),
       }
