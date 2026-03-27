@@ -1,4 +1,4 @@
-export type QueueName = 'otp' | 'emergency-blast' | 'transactional' | 'marketing'
+export type QueueName = 'otp' | 'emergency-blast' | 'transactional' | 'marketing' | 'etl'
 
 export interface EnqueueOptions {
   delay?: number      // milliseconds
@@ -6,6 +6,11 @@ export interface EnqueueOptions {
 }
 
 export type JobStatus = 'queued' | 'processing' | 'completed' | 'failed'
+
+export interface JobInfo {
+  status: JobStatus
+  progress?: number | object
+}
 
 export interface IQueueService {
   /**
@@ -17,5 +22,5 @@ export interface IQueueService {
   /**
    * Get the current status of a job by its jobId.
    */
-  getStatus(jobId: string): Promise<JobStatus>
+  getStatus(jobId: string): Promise<JobInfo>
 }
