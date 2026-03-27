@@ -21,6 +21,7 @@ services:
       DATABASE_URL: postgresql://yorindo:${POSTGRES_PASSWORD}@postgres:5432/yorindo
       REDIS_URL: redis://redis:6379
       UPLOADS_DIR: /app/uploads
+      SENTRY_DSN: ${API_SENTRY_DSN:-}
     volumes:
       - api_uploads:/app/uploads
     depends_on:
@@ -40,6 +41,7 @@ services:
     env_file: .env
     environment:
       NEXT_PUBLIC_ENABLE_EXPERIMENTAL: ""
+      SENTRY_DSN: ${APP_SENTRY_DSN:-}
     restart: unless-stopped
 
   postgres:

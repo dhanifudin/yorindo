@@ -53,6 +53,8 @@ jobs:
           tags: |
             ${{ env.IMAGE_APP }}:${{ steps.tag.outputs.value }}
             ${{ env.IMAGE_APP }}:latest
+          build-args: |
+            NEXT_PUBLIC_SENTRY_DSN=${{ secrets.APP_SENTRY_DSN }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
