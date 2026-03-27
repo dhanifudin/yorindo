@@ -67,6 +67,12 @@ export interface User {
   updatedAt: string
 }
 
+export interface UserEvent {
+  userId: string
+  eventId: string
+  grantedAt: string
+}
+
 export interface ScanResult {
   status: 'success' | 'already_attended' | 'invalid'
   registration?: {
