@@ -20,7 +20,7 @@ export default function LoginPage() {
     if (accessToken) router.replace('/app')
   }, [accessToken, router])
 
-  if (accessToken) return null
+  if (accessToken) return <div />
 
   const handleParticipantLogin = async (name: string, email: string) => {
     try {
@@ -32,9 +32,10 @@ export default function LoginPage() {
       if (!res.ok) throw new Error('Login gagal')
       const data = await res.json()
       setAccessToken(data.accessToken, data.user)
-    } catch {
-      toast.error('Login peserta gagal. Silakan coba lagi.')
-    }
+    } catch (err) {
+      console.error(err)
+      toast.error('Login gagal')
+   }
   }
 
   return (
