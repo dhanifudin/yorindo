@@ -111,8 +111,8 @@ export default function VendorsPage() {
         </Button>
       </div>
 
-      <div className="rounded-lg border border-border bg-card overflow-hidden">
-        <Table>
+      <div className="w-full overflow-hidden rounded-lg border border-border bg-card">
+        <Table className="min-w-[640px] lg:min-w-[760px] xl:min-w-full">
           <TableHeader>
             <TableRow>
               <TableHead className="w-10" />

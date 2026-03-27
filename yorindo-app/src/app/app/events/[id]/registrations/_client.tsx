@@ -544,10 +544,10 @@ export default function RegistrationsPage({ params }: RegistrationsPageProps) {
         onColumnFiltersChange={setColumnFilters}
       />
 
-      <Card>
+      <Card className="w-full overflow-hidden">
         <CardContent className="p-0">
           <div ref={tableContainerRef} className="overflow-auto">
-            <Table>
+            <Table className="lg:min-w-[960px] xl:min-w-full">
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow key={headerGroup.id}>
