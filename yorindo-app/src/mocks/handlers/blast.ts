@@ -15,7 +15,7 @@ export interface BlastJob {
 }
 
 // In-memory store of blast jobs (populated by POST /api/blast)
-export let blastJobsStore: BlastJob[] = [
+export const blastJobsStore: BlastJob[] = [
   {
     jobId: 'blast-hist-001',
     eventId: 'event-001',

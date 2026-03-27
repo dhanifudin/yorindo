@@ -1,10 +1,12 @@
 import { http, HttpResponse, delay } from 'msw'
+import { MOCK_USER_IDS } from './users'
+import { makeMockCuid2 } from './id'
 
-// MSW seed accounts — password is always 'password123' for any of these
+// MSW seed accounts — password is always 'Password123!' for any of these
 const MOCK_USERS = [
-  { id: 'user-001', email: 'admin@yorindo.app', role: 'admin' as const },
-  { id: 'user-002', email: 'budi@yorindo.app', role: 'staff' as const },
-  { id: 'user-003', email: 'sari@yorindo.app', role: 'viewer' as const },
+  { id: MOCK_USER_IDS.admin, email: 'admin@yorindo.id', role: 'admin' as const },
+  { id: MOCK_USER_IDS.staff, email: 'staff@yorindo.id', role: 'staff' as const },
+  { id: MOCK_USER_IDS.viewer, email: 'viewer@yorindo.id', role: 'viewer' as const },
 ]
 
 export const authHandlers = [
@@ -12,7 +14,7 @@ export const authHandlers = [
     await delay(300)
     const body = await request.json() as { email?: string; password?: string }
     const found = MOCK_USERS.find((u) => u.email === body.email)
-    if (!found || body.password !== 'password123') {
+    if (!found || body.password !== 'Password123!') {
       return HttpResponse.json(
         { error: { code: 'UNAUTHORIZED', message: 'Kredensial tidak valid', details: [] } },
         { status: 401 }
@@ -28,7 +30,7 @@ export const authHandlers = [
     await delay(200)
     return HttpResponse.json({
       accessToken: 'mock-access-token-refreshed',
-      user: { id: 'user-001', role: 'admin' },
+      user: { id: MOCK_USER_IDS.admin, role: 'admin' },
     })
   }),
 
@@ -54,7 +56,7 @@ export const authHandlers = [
     return HttpResponse.json({
       accessToken: 'mock-token-participant',
       user: {
-        id: body.contactId ?? 'contact-001',
+        id: body.contactId ?? makeMockCuid2(),
         role: 'participant' as const,
         name: body.participantName ?? 'Budi Santoso',
         email: body.participantEmail ?? 'budi.santoso@email.com',

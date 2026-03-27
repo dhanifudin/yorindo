@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -27,7 +27,19 @@ interface Template {
 const INDUSTRIES = ['teknologi', 'kesehatan', 'manufaktur', 'keuangan', 'pendidikan', 'retail', 'properti']
 
 export default function BlastPage() {
-  const [selectedEvent, setSelectedEvent] = useState('')
+  const [prefilledAudience, setPrefilledAudience] = useState<BlastPrefilledAudience | null>(() => {
+    if (typeof window === 'undefined') return null
+    const raw = sessionStorage.getItem('blast:prefilledAudience')
+    if (!raw) return null
+    try {
+      const parsed = JSON.parse(raw) as BlastPrefilledAudience
+      sessionStorage.removeItem('blast:prefilledAudience')
+      return parsed
+    } catch {
+      return null
+    }
+  })
+  const [selectedEvent, setSelectedEvent] = useState(() => prefilledAudience?.eventId ?? '')
   const [templateId, setTemplateId] = useState('')
   const [channel, setChannel] = useState('whatsapp')
   const [filters, setFilters] = useState({ industry: '', city: '', companySize: '' })
@@ -35,21 +47,6 @@ export default function BlastPage() {
   const [scheduleEnabled, setScheduleEnabled] = useState(false)
   const [scheduledAtLocal, setScheduledAtLocal] = useState('')
   const [scheduleError, setScheduleError] = useState('')
-  const [prefilledAudience, setPrefilledAudience] = useState<BlastPrefilledAudience | null>(null)
-
-  useEffect(() => {
-    const raw = sessionStorage.getItem('blast:prefilledAudience')
-    if (raw) {
-      try {
-        const parsed = JSON.parse(raw) as BlastPrefilledAudience
-        setPrefilledAudience(parsed)
-        setSelectedEvent(parsed.eventId)
-      } catch {
-        // invalid data, ignore
-      }
-      sessionStorage.removeItem('blast:prefilledAudience')
-    }
-  }, [])
 
   const { data: eventsData } = useQuery<{ data: Event[] }>({
     queryKey: ['events'],

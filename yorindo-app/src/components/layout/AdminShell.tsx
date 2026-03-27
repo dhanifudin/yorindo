@@ -43,17 +43,15 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
 
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window === 'undefined') return false
+    try { return localStorage.getItem(SIDEBAR_KEY) === 'true' } catch { return false }
+  })
   const [hydrated, setHydrated] = useState(false)
 
-  // Hydrate collapsed state from localStorage (avoids SSR mismatch)
+  // Set hydrated after mount to enable CSS transitions (avoids SSR mismatch flash)
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(SIDEBAR_KEY)
-      if (stored === 'true') setCollapsed(true)
-    } catch {
-      // localStorage may be unavailable — use default
-    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setHydrated(true)
   }, [])
 

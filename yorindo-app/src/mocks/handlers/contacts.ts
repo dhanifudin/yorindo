@@ -3,6 +3,7 @@ import { faker } from '@faker-js/faker'
 import type { Contact, FlagCategory, PaginatedResponse, RecommendedEventsResponse } from '@/types/api'
 import { eventsStore } from './events'
 import { djb2 } from '@/lib/djb2'
+import { makeMockCuid2 } from './id'
 
 faker.seed(42)
 
@@ -20,7 +21,7 @@ const FLAG_CATEGORIES: FlagCategory[] = ['spam', 'not-potential', 'invalid-data'
 
 // Seeded pool of 247 contacts — deterministic with faker.seed(42)
 export const contactsPool: Contact[] = Array.from({ length: 247 }, (_, i) => ({
-  id: faker.string.uuid(),
+  id: makeMockCuid2(),
   name: faker.person.fullName(),
   phone: `+62${faker.string.numeric(10)}`,
   email: i % 5 === 0 ? '' : faker.internet.email(),
@@ -255,7 +256,7 @@ export const contactHandlers = [
     await delay(400)
     const body = await request.json() as { email?: string; phone?: string; reason?: string }
     return HttpResponse.json({
-      id: faker.string.uuid(),
+        id: makeMockCuid2(),
       ...body,
       suppressedAt: new Date().toISOString(),
       reason: body.reason ?? 'manually_added',
@@ -336,7 +337,7 @@ export const contactHandlers = [
   http.post('/api/contacts/flagged/:id', async () => {
     await delay(400)
     return HttpResponse.json({
-      id: faker.string.uuid(),
+        id: makeMockCuid2(),
       rawData: {},
       suggestedData: {},
       reason: 'Incomplete data',

@@ -1,13 +1,30 @@
 import { faker } from '@faker-js/faker'
+import { createId } from '@paralleldrive/cuid2'
 import type { IContactRepository, PaginationParams, ContactFilters } from '../../interfaces/repositories/IContactRepository.js'
 import type { Contact, FacetResult } from '../../types/domain.js'
+import { SEED_CONTACT_IDS, INDONESIAN_INDUSTRIES, INDONESIAN_JOB_TITLES } from './_seeds.js'
 
 faker.seed(42)
 
-const INDONESIAN_CITIES = ['Jakarta', 'Surabaya', 'Bandung', 'Medan', 'Semarang', 'Makassar', 'Yogyakarta', 'Palembang', 'Tangerang', 'Depok']
+const INDONESIAN_CITIES = ['Jakarta', 'Bandung', 'Surabaya', 'Medan', 'Yogyakarta', 'Semarang', 'Makassar', 'Palembang', 'Denpasar', 'Balikpapan']
 const COMPANY_SIZES = ['<50', '50-200', '200-1000', '>1000'] as const
-const INDUSTRY_SLUGS = ['teknologi', 'kesehatan', 'manufaktur', 'keuangan', 'pendidikan', 'retail', 'properti', 'otomotif', 'energi', 'telekomunikasi']
-const FLAG_CATEGORIES = [null, null, null, null, 'spam', 'not-potential'] as const
+const SOURCES = ['excel_upload', 'excel_upload', 'excel_upload', 'form', 'manual'] as const
+
+// Consent distribution: ~80% active, ~14% legacy_unverified, ~6% suppressed
+function consentStatus(i: number) {
+  if (i >= 115) return 'suppressed' as const
+  if (i % 7 === 0) return 'legacy_unverified' as const
+  return 'active' as const
+}
+
+/**
+ * Mengubah slug industri FE menjadi id lookup yang dipakai di seed repository.
+ */
+function toIndustryId(industry?: string): string | undefined {
+  if (!industry) return undefined
+  const found = INDONESIAN_INDUSTRIES.find((item) => item.slug === industry || item.id === industry)
+  return found?.id ?? industry
+}
 
 export class InMemoryContactRepository implements IContactRepository {
   private contacts: Map<string, Contact> = new Map()
@@ -20,26 +37,28 @@ export class InMemoryContactRepository implements IContactRepository {
    * Menyiapkan data kontak deterministik untuk dev dan test tanpa DB sungguhan.
    */
   private _seed(): void {
-    for (let i = 0; i < 247; i++) {
-      const id = crypto.randomUUID()
-      const industryId = INDUSTRY_SLUGS[i % INDUSTRY_SLUGS.length]!
-      const city = INDONESIAN_CITIES[i % INDONESIAN_CITIES.length]!
-      const companySize = COMPANY_SIZES[i % COMPANY_SIZES.length]!
-      const flagCategory = FLAG_CATEGORIES[i % FLAG_CATEGORIES.length]!
+    for (let i = 0; i < 120; i++) {
+      const id = SEED_CONTACT_IDS[i]!
+      const industry = INDONESIAN_INDUSTRIES[i % INDONESIAN_INDUSTRIES.length]!
+      const jobTitle = INDONESIAN_JOB_TITLES[i % INDONESIAN_JOB_TITLES.length]!
+      const status = consentStatus(i)
+
       const contact: Contact = {
         id,
         name: faker.person.fullName(),
-        phone: `+6281${faker.number.int({ min: 100000000, max: 999999999 })}`,
-        email: i % 5 === 0 ? null : faker.internet.email(),
-        industryId: i % 3 === 0 ? null : industryId,
-        jobTitleId: null,
-        city,
+        phone: i >= 115
+          ? `+62811000000${i}`
+          : `+6281${faker.number.int({ min: 100000000, max: 999999999 })}`,
+        email: i % 8 === 0 ? null : faker.internet.email(),
+        industryId: i % 5 === 0 ? null : industry.id,
+        jobTitleId: i % 7 === 0 ? null : jobTitle.id,
+        city: INDONESIAN_CITIES[i % INDONESIAN_CITIES.length]!,
         company: faker.company.name(),
-        companySize,
-        source: 'excel_upload',
-        completenessScore: Math.round((0.5 + (i % 5) * 0.1) * 1000) / 1000,
-        consentStatus: i % 10 === 0 ? 'suppressed' : 'legacy_unverified',
-        flagCategory,
+        companySize: COMPANY_SIZES[i % COMPANY_SIZES.length]!,
+        source: SOURCES[i % SOURCES.length]!,
+        completenessScore: Math.round((0.4 + (i % 7) * 0.09) * 1000) / 1000,
+        consentStatus: status,
+        flagCategory: i % 15 === 0 ? 'spam' : i % 22 === 0 ? 'not-potential' : null,
         deletedAt: null,
         createdAt: new Date(Date.now() - i * 86400000).toISOString(),
         updatedAt: new Date().toISOString(),
@@ -98,8 +117,9 @@ export class InMemoryContactRepository implements IContactRepository {
    */
   async findAll(params: PaginationParams, filters?: ContactFilters): Promise<{ data: Contact[]; total: number }> {
     let data = Array.from(this.contacts.values()).filter(c => c.deletedAt === null)
+    const industryId = toIndustryId(filters?.industry)
 
-    if (filters?.industry) data = data.filter(c => c.industryId === filters.industry)
+    if (industryId) data = data.filter(c => c.industryId === industryId)
     if (filters?.city) data = data.filter(c => c.city === filters.city)
     if (filters?.companySize) data = data.filter(c => c.companySize === filters.companySize)
     if (filters?.flagCategory) data = data.filter(c => c.flagCategory === filters.flagCategory)
@@ -138,7 +158,7 @@ export class InMemoryContactRepository implements IContactRepository {
       return updated
     }
     const contact: Contact = {
-      id: crypto.randomUUID(),
+      id: createId(),
       ...data,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -204,7 +224,11 @@ export class InMemoryContactRepository implements IContactRepository {
     }
 
     return {
-      industries: Array.from(industryMap.entries()).map(([id, count]) => ({ id, name: id, count })),
+      industries: INDONESIAN_INDUSTRIES.map(ind => ({
+        id: ind.id,
+        name: ind.name,
+        count: all.filter(c => c.industryId === ind.id).length,
+      })),
       cities: Array.from(cityMap.entries()).map(([city, count]) => ({ city, count })),
       companySizes: Array.from(sizeMap.entries()).map(([size, count]) => ({ size, count })),
     }

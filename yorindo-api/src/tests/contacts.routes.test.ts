@@ -25,8 +25,8 @@ describe('GET /api/contacts', () => {
     expect(res.statusCode).toBe(200)
     const body = res.json()
     expect(body.data).toHaveLength(20)
-    expect(body.pagination.total).toBe(247)
-    expect(body.pagination.totalPages).toBe(13)
+    expect(body.pagination.total).toBe(120)
+    expect(body.pagination.totalPages).toBe(6)
     expect(body.data[0]).toHaveProperty('company')
   })
 
@@ -39,7 +39,7 @@ describe('GET /api/contacts', () => {
     expect(res.statusCode).toBe(200)
     const body = res.json()
     expect(body.pagination.total).toBeGreaterThan(0)
-    expect(body.pagination.total).toBeLessThan(247)
+    expect(body.pagination.total).toBeLessThan(120)
     expect(body.data.every((contact: { industryId: string }) => contact.industryId === 'teknologi')).toBe(true)
   })
 

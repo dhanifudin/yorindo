@@ -2,6 +2,7 @@ import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
 import { contactRepository } from '../container.js'
 import type { CompanySize, Contact } from '../types/domain.js'
+import { INDONESIAN_INDUSTRIES } from '../repositories/memory/_seeds.js'
 
 const COMPANY_SIZE_TO_DOMAIN: Record<string, CompanySize> = {
   small: '<50',
@@ -46,6 +47,15 @@ function toApiCompanySize(companySize: Contact['companySize']): string {
 }
 
 /**
+ * Mengubah id industri internal menjadi slug yang dipakai kontrak FE.
+ */
+function toIndustrySlug(industryId: Contact['industryId']): string {
+  if (!industryId) return ''
+  const found = INDONESIAN_INDUSTRIES.find((item) => item.id === industryId || item.slug === industryId)
+  return found?.slug ?? industryId
+}
+
+/**
  * Menormalkan alias sort FE ke nama field repository yang didukung.
  */
 function toSortBy(sortBy?: string): string | undefined {
@@ -65,7 +75,7 @@ function toContactDto(contact: Contact) {
     email: contact.email ?? '',
     phone: contact.phone,
     company: contact.company ?? '',
-    industryId: contact.industryId ?? '',
+    industryId: toIndustrySlug(contact.industryId),
     jobTitleId: contact.jobTitleId ?? '',
     city: contact.city ?? '',
     companySize: toApiCompanySize(contact.companySize),

@@ -134,7 +134,7 @@ export default function VendorsPage() {
             {!isLoading && vendors.length === 0 && (
               <TableRow>
                 <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                  Belum ada vendor. Klik "Tambah Vendor" untuk memulai.
+                  Belum ada vendor. Klik &quot;Tambah Vendor&quot; untuk memulai.
                 </TableCell>
               </TableRow>
             )}

@@ -1,6 +1,8 @@
+import { createId } from '@paralleldrive/cuid2'
 import type { IUserRepository } from '../../interfaces/repositories/IUserRepository.js'
 import type { PaginationParams } from '../../interfaces/repositories/IContactRepository.js'
-import type { User } from '../../types/domain.js'
+import type { User, UserRole } from '../../types/domain.js'
+import { SEED_USER_IDS, PASSWORD123_HASH } from './_seeds.js'
 
 export class InMemoryUserRepository implements IUserRepository {
   private users: Map<string, User> = new Map()
@@ -11,28 +13,24 @@ export class InMemoryUserRepository implements IUserRepository {
   }
 
   private _seed(): void {
-    const admin: User = {
-      id: 'admin-seed-user-001',
-      email: 'admin@yorindo.id',
-      // bcrypt hash for 'admin1234'
-      passwordHash: '$2b$10$dYeTOklhtx6w41wl0syPOu84F8l5sVge8d5XakiWi4LbWLRm3ES52',
-      role: 'event_admin',
-      name: 'Admin Yorindo',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+    const seedUsers: Array<{ role: UserRole; email: string; name: string }> = [
+      { role: 'admin',  email: 'admin@yorindo.id',  name: 'Admin Yorindo' },
+      { role: 'staff',  email: 'staff@yorindo.id',  name: 'Staff Yorindo' },
+      { role: 'viewer', email: 'viewer@yorindo.id', name: 'Viewer Yorindo' },
+    ]
+
+    for (const { role, email, name } of seedUsers) {
+      const user: User = {
+        id: SEED_USER_IDS[role],
+        email,
+        passwordHash: PASSWORD123_HASH,
+        role,
+        name,
+        createdAt: new Date('2026-01-01T00:00:00.000Z').toISOString(),
+        updatedAt: new Date('2026-01-01T00:00:00.000Z').toISOString(),
+      }
+      this.users.set(user.id, user)
     }
-    const staff: User = {
-      id: 'staff-seed-user-001',
-      email: 'staff@yorindo.id',
-      // bcrypt hash for 'staff1234'
-      passwordHash: '$2b$10$weXhMzQqu9xk3du12vwgquu2RUCTI.NEIskjmTOFxVdRfZkfawnCC',
-      role: 'staff',
-      name: 'Staff Yorindo',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-    this.users.set(admin.id, admin)
-    this.users.set(staff.id, staff)
   }
 
   async findAll(params: PaginationParams): Promise<{ data: User[]; total: number }> {
@@ -52,7 +50,7 @@ export class InMemoryUserRepository implements IUserRepository {
 
   async create(data: Omit<User, 'id' | 'createdAt' | 'updatedAt'>): Promise<User> {
     const user: User = {
-      id: crypto.randomUUID(),
+      id: createId(),
       ...data,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),

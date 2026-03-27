@@ -8,8 +8,10 @@ function makeWrapper() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
-  return ({ children }: { children: React.ReactNode }) =>
-    createElement(QueryClientProvider, { client }, children)
+  function Wrapper({ children }: { children: React.ReactNode }) {
+    return createElement(QueryClientProvider, { client }, children)
+  }
+  return Wrapper
 }
 
 describe('useUsers', () => {
@@ -37,7 +39,7 @@ describe('useCreateUser', () => {
       name: 'Test User',
       email: 'test@yorindo.app',
       role: 'staff',
-      password: 'password123',
+      password: 'Password123!',
     })
     await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 3000 })
     expect(result.current.data?.email).toBe('test@yorindo.app')

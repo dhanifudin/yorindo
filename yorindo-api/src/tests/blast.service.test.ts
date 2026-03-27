@@ -56,7 +56,7 @@ describe('BlastService', () => {
     const sentEmails = emailService.getSentEmails()
     expect(sentEmails.length).toBeGreaterThan(0)
     expect(result.sentCount).toBeGreaterThan(0)
-    expect(result.suppressedCount).toBe(0)
+    expect(result.suppressedCount).toBeGreaterThan(0)
   })
 
   it('whatsapp channel: WA send() called instead of email', async () => {
