@@ -84,6 +84,7 @@ development_status:
   epic-2: in-progress
   2-1-admin-login-jwt-authentication: review
   2-2-user-account-management: review
+  be-2-2-user-account-management: review
   2-3-role-based-route-guards-frontend: review
   2-4-event-access-assignment-for-staff-viewer: review
   epic-2-retrospective: optional
