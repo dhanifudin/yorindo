@@ -56,3 +56,20 @@ export async function requireAuth(
     })
   }
 }
+
+export async function requireAdmin(
+  request: FastifyRequest,
+  reply: FastifyReply,
+): Promise<void> {
+  if (!request.user) {
+    return reply.status(401).send({
+      error: { code: 'UNAUTHORIZED', message: 'Authentication required', details: [] },
+    })
+  }
+
+  if (request.user.role !== 'admin') {
+    return reply.status(403).send({
+      error: { code: 'FORBIDDEN', message: 'Admin privileges required', details: [] },
+    })
+  }
+}

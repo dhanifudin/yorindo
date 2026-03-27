@@ -9,6 +9,7 @@ import { participantRoutes } from './routes/participants.routes.js'
 import { authRoutes } from './routes/auth.routes.js'
 import { contactRoutes } from './routes/contacts.routes.js'
 import { etlRoutes } from './routes/etl.routes.js'
+import { usersRoutes } from './routes/users.routes.js'
 
 export async function buildServer() {
   const fastify = Fastify({
@@ -60,6 +61,7 @@ export async function buildServer() {
   await fastify.register(authRoutes)
   await fastify.register(contactRoutes)
   await fastify.register(etlRoutes)
+  await fastify.register(usersRoutes)
 
   return fastify
 }
