@@ -16,3 +16,11 @@
 - **`bulkApprove` with duplicate IDs**: No deduplication; `approved` count is inflated and `approvedAt` overwritten per duplicate pass. Pre-existing.
 - **`aiScoreMin = 0` includes null-score registrations**: `aiScore ?? 0` means records with `aiScore: null` pass a `>= 0` filter. Pre-existing.
 - **`SURVEY_SCHEMA_IDS` exported from `EventRepository`**: Cross-repo constant lives in EventRepository rather than `_seeds.ts`. Not a bug, but creates a one-way dependency SurveyRepository → EventRepository. Pre-existing design.
+
+## From spec-sentry-integration (2026-03-27)
+
+- **No `Sentry.flush()` on shutdown**: `SIGTERM`/`SIGINT` handlers don't call `await Sentry.close(2000)` — buffered events may be dropped on container stop. Add to graceful shutdown sequence when implemented.
+- **`start()` unhandled rejection**: `buildServer()` throw propagates out of `start()` as an unhandled promise rejection; no `process.on('unhandledRejection')` captures it. Low risk in Phase 1 but worth hardening before production.
+- **`auth.routes.ts` inline catch bypasses `setErrorHandler`**: Login and refresh handlers catch errors internally and call `reply.status(500).send()` directly — these 500s never reach `setErrorHandler` and are invisible to Sentry. Pre-existing pattern.
+- **No Fastify request-context integration**: `Sentry.captureException` is called without Fastify's Sentry integration (`setupFastifyErrorHandler`) — captured errors lack HTTP request URL, method, and headers. Consider `@sentry/node` Fastify integration when richer error context is needed.
+- **No release tagging**: `Sentry.init` has no `release` field — Sentry cannot correlate errors to deployments or use source maps. Add when a versioning/release pipeline is established.

@@ -42,4 +42,7 @@ export const config = {
   brevoApiKey: optional('BREVO_API_KEY'),
   everproApiKey: optional('EVERPRO_API_KEY'),
   brevoSenderEmail: optional('BREVO_SENDER_EMAIL', 'no-reply@yorindo.app'),
+
+  // Error monitoring — optional; Sentry skips init silently when undefined
+  sentryDsn: optional('SENTRY_DSN') || undefined,
 } as const
