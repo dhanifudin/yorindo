@@ -5,6 +5,8 @@ import { InMemoryRegistrationRepository } from '../repositories/memory/Registrat
 import { InMemoryUserRepository } from '../repositories/memory/UserRepository.js'
 import { InMemoryFlaggedRecordsRepository } from '../repositories/memory/FlaggedRecordsRepository.js'
 import { InMemorySuppressionRepository } from '../repositories/memory/SuppressionRepository.js'
+import { InMemorySurveyRepository } from '../repositories/memory/SurveyRepository.js'
+import { SEED_CONTACT_IDS, SEED_EVENT_IDS, SEED_REGISTRATION_IDS } from '../repositories/memory/_seeds.js'
 
 // ─── Contact Repository ───────────────────────────────────────────────────────
 
@@ -13,15 +15,15 @@ describe('InMemoryContactRepository', () => {
 
   beforeEach(() => { repo = new InMemoryContactRepository() })
 
-  it('seeds 50 contacts on construction', async () => {
+  it('seeds 120 contacts on construction', async () => {
     const { total } = await repo.findAll({ page: 1, pageSize: 100 })
-    expect(total).toBe(50)
+    expect(total).toBe(120)
   })
 
   it('findAll paginates correctly', async () => {
     const { data, total } = await repo.findAll({ page: 1, pageSize: 10 })
     expect(data.length).toBe(10)
-    expect(total).toBe(50)
+    expect(total).toBe(120)
   })
 
   it('findById returns contact by id', async () => {
@@ -82,7 +84,7 @@ describe('InMemoryContactRepository', () => {
     const { data } = await repo.findAll({ page: 1, pageSize: 1 })
     await repo.softDelete(data[0].id)
     const { total } = await repo.findAll({ page: 1, pageSize: 100 })
-    expect(total).toBe(49)
+    expect(total).toBe(119)
   })
 
   it('countHealth returns correct health stats', async () => {
@@ -99,9 +101,9 @@ describe('InMemoryEventRepository', () => {
 
   beforeEach(() => { repo = new InMemoryEventRepository() })
 
-  it('seeds 5 events on construction', async () => {
+  it('seeds 12 events on construction', async () => {
     const { total } = await repo.findAll({ page: 1, pageSize: 10 })
-    expect(total).toBe(5)
+    expect(total).toBe(12)
   })
 
   it('findById returns event', async () => {
@@ -204,9 +206,9 @@ describe('InMemoryUserRepository', () => {
 
   beforeEach(() => { repo = new InMemoryUserRepository() })
 
-  it('seeds admin and staff users', async () => {
+  it('seeds five role-based users', async () => {
     const { total } = await repo.findAll({ page: 1, pageSize: 10 })
-    expect(total).toBe(2)
+    expect(total).toBe(5)
   })
 
   it('findByEmail returns correct user', async () => {
@@ -218,7 +220,7 @@ describe('InMemoryUserRepository', () => {
   it('create adds a new user', async () => {
     await repo.create({ email: 'new@example.com', passwordHash: 'hash', role: 'staff', name: 'New User' })
     const { total } = await repo.findAll({ page: 1, pageSize: 10 })
-    expect(total).toBe(3)
+    expect(total).toBe(6)
   })
 
   it('assignEvent and getAssignedEvents work', async () => {
@@ -273,5 +275,35 @@ describe('InMemorySuppressionRepository', () => {
     await repo.suppress('contact-id-1', 'user_request')
     const result = await repo.isSuppressed('contact-id-1')
     expect(result).toBe(true)
+  })
+
+  it('recognizes seeded suppressed contact phones', async () => {
+    const contactRepo = new InMemoryContactRepository()
+    const contact = await contactRepo.findById(SEED_CONTACT_IDS[115]!)
+    expect(contact).not.toBeNull()
+    expect(await repo.isSuppressed(contact!.phone)).toBe(true)
+  })
+})
+
+describe('InMemorySurveyRepository', () => {
+  let repo: InMemorySurveyRepository
+
+  beforeEach(() => { repo = new InMemorySurveyRepository() })
+
+  it('returns a schema for the seeded survey event', async () => {
+    const schema = await repo.findByEventId(SEED_EVENT_IDS[2]!)
+    expect(schema).not.toBeNull()
+    expect(schema!.fields.length).toBeGreaterThanOrEqual(3)
+  })
+
+  it('returns seeded responses for the seeded survey event', async () => {
+    const responses = await repo.getResponsesByEvent(SEED_EVENT_IDS[2]!)
+    expect(responses.length).toBe(5)
+  })
+
+  it('saves new seeded-registration responses under the event bucket', async () => {
+    await repo.saveResponse(SEED_REGISTRATION_IDS[5]!, { interest: 'Fintech' })
+    const responses = await repo.getResponsesByEvent(SEED_EVENT_IDS[2]!)
+    expect(responses.length).toBe(6)
   })
 })
