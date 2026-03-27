@@ -1,0 +1,249 @@
+name: Bug
+description: Use this QA form to report something that is broken or not working as expected.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this QA form when you find a bug.
+
+        Deployment targets:
+        - FE only (mocked frontend): `https://yorindo.dhanifudin.com`
+        - FE + BE integrated demo: `https://demo.dhanifudin.com`
+
+        Please create one issue for one bug.
+
+  - type: dropdown
+    id: deployment_context
+    attributes:
+      label: Where did you find the bug?
+      description: Choose the environment where you saw the issue.
+      options:
+        - FE only - https://yorindo.dhanifudin.com
+        - FE + BE - https://demo.dhanifudin.com
+        - Both environments
+    validations:
+      required: true
+
+  - type: dropdown
+    id: affected_area
+    attributes:
+      label: Which area is affected?
+      description: Pick the closest area.
+      options:
+        - Public landing and marketing pages
+        - Authentication and access control
+        - Admin dashboard and shell
+        - Contacts and segmentation
+        - Event management and pipeline hub
+        - Participant registration flow
+        - Check-in and attendance flow
+        - Notifications and blast messaging
+        - Reporting and analytics
+        - API or backend behavior
+        - CI/CD or deployment behavior
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: bug_type
+    attributes:
+      label: What kind of bug is it?
+      options:
+        - Functional failure
+        - UI or layout issue
+        - Data inconsistency
+        - Performance issue
+        - Accessibility issue
+        - Security concern
+        - Regression
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: How serious is it?
+      description: Choose the impact level.
+      options:
+        - Critical - blocks release or core flow
+        - High - major flow broken with no workaround
+        - Medium - degraded flow with workaround
+        - Low - minor issue or cosmetic defect
+    validations:
+      required: true
+
+  - type: input
+    id: summary
+    attributes:
+      label: Short summary
+      description: Write one short sentence about the bug.
+      placeholder: "Example: Registration form submits successfully but never shows confirmation page"
+    validations:
+      required: true
+
+  - type: textarea
+    id: preconditions
+    attributes:
+      label: Before testing
+      description: Write anything that must already be set up before the bug appears.
+      placeholder: |
+        Example:
+        - Logged in as admin
+        - Event already exists in Published status
+        - Browser cache cleared
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps_to_reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Write the exact steps using numbers.
+      placeholder: |
+        1. Open ...
+        2. Click ...
+        3. Enter ...
+        4. Observe ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_result
+    attributes:
+      label: Expected result
+      placeholder: What should happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual_result
+    attributes:
+      label: Actual result
+      placeholder: What actually happened? Include any error message if you saw one.
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Add screenshots, video, error text, console logs, network errors, or other proof.
+      placeholder: |
+        Include any of the following when available:
+        - Screenshot or recording
+        - Browser console error
+        - Network request URL and status code
+        - API response body
+        - Timestamp in local time
+    validations:
+      required: true
+
+  - type: textarea
+    id: affected_data
+    attributes:
+      label: Affected data or records
+      description: Add any related event ID, email, contact ID, or sample record.
+      placeholder: Write the related record details, or write `N/A` if none.
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact_scope
+    attributes:
+      label: Impact
+      description: Explain who is affected, how often it happens, and whether there is a workaround.
+      placeholder: |
+        Example:
+        - Affects admin users only
+        - Happens every time on demo.dhanifudin.com
+        - Temporary workaround: refresh and re-open the drawer
+    validations:
+      required: true
+
+  - type: dropdown
+    id: role
+    attributes:
+      label: Which user role did you use?
+      options:
+        - Public visitor
+        - Participant
+        - Admin
+        - Staff
+        - Viewer
+        - Vendor
+        - Not role-specific
+    validations:
+      required: true
+
+  - type: input
+    id: test_account
+    attributes:
+      label: Test account used
+      description: Add the email, username, or participant identity you used, if relevant.
+      placeholder: qa-admin@example.com / participant email / N/A
+    validations:
+      required: true
+
+  - type: dropdown
+    id: browser
+    attributes:
+      label: Browser used
+      options:
+        - Chrome
+        - Safari
+        - Firefox
+        - Edge
+        - Mobile browser
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: device_os
+    attributes:
+      label: Device and OS
+      description: Include the device type, OS version, and screen size if helpful.
+      placeholder: MacBook Pro / macOS 15 / 1440x900
+    validations:
+      required: true
+
+  - type: textarea
+    id: api_context
+    attributes:
+      label: API or backend details
+      description: If this happened on `FE + BE` or `Both environments`, add API/backend details. Otherwise write `N/A`.
+      placeholder: |
+        Include when relevant:
+        - Endpoint or route
+        - HTTP method and status code
+        - Response payload snippet
+        - Request ID / trace ID
+        - Related service or third-party integration
+    validations:
+      required: true
+
+  - type: input
+    id: version_info
+    attributes:
+      label: Version or test date
+      description: Add the app version if known. If not, add the date you tested it.
+      placeholder: v1.2.3 / commit abc123 / tested on 2026-03-27
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: QA checklist
+      options:
+        - label: I verified this issue is reproducible and not an accidental one-off.
+          required: true
+        - label: I checked for an existing open issue covering the same bug.
+          required: true
+        - label: I added enough details for the team to check the bug.
+          required: true
