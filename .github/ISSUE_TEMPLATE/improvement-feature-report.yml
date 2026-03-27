@@ -1,0 +1,209 @@
+name: Improvement
+description: Use this QA form to suggest a better flow, UI improvement, or new feature.
+title: "[Improvement]: "
+labels:
+  - improvement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this QA form when something is not broken, but could be better.
+
+        Relevant deployment targets:
+        - FE only (mocked frontend): `https://yorindo.dhanifudin.com`
+        - FE + BE integrated demo: `https://demo.dhanifudin.com`
+
+        Please create one issue for one improvement idea.
+
+  - type: dropdown
+    id: request_type
+    attributes:
+      label: What kind of improvement is this?
+      options:
+        - Improvement to existing behavior
+        - New feature request
+        - UX enhancement
+        - Performance improvement
+        - Accessibility improvement
+        - Technical or operational improvement
+    validations:
+      required: true
+
+  - type: dropdown
+    id: deployment_context
+    attributes:
+      label: Where is this related?
+      description: Choose where you noticed this or where it should be checked.
+      options:
+        - FE only - https://yorindo.dhanifudin.com
+        - FE + BE - https://demo.dhanifudin.com
+        - Both environments
+        - Not environment-specific
+    validations:
+      required: true
+
+  - type: dropdown
+    id: affected_area
+    attributes:
+      label: Which area is affected?
+      options:
+        - Public landing and marketing pages
+        - Authentication and access control
+        - Admin dashboard and shell
+        - Contacts and segmentation
+        - Event management and pipeline hub
+        - Participant registration flow
+        - Check-in and attendance flow
+        - Notifications and blast messaging
+        - Reporting and analytics
+        - API or backend behavior
+        - CI/CD or deployment behavior
+        - Cross-cutting platform experience
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: summary
+    attributes:
+      label: Short summary
+      description: Write one short sentence about the improvement.
+      placeholder: "Example: Add saved filters to the contact list so admins can reuse segmentation views"
+    validations:
+      required: true
+
+  - type: textarea
+    id: current_problem
+    attributes:
+      label: Current problem
+      description: Explain what is difficult, slow, confusing, or missing today.
+      placeholder: |
+        Describe:
+        - What users are trying to do
+        - Where the current flow breaks down
+        - Why the current experience is inefficient or unclear
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed_solution
+    attributes:
+      label: Suggested improvement
+      description: Describe what you want to change or add.
+      placeholder: |
+        Describe the expected solution in practical terms.
+        Include key actions, screens, states, or outputs.
+    validations:
+      required: true
+
+  - type: textarea
+    id: target_users
+    attributes:
+      label: Who needs this?
+      description: Explain who will use it and in what situation.
+      placeholder: |
+        Example:
+        - Admin operations team
+        - During event targeting and audience review
+        - Needed several times per day
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_impact
+    attributes:
+      label: Expected benefit
+      description: Explain why this would help users or the business.
+      placeholder: |
+        Example:
+        - Reduce repeated filter setup time
+        - Lower operator error rate
+        - Improve conversion or completion rate
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance_notes
+    attributes:
+      label: What should be included?
+      description: List the main things that should exist if this improvement is done.
+      placeholder: |
+        Example:
+        1. User can save the current filter combination with a custom name
+        2. Saved filters can be reopened later
+        3. Users can rename or delete saved filters
+    validations:
+      required: true
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: Current workaround
+      description: Explain how the team handles this today, or write `None`.
+      placeholder: Describe the temporary process if one exists.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: urgency
+    attributes:
+      label: How important is this?
+      options:
+        - Critical - urgent for release or operations
+        - High - strong value and should be prioritized soon
+        - Medium - useful improvement with moderate urgency
+        - Low - nice to have
+    validations:
+      required: true
+
+  - type: dropdown
+    id: role
+    attributes:
+      label: Who is requesting this?
+      options:
+        - QA
+        - Public visitor
+        - Participant
+        - Admin
+        - Staff
+        - Viewer
+        - Vendor
+        - Internal team
+        - Not role-specific
+    validations:
+      required: true
+
+  - type: textarea
+    id: references
+    attributes:
+      label: Supporting references
+      description: Add related bugs, screenshots, mockups, docs, or recordings.
+      placeholder: |
+        Include any useful references such as:
+        - Related issue numbers
+        - Screenshot or video
+        - Figma or design notes
+        - API endpoint or data example
+    validations:
+      required: true
+
+  - type: input
+    id: version_info
+    attributes:
+      label: Version or date noticed
+      description: Add the app version if known. If not, add the date you noticed this.
+      placeholder: v1.2.3 / commit abc123 / observed on 2026-03-27
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: QA checklist
+      options:
+        - label: I confirmed this is an improvement or feature request, not a bug report.
+          required: true
+        - label: I described the current problem and the desired outcome clearly.
+          required: true
+        - label: I added enough details for the team to review this improvement.
+          required: true
