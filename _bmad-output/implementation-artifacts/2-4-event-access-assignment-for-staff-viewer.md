@@ -1,7 +1,7 @@
 # Story 2.4: Event Access Assignment for Staff & Viewer
 
 ## Story
-As a super admin, I want to assign staff and viewer accounts to specific events, so that staff can only scan check-ins for their assigned events and viewers only see analytics for their assigned events.
+As an admin, I want to assign staff and viewer accounts to specific events, so that staff can only scan check-ins for their assigned events and viewers only see analytics for their assigned events.
 
 ## Acceptance Criteria
 - [x] Admin can view which events are assigned to a staff/viewer user

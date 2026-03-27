@@ -68,9 +68,9 @@ Then they are redirected to `/admin` immediately
 
 - [x] **Task 5: Add auth-required redirect stub for admin routes**
   - [x] Create `src/middleware.ts` at the src/ root (Next.js middleware)
-  - [x] Protect `/admin/*` routes: if no `authStore` accessToken → redirect to `/login`
+  - [x] Protect `/app/*` routes: if no `authStore` accessToken → redirect to `/login`
   - [x] Note: Zustand is client-side; middleware reads from a cookie or sessionStorage token. In Phase 1, use a simple session approach: after login, write `accessToken` to `sessionStorage`; middleware checks for its presence via a cookie or header. The full JWT middleware guard is Phase 2. For Phase 1, the redirect guard can be a simple client-side check in the admin layout.
-  - [x] Create `src/app/(admin)/layout.tsx` with client-side auth check: if no authStore token, redirect to `/login`
+  - [x] Create `src/app/app/layout.tsx` with client-side auth check: if no authStore token, redirect to `/login`
 
 - [x] **Task 6: Write vitest tests**
   - [x] Test: form shows validation errors on empty submit
@@ -105,21 +105,21 @@ Use `useAuthStore().setAccessToken(token, user)` after login. DO NOT add new fie
 - Login page: `src/app/login/page.tsx`
 - Login form component: `src/components/forms/LoginForm.tsx`
 - Middleware: `src/middleware.ts`
-- Admin layout guard: `src/app/(admin)/layout.tsx`
+- Admin layout guard: `src/app/app/layout.tsx`
 - authStore: `src/store/authStore.ts` (already exists, do not modify shape)
 
 ### Route Architecture
 ```
 /login                     ← Public; redirect to /admin if authenticated
 /admin                     ← Protected; requires authStore.accessToken
-/admin/contacts            ← Protected (Epic 3)
-/admin/events              ← Protected (Epic 4)
+/app/contacts              ← Protected (Epic 3)
+/app/events                ← Protected (Epic 4)
 /scan                      ← Protected; staff + admin only (Epic 7)
 /register/[eventSlug]      ← Public (Epic 6)
 ```
 
 ### Phase 1 Middleware Constraint
-Next.js middleware (`src/middleware.ts`) runs on the Edge and cannot access Zustand store directly. For Phase 1, implement auth guard as a **client-side redirect in `(admin)/layout.tsx`**:
+Next.js middleware (`src/middleware.ts`) runs on the Edge and cannot access Zustand store directly. For Phase 1, implement auth guard as a **client-side redirect in `app/layout.tsx`**:
 ```typescript
 'use client'
 import { useAuthStore } from '@/store/authStore'
@@ -172,8 +172,8 @@ In dev mode, the DevToolbar (already in layout.tsx from Story 1.5) sets `authSto
 2. Created `src/app/login/layout.tsx` — centered full-screen layout with gray background.
 3. Created `src/components/forms/LoginForm.tsx` — RHF + Zod v4 (`z.string().email()`, `z.string().min(8)`), `zodResolver` from `@hookform/resolvers/zod` v5 (compatible with Zod v4). Plain `fetch` for login call, inline error state for API errors, loading spinner on button during submission.
 4. Created `src/app/login/page.tsx` — `'use client'`, checks authStore on mount via `useEffect`, redirects to `/admin` if already authenticated; returns `null` during redirect to prevent flash.
-5. Created `src/app/(admin)/layout.tsx` — client-side guard: `useEffect` redirects to `/login` if no `accessToken`; returns `null` to prevent flash of admin content. Also includes a simple top nav with logout button (calls `POST /api/auth/logout` + `clearAuth()` + redirect).
-6. Created `src/app/(admin)/page.tsx` — placeholder admin dashboard.
+5. Created `src/app/app/layout.tsx` — client-side guard: `useEffect` redirects to `/login` if no `accessToken`; returns `null` to prevent flash of protected app content. Also includes a simple top nav with logout button (calls `POST /api/auth/logout` + `clearAuth()` + redirect).
+6. Created `src/app/app/page.tsx` — placeholder admin dashboard.
 
 ### Debug Log
 
@@ -181,7 +181,7 @@ In dev mode, the DevToolbar (already in layout.tsx from Story 1.5) sets `authSto
 
 ### Completion Notes
 
-All 6 tasks complete. 30/30 tests pass (7 new tests: 4 in LoginForm.test.tsx, 3 in login/page.test.tsx; 23 pre-existing). `tsc --noEmit` clean. Key decisions: Phase 1 auth guard is client-side only (Zustand-based) in `(admin)/layout.tsx` — no Edge middleware JWT verification (deferred to Story 2.3). `QueryProvider` added as a prerequisite for all subsequent React Query-dependent stories.
+All 6 tasks complete. 30/30 tests pass (7 new tests: 4 in LoginForm.test.tsx, 3 in login/page.test.tsx; 23 pre-existing). `tsc --noEmit` clean. Key decisions: Phase 1 auth guard is client-side only (Zustand-based) in `app/layout.tsx` — no Edge middleware JWT verification (deferred to Story 2.3). `QueryProvider` added as a prerequisite for all subsequent React Query-dependent stories.
 
 ---
 
@@ -192,8 +192,8 @@ All 6 tasks complete. 30/30 tests pass (7 new tests: 4 in LoginForm.test.tsx, 3 
 - `src/app/login/layout.tsx`
 - `src/app/login/page.tsx`
 - `src/components/forms/LoginForm.tsx`
-- `src/app/(admin)/layout.tsx`
-- `src/app/(admin)/page.tsx`
+- `src/app/app/layout.tsx`
+- `src/app/app/page.tsx`
 - `src/components/forms/LoginForm.test.tsx`
 - `src/app/login/page.test.tsx`
 

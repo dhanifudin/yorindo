@@ -11,7 +11,7 @@
 
 ## Story
 
-As a super admin,
+As an admin,
 I want to create and edit notification message templates with named variable substitution,
 So that all outbound communications use consistent, personalized messaging.
 
@@ -21,7 +21,7 @@ So that all outbound communications use consistent, personalized messaging.
 
 ## Acceptance Criteria (FE Phase 1)
 
-**AC1:** Given `/admin/templates` renders,
+**AC1:** Given `/app/templates` renders,
 When the page loads,
 Then a list of templates is shown with: name, channel badge (email/whatsapp), type badge (invitation/confirmation/rejection), and edit/delete actions
 
@@ -50,7 +50,7 @@ Then the form pre-fills with current values and `PATCH /api/templates/:id` is ca
   - [x] Export `templateHandlers` and add to `src/mocks/handlers/index.ts`
 
 - [x] **Task 2: Create templates list page**
-  - [x] Create `src/app/(admin)/templates/page.tsx`
+  - [x] Create `src/app/app/templates/page.tsx`
   - [x] Fetch via `useTemplates()` React Query hook
   - [x] Render table: name, channel badge, type badge, body preview (truncated), edit/delete actions
 
@@ -97,7 +97,7 @@ export const templateHandlers = [
 After creating the handler, add `...templateHandlers` to `src/mocks/handlers/index.ts`.
 
 ### File Locations (from architecture)
-- Page: `src/app/(admin)/templates/page.tsx`
+- Page: `src/app/app/templates/page.tsx`
 - Form: `src/components/features/templates/TemplateForm.tsx`
 - Preview: `src/components/features/templates/TemplatePreview.tsx`
 - MSW handler: `src/mocks/handlers/templates.ts`
@@ -118,7 +118,7 @@ After creating the handler, add `...templateHandlers` to `src/mocks/handlers/ind
 2. Created `src/hooks/useTemplates.ts` — `useTemplates()`, `useCreateTemplate()`, `useUpdateTemplate()`, `useDeleteTemplate()` with React Query cache invalidation.
 3. Created `src/components/features/templates/TemplatePreview.tsx` — regex substitution of `{{variable}}` with sample values; updates live on keystroke.
 4. Created `src/components/features/templates/TemplateForm.tsx` — RHF + Zod; handles create/edit mode via `template` prop; two-column layout (form + live preview).
-5. Created `src/app/(admin)/templates/page.tsx` — table with channel/type badges; inline create/edit panel.
+5. Created `src/app/app/templates/page.tsx` — table with channel/type badges; inline create/edit panel.
 6. Created `src/hooks/useTemplates.test.ts` — 3 tests (GET 3 templates, fields, POST new template) + preview substitution test.
 
 ### Debug Log
@@ -139,7 +139,7 @@ All 6 tasks complete. 40/40 tests pass (4 new; 36 pre-existing). `tsc --noEmit` 
 - `src/hooks/useTemplates.test.ts`
 - `src/components/features/templates/TemplatePreview.tsx`
 - `src/components/features/templates/TemplateForm.tsx`
-- `src/app/(admin)/templates/page.tsx`
+- `src/app/app/templates/page.tsx`
 
 **Modified files:**
 - `src/mocks/handlers/index.ts` — added `templateHandlers` import + spread

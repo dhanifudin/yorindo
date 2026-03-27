@@ -21,7 +21,7 @@ So that I have an accurate record of event performance.
 
 ## Acceptance Criteria (FE Phase 1)
 
-**AC1:** Given `/admin/events/:id/report` is accessed for a completed event,
+**AC1:** Given `/app/events/:id/report` is accessed for a completed event,
 When the page loads,
 Then metric cards show: total invited, registered, approved, attended, attendance rate %, no-show rate %
 
@@ -48,7 +48,7 @@ Then metric cards and charts show skeleton loaders
   - [x] 600ms delay; added to `handlers/index.ts`
 
 - [x] **Task 2: Create report page route**
-  - [x] Create `src/app/(admin)/events/[id]/report/page.tsx`; `useReport(id)` hook; skeleton loader
+  - [x] Create `src/app/app/events/[id]/report/page.tsx`; `useReport(id)` hook; skeleton loader
 
 - [x] **Task 3: Build MetricCards component**
   - [x] Create `src/components/features/reports/MetricCards.tsx` with 6 metric cards + skeleton variant
@@ -110,7 +110,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pi
 ```
 
 ### File Locations (from architecture)
-- Report page: `src/app/(admin)/events/[id]/report/page.tsx`
+- Report page: `src/app/app/events/[id]/report/page.tsx`
 - Metric cards: `src/components/features/reports/MetricCards.tsx`
 - Funnel chart: `src/components/features/reports/AttendanceFunnelChart.tsx`
 - Demographics: `src/components/features/reports/DemographicsCharts.tsx`
@@ -132,7 +132,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pi
 3. Created `src/components/features/reports/MetricCards.tsx` — 6 metric cards + skeleton variant.
 4. Created `src/components/features/reports/AttendanceFunnelChart.tsx` — Recharts horizontal BarChart, 4 stages.
 5. Created `src/components/features/reports/DemographicsCharts.tsx` — PieChart + 2x BarChart.
-6. Created `src/app/(admin)/events/[id]/report/page.tsx` — assembles all components; download stub toast.
+6. Created `src/app/app/events/[id]/report/page.tsx` — assembles all components; download stub toast.
 7. Created `src/hooks/useReport.test.ts` — 2 tests.
 
 ### Debug Log
@@ -154,7 +154,7 @@ All 7 tasks complete. 47/47 tests pass (2 new; 45 pre-existing). `tsc --noEmit` 
 - `src/components/features/reports/MetricCards.tsx`
 - `src/components/features/reports/AttendanceFunnelChart.tsx`
 - `src/components/features/reports/DemographicsCharts.tsx`
-- `src/app/(admin)/events/[id]/report/page.tsx`
+- `src/app/app/events/[id]/report/page.tsx`
 
 **Modified files:**
 - `src/mocks/handlers/index.ts` — added `reportHandlers`

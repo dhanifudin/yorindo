@@ -79,7 +79,7 @@ Then it returns deterministic seeded registrations including: AI scores (djb2 ha
 ```
 src/
   app/
-    (admin)/
+    app/
       events/
         [id]/
           registrations/

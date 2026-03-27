@@ -21,7 +21,7 @@ So that I can find and review specific participant segments efficiently.
 
 ## Acceptance Criteria (FE Phase 1)
 
-**AC1:** Given `/admin/contacts` renders,
+**AC1:** Given `/app/contacts` renders,
 When the page loads,
 Then TanStack Table v8 displays paginated contact data (20 per page default) from `GET /api/contacts?page=1&pageSize=20`
 
@@ -48,7 +48,7 @@ Then filterStore is updated and the query key includes current filter state
 ## Tasks / Subtasks
 
 - [x] **Task 1: Create contacts page route**
-  - [x] Create `src/app/(admin)/contacts/page.tsx`
+  - [x] Create `src/app/app/contacts/page.tsx`
   - [x] Page title: "Database Kontak"
   - [x] Import and render `ContactsTable` component
 
@@ -148,7 +148,7 @@ const table = useReactTable({
 Note: `pageIndex` in TanStack is 0-based; `page` in API is 1-based. Convert accordingly.
 
 ### File Locations (from architecture)
-- Page: `src/app/(admin)/contacts/page.tsx`
+- Page: `src/app/app/contacts/page.tsx`
 - Table component: `src/components/features/contacts/ContactsTable.tsx`
 - Filter bar: `src/components/features/contacts/ContactsFilterBar.tsx`
 - Pagination: `src/components/features/contacts/ContactsPagination.tsx`
@@ -173,7 +173,7 @@ Ensure `QueryClientProvider` wraps the admin layout. If not already in `src/app/
 2. Created `src/components/features/contacts/ContactsFilterBar.tsx` — industry select, city text input, companySize select with 300ms debounce; Reset button calls `resetFilter()`.
 3. Created `src/components/features/contacts/ContactsTable.tsx` — TanStack Table v8 in manual mode (`manualPagination`, `manualFiltering`); 8 skeleton rows via `animate-pulse` while loading; error state; 8 columns.
 4. Created `src/components/features/contacts/ContactsPagination.tsx` — calls `useContacts()` for pagination data (shared React Query cache, no extra fetch); Sebelumnya/Berikutnya buttons with disabled states.
-5. Created `src/app/(admin)/contacts/page.tsx` — server component assembling all three client components.
+5. Created `src/app/app/contacts/page.tsx` — server component assembling all three client components.
 6. Created `src/hooks/useContacts.test.ts` — 3 vitest tests via MSW (total=247, totalPages=13, industry filter).
 
 ### Debug Log
@@ -195,7 +195,7 @@ All 7 tasks complete. 33/33 tests pass (3 new in useContacts.test.ts; 30 pre-exi
 - `src/components/features/contacts/ContactsFilterBar.tsx`
 - `src/components/features/contacts/ContactsTable.tsx`
 - `src/components/features/contacts/ContactsPagination.tsx`
-- `src/app/(admin)/contacts/page.tsx`
+- `src/app/app/contacts/page.tsx`
 
 ---
 

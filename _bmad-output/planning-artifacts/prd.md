@@ -73,8 +73,8 @@ Data quality is a prerequisite: AI-powered participant scoring and vendor report
 |---|---|---|
 | Participant | Registers without frustration | Form completed in **< 2 minutes** on mobile |
 | Participant | Arrives at event without stress | Check-in time **< 45 seconds** measured from staff scan initiation |
-| Participant | Self-serves without staff help | **< 5%** of participants require staff assistance (name search or OTP recovery) |
-| Participant | Never loses access | OTP self-recovery available — zero admin intervention for lost tickets |
+| Participant | Self-serves without staff help | **< 5%** of participants require staff assistance (name search or KTP-assisted recovery) |
+| Participant | Never loses access | KTP-assisted recovery available — zero admin escalation for lost tickets |
 | Admin | Routine approvals are automated | **≥ 50% auto-approval at launch**, rising to **≥ 75% by month 12** as database quality improves |
 | Admin | Event day runs without firefighting | Check-in queue cleared within **15 minutes** of event start for events up to 300 pax |
 | Admin | Venue changes don't cause chaos | Emergency blast queued within **30 seconds** of admin action with visual delivery confirmation — zero manual fallback required |
@@ -94,7 +94,7 @@ Data quality is a prerequisite: AI-powered participant scoring and vendor report
 
 | Requirement | Target | Notes |
 |---|---|---|
-| Offline check-in reliability | **0 attendance records lost** due to sync failure | Separate from user errors (wrong OTP, unregistered participant) |
+| Offline check-in reliability | **0 attendance records lost** due to sync failure | Separate from user errors (missing ticket, unregistered participant) |
 | Event-window availability | **100% availability** during event day ± 2 hours | Off-peak maintenance windows acceptable |
 | Annual uptime | **≥ 99.5%** | ~3.65 hours total downtime per year |
 | Message delivery rate | **≥ 95%** WhatsApp + Email combined | BullMQ retry + dual-channel fallback — treat as launch blocker, not stretch goal |
@@ -103,7 +103,7 @@ Data quality is a prerequisite: AI-powered participant scoring and vendor report
 
 ### Measurable Outcomes
 
-- **Participant experience:** Registration-to-confirmation flow achievable in < 5 minutes total (form + double opt-in + OTP receipt)
+- **Participant experience:** Registration-to-confirmation flow achievable in < 5 minutes total (form + double opt-in + ticket receipt)
 - **Admin efficiency:** Auto-approval engine handles routine cases; manual review queue ≤ 20% of registrants at steady state
 - **Vendor intelligence:** Lead Intelligence Suite produces a report that vendor sales director can forward directly to their team without manual cleanup
 - **Data quality improvement:** Participant database enrichment rate (profiles with complete industry + job title + phone) improves from current unstructured baseline to **≥ 85% complete profiles** within 6 months
@@ -122,10 +122,10 @@ Core event cycle — proves the operational promise before layering intelligence
 - **Registration Module:** Public event landing page + mobile-first registration form + optional double opt-in confirmation (configurable per event)
 - **Admin Approval Workflow:** Pending list → manual/hybrid approval → approved/rejected/waitlisted status with automated notifications
 - **QR/Barcode Ticket Delivery:** Auto-generated QR code sent via WhatsApp/Email on approval
-- **Offline-First Check-in PWA:** QR scanner, OTP entry, name search fallback, degraded mode — all offline-capable via IndexedDB + Service Worker
+- **Offline-First Check-in PWA:** QR scanner, KTP-assisted name search recovery, manual override, degraded mode — all offline-capable via IndexedDB + Service Worker
 - **Basic Analytics:** Attendance report, registration funnel, participant demographics (age, industry, job title distribution)
 - **Admin Safety Layer:** Event state machine, soft delete, audit trail, destructive action confirmations, role-based access (5 roles)
-- **Security Baseline:** Rate limiting, OTP single-use + expiry, input sanitization, CAPTCHA, HMAC webhook verification
+- **Security Baseline:** Rate limiting, authenticated manual override controls, input sanitization, CAPTCHA, HMAC webhook verification
 - **UU PDP Compliance:** Consent capture at registration, unsubscribe handling, suppression list, participant data rights
 - **OpenAPI Contract:** Full API spec completed and Prism mock server running before feature development starts
 
@@ -179,15 +179,15 @@ Long-term platform evolution:
 
 **Opening Scene:** 8:47am. Event starts at 9:00. Sari is at the registration desk with an empty phone. The queue is forming behind her.
 
-**Rising Action:** Staff taps "OTP Recovery." Enters Sari's phone number. A 6-digit OTP lands on her WhatsApp — new phone, same number — in seconds. She reads it to staff. Green. 45 seconds total.
+**Rising Action:** Staff taps "Verifikasi KTP." Sari shows her physical ID card. Staff types her name, confirms the matching approved profile, and completes check-in with a logged override reason. Green. 45 seconds total.
 
-**Alternative fallback:** If OTP fails (no signal), staff switches to name search. Types "Sari", filters by event — her record appears with approved status. Manual check-in with audit log. She's in.
+**Alternative fallback:** If the first search is ambiguous, staff keeps the same flow: refine the name search, confirm the correct approved profile, then complete manual check-in with audit log. She's in.
 
 **Additional requirement surfaced:** Optional photo capture at registration enables visual identity assist at check-in for high-security events — configurable event setting, not mandatory.
 
 **Wrong-city scenario:** A participant presents a QR from a different city event. The staff device shows only: *"Peserta ini tidak terdaftar untuk event ini. Hubungi admin untuk bantuan."* — no cross-event details exposed to field staff (UU PDP: staff role scoped to current event data only). Full cross-event lookup is admin-only access.
 
-**Capabilities revealed:** OTP recovery flow, name search fallback, offline check-in, degraded mode sync, optional photo identity assist, role-based data scoping at check-in (staff sees wrong-event message only — no event details).
+**Capabilities revealed:** KTP-assisted identity verification, name search fallback, offline check-in, degraded mode sync, optional photo identity assist, role-based data scoping at check-in (staff sees wrong-event message only — no event details).
 
 ---
 
@@ -311,7 +311,7 @@ Long-term platform evolution:
 
 **Part A — Vendor report setup (pre-event):** Andi attaches Dewi's email address to the April Jakarta event report. On report completion (event day +1), the system generates a magic link and sends it automatically. No vendor account required. For premium-tier vendors like Hendri, Andi marks the event as Lead Intelligence enabled and confirms the vendor contact email.
 
-**Part B — Audit and access correction (post-event):** Vendor complaint — report shows 0 attendees. Andi opens the event audit trail. Finds a junior admin set event to Draft post-completion. Reverts to Completed. Report regenerates. Corrected copy delivered within 15 minutes of complaint. He also finds the junior admin has super_admin access — misconfigured at onboarding. Downgrades to event_admin.
+**Part B — Audit and access correction (post-event):** Vendor complaint — report shows 0 attendees. Andi opens the event audit trail. Finds a junior admin set event to Draft post-completion. Reverts to Completed. Report regenerates. Corrected copy delivered within 15 minutes of complaint. He also finds the junior admin was incorrectly given full `admin` access instead of `viewer`. He downgrades the account immediately.
 
 **Capabilities revealed:** Vendor email attachment to event (no account creation), magic link generation on report completion, full audit trail (event + participant + admin actions), event state machine manual override, role management (5 roles), report regeneration trigger.
 
@@ -322,7 +322,7 @@ Long-term platform evolution:
 | Journey | Capabilities Required |
 |---|---|
 | Participant — Success | Pre-fill from history, auto-approval with scoring, WhatsApp ticket, QR check-in, calendar link |
-| Participant — Lost ticket | OTP recovery, name search fallback, offline check-in, optional photo identity assist |
+| Participant — Lost ticket | KTP-assisted identity verification, name search fallback, offline check-in, optional photo identity assist |
 | Participant — Rejected | Admin-editable notification templates, rejection reason abstraction, auto segment tagging |
 | Participant — Waitlisted | Waitlist queue, score/FIFO auto-promotion, BullMQ deadline job, 2-attempt max + manual fallback |
 | Participant — Cancellation | Cancel link in ticket, slot release → waitlist trigger, data retention (status only, not erasure) |
@@ -398,9 +398,9 @@ Long-term platform evolution:
 
 | Integration | Purpose | Constraint |
 |---|---|---|
-| **Everpro (WhatsApp Business API)** | Invitation blast, OTP, ticket delivery, post-event survey, emergency blast | Template pre-approval required; 4 named BullMQ queues: `otp` > `emergency-blast` > `transactional` > `marketing`; ~52 msg/min rate limit; HMAC webhook verification for delivery callbacks |
+| **Everpro (WhatsApp Business API)** | Invitation blast, ticket delivery, post-event survey, emergency blast | Template pre-approval required; named BullMQ queues for `emergency-blast`, `transactional`, `marketing`, and report/maintenance jobs; ~52 msg/min rate limit; HMAC webhook verification for delivery callbacks |
 | **Brevo (Email)** | Invitation blast fallback, vendor magic link report delivery, re-consent fallback | Bounce handling; unsubscribe management; suppression list sync |
-| **BullMQ + Redis** | Async queues, OTP expiry, waitlist promotion deadline jobs, report generation | 4 separate named queues with dedicated workers (not priority integers — starvation risk under load). Concurrency: `otp` (10), `emergency-blast` (20), `transactional` (5), `marketing` (2 — throttled to protect Everpro rate limit budget) |
+| **BullMQ + Redis** | Async queues, waitlist promotion deadline jobs, report generation, notification dispatch | Separate named queues with dedicated workers (not priority integers — starvation risk under load). Concurrency is tuned so `emergency-blast` preempts normal sends while transactional notifications and reporting remain isolated |
 | **ZXing-js** | QR/barcode scanning in offline check-in PWA | Must function fully offline — no network call for decode |
 | **Google reCAPTCHA v3** | Public registration form bot protection | Invisible risk score — if unavailable, log-and-flag (do not block registration); admin approval queue shows `⚠ reCAPTCHA not verified` indicator; alert if failure rate > 5% |
 | **AI Provider (OpenAI / Gemini)** | Participant scoring for auto-approval engine | Pluggable via `AI_PROVIDER` env config + factory pattern; fail-safe: if AI unavailable, route to manual queue — never block registration |
@@ -469,7 +469,7 @@ The pluggable provider pattern (`AI_PROVIDER` env config, factory interface: `sc
 
 **4. Offline-First Event Operations — Complete Degraded Mode**
 
-The check-in PWA handles without any network connection: QR scan, OTP recovery, name search fallback, manual override with audit log, capacity view, waitlist walk-in detection. Every check-in function, fully operational offline.
+The check-in PWA handles without any network connection: QR scan, KTP-assisted identity verification, name search fallback, manual override with audit log, capacity view, waitlist walk-in detection. Every check-in function is fully operational offline.
 
 Sync layer: IndexedDB + first-write-wins + background sync on reconnect. Event-day operations are **network-optional**, not network-dependent. In Indonesia's tier-2 and tier-3 city venues where event WiFi is unreliable, this is the operational difference between a platform staff can trust and one they keep a printed backup list for.
 
@@ -479,7 +479,7 @@ QR code (default) or barcode (admin-configurable per event) — both decoded by 
 
 The notification channel (WhatsApp via Everpro, or email via Brevo) is configured by the admin at event creation — not hardcoded. For WhatsApp events, every participant touchpoint flows through WhatsApp. For email events, through Brevo. Either way, participants never download an app or create an account.
 
-For WhatsApp-configured events: invitation arrives via WhatsApp, registration is a web link, ticket is a WhatsApp message, check-in QR is pulled from WhatsApp, OTP recovery is a WhatsApp reply. For email-configured events: same experience, email-native. The zero-app principle holds regardless of channel.
+For WhatsApp-configured events: invitation arrives via WhatsApp, registration is a web link, ticket is a WhatsApp message, and check-in QR is pulled from WhatsApp. For email-configured events: same experience, email-native. Ticket recovery still happens on-site through cached participant lookup rather than a participant-facing app. The zero-app principle holds regardless of channel.
 
 This eliminates app-install friction — the single biggest barrier to event platform adoption in emerging markets. Participants don't choose to "use Yorindo" — they respond to a message on their existing channel. This scales across 18 cities and a participant base of manufacturing workers, healthcare professionals, and oil & gas engineers who may never have used a dedicated event app.
 
@@ -543,19 +543,17 @@ All data is scoped to one organization. No tenant isolation required at the data
 
 ### RBAC Matrix
 
-Five roles with strict permission boundaries:
+Three internal roles with strict permission boundaries; participant accounts only exist when experimental participant features are enabled:
 
 | Role | Scope | Key Permissions | Account Management |
 |---|---|---|---|
-| `super_admin` | System-wide | All events, all reports, audit trail, system config, vendor setup, account management | **Only role that can create/edit/deactivate accounts** |
-| `event_admin` | Assigned events | Create/clone/publish events, run blasts, manage approval queue, monitor check-in ops, access reports | Cannot manage accounts — created and managed by `super_admin` only |
-| `staff` | Assigned event (check-in only) | QR scan, OTP recovery, name search, manual check-in override, capacity view | No dashboard access; check-in PWA only |
-| `vendor_client` | Assigned event reports | Read-only report access via magic link (MVP) or vendor portal (Growth) | No write access of any kind |
-| `participant` | Self only | Registration, self-cancellation, OTP recovery | No dashboard access; public web forms only |
+| `admin` | System-wide | All events, all reports, audit trail, system config, vendor setup, account management | Only role that can create/edit/deactivate internal accounts |
+| `viewer` | Assigned events | Read-only analytics, reports, and approval-queue visibility for assigned events | No write access; cannot manage users or send blasts |
+| `staff` | Assigned event (check-in only) | QR scan, KTP-assisted identity verification, name search, manual check-in override, capacity view | No dashboard access; check-in PWA only |
 
-**Account creation flow:** `super_admin` creates all accounts. `event_admin` and `staff` accounts are internal Yorindo staff. `vendor_client` access is provisioned by `super_admin` per event (email attachment for magic link — no account required at MVP). Participants are not accounts — they are database records created via public registration.
+**Account creation flow:** `admin` creates all internal accounts. `viewer` and `staff` are internal or client-facing assigned users depending on deployment needs. Vendor report access can continue to use magic links without a dedicated role. Participants are database records by default and only become accounts when experimental participant features are enabled.
 
-**Permission enforcement:** JWT with role claim, validated server-side on every request via `express-openapi-validator` middleware. Role claim is not trusted from client — always resolved from database on token issue.
+**Permission enforcement:** JWT with role claim, validated server-side on every request via the API's OpenAPI-aware validation/auth middleware. Role claim is not trusted from client - always resolved from database on token issue.
 
 ---
 
@@ -589,9 +587,9 @@ Five roles with strict permission boundaries:
 
 ### SPA Architecture
 
-- **Frontend:** Vite + React, single PWA codebase for all surfaces (participant, admin, check-in)
+- **Frontend:** Next.js 16 App Router + React, single web codebase for participant, admin, and check-in surfaces
 - **UI components:** shadcn/ui
-- **Routing:** Role-based route guards — `super_admin`/`event_admin` routes, `staff` routes (check-in only), participant public routes
+- **Routing:** Role-based route guards — `admin` routes, `viewer` read-only routes, `staff` routes (check-in only), plus public participant routes. Experimental participant-account routes only exist when that feature set is enabled.
 - **Offline layer:** Service Worker + IndexedDB (Dexie.js) for check-in PWA; registration and admin dashboard do not require offline support
 - **API client:** Orval-generated React Query hooks from OpenAPI spec — FE team consumes spec, not hand-written fetch calls
 - **State management:** React Query for server state; local component state for UI — no global store at MVP
@@ -600,15 +598,15 @@ Five roles with strict permission boundaries:
 
 ### API Architecture
 
-- **Backend:** Express.js (JavaScript ES6, no TypeScript)
+- **Backend:** Fastify + TypeScript
 - **API style:** REST, OpenAPI 3.0 spec as first-class deliverable
 - **Authentication:** JWT (access token 15min + refresh token 7 days), Redis blacklist for logout/invalidation
-- **Validation:** `express-openapi-validator` middleware — request/response validated against OpenAPI spec on every call
+- **Validation:** OpenAPI-aware request/response validation middleware on every API call
 - **Sync endpoints** (required for offline PWA — must be in OpenAPI spec from Sprint 0):
   - `GET /sync/participants/{eventId}` — downloads confirmed participant list for offline caching
   - `POST /sync/checkins` — batch upload of offline check-in records on reconnect
 - **Error response schema:** Standardized across all endpoints — `{ error: { code, message, details[] } }` — required for offline PWA error handling (rate-limit vs. auth vs. sync conflict handled differently)
-- **Rate limiting:** Per-IP on public endpoints (registration form, OTP request); per-user on authenticated endpoints
+- **Rate limiting:** Per-IP on public endpoints (registration form); per-user on authenticated endpoints
 - **HMAC webhook verification:** All inbound webhooks from Everpro and Brevo verified before processing
 
 ---
@@ -640,17 +638,17 @@ All external service calls (Everpro, Brevo, AI provider) are abstracted behind s
 
 **Team structure:** Two parallel teams (Frontend / Backend) coordinated via OpenAPI 3.0 contract. Sprint 0 gate: OpenAPI spec reviewed and approved by both tech leads before any feature code is written.
 
-**Resource requirements:** FE team (Vite + React + shadcn/ui + Dexie.js + Orval + MSW); BE team (Express.js ES6 + MongoDB + BullMQ + Redis + express-openapi-validator). Shared: OpenAPI spec, Prism mock server (FE dev).
+**Resource requirements:** FE team (Next.js 16 + shadcn/ui + idb/Dexie + Orval or generated typed client + MSW); BE team (Fastify + TypeScript + PostgreSQL + BullMQ + Redis + OpenAPI validation). Shared: OpenAPI spec, Prism mock server (FE dev).
 
 ---
 
 ### MVP Feature Set (Phase 1)
 
 **Core User Journeys Supported:**
-- Participant: registration → approval → ticket delivery → check-in (QR scan, OTP recovery, name search fallback)
+- Participant: registration → approval → ticket delivery → check-in (QR scan, KTP-assisted recovery, name search fallback)
 - Participant: rejection notification, waitlist + auto-promotion, self-cancellation
 - Admin: event create/clone/publish → segmented blast → approval queue (auto + manual + hybrid) → event day ops dashboard → post-event basic report
-- Staff: offline-first check-in PWA (QR scan, OTP recovery, name search, manual override)
+- Staff: offline-first check-in PWA (QR scan, KTP-assisted recovery, name search, manual override)
 - Super Admin: account management, vendor email attachment, audit trail, state overrides, report regeneration
 - Vendor: magic link basic report delivery (attendance + demographics + Excel/PDF export)
 
@@ -660,20 +658,20 @@ All external service calls (Everpro, Brevo, AI provider) are abstracted behind s
 |---|---|
 | **Event Management** | Create, publish, clone with full config (capacity, target criteria, approval mode, notification channel, scan format QR/barcode, double opt-in toggle, cancellation deadline) |
 | **Criteria Validation Preview** | Before saving event target criteria, shows match count against participant database ("~847 contacts qualify") — count only, no sample; catches misconfiguration before any message is sent |
-| **Invitation Blast** | Segmented blast via Brevo (email) + Everpro (WhatsApp); `consentStatus` check + suppression list enforced before every send; 4 named BullMQ queues (`otp` > `emergency-blast` > `transactional` > `marketing`) |
+| **Invitation Blast** | Segmented blast via Brevo (email) + Everpro (WhatsApp); `consentStatus` check + suppression list enforced before every send; dedicated BullMQ queues isolate emergency, transactional, marketing, and reporting work |
 | **Registration Module** | Public event landing page + mobile-first form + optional double opt-in (configurable per event — if enabled, unconfirmed entries held in provisional state until confirmed or expired); phone-based pre-fill from participant history; reCAPTCHA v3 with log-and-flag fallback (`⚠ reCAPTCHA not verified` shown in approval queue) |
 | **Admin Approval Workflow** | Auto / hybrid / manual mode configurable per event; rule-based scoring with confidence indicators ("why approved" explanations); pending → approved / rejected / waitlisted |
-| **Notification Templates** | Admin-editable structured form with variable hints (`{name}`, `{eventTitle}`, `{date}`, `{venue}`) for all notification types (rejection, waitlist, promotion, ticket, OTP, emergency blast); plain-text compliant with WhatsApp template requirements |
+| **Notification Templates** | Admin-editable structured form with variable hints (`{name}`, `{eventTitle}`, `{date}`, `{venue}`) for all notification types (rejection, waitlist, promotion, ticket, emergency blast); plain-text compliant with WhatsApp template requirements |
 | **Waitlist Engine** | Score-based auto-promotion (FIFO configurable per event); BullMQ delayed job for confirmation deadline enforcement; 2-attempt max then manual fallback to admin queue |
 | **Self-Cancellation** | Cancel link in ticket; slot release triggers waitlist promotion cycle; data retention (status change only — not erasure) |
 | **QR/Barcode Ticket Delivery** | Auto-generated ticket sent via configured channel (WhatsApp or email) on approval; scan format (QR default / barcode) configurable per event |
-| **Offline-First Check-in PWA** | QR/barcode scan (ZXing-js, fully offline), OTP recovery, name search fallback, manual override with audit log; IndexedDB (Dexie.js) + Service Worker + background sync on reconnect; first-write-wins conflict resolution |
+| **Offline-First Check-in PWA** | QR/barcode scan (ZXing-js, fully offline), KTP-assisted identity verification, name search fallback, manual override with audit log; IndexedDB (Dexie.js) + Service Worker + background sync on reconnect; first-write-wins conflict resolution |
 | **Sync Endpoints** | `GET /sync/participants/{eventId}` + `POST /sync/checkins` — in OpenAPI spec from Sprint 0; required before FE starts check-in PWA development |
 | **Basic Analytics & Report** | Attendance report, registration funnel, participant demographics (industry, job title, age); `profileCompleteness` score computed on every registration create/update; magic link report delivery (signed URL + HMAC + expiry) |
 | **Vendor DPA Acceptance Gate** | Checkbox + timestamp + DPA version reference stored per vendor record; re-acceptance required on DPA version change |
 | **Admin Safety Layer** | Event state machine (Draft → Published → Live → Completed → Archived; Cancel action → Archived + mandatory blast + QR invalidation); soft delete 30-day recovery; full audit trail; destructive action confirmations |
-| **5-Role RBAC** | `super_admin` / `event_admin` / `staff` / `vendor_client` / `participant`; JWT (15min access + 7-day refresh) + Redis blacklist; `super_admin`-only account creation/management |
-| **Security Baseline** | Rate limiting (per-IP public, per-user authenticated); OTP single-use + expiry; input sanitization; reCAPTCHA v3; HMAC webhook verification; staff PWA session expiry (configurable hours — baseline device security) |
+| **3-Role RBAC** | `admin` / `viewer` / `staff`; JWT (15min access + 7-day refresh) + Redis blacklist; `admin`-only account creation/management. `participant` role exists only for experimental participant-account features |
+| **Security Baseline** | Rate limiting (per-IP public, per-user authenticated); input sanitization; reCAPTCHA v3; HMAC webhook verification; staff PWA session expiry (configurable hours — baseline device security) |
 | **UU PDP Compliance** | Consent capture at registration; `consentStatus` field (`legacy_unverified` \| `re-consent-sent` \| `consented` \| `suppressed`); suppression list; anonymization path for erasure requests; vendor DPA gate |
 | **Data Model Foundation** | `identitySignals` subdocument (`phones[]`, `emails[]`, `nameVariants[]`, `companyHistory[]` — arrays of objects with metadata); `profileCompleteness` score field; Lead Intelligence Suite config fields in event schema (toggles, consent fields) — UI ships Growth Phase 1 |
 | **Service Abstractions** | `NotificationService.send()`, `ScoringService.score()` — provider-agnostic interfaces; no direct SDK calls from route handlers |
@@ -698,7 +696,7 @@ All external service calls (Everpro, Brevo, AI provider) are abstracted behind s
 |---|---|
 | Lead Intelligence Suite UI | Pre-event intent survey, vendor booth QR check-in, post-event WhatsApp survey, combined lead score — data model ready in MVP schema |
 | AI Scoring Engine | Pluggable AI provider (OpenAI/Gemini) via `AI_PROVIDER` factory pattern; rule-based scoring at MVP, AI scoring added once adapter validated |
-| Participant Accounts | Passwordless WhatsApp OTP login, profile auto-fill across events, attendance history dashboard |
+| Participant Accounts | Experimental only: SSO login, profile auto-fill across events, attendance history dashboard |
 | Vendor Portal | Multi-event report history, persistent login, self-service access — replaces magic link for multi-event vendors |
 | Advanced Analytics | Branded PDF generator, scheduled delivery, multi-format export (PDF/Excel/CSV), field drop-off analytics, vendor feedback prompt (lead qualification rate tracking) |
 | Notification Intelligence | Granular notification type controls, participant preference center, smart reminder sequences |
@@ -728,7 +726,7 @@ All external service calls (Everpro, Brevo, AI provider) are abstracted behind s
 | Risk Category | Risk | Mitigation |
 |---|---|---|
 | **Technical** | Offline sync complexity | First-write-wins simplicity + Dexie.js abstraction; 0 lost records is launch blocker |
-| **Technical** | OpenAPI contract drift between teams | `express-openapi-validator` enforces spec on every BE request; drift is a build error |
+| **Technical** | OpenAPI contract drift between teams | Contract validation is enforced on every BE request; drift is a build error |
 | **Technical** | BullMQ queue starvation under load | 4 named queues with dedicated workers — not priority integers |
 | **Market** | Vendors don't value report over spreadsheet | MVP basic report first; Lead Intelligence Suite ships only after renewal rate + time-to-download signals are positive |
 | **Market** | Auto-approval doesn't reach 50% target at launch | Conservative threshold; manual queue absorbs borderline cases; 50% is month-3 target not launch requirement |
@@ -755,7 +753,7 @@ All external service calls (Everpro, Brevo, AI provider) are abstracted behind s
 
 ### Participant Database & Identity
 
-- **FR9:** Super admin can import participant records from structured data sources into the platform database
+- **FR9:** Admin can import participant records from structured data sources into the platform database
 - **FR10:** System automatically matches new registrations against existing participant profiles using composite identity signals (phone, email, name, company)
 - **FR11:** Admin can review and merge duplicate participant profiles flagged by the identity matching system
 - **FR12:** System computes and maintains a profile completeness score for each participant record, updated on every registration
@@ -766,7 +764,7 @@ All external service calls (Everpro, Brevo, AI provider) are abstracted behind s
 
 - **FR15:** Event admin can configure and send segmented invitation blasts to the participant database, filtered by industry, city, job title, and attendance history
 - **FR16:** Event admin can schedule blast delivery for a specified date and time
-- **FR17:** Super admin can create and edit notification message templates for each notification type, with named variable substitution (name, event title, date, venue)
+- **FR17:** Admin can create and edit notification message templates for each notification type, with named variable substitution (name, event title, date, venue)
 - **FR18:** System enforces consent status and suppression list checks before including any contact in any outbound communication
 - **FR19:** System delivers notifications via the event-configured channel with automatic fallback handling on delivery failure
 - **FR20:** Event admin can trigger an emergency blast to all confirmed participants for a specific event
@@ -790,10 +788,10 @@ All external service calls (Everpro, Brevo, AI provider) are abstracted behind s
 ### Check-in Operations
 
 - **FR33:** Staff can scan participant QR codes or barcodes to confirm event-day check-in
-- **FR34:** Staff can initiate OTP-based identity recovery for participants who cannot present their ticket
+- **FR34:** Staff can verify a participant's identity using their physical KTP (national ID card), then complete a logged manual check-in after confirming the matching approved participant profile
 - **FR35:** Staff can search for participants by name to perform manual check-in
 - **FR36:** Staff can manually check in a participant with a logged override reason and staff identity record
-- **FR37:** Staff can perform QR code scan check-in, OTP identity recovery, name search check-in, and manual override check-in without network connectivity; all check-in records are persisted locally and synced automatically when connectivity is restored
+- **FR37:** Staff can perform QR code scan check-in, KTP-assisted identity verification, name search check-in, and manual override check-in without network connectivity; all check-in records are persisted locally and synced automatically when connectivity is restored
 - **FR38:** System detects when a presented ticket belongs to a different event and notifies staff without exposing cross-event registration details
 - **FR39:** Event admin can monitor real-time check-in progress, queue status, and attendance count during event operations
 
@@ -804,18 +802,18 @@ All external service calls (Everpro, Brevo, AI provider) are abstracted behind s
 - **FR42:** Vendor can download the event report in Excel and PDF formats
 - **FR43:** Report includes attendance rate, registration funnel, and participant demographic breakdown by industry, job title, and age distribution
 - **FR44:** Vendor must accept the current version of the data processing agreement before accessing any report; re-acceptance required when the DPA version changes
-- **FR45:** Super admin can configure vendor contact email and report tier (standard / Lead Intelligence Suite) per event
-- **FR46:** Super admin can regenerate a post-event report for a completed event
+- **FR45:** Admin can manage the vendor roster and attach one or more vendors to an event as sponsors, including the contact email and report tier used for report delivery
+- **FR46:** Admin can regenerate a post-event report for a completed event
 
 ### Administration & Access Control
 
-- **FR47:** Super admin can create, edit, and deactivate user accounts for all internal roles
+- **FR47:** Admin can create, edit, and deactivate user accounts for all internal roles
 - **FR48:** System enforces role-based access control, restricting all capabilities to those permitted for each role
 - **FR49:** System maintains a full audit trail of all significant actions — event state changes, approval decisions, check-in overrides, admin account changes
 - **FR50:** Admin can soft-delete events and records with a configurable recovery window (default: 30 days) before permanent deletion
 - **FR51:** Admin can view and restore soft-deleted items within the recovery window
 - **FR52:** System requires explicit confirmation before executing destructive or irreversible admin actions
-- **FR53:** Super admin can override event state machine transitions with safeguarded access
+- **FR53:** Admin can override event state machine transitions with safeguarded access
 
 ### Compliance & Data Rights
 
@@ -849,7 +847,7 @@ All external service calls (Everpro, Brevo, AI provider) are abstracted behind s
 | **NFR-P6** | QR/barcode scan → confirmation (offline mode): ≤ 1 second | IndexedDB lookup only — no network call |
 | **NFR-P7** | Post-event report generation: ≤ 10 minutes | Async background job; vendor notified on completion |
 | **NFR-P8** | Vendor magic link report delivery: ≤ 24 hours after event completion | Automated trigger on event state → Completed |
-| **NFR-P9** | OTP delivery (WhatsApp or email): ≤ 30 seconds | From request submission to message received |
+| **NFR-P9** | Identity recovery search results appear within 500ms | Cached participant list, on-device lookup during check-in |
 | **NFR-P10** | Emergency blast queued and transmission initiated: ≤ 30 seconds of admin action | Platform SLA — what Yorindo controls. Full delivery within Everpro rate-limit capacity (~52 msg/min); events > 250 confirmed participants will exceed 5-minute full delivery window. |
 | **NFR-P11** | `POST /registrations` returns 201 response: ≤ 3 seconds normal load, ≤ 5 seconds during burst | Synchronous acknowledgement only — approval processing is async via BullMQ. Admin approve/reject action returns ≤ 1 second. |
 
@@ -860,7 +858,7 @@ All external service calls (Everpro, Brevo, AI provider) are abstracted behind s
 | **NFR-R1** | API annual uptime: ≥ 99.5% | ~3.65 hours downtime/year. System must include: automated daily database backup to offsite storage, verified restore capability (tested monthly), documented recovery procedure with RTO ≤ 2 hours. Deployment blackout policy: no deployments or maintenance during event window ± 2 hours. |
 | **NFR-R2** | Event-day availability: 100% during event window ± 2 hours | Zero tolerance for downtime during active check-in |
 | **NFR-R3** | Message delivery rate: ≥ 95% WhatsApp + email combined | BullMQ retry with exponential backoff; dual-channel fallback; treat as launch blocker |
-| **NFR-R4** | OTP delivery success rate: ≥ 99% | Highest-priority queue (`otp`); failure = blocked check-in recovery |
+| **NFR-R4** | Approved participants can always be recovered through cached search + manual verification during the event window | Recovery design must not block legitimate check-ins when staff has the participant list cached |
 | **NFR-R5** | Attendance records lost due to offline sync failure: 0 | IndexedDB persists through app restart, browser close, and device reboot |
 | **NFR-R6** | Background sync completion after reconnect: ≤ 60 seconds | From network restoration to all offline check-ins reflected on ops dashboard |
 
@@ -871,8 +869,8 @@ All external service calls (Everpro, Brevo, AI provider) are abstracted behind s
 | **NFR-S1** | All data in transit encrypted via TLS 1.2 or higher |
 | **NFR-S2** | All personal data at rest encrypted at the storage layer |
 | **NFR-S3** | JWT access tokens expire after 15 minutes; refresh tokens after 7 days; invalidated on logout via a server-side token blacklist |
-| **NFR-S4** | OTP codes are single-use, expire after 5 minutes, invalidated immediately on use |
-| **NFR-S5** | OTP requests rate-limited to maximum 3 per phone number per 10-minute window |
+| **NFR-S4** | Manual identity recovery always requires authenticated staff context and a logged override reason before check-in is finalized |
+| **NFR-S5** | Manual identity recovery actions are rate-limited and fully auditable per staff session to prevent abuse |
 | **NFR-S6** | All inbound webhooks (Everpro, Brevo) verified via HMAC signature; unverified requests rejected with 401 |
 | **NFR-S7** | Public registration form protected by an automated bot-detection mechanism; unavailable mechanism logs and flags submission — does not block registration |
 | **NFR-S8** | All authenticated API requests validated against OpenAPI spec; schema violations return 400 with standardized error response |

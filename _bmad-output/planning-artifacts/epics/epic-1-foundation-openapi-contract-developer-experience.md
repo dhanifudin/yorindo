@@ -86,7 +86,7 @@ So that any team member can initialize the complete database schema from scratch
 > **Sprint Planning Note (Bob):** This story is large — it covers Next.js init, 3 Zustand stores, TanStack dependencies, next-pwa, and vitest. If sprint capacity is tight, it can be split: 1.3a (scaffold + routing + stores) and 1.3b (next-pwa + vitest config). The FE team must assess during sprint planning.
 
 As a FE developer,
-I want the `yorindo-app` repository initialized with Next.js 14 App Router, all required packages, three Zustand stores, next-pwa configuration, and vitest with `@/` alias resolution,
+I want the `yorindo-app` repository initialized with Next.js 16 App Router, all required packages, three Zustand stores, PWA configuration, and vitest with `@/` alias resolution,
 So that the FE team has a fully working local environment with PWA support and testing infrastructure from day one.
 
 **Acceptance Criteria:**
@@ -167,7 +167,7 @@ So that the FE team can develop type-safely against a mock API with role switchi
 **Then** `server.listen({ onUnhandledRequest: 'warn' })` is active before the test, `server.resetHandlers()` runs after each test, `server.close()` runs after all tests
 
 **Given** the app renders in `NODE_ENV=development`,
-**Then** `<DevToolbar />` is visible in the bottom-right corner with three role buttons: `admin | staff | viewer`
+**Then** `<DevToolbar />` is visible in the bottom-right corner with three role buttons: `admin | viewer | staff`
 
 **Given** the `staff` button is clicked,
 **When** `useAuthStore().user` is read,
@@ -268,7 +268,7 @@ So that every merge to main automatically reaches production without manual step
 
 As a BE developer,
 I want all repository interfaces, in-memory implementations, service adapter interfaces, and mock service implementations scaffolded,
-So that all BE feature stories can be implemented in Phase 1 without any dependency on PostgreSQL, MongoDB, Redis, Brevo, Everpro, GPT-4o, or Claude.
+So that all BE feature stories can be implemented in Phase 1 without any dependency on PostgreSQL, Redis, Brevo, Everpro, GPT-4o, Claude, or any optional secondary document store.
 
 **Acceptance Criteria:**
 

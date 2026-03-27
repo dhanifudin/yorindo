@@ -44,7 +44,7 @@ Then they use `className="animate-none"` to distinguish intentional placeholder 
 ```
 src/
   app/
-    (admin)/
+    app/
       events/
         [id]/
           report/
@@ -174,7 +174,7 @@ function YoriMindPanelOrFallback() {
 ### Debug Log
 
 - Skeleton component only accepts `className` prop — used raw `<div>` with `animate-none bg-muted` for custom height bars
-- `React.lazy(() => import('@/components/yorimind/YoriMindPanel'))` fails at Vite build time (static analysis). Used `YORIMIND_PATH` variable with `/* @vite-ignore */` comment to suppress Vite's static import resolution
+- `React.lazy(() => import('@/components/yorimind/YoriMindPanel'))` fails at build time (static analysis). Used `YORIMIND_PATH` variable with `dynamic import guard` comment to suppress Vite's static import resolution
 - rtk proxy passes `PASS (0)` for no-test runs; used `node_modules/.bin/vitest` directly to diagnose real test failures
 
 ### Completion Notes

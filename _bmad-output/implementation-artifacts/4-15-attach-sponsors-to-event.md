@@ -4,18 +4,20 @@
 **Story Key:** 4-15-attach-sponsors-to-event
 **Epic:** Epic 4 — Event Configuration & Management
 **Phase:** Phase 1 (FE) — wired to MSW event sponsors handler
-**Status:** review
+**Status:** superseded
 **Created:** 2026-03-26
 
 ---
 
 ## Story
 
-As an event admin,
+As an admin,
 I want to attach one or more vendors from the roster to an event as sponsors with a tier and display order,
 So that sponsor information is formally linked to the event for report delivery, landing page display, and audit purposes.
 
 > **Phase 1 FE scope:** Sponsor panel on the event Overview tab; vendor searchable dropdown; tier selector; remove action. All wired to MSW `/api/events/:id/sponsors` handlers. Vendor attachment is optional — events without sponsors are valid.
+
+> **Superseded:** This implementation story has been merged into `/_bmad-output/implementation-artifacts/4-14-vendor-roster-management.md` to match the updated Epic 4 Story 4.14 scope.
 
 ---
 
@@ -26,7 +28,7 @@ Then a "Sponsor" section renders below the main funnel grid showing currently at
 
 **AC2:** Given I click "Tambah Sponsor",
 When a popover/inline form opens,
-Then I can select a vendor from the roster (searchable list) and a tier (standard/premium/lead_intelligence); on submit `POST /api/events/:id/sponsors` is called and the sponsor appears in the panel
+Then I can select a vendor from the roster (searchable list) and a tier (`standard`/`premium`/`supporter`); on submit `POST /api/events/:id/sponsors` is called and the sponsor appears in the panel
 
 **AC3:** Given I change a sponsor's tier,
 When I select a new tier from the inline dropdown,
@@ -109,7 +111,7 @@ export interface EventSponsor {
   event_id: string
   vendor_id: string
   vendor_name: string
-  tier: 'standard' | 'premium' | 'lead_intelligence'
+  tier: 'standard' | 'premium' | 'supporter'
   display_order: number
 }
 
@@ -133,9 +135,9 @@ All other events start with empty sponsor arrays.
 ### Tier Badge Colors
 
 ```
-standard       → bg-muted text-muted-foreground
-premium        → bg-blue-100 text-blue-700
-lead_intelligence → bg-purple-100 text-purple-700 (label: "Lead Intel")
+standard  → bg-muted text-muted-foreground
+premium   → bg-blue-100 text-blue-700
+supporter → bg-amber-100 text-amber-700
 ```
 
 ### Handlers placement in events.ts
@@ -190,3 +192,4 @@ Add sponsor sub-resource handlers BEFORE the `GET /api/events/:id` wildcard hand
 |------|--------|--------|
 | 2026-03-26 | Story created from SCP 2026-03-26j | bmad-dev-story |
 | 2026-03-26 | All 6 tasks implemented; 137/138 tests pass; 0 TS errors | bmad-dev-story |
+| 2026-03-27 | Marked superseded after merge into updated Story 4.14 | OpenCode |

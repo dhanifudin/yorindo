@@ -12,7 +12,7 @@
 ## Story
 
 As a FE developer,
-I want the `yorindo-app` repository initialized with Next.js 14 App Router, all required packages, three Zustand stores, next-pwa configuration, and vitest with `@/` alias resolution,
+I want the `yorindo-app` repository initialized with Next.js 16 App Router, all required packages, three Zustand stores, next-pwa configuration, and vitest with `@/` alias resolution,
 So that the FE team has a fully working local environment with PWA support and testing infrastructure from day one.
 
 ---
@@ -42,8 +42,8 @@ Then vitest resolves all `@/` imports and the empty test suite reports 0 failure
 
 ## Tasks / Subtasks
 
-- [x] **Task 1: Bootstrap Next.js 14 App Router project**
-  - [x] Run `npx create-next-app@14 yorindo-app --typescript --tailwind --eslint --app --src-dir --import-alias "@/*"` in `/home/dhs/Workspaces/kada/yorindo`
+- [x] **Task 1: Bootstrap Next.js 16 App Router project**
+  - [x] Run `npx create-next-app@16 yorindo-app --typescript --tailwind --eslint --app --src-dir --import-alias "@/*"` in `/home/dhs/Workspaces/kada/yorindo`
   - [x] Verify `src/app/page.tsx` and `src/app/layout.tsx` exist
 
 - [x] **Task 2: Install all required packages**
@@ -65,7 +65,7 @@ Then vitest resolves all `@/` imports and the empty test suite reports 0 failure
   - [x] Create `src/components/dev/` directory
   - [x] Create `src/components/ui/`, `src/components/forms/`, `src/components/features/`
   - [x] Create `src/hooks/`, `src/lib/auth/`, `src/lib/offline/`, `src/utils/` directories
-  - [x] Create `src/app/(admin)/` layout, `src/app/register/`, `src/app/scan/` route groups
+  - [x] Create `src/app/app/` layout, `src/app/register/`, `src/app/scan/` route groups
   - [x] Create `src/app/api/health/route.ts`
 
 - [x] **Task 4: Implement three Zustand stores**
@@ -102,7 +102,7 @@ Then vitest resolves all `@/` imports and the empty test suite reports 0 failure
 
 ### Critical Architectural Decisions (DO NOT DEVIATE)
 
-**Framework:** Next.js 14 App Router only — never use Pages Router. All routes go under `src/app/`.
+**Framework:** Next.js 16 App Router only — never use Pages Router. All routes go under `src/app/`.
 
 **Three Zustand stores — exact shapes (no additions without review):**
 
@@ -247,7 +247,7 @@ All ACs satisfied:
 - AC4: `npm run build` generates `public/sw.js` + `public/workbox-*.js` via next-pwa
 - AC5: `npm run test` exits 0 with `passWithNoTests: true`; `@/` alias resolves correctly
 
-Note: scaffold uses npm v11 which requires `npm exec --` syntax for create-next-app (not `npx create-next-app@14`).
+Note: scaffold uses npm v11 which requires `npm exec --` syntax for create-next-app (not `npx create-next-app@16`).
 Note: scaffold generated `next.config.mjs` (ESM) — replaced with `next.config.js` (CJS) as required by next-pwa.
 
 ---

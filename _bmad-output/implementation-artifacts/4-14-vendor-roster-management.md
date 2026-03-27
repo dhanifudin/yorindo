@@ -1,7 +1,7 @@
-# Story 4.14: Vendor Roster Management
+# Story 4.14: Vendor Roster & Event Sponsor Attachment
 
 **Story ID:** 4.14
-**Story Key:** 4-14-vendor-roster-management
+**Story Key:** 4-14-vendor-roster-event-sponsor-attachment
 **Epic:** Epic 4 — Event Configuration & Management
 **Phase:** Phase 1 (FE) — wired to MSW vendors handler
 **Status:** review
@@ -11,11 +11,11 @@
 
 ## Story
 
-As a super admin,
-I want to create, view, edit, and delete vendor companies in a central roster,
-So that vendor profiles can be reused across multiple events without re-entering contact information.
+As an admin,
+I want to manage vendors in a central roster and attach them to events as sponsors,
+So that report delivery, sponsor display, and vendor analytics all resolve from the same vendor records.
 
-> **Phase 1 FE scope:** Vendor list page at `/app/vendors`; create/edit modal form; delete with conflict guard. All wired to MSW `/api/vendors` handler.
+> **Phase 1 FE scope:** Vendor list page at `/app/vendors`; create/edit modal form; delete with conflict guard; sponsor management panel on the event workspace; all wired to MSW `/api/vendors` and `/api/events/:id/sponsors` handlers.
 
 ---
 
@@ -43,6 +43,22 @@ Then `DELETE /api/vendors/:id` is called and the vendor disappears from the tabl
 **AC6:** Given `logo_url` is null,
 When the vendor row renders,
 Then a fallback avatar showing the vendor's initials is displayed
+
+**AC7:** Given I am on an event workspace and open sponsor management,
+When `GET /api/events/:id/sponsors` is called,
+Then the response lists attached vendors ordered by `display_order` with `vendor_name`, `tier`, and `display_order`
+
+**AC8:** Given I attach a vendor to an event,
+When `POST /api/events/:id/sponsors` is called with `{ vendorId, tier, displayOrder }`,
+Then the vendor becomes an event sponsor and can be used for vendor-facing report delivery and sponsor display on the public event page
+
+**AC9:** Given I update sponsorship metadata,
+When `PATCH /api/events/:id/sponsors/:vendorId` is called,
+Then the sponsor `tier` and `display_order` are updated without changing the base vendor record
+
+**AC10:** Given I remove a sponsor from an event,
+When `DELETE /api/events/:id/sponsors/:vendorId` is called,
+Then the vendor is detached from that event while remaining available in the vendor roster
 
 ---
 
@@ -84,6 +100,13 @@ Then a fallback avatar showing the vendor's initials is displayed
   - [x] Subtask 6.2: Create vendor — form submit calls POST and new vendor appears
   - [x] Subtask 6.3: Delete vendor with linked events — shows 409 error toast
   - [x] Subtask 6.4: Delete vendor without links — removed from list
+
+- [x] **Task 7: Manage event sponsor attachments**
+  - [x] Subtask 7.1: `GET /api/events/:id/sponsors` returns sponsor array for the event
+  - [x] Subtask 7.2: `POST /api/events/:id/sponsors` attaches vendor as sponsor
+  - [x] Subtask 7.3: `PATCH /api/events/:id/sponsors/:vendorId` updates tier or display order
+  - [x] Subtask 7.4: `DELETE /api/events/:id/sponsors/:vendorId` removes sponsor attachment
+  - [x] Subtask 7.5: Event workspace renders sponsor management UI using the shared vendor roster
 
 ---
 
@@ -164,7 +187,7 @@ const initials = name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase
 
 - DO NOT use Zustand for vendor state — React Query cache is sufficient
 - DO NOT add vendor navigation to sidebar in this story — that is Epic 10/11 scope
-- DO NOT implement vendor-to-event linking UI here — that is Story 4.15
+- DO NOT create a separate vendor-email source on the event object — report delivery must resolve from linked vendor records
 
 ---
 
@@ -211,3 +234,4 @@ const initials = name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase
 |------|--------|--------|
 | 2026-03-26 | Story created from SCP 2026-03-26j | bmad-dev-story |
 | 2026-03-26 | All 6 tasks implemented; 133/134 tests pass; 0 TS errors | bmad-dev-story |
+| 2026-03-27 | Updated to match merged Epic 4.14 scope including event sponsor attachment | OpenCode |

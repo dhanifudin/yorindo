@@ -6,7 +6,7 @@ Both development teams have fully operational environments with a shared OpenAPI
 **Architecture requirements:** Both repo scaffolds, OpenAPI 3.0 spec, Docker Compose (prod + dev override), DB migrations 001–004, CI/CD pipeline (GitHub Actions → GHCR → VPS SSH deploy), MSW handlers for all API domains, DevToolbar (role switcher), `src/types/api.ts` FE-owned type definitions.
 
 ## Epic 2: Team & Access Management
-Super admin can create and manage internal user accounts (admin, staff, viewer); team members can securely log in with JWT and are automatically restricted to their role's permitted capabilities. Audit trail begins here.
+Admin can create and manage internal user accounts (`admin`, `viewer`, `staff`); team members can securely log in with JWT and are automatically restricted to their role's permitted capabilities. A `participant` role exists only when experimental participant features are enabled. Audit trail begins here.
 **FRs covered:** FR47, FR48
 **FR49 audit trail:** login, account-created, role-changed actions logged in this epic.
 **NFRs:** NFR-S1, NFR-S2, NFR-S3, NFR-S9, NFR-S10, NFR-S11
@@ -19,7 +19,7 @@ Admin can build and maintain a clean, qualified participant database by importin
 
 ## Epic 4: Event Configuration & Management
 Admin can create, configure, clone, publish, and manage events through their full lifecycle — with capacity management, survey template builder, segmentation criteria preview, state machine controls, soft delete with recovery, and event cancellation.
-**FRs covered:** FR1, FR2, FR3, FR4, FR5, FR6, FR7, FR8, FR50, FR51, FR52 (event-context confirmation dialogs), FR53, FR61
+**FRs covered:** FR1, FR2, FR3, FR4, FR5, FR6, FR7, FR8, FR45, FR50, FR51, FR52 (event-context confirmation dialogs), FR53, FR61
 **FR49 audit trail:** event.created, event.published, event.cancelled, event.deleted, event.restored, event.state-override actions logged in this epic.
 **NFRs:** NFR-SC2, NFR-P3
 
@@ -36,14 +36,14 @@ Participants can discover events and complete registration via mobile-first form
 **NFRs:** NFR-P1, NFR-P2, NFR-P11, NFR-R3, NFR-SC6, NFR-S7, NFR-S14, NFR-A1
 
 ## Epic 7: Event-Day Check-in (Offline-First PWA)
-Staff can run seamless event-day check-in via QR scan, OTP identity recovery, name search, and manual override — fully offline-resilient with automatic background sync on reconnect and real-time attendance monitoring for admins.
+Staff can run seamless event-day check-in via QR scan, KTP-assisted identity verification, name search, and manual override — fully offline-resilient with automatic background sync on reconnect and real-time attendance monitoring for admins.
 **FRs covered:** FR33, FR34, FR35, FR36, FR37, FR38, FR39
-**FR49 audit trail:** checkin.scan, checkin.otp-recovery, checkin.manual-override actions logged in this epic.
-**NFRs:** NFR-P5, NFR-P6, NFR-P9, NFR-R2, NFR-R4, NFR-R5, NFR-R6, NFR-DI1, NFR-DI2, NFR-DI5, NFR-PWA1, NFR-PWA2, NFR-PWA3, NFR-SC4, NFR-S4, NFR-S5, NFR-A2
+**FR49 audit trail:** checkin.scan, checkin.ktp-verified, checkin.manual-override actions logged in this epic.
+**NFRs:** NFR-P5, NFR-P6, NFR-R2, NFR-R5, NFR-R6, NFR-DI1, NFR-DI2, NFR-DI5, NFR-PWA1, NFR-PWA2, NFR-PWA3, NFR-SC4, NFR-A2
 
 ## Epic 8: Analytics, Reporting & YoriMind
 Admin can access AI-powered event performance insights via the YoriMind panel with funnel charts and demographic breakdowns; vendors can securely download post-event reports via time-limited magic links with mandatory DPA acceptance and full access logging.
-**FRs covered:** FR40, FR41, FR42, FR43, FR44, FR45, FR46
+**FRs covered:** FR40, FR41, FR42, FR43, FR44, FR46
 **FR49 audit trail:** report.generated, report.downloaded, vendor-link.accessed actions logged in this epic.
 **NFRs:** NFR-P3, NFR-P7, NFR-P8, NFR-S12, NFR-S13
 
