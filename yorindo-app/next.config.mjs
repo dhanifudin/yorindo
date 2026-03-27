@@ -1,3 +1,4 @@
+import { withSentryConfig } from '@sentry/nextjs'
 import withSerwistInit from '@serwist/next'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -24,4 +25,21 @@ const nextConfig = {
   }, // keep Turbopack scoped to yorindo-app so it does not infer the repo root from sibling lockfiles
 }
 
-export default isExport ? nextConfig : withSerwist(nextConfig)
+const baseConfig = isExport ? nextConfig : withSerwist(nextConfig)
+
+export default withSentryConfig(baseConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+
+  // Upload more client files for readable stack traces
+  widenClientFileUpload: true,
+
+  // Proxy Sentry requests through /monitoring to bypass ad-blockers
+  tunnelRoute: '/monitoring',
+
+  // Only log during CI builds
+  silent: !process.env.CI,
+
+  // Note: tree-shaking options are webpack-only and intentionally omitted — this project uses Turbopack
+})
