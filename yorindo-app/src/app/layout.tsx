@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { MSWProvider } from "@/components/dev/MSWProvider";
 import { DevToolbar } from "@/components/dev/DevToolbar";
@@ -13,6 +13,13 @@ export const metadata: Metadata = {
   title: "Yorindo",
   description: "Event management platform",
   manifest: "/manifest.json",
+  icons: {
+    icon: [{ url: "/favicon.jpg", type: "image/jpeg" }],
+    shortcut: [{ url: "/favicon.jpg", type: "image/jpeg" }],
+  },
+};
+
+export const viewport: Viewport = {
   themeColor: "#184A9A",
 };
 

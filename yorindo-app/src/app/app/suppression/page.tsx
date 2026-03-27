@@ -108,8 +108,8 @@ export default function SuppressionPage() {
           ))}
         </div>
       ) : (
-        <Card>
-          <Table>
+        <Card className="w-full overflow-hidden">
+          <Table className="min-w-[640px] lg:min-w-[760px] xl:min-w-full">
             <TableHeader>
               <TableRow>
                 <TableHead>Nama</TableHead>

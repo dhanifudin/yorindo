@@ -151,8 +151,8 @@ export default function UsersPage() {
           </div>
 
           {/* Desktop table */}
-          <Card className="hidden md:block">
-            <Table>
+          <Card className="hidden w-full overflow-hidden md:block">
+            <Table className="lg:min-w-[900px] xl:min-w-full">
               <TableHeader>
                 <TableRow>
                   <TableHead>Nama</TableHead>

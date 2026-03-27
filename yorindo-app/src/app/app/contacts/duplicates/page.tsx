@@ -211,8 +211,8 @@ export default function DuplicatesPage() {
             <p className="text-muted-foreground text-center py-12">Tidak ada profil duplikat yang terdeteksi</p>
           )}
           {data?.data && data.data.length > 0 && (
-            <Card>
-              <Table>
+            <Card className="w-full overflow-hidden">
+              <Table className="md:min-w-[640px] xl:min-w-full">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Record A</TableHead>

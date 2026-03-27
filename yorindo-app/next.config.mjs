@@ -1,7 +1,10 @@
 import withSerwistInit from '@serwist/next'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 const isExport = process.env.NEXT_EXPORT === 'true'
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ''
+const workspaceRoot = path.dirname(fileURLToPath(import.meta.url))
 
 const withSerwist = withSerwistInit({
   swSrc: 'src/app/sw.ts',
@@ -16,7 +19,9 @@ const nextConfig = {
   ...(isExport && { trailingSlash: true }),
   ...(basePath && { basePath }),
   ...(isExport && { images: { unoptimized: true } }),
-  turbopack: {}, // serwist adds a webpack config internally; empty turbopack config silences the Next.js 16 warning
+  turbopack: {
+    root: workspaceRoot,
+  }, // keep Turbopack scoped to yorindo-app so it does not infer the repo root from sibling lockfiles
 }
 
 export default isExport ? nextConfig : withSerwist(nextConfig)
