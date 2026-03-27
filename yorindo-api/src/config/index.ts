@@ -34,7 +34,7 @@ export const config = {
   databaseUrl: optional('DATABASE_URL'),
   redisUrl: optional('REDIS_URL'),
   snapshotDir: optional('SNAPSHOT_DIR', '/data/snapshots'),
-  uploadsDir: optional('UPLOADS_DIR', '/tmp/uploads'),
+  uploadsDir: optional('UPLOADS_DIR', 'uploads'),
 
   // External API keys — Phase 2 only; unused in Phase 1
   openaiApiKey: optional('OPENAI_API_KEY'),

@@ -21,7 +21,7 @@ In Phase 1, `IEtlNormalizationService` is wired to `MockEtlNormalizationService`
 ## Acceptance Criteria
 
 **AC1:** Given an ETL job is dequeued by `etl.worker.ts`,
-When the file is read from `uploads_tmp`,
+When the file is read from `uploads`,
 Then `xlsx` parses it into an array of row objects and the temp file is deleted after parsing
 
 **AC2:** Given 50 rows are sent to the AI normalization service (IEtlNormalizationService.normalizeBatch()) in a batch,
@@ -72,7 +72,7 @@ yorindo-api/src/
     mock/
       EtlNormalizationService.ts        ← Mock (already exists from Story 1.8)
   lib/
-    storage.ts                     ← readFile, deleteFile for uploads_tmp
+    storage.ts                     ← readFile, deleteFile for uploads
 ```
 
 ### Architecture Constraints (MUST FOLLOW)

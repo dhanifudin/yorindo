@@ -10,7 +10,7 @@ Implement the Fastify API endpoints for uploading Excel/CSV files and triggering
 - Validates file type to allow only `.xlsx` or `.csv`. Rejects unsupported types with HTTP 400 (`{ error: { code: 'INVALID_FILE_TYPE' } }`).
 - Validates file size (limit to 10MB). Rejects excessively large files with HTTP 400 (`{ error: { code: 'FILE_TOO_LARGE' } }`).
 - Requires `admin` authentication (use existing Role/Auth middleware).
-- Saves the uploaded file to a temporary storage directory (`uploads_tmp`).
+- Saves the uploaded file to a temporary storage directory (`uploads`).
 - Enqueues a job in the `etl` BullMQ queue with the saved file's path and the uploader's user ID.
 - Returns HTTP 202 with `{ jobId, status: 'queued' }`.
 
@@ -29,7 +29,7 @@ Implement the Fastify API endpoints for uploading Excel/CSV files and triggering
 ### Tech Stack Constraints
 - **Framework:** Fastify 4.x. Use `@fastify/multipart` for parsing incoming files. Ensure limits are passed to the plugin during registration to guard against payload exhaustion.
 - **Queue:** BullMQ. Import the pre-configured `etlQueue` from `src/lib/queue.ts`.
-- **Storage Node:** Save files securely using standard Node APIs (`fs.promises` or `src/lib/storage.ts`) inside an `uploads_tmp` directory in the root or data volume.
+- **Storage Node:** Save files securely using standard Node APIs (`fs.promises` or `src/lib/storage.ts`) inside an `uploads` directory in the app root or `/app/uploads` in Docker.
 - **Validation:** Standardized error responses using the `FastifyError` object format.
 
 ### Architecture Compliance

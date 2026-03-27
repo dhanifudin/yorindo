@@ -20,6 +20,9 @@ services:
       REPOSITORY_MODE: memory
       DATABASE_URL: postgresql://yorindo:${POSTGRES_PASSWORD}@postgres:5432/yorindo
       REDIS_URL: redis://redis:6379
+      UPLOADS_DIR: /app/uploads
+    volumes:
+      - api_uploads:/app/uploads
     depends_on:
       - postgres
       - redis
@@ -61,5 +64,6 @@ services:
     restart: unless-stopped
 
 volumes:
+  api_uploads:
   postgres_data:
   redis_data:
