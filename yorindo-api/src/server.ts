@@ -8,6 +8,7 @@ import { healthRoutes } from './routes/health.js'
 import { participantRoutes } from './routes/participants.routes.js'
 import { authRoutes } from './routes/auth.routes.js'
 import { contactRoutes } from './routes/contacts.routes.js'
+import { etlRoutes } from './routes/etl.routes.js'
 
 export async function buildServer() {
   const fastify = Fastify({
@@ -58,6 +59,7 @@ export async function buildServer() {
   await fastify.register(participantRoutes)
   await fastify.register(authRoutes)
   await fastify.register(contactRoutes)
+  await fastify.register(etlRoutes)
 
   return fastify
 }
