@@ -16,11 +16,9 @@ export const PASSWORD123_HASH = bcrypt.hashSync('Password123!', 10)
 
 // ─── User IDs (one per role) ──────────────────────────────────────────────────
 export const SEED_USER_IDS = {
-  super_admin:    'cuid2superadmin000000001',
-  event_admin:    'cuid2eventadmin000000001',
-  staff:          'cuid2staffuser000000001x',
-  vendor_client:  'cuid2vendorclient0000001',
-  participant:    'cuid2participant0000001x',
+  admin:  'cuid2adminuser000000001x',
+  staff:  'cuid2staffuser000000001x',
+  viewer: 'cuid2vieweruser00000001x',
 } as const
 
 // ─── Vendor IDs ────────────────────────────────────────────────────────────────

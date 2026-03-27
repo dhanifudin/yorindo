@@ -6,7 +6,7 @@ import { getRedisOptional } from '../lib/redis.js'
 
 export interface JwtPayload {
   sub: string
-  role: 'super_admin' | 'event_admin' | 'staff' | 'vendor_client' | 'participant'
+  role: 'admin' | 'viewer' | 'staff'
   jti: string
   iat: number
   exp: number

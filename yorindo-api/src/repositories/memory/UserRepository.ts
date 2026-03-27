@@ -14,11 +14,9 @@ export class InMemoryUserRepository implements IUserRepository {
 
   private _seed(): void {
     const seedUsers: Array<{ role: UserRole; email: string; name: string }> = [
-      { role: 'super_admin',   email: 'super@yorindo.id',       name: 'Super Admin' },
-      { role: 'event_admin',   email: 'admin@yorindo.id',       name: 'Admin Yorindo' },
-      { role: 'staff',         email: 'staff@yorindo.id',       name: 'Staff Yorindo' },
-      { role: 'vendor_client', email: 'vendor@yorindo.id',      name: 'Vendor Client' },
-      { role: 'participant',   email: 'participant@yorindo.id', name: 'Peserta Demo' },
+      { role: 'admin',  email: 'admin@yorindo.id',  name: 'Admin Yorindo' },
+      { role: 'staff',  email: 'staff@yorindo.id',  name: 'Staff Yorindo' },
+      { role: 'viewer', email: 'viewer@yorindo.id', name: 'Viewer Yorindo' },
     ]
 
     for (const { role, email, name } of seedUsers) {

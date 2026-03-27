@@ -1,34 +1,44 @@
 import { http, HttpResponse, delay } from 'msw'
 import { faker } from '@faker-js/faker'
 import type { User } from '@/types/api'
+import { makeMockCuid2 } from './id'
+
+export const MOCK_USER_IDS = {
+  admin: 'cuid2adminuser000000001x',
+  staff: 'cuid2staffuser000000001x',
+  viewer: 'cuid2vieweruser00000001x',
+  devAdmin: 'cuid2devadminuser0000001',
+  devStaff: 'cuid2devstaffuser0000001',
+  devViewer: 'cuid2devvieweruser000001',
+} as const
 
 // user_id -> Set of eventIds
 export const userEventAssignments: Map<string, Set<string>> = new Map([
-  ['user-002', new Set(['event-001', 'event-003'])],
-  ['user-003', new Set(['event-001'])],
+  [MOCK_USER_IDS.staff, new Set(['event-001', 'event-003'])],
+  [MOCK_USER_IDS.viewer, new Set(['event-001'])],
 ])
 
 export let usersStore: User[] = [
   {
-    id: 'user-001',
-    name: 'Super Admin',
-    email: 'admin@yorindo.app',
+    id: MOCK_USER_IDS.admin,
+    name: 'Admin Yorindo',
+    email: 'admin@yorindo.id',
     role: 'admin',
     createdAt: new Date('2026-01-01').toISOString(),
     updatedAt: new Date('2026-01-01').toISOString(),
   },
   {
-    id: 'user-002',
+    id: MOCK_USER_IDS.staff,
     name: 'Budi Santoso',
-    email: 'budi@yorindo.app',
+    email: 'staff@yorindo.id',
     role: 'staff',
     createdAt: new Date('2026-02-10').toISOString(),
     updatedAt: new Date('2026-02-10').toISOString(),
   },
   {
-    id: 'user-003',
-    name: 'Sari Dewi',
-    email: 'sari@yorindo.app',
+    id: MOCK_USER_IDS.viewer,
+    name: 'Sari Viewer',
+    email: 'viewer@yorindo.id',
     role: 'viewer',
     createdAt: new Date('2026-02-15').toISOString(),
     updatedAt: new Date('2026-02-15').toISOString(),
@@ -41,12 +51,12 @@ export const userHandlers = [
     const auth = request.headers.get('Authorization') ?? ''
     const token = auth.replace('Bearer ', '')
     const DEV_IDS: Record<string, User> = {
-      'dev-admin':  { id: 'dev-admin',  name: 'Super Admin',  email: 'admin@yorindo.app', role: 'admin',  createdAt: '', updatedAt: '' },
-      'dev-staff':  { id: 'dev-staff',  name: 'Budi Santoso', email: 'budi@yorindo.app',  role: 'staff',  createdAt: '', updatedAt: '' },
-      'dev-viewer': { id: 'dev-viewer', name: 'Sari Dewi',    email: 'sari@yorindo.app',  role: 'viewer', createdAt: '', updatedAt: '' },
+      [MOCK_USER_IDS.devAdmin]:  { id: MOCK_USER_IDS.devAdmin,  name: 'Admin Yorindo', email: 'admin@yorindo.id', role: 'admin', createdAt: '', updatedAt: '' },
+      [MOCK_USER_IDS.devStaff]:  { id: MOCK_USER_IDS.devStaff,  name: 'Budi Santoso',  email: 'staff@yorindo.id', role: 'staff', createdAt: '', updatedAt: '' },
+      [MOCK_USER_IDS.devViewer]: { id: MOCK_USER_IDS.devViewer, name: 'Sari Viewer',   email: 'viewer@yorindo.id', role: 'viewer', createdAt: '', updatedAt: '' },
     }
     if (token === 'dev-token') {
-      const userId = request.headers.get('X-User-Id') ?? 'dev-admin'
+      const userId = request.headers.get('X-User-Id') ?? MOCK_USER_IDS.devAdmin
       const devUser = DEV_IDS[userId]
       if (devUser) return HttpResponse.json(devUser)
       return HttpResponse.json(usersStore.find((u) => u.id === userId) ?? usersStore[0])
@@ -65,7 +75,7 @@ export const userHandlers = [
     await delay(400)
     const body = await request.json() as { email: string; name: string; role: User['role']; password: string }
     const newUser: User = {
-      id: faker.string.uuid(),
+      id: makeMockCuid2(),
       email: body.email,
       name: body.name,
       role: body.role,

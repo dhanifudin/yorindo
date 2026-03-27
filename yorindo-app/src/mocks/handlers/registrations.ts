@@ -3,6 +3,7 @@ import { faker } from '@faker-js/faker'
 import type { Registration, RegistrationWithContact, PaginatedResponse } from '@/types/api'
 import { contactsPool } from './contacts'
 import { djb2 } from '@/lib/djb2'
+import { makeMockCuid2 } from './id'
 
 type StoredRegistration = Registration & { flagOverride: boolean }
 
@@ -151,7 +152,7 @@ export const registrationHandlers = [
   http.post('/api/registrations', async () => {
     await delay(400)
     const newReg: StoredRegistration = {
-      id: faker.string.uuid(),
+      id: makeMockCuid2(),
       contactId: contactsPool[registrationsStore.length % contactsPool.length].id,
       eventId: 'event-001',
       status: 'pending',
@@ -192,7 +193,7 @@ export const registrationHandlers = [
       eventName: 'Seminar ERP Jakarta',
       eventDate: '2026-04-15T02:00:00.000Z',
       eventLocation: 'Jakarta Convention Center',
-      registrationId: faker.string.uuid(),
+      registrationId: makeMockCuid2(),
     })
   }),
 
@@ -208,12 +209,12 @@ export const registrationHandlers = [
     return HttpResponse.json({
       message: 'Registrasi berhasil dikonfirmasi',
       registration: {
-        id: faker.string.uuid(),
+        id: makeMockCuid2(),
         status: 'pending',
         eventName: 'Seminar ERP Jakarta',
         eventSlug: 'seminar-erp-jakarta',
         participantName: 'Budi Santoso',
-        contactId: 'contact-001',
+        contactId: makeMockCuid2(),
         participantEmail: 'budi.santoso@email.com',
       },
     })

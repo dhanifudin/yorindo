@@ -1,4 +1,5 @@
 import type { IQueueService, QueueName, EnqueueOptions, JobStatus } from '../../../interfaces/services/IQueueService.js'
+import { createId } from '@paralleldrive/cuid2'
 
 interface EnqueuedJob {
   jobId: string
@@ -12,7 +13,7 @@ export class MockQueueService implements IQueueService {
   private enqueuedJobs: EnqueuedJob[] = []
 
   async enqueue(queueName: QueueName, job: object, _opts?: EnqueueOptions): Promise<string> {
-    const jobId = `mock-job-${crypto.randomUUID()}`
+    const jobId = `mock-job-${createId()}`
     this.enqueuedJobs.push({
       jobId,
       queueName,

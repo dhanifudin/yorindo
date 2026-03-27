@@ -15,7 +15,7 @@ export class InMemoryRawUploadRepository implements IRawUploadRepository {
       {
         id: SEED_UPLOAD_IDS[0]!,
         filename: 'contacts-batch-maret-2026.xlsx',
-        uploadedBy: SEED_USER_IDS.event_admin,
+        uploadedBy: SEED_USER_IDS.admin,
         rowCount: 100,
         upsertedCount: 90,
         flaggedCount: 10,
@@ -37,7 +37,7 @@ export class InMemoryRawUploadRepository implements IRawUploadRepository {
       {
         id: SEED_UPLOAD_IDS[2]!,
         filename: 'contacts-invalid-format.csv',
-        uploadedBy: SEED_USER_IDS.event_admin,
+        uploadedBy: SEED_USER_IDS.admin,
         rowCount: 50,
         upsertedCount: 0,
         flaggedCount: 10,

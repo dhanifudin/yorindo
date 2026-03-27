@@ -39,7 +39,7 @@ describe('useCreateUser', () => {
       name: 'Test User',
       email: 'test@yorindo.app',
       role: 'staff',
-      password: 'password123',
+      password: 'Password123!',
     })
     await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 3000 })
     expect(result.current.data?.email).toBe('test@yorindo.app')
