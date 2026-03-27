@@ -106,7 +106,7 @@ So that no attendance record is lost due to network issues during the event.
 
 As a staff member,
 I want to verify a participant's identity using their physical KTP (national ID card) when they cannot present their QR ticket,
-So that legitimate attendees are not turned away due to a lost or inaccessible ticket — without requiring network access to deliver an OTP.
+So that legitimate attendees are not turned away due to a lost or inaccessible ticket — without depending on any network-delivered recovery step.
 
 **Acceptance Criteria:**
 
@@ -149,7 +149,7 @@ So that legitimate attendees are not turned away due to a lost or inaccessible t
 
 As a staff member,
 I want to search for participants by name and perform a manual check-in with a logged override reason,
-So that I can handle edge cases where neither QR nor OTP is available.
+So that I can handle edge cases where neither QR nor KTP verification resolves the participant immediately.
 
 **Acceptance Criteria:**
 
@@ -179,7 +179,7 @@ So that I can make real-time decisions about staffing and capacity.
 
 **Acceptance Criteria:**
 
-**Given** an event is `live` and I am on the event detail page (`/admin/events/:id`),
+**Given** an event is `live` and I am on the event detail page (`/app/events/:id/check-in`),
 **When** the page renders,
 **Then** `GET /api/events/:id/attendance-stats` is polled every 5 seconds and the dashboard shows: total approved, attended count, attendance rate %, and a live check-in activity feed
 

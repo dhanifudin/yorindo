@@ -8,7 +8,7 @@ info:
     Yorindo event management platform API.
 
     All dates are ISO 8601 UTC strings (e.g., "2026-04-15T02:00:00.000Z").
-    All IDs are UUIDs (string).
+    All IDs are opaque strings.
     All errors use { error: { code, message, details[] } } format exclusively.
     Rate limit: POST /api/registrations is limited to 10 requests/hour per IP.
 
@@ -116,7 +116,7 @@ components:
       properties:
         jobId:
           type: string
-          example: etl:upload:1234
+          example: etl-upload-001
         status:
           type: string
           enum: [queued]
@@ -129,8 +129,7 @@ components:
       properties:
         id:
           type: string
-          format: uuid
-          example: 550e8400-e29b-41d4-a716-446655440000
+          example: industry-001
         slug:
           type: string
           example: teknologi
@@ -144,8 +143,7 @@ components:
       properties:
         id:
           type: string
-          format: uuid
-          example: 550e8400-e29b-41d4-a716-446655440001
+          example: job-title-001
         slug:
           type: string
           example: direktur
@@ -160,8 +158,7 @@ components:
       properties:
         id:
           type: string
-          format: uuid
-          example: 550e8400-e29b-41d4-a716-446655440000
+          example: contact-001
         name:
           type: string
           example: Budi Santoso
@@ -220,7 +217,6 @@ components:
       properties:
         id:
           type: string
-          format: uuid
         rawData:
           type: object
           additionalProperties: true
@@ -254,8 +250,7 @@ components:
       properties:
         id:
           type: string
-          format: uuid
-          example: 550e8400-e29b-41d4-a716-446655440000
+          example: event-001
         name:
           type: string
           example: Seminar ERP Jakarta
@@ -409,14 +404,11 @@ components:
       properties:
         id:
           type: string
-          format: uuid
-          example: 550e8400-e29b-41d4-a716-446655440000
+          example: registration-001
         contactId:
           type: string
-          format: uuid
         eventId:
           type: string
-          format: uuid
         status:
           type: string
           enum: [pending, confirmed, approved, rejected, waitlisted, attended, cancelled]
@@ -477,7 +469,6 @@ components:
       properties:
         eventId:
           type: string
-          format: uuid
         name:
           type: string
         email:
@@ -531,7 +522,6 @@ components:
           properties:
             id:
               type: string
-              format: uuid
             contactName:
               type: string
               example: Budi Santoso
@@ -573,7 +563,6 @@ components:
           type: array
           items:
             type: string
-            format: uuid
           minItems: 1
           description: Contact IDs to flag
         flagCategory:
@@ -599,7 +588,6 @@ components:
           type: array
           items:
             type: string
-            format: uuid
           minItems: 1
           description: Registration IDs to approve
 
@@ -623,7 +611,6 @@ components:
       properties:
         id:
           type: string
-          format: uuid
         email:
           type: string
           format: email
@@ -675,13 +662,10 @@ components:
       properties:
         id:
           type: string
-          format: uuid
         userId:
           type: string
-          format: uuid
         eventId:
           type: string
-          format: uuid
         grantedAt:
           type: string
           format: date-time
@@ -712,7 +696,6 @@ components:
           properties:
             id:
               type: string
-              format: uuid
             role:
               type: string
               enum: [admin, staff, viewer]
@@ -833,7 +816,6 @@ components:
       properties:
         templateId:
           type: string
-          format: uuid
         filters:
           type: object
           properties:
@@ -848,7 +830,6 @@ components:
           type: array
           items:
             type: string
-            format: uuid
           description: "AI-curated contact list from audience recommendations. Mutually exclusive with filters — omit when using filters."
         scheduledAt:
           type: string
@@ -865,7 +846,6 @@ components:
       properties:
         jobId:
           type: string
-          format: uuid
         status:
           type: string
           enum: [queued, scheduled]
@@ -884,7 +864,6 @@ components:
       properties:
         contactId:
           type: string
-          format: uuid
         name:
           type: string
         email:
@@ -942,7 +921,6 @@ components:
       properties:
         eventId:
           type: string
-          format: uuid
         name:
           type: string
         eventDate:
@@ -978,8 +956,7 @@ components:
       properties:
         id:
           type: string
-          format: uuid
-          example: 550e8400-e29b-41d4-a716-446655440000
+          example: vendor-001
         name:
           type: string
           example: Alibaba Cloud
@@ -1036,6 +1013,27 @@ components:
         notes:
           type: string
 
+    UpdateVendorBody:
+      type: object
+      properties:
+        name:
+          type: string
+        contact_email:
+          type: string
+          format: email
+        industry:
+          type: string
+        logo_url:
+          type: string
+          format: uri
+          nullable: true
+        website:
+          type: string
+          format: uri
+          nullable: true
+        notes:
+          type: string
+
     PaginatedVendors:
       type: object
       required: [data, pagination]
@@ -1054,13 +1052,10 @@ components:
       properties:
         id:
           type: string
-          format: uuid
         event_id:
           type: string
-          format: uuid
         vendor_id:
           type: string
-          format: uuid
         vendor_name:
           type: string
           example: Alibaba Cloud
@@ -1079,12 +1074,22 @@ components:
       properties:
         vendorId:
           type: string
-          format: uuid
         tier:
           type: string
           enum: [premium, standard, supporter]
           nullable: true
         displayOrder:
+          type: integer
+          nullable: true
+
+    UpdateSponsorBody:
+      type: object
+      properties:
+        tier:
+          type: string
+          enum: [premium, standard, supporter]
+          nullable: true
+        display_order:
           type: integer
           nullable: true
 
@@ -1095,7 +1100,7 @@ components:
       properties:
         id:
           type: string
-          example: tmpl-001
+          example: template-001
         name:
           type: string
           example: Undangan Event
@@ -1224,7 +1229,7 @@ components:
       properties:
         id:
           type: string
-          example: sup-1
+          example: suppression-001
         name:
           type: string
           nullable: true
@@ -1279,7 +1284,7 @@ components:
       properties:
         id:
           type: string
-          example: dup-group-1
+          example: duplicate-group-001
         primary:
           $ref: '#/components/schemas/Contact'
         duplicate:
@@ -1314,7 +1319,6 @@ components:
       properties:
         eventId:
           type: string
-          format: uuid
         eventName:
           type: string
           example: Seminar ERP Jakarta
@@ -1373,7 +1377,6 @@ components:
       properties:
         eventId:
           type: string
-          format: uuid
         totalInvited:
           type: integer
           example: 500
@@ -1427,7 +1430,7 @@ components:
       properties:
         token:
           type: string
-          example: magic-token-valid
+          example: vendor-report-token-001
         eventName:
           type: string
           example: Seminar ERP Jakarta
@@ -1443,6 +1446,37 @@ components:
           allOf:
             - $ref: '#/components/schemas/EventReport'
 
+    VendorLinkResponse:
+      type: object
+      required: [sent, eventId, vendorId, contactEmail, expiresAt]
+      properties:
+        sent:
+          type: boolean
+          example: true
+        eventId:
+          type: string
+        vendorId:
+          type: string
+        contactEmail:
+          type: string
+          format: email
+          example: sponsor@alibabacloud.com
+        expiresAt:
+          type: string
+          format: date-time
+          example: "2026-04-22T09:00:00.000Z"
+
+    VendorDpaAcceptanceResponse:
+      type: object
+      required: [accepted, dpaVersion]
+      properties:
+        accepted:
+          type: boolean
+          example: true
+        dpaVersion:
+          type: string
+          example: v2.1
+
     # ─── Participant ────────────────────────────────────────────────────────────
     ParticipantRegistration:
       type: object
@@ -1450,11 +1484,9 @@ components:
       properties:
         id:
           type: string
-          format: uuid
-          example: preg-001
+          example: participant-registration-001
         eventId:
           type: string
-          format: uuid
         eventName:
           type: string
           example: Seminar ERP Jakarta
@@ -1471,7 +1503,7 @@ components:
           example: approved
         ticketToken:
           type: string
-          example: TICKET-A1B2C3
+          example: ticket-token-001
 
     # ─── Blast ─────────────────────────────────────────────────────────────────
     BlastHistoryItem:
@@ -1480,7 +1512,7 @@ components:
       properties:
         id:
           type: string
-          example: blast-hist-001
+          example: blast-history-001
         channel:
           type: string
           enum: [email, whatsapp]
@@ -1505,13 +1537,11 @@ components:
       properties:
         eventId:
           type: string
-          format: uuid
         channel:
           type: string
           enum: [email, whatsapp]
         templateId:
           type: string
-          format: uuid
         filters:
           type: object
           description: Manual audience filter criteria (mutually exclusive with contactIds)
@@ -1526,7 +1556,6 @@ components:
           type: array
           items:
             type: string
-            format: uuid
           description: AI-curated contact list (mutually exclusive with filters)
         scheduledAt:
           type: string
@@ -1560,7 +1589,6 @@ components:
           properties:
             id:
               type: string
-              format: uuid
             name:
               type: string
               example: Konferensi Teknologi 2026
@@ -1594,7 +1622,6 @@ components:
       properties:
         id:
           type: string
-          format: uuid
         name:
           type: string
           example: Budi Santoso
@@ -1603,7 +1630,7 @@ components:
           example: "+6281234567890"
         ticketToken:
           type: string
-          example: ABC123XYZ
+          example: participant-cache-token-001
         status:
           type: string
           enum: [approved, attended]
@@ -1631,7 +1658,7 @@ components:
           example: Request queued
         requestId:
           type: string
-          format: uuid
+          example: data-rights-request-001
 
 paths:
   # ─────────────────────────────────────────────────────────────────────────────
@@ -1922,7 +1949,6 @@ paths:
           required: true
           schema:
             type: string
-            format: uuid
       requestBody:
         required: true
         content:
@@ -1979,7 +2005,6 @@ paths:
           required: true
           schema:
             type: string
-            format: uuid
       responses:
         '200':
           description: AI-recommended events for this contact
@@ -2001,6 +2026,209 @@ paths:
                 $ref: '#/components/schemas/ApiError'
         '404':
           description: Contact not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # VENDORS
+  # ─────────────────────────────────────────────────────────────────────────────
+  /vendors:
+    get:
+      summary: List vendors with pagination (admin/viewer)
+      operationId: listVendors
+      tags: [Vendors]
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: Paginated vendor list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedVendors'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+    post:
+      summary: Create a new vendor (admin only)
+      operationId: createVendor
+      tags: [Vendors]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateVendorBody'
+      responses:
+        '201':
+          description: Vendor created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vendor'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Vendor already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /vendors/{id}:
+    get:
+      summary: Get vendor by ID (admin/viewer)
+      operationId: getVendor
+      tags: [Vendors]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Vendor detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vendor'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Vendor not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+    patch:
+      summary: Update vendor details (admin only)
+      operationId: updateVendor
+      tags: [Vendors]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateVendorBody'
+      responses:
+        '200':
+          description: Vendor updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vendor'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Vendor not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+    delete:
+      summary: Delete vendor (admin only)
+      operationId: deleteVendor
+      tags: [Vendors]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Vendor deleted
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Vendor not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Vendor is still linked to one or more events
           content:
             application/json:
               schema:
@@ -2091,7 +2319,6 @@ paths:
           required: true
           schema:
             type: string
-            format: uuid
       responses:
         '200':
           description: Event detail
@@ -2123,7 +2350,6 @@ paths:
           required: true
           schema:
             type: string
-            format: uuid
       requestBody:
         required: true
         content:
@@ -2173,7 +2399,6 @@ paths:
           required: true
           schema:
             type: string
-            format: uuid
       responses:
         '204':
           description: Event soft-deleted
@@ -2196,6 +2421,369 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
 
+  /events/{id}/sponsors:
+    get:
+      summary: List sponsors attached to an event
+      operationId: listEventSponsors
+      tags: [Events, Vendors]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Sponsors attached to the event
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EventSponsor'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+    post:
+      summary: Attach a vendor as sponsor to an event (admin only)
+      operationId: attachEventSponsor
+      tags: [Events, Vendors]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AttachSponsorBody'
+      responses:
+        '201':
+          description: Sponsor attached to event
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventSponsor'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Event or vendor not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Vendor already attached to this event
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /events/{id}/sponsors/{vendorId}:
+    patch:
+      summary: Update sponsor tier or display order on an event (admin only)
+      operationId: updateEventSponsor
+      tags: [Events, Vendors]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: vendorId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSponsorBody'
+      responses:
+        '200':
+          description: Sponsor updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventSponsor'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Sponsor attachment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+    delete:
+      summary: Remove sponsor attachment from an event (admin only)
+      operationId: removeEventSponsor
+      tags: [Events, Vendors]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: vendorId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Sponsor removed from event
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Sponsor attachment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /events/{id}/report:
+    get:
+      summary: Get post-event attendance report (admin/viewer)
+      operationId: getEventReport
+      tags: [Events, Reports]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Event report data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventReport'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Event or report not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /events/{id}/report/regenerate:
+    post:
+      summary: Regenerate post-event report (admin only)
+      operationId: regenerateEventReport
+      tags: [Events, Reports]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '202':
+          description: Report regeneration job queued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AsyncJobResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /events/{id}/report/download:
+    get:
+      summary: Download post-event report file (admin/viewer)
+      operationId: downloadEventReport
+      tags: [Events, Reports]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: format
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [xlsx, pdf]
+      responses:
+        '200':
+          description: Report file download
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Event or report not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /events/{id}/vendor-link:
+    post:
+      summary: Generate and deliver vendor report magic link for an event (admin only)
+      operationId: generateVendorReportLink
+      tags: [Events, Reports, Vendors]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Vendor magic link generated and delivered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VendorLinkResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Event or eligible vendor sponsor not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Event has no sponsor eligible for report delivery
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
   /events/{id}/registrations:
     get:
       summary: List registrations for an event
@@ -2209,7 +2797,6 @@ paths:
           required: true
           schema:
             type: string
-            format: uuid
         - $ref: '#/components/parameters/PageParam'
         - $ref: '#/components/parameters/PageSizeParam'
         - name: status
@@ -2258,7 +2845,6 @@ paths:
           required: true
           schema:
             type: string
-            format: uuid
       responses:
         '200':
           description: Analytics data
@@ -2298,7 +2884,6 @@ paths:
           required: true
           schema:
             type: string
-            format: uuid
       responses:
         '200':
           description: YoriMind AI analysis result
@@ -2338,7 +2923,6 @@ paths:
           required: true
           schema:
             type: string
-            format: uuid
       responses:
         '200':
           description: Attendance statistics
@@ -2378,7 +2962,6 @@ paths:
           required: true
           schema:
             type: string
-            format: uuid
       responses:
         '200':
           description: Check-in statistics
@@ -2418,7 +3001,6 @@ paths:
           required: true
           schema:
             type: string
-            format: uuid
       responses:
         '200':
           description: Survey schema (JSONB)
@@ -2451,7 +3033,6 @@ paths:
           required: true
           schema:
             type: string
-            format: uuid
       requestBody:
         required: true
         content:
@@ -2498,7 +3079,6 @@ paths:
           required: true
           schema:
             type: string
-            format: uuid
         - name: limit
           in: query
           schema:
@@ -2551,7 +3131,6 @@ paths:
           required: true
           schema:
             type: string
-            format: uuid
       requestBody:
         required: true
         content:
@@ -2649,7 +3228,6 @@ paths:
           in: query
           schema:
             type: string
-            format: uuid
       responses:
         '200':
           description: Paginated registrations
@@ -2677,7 +3255,6 @@ paths:
           required: true
           schema:
             type: string
-            format: uuid
       responses:
         '200':
           description: Registration detail
@@ -2711,7 +3288,6 @@ paths:
           required: true
           schema:
             type: string
-            format: uuid
       requestBody:
         required: true
         content:
@@ -2763,7 +3339,6 @@ paths:
           required: true
           schema:
             type: string
-            format: uuid
       responses:
         '200':
           description: Registration cancelled
@@ -2800,7 +3375,6 @@ paths:
           required: true
           schema:
             type: string
-            format: uuid
       responses:
         '200':
           description: Flag cleared; returns enriched registration
@@ -2994,6 +3568,73 @@ paths:
                 $ref: '#/components/schemas/ApiError'
 
   # ─────────────────────────────────────────────────────────────────────────────
+  # REPORTS
+  # ─────────────────────────────────────────────────────────────────────────────
+  /vendor-report/{token}:
+    get:
+      summary: Open vendor report via magic link
+      operationId: getVendorReportByToken
+      tags: [Reports, Vendors]
+      security: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Vendor report landing payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VendorReport'
+        '403':
+          description: Expired or invalid link
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Vendor report link not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /vendor-report/{token}/dpa:
+    post:
+      summary: Accept vendor DPA for a magic-link report
+      operationId: acceptVendorReportDpa
+      tags: [Reports, Vendors]
+      security: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: DPA accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VendorDpaAcceptanceResponse'
+        '403':
+          description: Expired or invalid link
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Vendor report link not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  # ─────────────────────────────────────────────────────────────────────────────
   # USERS
   # ─────────────────────────────────────────────────────────────────────────────
   /users:
@@ -3082,7 +3723,6 @@ paths:
           required: true
           schema:
             type: string
-            format: uuid
       responses:
         '200':
           description: User's assigned events
@@ -3125,7 +3765,6 @@ paths:
           required: true
           schema:
             type: string
-            format: uuid
       requestBody:
         required: true
         content:
@@ -3136,7 +3775,6 @@ paths:
               properties:
                 eventId:
                   type: string
-                  format: uuid
       responses:
         '201':
           description: Event access assigned
@@ -3188,13 +3826,11 @@ paths:
           required: true
           schema:
             type: string
-            format: uuid
         - name: eventId
           in: path
           required: true
           schema:
             type: string
-            format: uuid
       responses:
         '204':
           description: Access revoked

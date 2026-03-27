@@ -3,7 +3,7 @@
 Admin can create, configure, clone, publish, and manage events through their full lifecycle — with capacity management, survey template builder, segmentation criteria preview, state machine controls, soft delete with recovery, and event cancellation.
 
 > **Phase 1 (FE):** Event creation form (RHF + Zod, all fields); event list with status badges + lifecycle action buttons; clone modal; survey builder (JSON Schema editor — adds/reorders fields with rjsf widget type selection: text, textarea, radio, select, checkboxes, range, date, time); audience count preview (debounced preview call); soft delete + restore UI with recovery countdown; event cancellation confirmation dialog — all wired to MSW events handler
-> **Phase 2 (BE):** `POST/PATCH/GET/DELETE /api/events`, state machine service (Draft→Published→Live→Completed→Archived), `POST /api/events/:id/clone`, survey schema JSONB storage, capacity preview endpoint, soft delete cron (purge after 30d), state-override endpoint (super admin), all event repositories, audit trail writes
+> **Phase 2 (BE):** `POST/PATCH/GET/DELETE /api/events`, state machine service (Draft→Published→Live→Completed→Archived), `POST /api/events/:id/clone`, survey schema JSONB storage, capacity preview endpoint, soft delete cron (purge after 30d), state-override endpoint (admin, safeguarded), `GET/POST/PATCH/DELETE /api/vendors`, `GET/POST /api/events/:id/sponsors`, `PATCH/DELETE /api/events/:id/sponsors/:vendorId`, all event repositories, audit trail writes
 
 ## Story 4.1: Event Creation with Full Configuration
 
@@ -48,7 +48,7 @@ So that the event is fully set up before I publish it for registrations.
 **Given** the event is created,
 **Then** an `event.created` audit entry is written with `actor_id`, `event_id`, and `created_at`
 
-**Given** the event creation form in the FE (`/admin/events` → new event),
+**Given** the event creation form in the FE (`/app/events` → new event),
 **When** I select approval mode `hybrid` and set a score threshold,
 **Then** both fields are included in the `POST /api/events` body and saved correctly
 
@@ -74,7 +74,7 @@ So that events move predictably through states and invalid transitions are preve
 **When** `PATCH /api/events/:id` is called with `{ status: 'cancelled' }`,
 **Then** the event is cancelled, all `approved` registrations are updated to `cancelled`, and a blast notification job is enqueued to notify participants; `event.cancelled` audit entry is written
 
-**Given** a super admin uses the state override endpoint (`POST /api/events/:id/state-override`),
+**Given** an admin uses the state override endpoint (`POST /api/events/:id/state-override`),
 **When** a safeguarded override is requested with justification,
 **Then** the state transitions even if it would normally be blocked; an `event.state-override` audit entry is written with the justification
 
@@ -121,7 +121,7 @@ So that I can capture event-specific participant intent signals beyond the stand
 
 **Acceptance Criteria:**
 
-**Given** I am on the survey builder page (`/admin/events/:id/builder`),
+**Given** I am on the survey builder page (`/app/events/:id/builder`),
 **When** I add a custom field with a label, widget type, and optional choices,
 **Then** the field is appended to the `properties` map in the JSON Schema and the `ui:order` array in the UISchema; supported widget types mirror Google Forms (excluding file upload):
 - `text` — short answer (single-line free text)
@@ -197,7 +197,7 @@ So that accidental deletions can be reversed without permanent data loss.
 **When** `GET /api/events` is called,
 **Then** the deleted event does not appear in the list (filtered by `deleted_at IS NULL`)
 
-**Given** I navigate to the deleted items view (`/admin/events?deleted=true`),
+**Given** I navigate to the deleted items view (`/app/events?deleted=true`),
 **When** I click "Restore" on a deleted event,
 **Then** `PATCH /api/events/:id/restore` sets `deleted_at = NULL` and the event reappears in the active list; an `event.restored` audit entry is written
 
@@ -421,5 +421,47 @@ So that the public registration page and blast templates have consistent event b
 **Given** an uploaded image,
 **When** stored on the VPS filesystem,
 **Then** it is placed in `UPLOADS_DIR/banners/{eventId}/` with the original filename sanitized; the stored path is saved to `events.banner_url`
+
+---
+
+## Story 4.14: Vendor Roster & Event Sponsor Attachment
+
+As an admin,
+I want to manage vendors in a central roster and attach them to events as sponsors,
+So that report delivery, sponsor display, and vendor analytics all resolve from the same vendor records.
+
+**Acceptance Criteria:**
+
+**Given** I am on `/app/vendors`,
+**When** the page loads,
+**Then** it shows a paginated vendor table sourced from `GET /api/vendors` with columns: Name, Contact Email, Industry, Linked Events, and Last Updated
+
+**Given** I submit the vendor form,
+**When** `POST /api/vendors` is called with `{ name, contact_email, industry, logo_url?, website?, notes? }`,
+**Then** a new vendor is created and appears in the roster with `linked_event_count: 0`
+
+**Given** I edit an existing vendor,
+**When** `PATCH /api/vendors/:id` is called,
+**Then** the changed fields persist and are reflected anywhere that vendor is referenced
+
+**Given** a vendor has `linked_event_count > 0`,
+**When** `DELETE /api/vendors/:id` is called,
+**Then** HTTP 409 is returned and the vendor is not deleted until event sponsor links are removed
+
+**Given** I am on an event workspace and open sponsor management,
+**When** `GET /api/events/:id/sponsors` is called,
+**Then** the response lists attached vendors ordered by `display_order` with `vendor_name`, `tier`, and `display_order`
+
+**Given** I attach a vendor to an event,
+**When** `POST /api/events/:id/sponsors` is called with `{ vendorId, tier, displayOrder }`,
+**Then** the vendor becomes an event sponsor and can be used for vendor-facing report delivery and sponsor display on the public event page
+
+**Given** I update sponsorship metadata,
+**When** `PATCH /api/events/:id/sponsors/:vendorId` is called,
+**Then** the sponsor `tier` and `display_order` are updated without changing the base vendor record
+
+**Given** I remove a sponsor from an event,
+**When** `DELETE /api/events/:id/sponsors/:vendorId` is called,
+**Then** the vendor is detached from that event while remaining available in the vendor roster
 
 ---

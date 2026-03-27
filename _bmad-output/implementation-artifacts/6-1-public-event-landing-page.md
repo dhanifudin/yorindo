@@ -81,7 +81,7 @@ http.get('/api/events/public/:slug', async ({ params }) => {
 ```
 
 ### Route Layout
-This page is NOT under `(admin)` layout — it needs its own minimal layout:
+This page is NOT under the authenticated `app` layout — it needs its own minimal layout:
 ```
 src/app/register/
   [eventSlug]/

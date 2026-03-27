@@ -21,7 +21,7 @@ So that the event is fully set up before I publish it for registrations.
 
 ## Acceptance Criteria (FE Phase 1)
 
-**AC1:** Given `/admin/events` renders,
+**AC1:** Given `/app/events` renders,
 Then a list of events from `GET /api/events` is displayed with status badges (draft/published/active/completed/cancelled)
 
 **AC2:** Given the "New Event" button is clicked,
@@ -47,7 +47,7 @@ Then the new event appears at the top with a "Draft" badge
 ## Tasks / Subtasks
 
 - [x] **Task 1: Create events list page**
-  - [x] Create `src/app/(admin)/events/page.tsx`
+  - [x] Create `src/app/app/events/page.tsx`
   - [x] Fetch `GET /api/events` via React Query hook `useEvents()`
   - [x] Render event cards with: name, date, status badge, capacity, click to navigate
   - [x] Add "Event Baru" button that shows EventCreateForm inline
@@ -68,7 +68,7 @@ Then the new event appears at the top with a "Draft" badge
   - [x] `eventStore.setSelectedEvent(id)` called on click; navigates to detail page
 
 - [x] **Task 5: Event detail page route**
-  - [x] Create `src/app/(admin)/events/[id]/page.tsx`
+  - [x] Create `src/app/app/events/[id]/page.tsx`
   - [x] Fetch single event: `GET /api/events/:id` via `useEvent(id)`
   - [x] Display event details; lifecycle action placeholder for Story 4.2
 
@@ -119,8 +119,8 @@ interface EventStore {
 ```
 
 ### File Locations (from architecture)
-- Events list page: `src/app/(admin)/events/page.tsx`
-- Event detail page: `src/app/(admin)/events/[id]/page.tsx`
+- Events list page: `src/app/app/events/page.tsx`
+- Event detail page: `src/app/app/events/[id]/page.tsx`
 - Create form: `src/components/features/events/EventCreateForm.tsx`
 - Hook: `src/hooks/useEvents.ts`
 
@@ -142,8 +142,8 @@ interface EventStore {
 
 1. Created `src/hooks/useEvents.ts` — `useEvents()` (GET /api/events list), `useEvent(id)` (GET /api/events/:id), `useCreateEvent()` (POST + cache invalidation).
 2. Created `src/components/features/events/EventCreateForm.tsx` — RHF + Zod schema using actual api.ts Event fields (name, description, eventDate, timezone, capacity). Used string for capacity field to avoid `z.coerce` resolver type conflicts; manual `parseInt` in submit handler.
-3. Created `src/app/(admin)/events/page.tsx` — client component; event cards with status badges; inline form toggle; `eventStore.setSelectedEvent` + router push on click.
-4. Created `src/app/(admin)/events/[id]/page.tsx` — client component using `use(params)` for Next.js 15 async params; loading/error states; event detail display.
+3. Created `src/app/app/events/page.tsx` — client component; event cards with status badges; inline form toggle; `eventStore.setSelectedEvent` + router push on click.
+4. Created `src/app/app/events/[id]/page.tsx` — client component using `use(params)` for Next.js 15 async params; loading/error states; event detail display.
 5. Created `src/hooks/useEvents.test.ts` — 3 tests: 5 seeded events, all statuses present, POST creates draft.
 
 ### Debug Log
@@ -164,8 +164,8 @@ All 7 tasks complete. 36/36 tests pass (3 new in useEvents.test.ts; 33 pre-exist
 - `src/hooks/useEvents.ts`
 - `src/hooks/useEvents.test.ts`
 - `src/components/features/events/EventCreateForm.tsx`
-- `src/app/(admin)/events/page.tsx`
-- `src/app/(admin)/events/[id]/page.tsx`
+- `src/app/app/events/page.tsx`
+- `src/app/app/events/[id]/page.tsx`
 
 ---
 

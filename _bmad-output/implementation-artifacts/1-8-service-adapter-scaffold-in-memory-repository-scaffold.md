@@ -16,7 +16,7 @@ This is the Phase 1 BE gate — it must be completed before any BE feature story
 
 The Sprint Change Proposal v2 (concurrent FE+BE mock-first) requires that all BE feature code in Phase 1 uses only in-memory repositories and mock service adapters. This story creates those artifacts. Feature stories import `IContactRepository` from the interface, receive a concrete `InMemoryContactRepository` via `container.ts`, and never know the difference.
 
-The five roles in the system are: `super_admin`, `event_admin`, `staff`, `vendor_client`, `participant`. Interfaces must reflect this. The BullMQ four named queues: `otp` > `emergency-blast` > `transactional` > `marketing`.
+The default internal roles in the system are `admin`, `viewer`, and `staff`. Experimental participant-account features may introduce `participant` separately, but interfaces for the core MVP must reflect the 3-role model. BullMQ uses isolated named queues for `emergency-blast`, `transactional`, `marketing`, and reporting/maintenance jobs.
 
 ## Acceptance Criteria
 

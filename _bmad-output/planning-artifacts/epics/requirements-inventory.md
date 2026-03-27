@@ -10,7 +10,7 @@ FR5: Event admin can configure the approval mode per event (automatic / hybrid /
 FR6: Event admin can configure the notification channel per event (WhatsApp or email)
 FR7: Event admin can configure the scan format per event (QR code or barcode)
 FR8: Event admin can set event capacity with a configurable buffer for waitlist and VIP holds
-FR9: Super admin can import participant records from structured data sources into the platform database
+FR9: Admin can import participant records from structured data sources into the platform database
 FR10: System automatically matches new registrations against existing participant profiles using composite identity signals (phone, email, name, company)
 FR11: Admin can review and merge duplicate participant profiles flagged by the identity matching system
 FR12: System computes and maintains a profile completeness score for each participant record, updated on every registration
@@ -18,7 +18,7 @@ FR13: Admin can view a participant's full registration history, profile data, an
 FR14: Participant can update their profile information during registration, with changes persisted to their stored profile
 FR15: Event admin can configure and send segmented invitation blasts to the participant database, filtered by industry, city, job title, and attendance history
 FR16: Event admin can schedule blast delivery for a specified date and time
-FR17: Super admin can create and edit notification message templates for each notification type, with named variable substitution
+FR17: Admin can create and edit notification message templates for each notification type, with named variable substitution
 FR18: System enforces consent status and suppression list checks before including any contact in any outbound communication
 FR19: System delivers notifications via the event-configured channel with automatic fallback handling on delivery failure
 FR20: Event admin can trigger an emergency blast to all confirmed participants for a specific event
@@ -47,15 +47,15 @@ FR41: System delivers the vendor report to the configured vendor contact via a t
 FR42: Vendor can download the event report in Excel and PDF formats
 FR43: Report includes attendance rate, registration funnel, and participant demographic breakdown by industry, job title, and age distribution
 FR44: Vendor must accept the current version of the data processing agreement before accessing any report; re-acceptance required when DPA version changes
-FR45: Super admin can configure vendor contact email and report tier (standard / Lead Intelligence Suite) per event
-FR46: Super admin can regenerate a post-event report for a completed event
-FR47: Super admin can create, edit, and deactivate user accounts for all internal roles
+FR45: Admin can manage the vendor roster and attach one or more vendors to an event as sponsors, including the contact email and report tier used for report delivery
+FR46: Admin can regenerate a post-event report for a completed event
+FR47: Admin can create, edit, and deactivate user accounts for all internal roles
 FR48: System enforces role-based access control, restricting all capabilities to those permitted for each role
 FR49: System maintains a full audit trail of all significant actions — event state changes, approval decisions, check-in overrides, admin account changes
 FR50: Admin can soft-delete events and records with a configurable recovery window (default: 30 days) before permanent deletion
 FR51: Admin can view and restore soft-deleted items within the recovery window
 FR52: System requires explicit confirmation before executing destructive or irreversible admin actions
-FR53: Super admin can override event state machine transitions with safeguarded access
+FR53: Admin can override event state machine transitions with safeguarded access
 FR54: System captures explicit participant consent at registration, linked to the specific event and stated data processing purpose
 FR55: System maintains a consent status per participant and enforces it on all outbound communications
 FR56: Participant can request a copy of their stored personal data
@@ -78,7 +78,7 @@ NFR-P5: QR/barcode scan → confirmation (online mode) ≤ 2 seconds full round-
 NFR-P6: QR/barcode scan → confirmation (offline mode) ≤ 1 second (IndexedDB lookup only)
 NFR-P7: Post-event report generation ≤ 10 minutes (async background job)
 NFR-P8: Vendor magic link report delivery ≤ 24 hours after event completion
-NFR-P9: ~~OTP delivery ≤ 30 seconds~~ — _Superseded: OTP identity recovery replaced by KTP manual verification (FR34 updated). NFR-P9 is void._
+NFR-P9: Identity recovery search results appear within 500ms from the cached participant list on staff devices
 NFR-P10: Emergency blast queued and transmission initiated ≤ 30 seconds of admin action
 NFR-P11: POST /registrations returns 201 ≤ 3 seconds normal load, ≤ 5 seconds burst; approve/reject action ≤ 1 second
 
@@ -86,7 +86,7 @@ NFR-P11: POST /registrations returns 201 ≤ 3 seconds normal load, ≤ 5 second
 NFR-R1: API annual uptime ≥ 99.5%; automated daily DB backup; RTO ≤ 2 hours; deployment blackout during event window ± 2 hours
 NFR-R2: Event-day availability 100% during event window ± 2 hours
 NFR-R3: Message delivery rate ≥ 95% WhatsApp + email combined (BullMQ retry + dual-channel fallback)
-NFR-R4: OTP delivery success rate ≥ 99% (highest-priority queue)
+NFR-R4: Identity recovery and manual check-in remain available for approved participants throughout the event window, including offline mode, with zero blocked check-ins caused by recovery flow design
 NFR-R5: Zero attendance records lost due to offline sync failure
 NFR-R6: Background sync completion after reconnect ≤ 60 seconds
 
@@ -94,8 +94,8 @@ NFR-R6: Background sync completion after reconnect ≤ 60 seconds
 NFR-S1: All data in transit encrypted via TLS 1.2 or higher
 NFR-S2: All personal data at rest encrypted at the storage layer
 NFR-S3: JWT access tokens expire after 15 minutes; refresh tokens after 7 days; invalidated on logout via server-side token blacklist
-NFR-S4: ~~OTP codes are single-use, expire after 5 minutes~~ — _Superseded: OTP replaced by KTP manual verification (FR34 updated). NFR-S4 is void._
-NFR-S5: ~~OTP requests rate-limited to maximum 3 per phone number per 10-minute window~~ — _Superseded: OTP removed. NFR-S5 is void._
+NFR-S4: Manual identity recovery always requires authenticated staff context and a logged override reason before check-in is finalized
+NFR-S5: Manual identity recovery actions are rate-limited and fully auditable per staff session to prevent abuse
 NFR-S6: All inbound webhooks (Everpro, Brevo) verified via HMAC signature; unverified requests rejected with 401
 NFR-S7: Public registration form protected by bot-detection mechanism; failed detection logs and flags — does not block registration
 NFR-S8: All authenticated API requests validated against OpenAPI spec; schema violations return 400
@@ -138,12 +138,12 @@ NFR-A2: Admin dashboard and check-in PWA fully keyboard-navigable; all interacti
 
 - **OpenAPI 3.0 Spec (Sprint 0 gate):** OpenAPI spec must be written and approved by both FE and BE tech leads before any feature code is written. This is a hard gate — both teams blocked without it. Spec lives in `yorindo-api/openapi.yaml`. MSW handlers in `yorindo-app/src/mocks/` are generated from or validated against this spec.
 
-- **Tech Stack — Authoritative:** **Next.js 14 App Router** (FE) + **Fastify + TypeScript** (BE). This is the canonical stack per Architecture.md and Epics. The PRD document references an earlier draft stack (Vite+React+Express) — **disregard PRD tech stack section; Architecture.md + Epics are source of truth.**
+- **Tech Stack — Authoritative:** **Next.js 16 App Router** (FE) + **Fastify + TypeScript** (BE). This is the canonical stack per Architecture.md, current repositories, and Epics. The PRD document references an earlier draft stack (Vite+React+Express) — **disregard PRD tech stack section; Architecture.md + Epics are source of truth.**
 
 - **Starter Template — Two Repos:**
-  - `yorindo-api`: `mkdir yorindo-api && cd yorindo-api && npm init -y && npm install fastify @fastify/cors @fastify/helmet @fastify/rate-limit @fastify/cookie @fastify/multipart pg mongodb bullmq ioredis zod dotenv pino pino-http jsonwebtoken bcrypt xlsx node-cron qrcode && npm install -D typescript tsx vitest @vitest/coverage-v8 @types/pg @types/node @types/jsonwebtoken @types/bcrypt @types/node-cron @types/qrcode && npx tsc --init`
+  - `yorindo-api`: `mkdir yorindo-api && cd yorindo-api && npm init -y && npm install fastify @fastify/cors @fastify/helmet @fastify/rate-limit @fastify/cookie @fastify/multipart pg bullmq ioredis zod dotenv pino pino-http jsonwebtoken bcrypt xlsx node-cron qrcode && npm install -D typescript tsx vitest @vitest/coverage-v8 @types/pg @types/node @types/jsonwebtoken @types/bcrypt @types/node-cron @types/qrcode && npx tsc --init`
   - **AI provider SDKs are installed per `*_AI_PROVIDER` env var selection** — do NOT install all at scaffold time. Add the relevant SDK only when implementing the real adapter (Phase 2): `openai` for OpenAI, `@anthropic-ai/sdk` for Anthropic, etc. Never import AI SDKs directly in route handlers — always via the service adapter.
-  - `yorindo-app`: `npx create-next-app@14 yorindo-app --typescript --tailwind --eslint --app --src-dir --import-alias "@/*"` + post-init installs (Zustand, React Query, RHF+Zod, TanStack Table, MSW, @faker-js/faker, idb, next-pwa, etc.)
+  - `yorindo-app`: `npx create-next-app@16 yorindo-app --typescript --tailwind --eslint --app --src-dir --import-alias "@/*"` + post-init installs (Zustand, React Query, RHF+Zod, TanStack Table, MSW, @faker-js/faker, idb, next-pwa/serwist, etc.)
 
 - **Database Migrations:** `yorindo-api/db/migrations/` — numbered SQL files run by `scripts/migrate.ts`. Must be run before any feature story begins.
   - `001_initial_schema.sql` — contacts, events, registrations, vendors, industries, job_titles
@@ -171,13 +171,13 @@ NFR-A2: Admin dashboard and check-in PWA fully keyboard-navigable; all interacti
 
 - **TanStack Table v8 — server-side (manual) mode:** All tables with >1K potential rows. Client-side pagination forbidden. Pagination API: `?page=&pageSize=&sortBy=&sortDir=`
 
-- **BullMQ — four named queues:** `otp` (highest priority) > `emergency-blast` > `transactional` > `marketing`. Workers started from `main.ts` in same Node process as API server (MVP). _(Updated per PRD §Queue Architecture — supersedes prior "two queues" note)_
+- **BullMQ — named queues:** `emergency-blast`, `transactional`, `marketing`, and reporting/maintenance jobs. Workers started from `main.ts` in the same Node process as the API server (MVP), with emergency traffic isolated from normal sends.
 
 - **YoriMind pattern:** node-cron daily 02:00 WIB → VPS filesystem snapshot → Redis cache TTL 24h → `IYoriMindService.analyzeEvent(snapshot)` on cache miss. Concrete AI provider resolved from `YORIMIND_AI_PROVIDER` env var via `container.ts`. Never call any AI SDK directly from `yorimind.service.ts`.
 
 - **Custom JWT auth:** Access token 15min (Zustand memory), refresh token 7d (httpOnly cookie). Token blacklist in Redis. Role resolved from DB on issue.
 
-- **Roles:** `super_admin` (platform-wide — users, templates, vendor config, state overrides), `event_admin` (full control of assigned events), `staff` (assigned events via user_events — scan + check-in only), `vendor_client` (magic-link report access, no login), `participant` (self-service registration/data rights portal). _(Updated per PRD §Roles — supersedes prior 3-role definition; `super_admin`+`event_admin` replace prior `admin` umbrella)_
+- **Roles:** `admin` (full platform control, user management, templates, vendor config, state overrides), `viewer` (read-only analytics/report access for assigned events), `staff` (assigned events via `user_events` — scan + check-in only). `participant` is not part of the default role set; it is activated only when experimental participant features are enabled (SSO, waitlist self-service, personal dashboard).
 
 - **Offline scan:** next-pwa NetworkFirst for API, CacheFirst for static. IndexedDB via `idb`. `queueScan()` + `flushScanQueue()` on reconnect.
 
@@ -192,10 +192,10 @@ Two complete UX design specifications exist for this project:
    - Includes KTP-based manual check-in (replaces OTP for identity recovery — see FR34 note below)
    - Offline-first: Background Sync API, seamless automatic flush — no manual sync button
 
-2. **General UX Design Specification** — `_bmad-output/planning-artifacts/ux-design-specification.md`
-   - Covers broader app UX patterns, component library decisions, and design system
+2. **Contacts Page UX Design Specification** — `_bmad-output/planning-artifacts/ux-design-specification.md`
+   - Covers the Contact Intelligence Hub / contacts-page revamp, its workspace patterns, and supporting design-system decisions
 
-**FR34 Decision — Resolved (2026-03-22):** KTP manual verification adopted. FR34 and Story 7.4 updated to KTP-only flow. OTP endpoints removed from Epic 7 scope. NFR-P9, NFR-S4, NFR-S5 voided.
+**FR34 Decision — Resolved (2026-03-22):** KTP manual verification adopted. FR34 and Story 7.4 now use the KTP-only recovery flow. OTP endpoints are removed from Epic 7 scope and the supporting NFRs have been rewritten to cover cached search speed, authenticated overrides, and auditability.
 
 ## FR Coverage Map
 
@@ -205,13 +205,14 @@ Two complete UX design specifications exist for this project:
 | FR9–FR14 | Epic 3 | Contact import, identity matching, duplicate merge, profile scoring |
 | FR15–FR21 | Epic 5 | Invitation blast, templates, scheduling, suppression, emergency blast |
 | FR22–FR32, FR30a | Epic 6 | Registration form, double opt-in, approval workflow, waitlist, ticket |
-| FR33–FR39 | Epic 7 | Check-in PWA — QR scan, OTP, name search, offline, live monitor |
-| FR40–FR46 | Epic 8 | Attendance report, vendor magic link, DPA acceptance, YoriMind |
+| FR33–FR39 | Epic 7 | Check-in PWA — QR scan, KTP verification, name search, offline, live monitor |
+| FR40–FR44, FR46 | Epic 8 | Attendance report, vendor magic link, DPA acceptance, YoriMind |
+| FR45 | Epic 4 | Vendor roster and event sponsor attachment management |
 | FR47–FR48 | Epic 2 | User accounts, RBAC |
 | FR49 | Cross-cutting | Audit trail — implemented incrementally within each epic's write operations (Epics 2–8) |
 | FR50–FR51 | Epic 4 | Soft delete + recovery (events/records — first destructive action context) |
 | FR52 | Distributed | Confirmation dialogs — implemented within each epic's destructive-action stories |
-| FR53 | Epic 4 | Event state machine override (super admin safeguarded access) |
+| FR53 | Epic 4 | Event state machine override (admin safeguarded access) |
 | FR54 | Epic 6 | Consent capture at registration |
 | FR55, FR59 | Epic 5 | Consent enforcement + suppression on outbound communications |
 | FR56–FR58 | Epic 9 | Participant self-service data rights — request copy, erasure, anonymization |
@@ -219,4 +220,6 @@ Two complete UX design specifications exist for this project:
 | FR61 | Epic 4 | Target criteria count preview before committing event segment |
 | FR62–FR63 | Epic 6 | Duplicate registration detection, requeue rejected registrations |
 
-**All 64 FRs accounted for. ✅**
+| FR-D1–FR-D3 | Epic 10 | Admin intelligence dashboard, company aggregation, vendor-event breakdown |
+
+**All 67 FR identifiers accounted for (FR1-FR63, FR30a, FR-D1-FR-D3). ✅**

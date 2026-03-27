@@ -154,9 +154,6 @@ So that I have a fair chance to attend even if I registered late.
 **When** viewed by admin,
 **Then** participants are listed in FIFO order with their queue position displayed
 
-**Given** `ENABLE_EXPERIMENTAL` is `false` or unset,
-**When** a registration is submitted for a full-capacity event,
-**Then** the registration is rejected with HTTP 409 `{ error: { code: 'EVENT_FULL', message: 'Pendaftaran sudah penuh' } }` — no waitlist slot is created and no `waitlisted` status is assigned; the public registration page shows "Registrasi Penuh" with no waitlist CTA
 
 ---
 

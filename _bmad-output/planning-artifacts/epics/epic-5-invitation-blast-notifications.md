@@ -7,7 +7,7 @@ Admin can proactively invite targeted participants to events via WhatsApp (Everp
 
 ## Story 5.1: Notification Message Template Management
 
-As a super admin,
+As an admin,
 I want to create and edit notification message templates with named variable substitution,
 So that all outbound communications use consistent, personalized messaging.
 
@@ -53,7 +53,7 @@ So that I send invitations only to participants who match the event's target pro
 
 **Given** the blast is configured,
 **When** `requireAuth` and `requireRole('admin')` middleware run,
-**Then** staff and viewer roles receive HTTP 403 — blast is admin-only
+**Then** staff receives HTTP 403 and vendor magic-link users never see this surface — blast is admin-only
 
 **Given** a contact with `consent_status = 'suppressed'` matches the filters,
 **When** the blast worker processes the job,

@@ -54,7 +54,7 @@ Then it returns a list of past blasts for this event with `{ id, channel, recipi
 ```
 src/
   app/
-    (admin)/
+    app/
       events/
         [id]/
           blast/

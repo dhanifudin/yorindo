@@ -20,6 +20,22 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 
 > **Note:** Stack revised 2026-03-19 to align with System Design Document (Yolanda Roring, KADA Program v1.0 March 2026). All prior Express/Vite/MongoDB-only decisions superseded.
 > **Note:** Deployment simplified 2026-03-19 — all infrastructure self-hosted via Docker Compose on VPS. External services: Everpro (WhatsApp) and Brevo (email) only. Supabase, Railway, Upstash, Atlas, Cloudflare, Sentry, Uptime Robot removed.
+> **Reconciliation note (2026-03-27):** The authoritative implementation model is OpenAPI contract-first, Next.js 16 + Fastify + TypeScript, PostgreSQL + JSONB as the planning default persistent store, 3-role RBAC (`admin`, `viewer`, `staff`) with optional `participant` role only when experimental participant-account features are enabled, `/app/*` for internal dashboards, and KTP-based manual identity verification for lost-ticket recovery. Any older references below should be interpreted through this reconciled model.
+
+## Reconciled Decisions (Authoritative)
+
+Use this section as the source of truth when any lower section or historical example disagrees.
+
+- Contract: `openapi.yaml` is the sprint gate; shared TypeScript types are derived from the approved OpenAPI contract rather than replacing it.
+- Stack: `yorindo-app` uses Next.js 16 App Router; `yorindo-api` uses Fastify + TypeScript.
+- Roles: final dashboard access uses `admin`, `viewer`, and `staff`; `participant` exists only when experimental participant-account features (SSO, waitlist self-service, personal dashboard) are enabled.
+- Routes: internal product workspace lives under `/app/*`; check-in remains under `/scan`; public registration remains under `/register/*`.
+- Check-in recovery: lost-ticket handling uses cached participant lookup plus KTP-assisted manual verification; OTP is not part of the event-day recovery flow.
+- Data planning default: PostgreSQL plus JSONB is the canonical planning model for operational data; legacy Mongo-oriented examples lower in the file are retained only as historical implementation notes.
+
+## Historical Appendix Status
+
+Detailed scaffolds, schema sketches, and older route or storage examples later in this file are preserved for traceability, but they are non-normative wherever they conflict with the reconciled decisions above.
 
 ---
 
@@ -75,7 +91,7 @@ Three UX surfaces: public participant registration (mobile-first, zero-account),
 | Auth | jsonwebtoken + bcrypt | latest | Custom JWT, HS256, httpOnly cookie refresh |
 | API mocking | MSW + @faker-js/faker | latest | Dev/test only; swap to real API via env var |
 | IndexedDB | idb | latest | Offline scan queue for PWA |
-| Testing | Vitest + Testing Library | latest | Fast, Vite-based |
+| Testing | Vitest + Testing Library | latest | Fast feedback for React and Next.js components |
 | Containerization | Docker + Compose | latest | Dev environment only |
 | AI — ETL | `IEtlNormalizationService` adapter | configured via `ETL_AI_PROVIDER` | Contact normalization & classification; swap provider without code change |
 | AI — Analytics | `IYoriMindService` adapter | configured via `YORIMIND_AI_PROVIDER` | YoriMind event analysis; swap provider without code change |
@@ -98,7 +114,7 @@ Three UX surfaces: public participant registration (mobile-first, zero-account),
 
 ### Technical Constraints & Dependencies
 
-1. **TypeScript strict contract (two-team gate):** TypeScript type definitions in `types/` package must be agreed before coding. Backend exposes API contract (endpoint URL, request/response schema as TS interfaces). Frontend consumes this contract. Type drift = build error.
+1. **OpenAPI contract-first gate (two-team gate):** OpenAPI 3.0 is the shared source of truth before coding. Backend exposes the contract in `openapi.yaml`; frontend consumes generated or synchronized TypeScript types derived from that contract. Type drift = build error, and contract drift blocks feature work.
 
 2. **VPS setup prerequisite:** VPS provisioned with Docker + Docker Compose installed. SSH key added to GitHub Actions secrets. `docker-compose.yml` and `.env` placed on VPS before Sprint 1 CI/CD is tested.
 
@@ -120,17 +136,17 @@ Three UX surfaces: public participant registration (mobile-first, zero-account),
 
 1. **TypeScript strict mode** — `"strict": true` in both repos' `tsconfig.json`. No `any` types. All API request/response bodies typed via Zod schemas inferred types.
 
-2. **Repository pattern** — All DB queries (PostgreSQL and MongoDB) live exclusively in `repositories/` files. Services call repositories only; route handlers call services only. Never query DB directly from a route handler.
+2. **Repository pattern** — All persistent-store access lives exclusively in `repositories/` files. Services call repositories only; route handlers call services only. Never query the database directly from a route handler.
 
 3. **Write Path vs Read Path** — Enforced at routing level. Write endpoints only accept mutations (INSERT/UPDATE). Read endpoints only execute SELECT. Claude AI (YoriMind) never queries live DB — reads daily snapshot JSON from VPS filesystem only.
 
-4. **Custom JWT + RBAC** — Three roles: `admin`, `staff`, `viewer`. Access token: 15 minutes, HS256, payload `{ sub, role, jti }`. Refresh token: 7 days, stored in httpOnly cookie. Role enforcement: middleware checks JWT role before handler. Event-scoped enforcement: `staff` and `viewer` are additionally checked against `user_events` join table — they can only access events explicitly assigned to them. `admin` bypasses event-scope checks. Public registration endpoint is unprotected, rate-limited at 10 submit/IP/hour.
+4. **Custom JWT + RBAC** — Final internal/product roles are `admin`, `viewer`, and `staff`. Access token: 15 minutes, HS256, payload `{ sub, role, jti }`. Refresh token: 7 days, stored in httpOnly cookie. Role enforcement: middleware checks JWT role before handler. Event-scoped enforcement applies to `staff` and `viewer` via `user_events`; `admin` bypasses event-scope checks unless a narrower deployment policy is introduced. Public registration endpoints remain unauthenticated and rate-limited. The `participant` role is only activated when experimental participant-account features are enabled.
 
 5. **BullMQ async processing** — Two workers: `etl.worker.ts` (processes ETL jobs) and `blast.worker.ts` (sends email/WA with rate limiting for Brevo/Everpro). All heavy async work goes through BullMQ. API endpoints return `202 Accepted` for queued work.
 
 6. **Redis always available** — Redis runs in Docker Compose on both dev and production. `REDIS_URL=redis://redis:6379` in compose network. BullMQ connects directly — no QUEUE_DRIVER abstraction needed. AOF persistence (`appendonly yes`) required in production compose.
 
-7. **ETL pipeline** — 7-step process: upload → VPS local temp storage (`/tmp/uploads/`) → BullMQ job → GPT-4o batch normalization (50 rows/batch) → Zod validation → upsert valid to PostgreSQL → flagged records to `flagged_records` table. Temp file deleted after ETL job completes. Admin reviews flagged records at `/admin/contacts/flagged`.
+7. **ETL pipeline** — 7-step process: upload → VPS local temp storage (`/tmp/uploads/`) → BullMQ job → GPT-4o batch normalization (50 rows/batch) → Zod validation → upsert valid to PostgreSQL → flagged records to `flagged_records` table. Temp file deleted after ETL job completes. Admin reviews flagged records at `/app/contacts/flagged`.
 
 8. **YoriMind snapshot pattern** — Cron job at 02:00 WIB queries Core DB, generates JSON snapshot `{ event, funnel_data, historical_comparison, attendee_segments }`, saves to VPS filesystem at `/data/snapshots/event_{id}_{date}.json` (Docker volume `snapshots_data`). YoriMind reads latest snapshot (never live DB), calls Claude API, caches result in Redis with TTL 7 days. Cache key: `yorimind:event:{id}`. Invalidated manually via "Refresh Insights" action only — never auto-invalidated (snapshot data doesn't change until next cron run; AI output is deterministic for the same snapshot input).
 
@@ -187,7 +203,7 @@ Full-stack web — two separate repos coordinated via TypeScript type definition
 | `yorindo-api` | Fastify 4.x + TypeScript + Node.js 20 LTS |
 | `yorindo-app` | Next.js 16 (App Router) + TypeScript |
 
-TypeScript type definitions for shared API contracts live in `yorindo-api/src/types/` and are manually synced to `yorindo-app/src/types/api.ts` (or extracted to a shared package in Growth Phase). **Both teams must agree on types before coding begins — this is the contract gate, replacing OpenAPI at MVP.**
+TypeScript type definitions for shared API contracts live in `yorindo-api/src/types/` and are manually synced to `yorindo-app/src/types/api.ts` (or extracted to a shared package in Growth Phase). **Both teams must agree on those types because they are derived from the approved OpenAPI contract at MVP - OpenAPI remains the contract gate.**
 
 ---
 
@@ -231,7 +247,7 @@ src/
   workers/            ← BullMQ worker definitions
   lib/
     postgres.ts       ← Singleton pg Pool, connection string from env
-    mongodb.ts        ← Singleton MongoClient, URL from env
+    postgres.ts       ← Shared PostgreSQL pool, URL from env
     redis.ts          ← Singleton IORedis client for BullMQ + cache
     queue.ts          ← BullMQ Queue factory using lib/redis.ts
     storage.ts        ← Local filesystem read/write for snapshots + uploads
@@ -244,7 +260,7 @@ src/
 - Language: TypeScript strict mode
 - Framework: Fastify (not Express — no `express` package ever)
 - SQL: `pg` Pool, direct SQL queries (no ORM, no Prisma, no Knex)
-- MongoDB: native `mongodb` driver (no Mongoose)
+- Database access: direct `pg` Pool usage through repositories
 - Auth: Custom JWT via `jsonwebtoken`; bcrypt for password hashing; refresh token in httpOnly cookie
 - Queue: BullMQ with IORedis (always Redis, no memory fallback)
 - AI: OpenAI SDK for ETL, Anthropic SDK for YoriMind + Smart Filter
@@ -282,7 +298,6 @@ function required(key: string): string {
 export const config = {
   port: parseInt(process.env.PORT || '3000'),
   databaseUrl: required('DATABASE_URL'),
-  mongodbUrl: required('MONGODB_URL'),
   redisUrl: required('REDIS_URL'),
   jwtSecret: required('JWT_SECRET'),
   jwtRefreshSecret: required('JWT_REFRESH_SECRET'),
@@ -301,7 +316,7 @@ No `process.env` access outside this file. Missing required vars throw at startu
 
 **Init command:**
 ```bash
-npx create-next-app@14 yorindo-app --typescript --tailwind --eslint --app --src-dir --import-alias "@/*"
+npx create-next-app@16 yorindo-app --typescript --tailwind --eslint --app --src-dir --import-alias "@/*"
 ```
 
 **Post-init setup:**
@@ -339,10 +354,10 @@ npm install @faker-js/faker --save-dev
 # 11. idb (IndexedDB wrapper for offline scan queue)
 npm install idb
 
-# 11. next-pwa (offline resilience for scan surface)
+# 11. next-pwa or Serwist (offline resilience for scan surface)
 npm install next-pwa
 
-# 9. Testing
+# 12. Testing
 npm install -D vitest @vitest/coverage-v8 @testing-library/react @testing-library/user-event jsdom
 ```
 
@@ -350,23 +365,23 @@ npm install -D vitest @vitest/coverage-v8 @testing-library/react @testing-librar
 ```
 src/
   app/
-    (admin)/              ← Admin pages (auth-gated)
+    (app)/                ← Internal pages (auth-gated)
       layout.tsx
-      page.tsx            ← /admin — dashboard
+      page.tsx            ← /app — dashboard
       contacts/
-        page.tsx          ← /admin/contacts
+        page.tsx          ← /app/contacts
         upload/
-          page.tsx        ← /admin/contacts/upload
+          page.tsx        ← /app/contacts/upload
         flagged/
-          page.tsx        ← /admin/contacts/flagged
+          page.tsx        ← /app/contacts/flagged
       events/
-        page.tsx          ← /admin/events
+        page.tsx          ← /app/events
         [id]/
-          page.tsx        ← /admin/events/[id]
+          page.tsx        ← /app/events/[id]
           builder/
-            page.tsx      ← /admin/events/[id]/builder
-          yorimind/
-            page.tsx      ← /admin/events/[id]/yorimind
+            page.tsx      ← /app/events/[id]/builder
+          report/
+            page.tsx      ← /app/events/[id]/report
     register/
       [eventSlug]/
         page.tsx          ← /register/[eventSlug] — public
@@ -436,7 +451,7 @@ module.exports = withPWA({ /* next config */ })
 
 **Architectural decisions this scaffold establishes:**
 - Language: TypeScript strict mode
-- Framework: Next.js 14 App Router (no Pages Router)
+- Framework: Next.js 16 App Router (no Pages Router)
 - Component library: shadcn/ui (Radix primitives + Tailwind, TypeScript mode)
 - Global state: Zustand (admin UI state — selected events, filter state, etc.)
 - Server state: React Query (API data fetching + caching)
@@ -449,7 +464,7 @@ module.exports = withPWA({ /* next config */ })
 - Auth: Custom JWT — access token in memory (Zustand), refresh token in httpOnly cookie via Fastify API
 - API mocking: MSW (Mock Service Worker) — FE develops independently; BE pending. Swap to real API via `NEXT_PUBLIC_API_URL` env var. MSW removed in production build.
 - Type ownership: FE team owns `src/types/api.ts` while BE is deciding. Types reflect agreed data shapes; BE adopts them when ready.
-- Dev toolbar: role switcher component (`DevToolbar`) rendered only in `NODE_ENV=development` — toggles active role between `admin`, `staff`, `viewer` in Zustand `authStore` without real login flow.
+- Dev toolbar: role switcher component (`DevToolbar`) rendered only in `NODE_ENV=development` — toggles active internal role between `admin`, `viewer`, and `staff` in Zustand `authStore` without real login flow.
 
 ---
 
@@ -475,7 +490,7 @@ module.exports = withPWA({ /* next config */ })
 ### Decision Priority Analysis
 
 **Critical Decisions (block implementation):**
-- Database strategy: PostgreSQL (self-hosted) + MongoDB (self-hosted) hybrid — fixed, see Appendix Decision Log
+- Database strategy: PostgreSQL (self-hosted) with JSONB for dynamic survey, raw upload, and event-configuration payloads — fixed, see Appendix Decision Log
 - Auth provider: Custom JWT (jsonwebtoken + bcrypt) — do not replace with Supabase Auth or Auth0
 - Repository pattern: mandatory — zero DB queries outside `repositories/` files
 - UUID primary keys: `gen_random_uuid()` on all PostgreSQL tables — no auto-increment
@@ -493,7 +508,6 @@ module.exports = withPWA({ /* next config */ })
 **Deferred Decisions (post-MVP):**
 - VPS → container orchestration (Kubernetes / ECS) when Docker Compose can't handle load
 - PostgreSQL → managed RDS when VPS can't scale further (UUID design makes this zero-friction — update `DATABASE_URL` only)
-- MongoDB → Atlas M0 when self-hosted Docker becomes operationally complex
 - Read replica for analytics queries
 - PDF export: `pdfkit` selected for BE-side report generation (lightweight, streaming, no Chromium); chart-in-PDF deferred to Sprint 3 — MVP exports text + table only; FE offers chart PNG download separately
 
@@ -501,14 +515,14 @@ module.exports = withPWA({ /* next config */ })
 
 ### Data Architecture
 
-**Hybrid Strategy — Which Data Goes Where:**
+**PostgreSQL-First Strategy — Which Data Goes Where:**
 
 | Data Type | Engine | Reason |
 |---|---|---|
 | contacts, events, registrations | PostgreSQL (self-hosted) | Stable structure, UNIQUE constraints, ACID transactions, foreign keys |
-| survey_schemas | MongoDB (self-hosted) | Dynamic fields per event — schema changes every event |
-| survey_responses | MongoDB (self-hosted) | Key-value free per event, no schema migration needed |
-| raw_uploads | MongoDB (self-hosted) | Immutable append-only log, variable document size |
+| survey_schemas | PostgreSQL JSONB | Dynamic per event while staying in the primary operational store |
+| survey_responses | PostgreSQL JSONB | Flexible answers without a second operational database |
+| raw_uploads | PostgreSQL JSONB | Immutable ETL metadata and flagged row payloads in one store |
 | flagged_records | PostgreSQL | Needs admin review workflow, status transitions |
 
 **PostgreSQL Schema (authoritative — do not deviate):**
@@ -536,7 +550,7 @@ slug        VARCHAR(150) UNIQUE NOT NULL
 date        TIMESTAMPTZ NOT NULL
 city        VARCHAR(100)
 vendor_id   UUID REFERENCES vendors(id)
-survey_schema_id TEXT  -- MongoDB ObjectId (cross-DB reference, stored as string)
+survey_schema_id UUID NULL REFERENCES survey_schemas(id)
 status      event_status NOT NULL DEFAULT 'draft'
 -- ENUM: draft, published, active, completed, cancelled
 created_at  TIMESTAMPTZ DEFAULT NOW()
@@ -546,7 +560,7 @@ id          UUID PRIMARY KEY DEFAULT gen_random_uuid()
 contact_id  UUID REFERENCES contacts(id) ON DELETE CASCADE
 event_id    UUID REFERENCES events(id) ON DELETE CASCADE
 status      reg_status NOT NULL DEFAULT 'pending'
--- ENUM: pending, approved, rejected, attended
+-- ENUM: pending, approved, rejected, waitlisted, attended, cancelled
 ticket_token TEXT  -- JWT, null until approved
 approved_at  TIMESTAMPTZ
 attended_at  TIMESTAMPTZ
@@ -594,43 +608,45 @@ level VARCHAR(50)  -- 'C-Level', 'Director', 'Manager', 'Staff'
 slug  VARCHAR(150) UNIQUE
 ```
 
-**MongoDB Collections:**
+**Dynamic-data tables (PostgreSQL JSONB shapes):**
 
 ```typescript
-// survey_schemas — one document per event
+-- survey_schemas — one row per event version
 {
-  _id: ObjectId,
-  event_id: string,    // UUID ref → PostgreSQL events
+  id: uuid,
+  event_id: uuid,
   version: number,
-  fields: Array<{
+  schema_json: {
+    fields: Array<{
     key: string,
     label: string,
     type: 'dropdown' | 'text' | 'number' | 'radio',
     required: boolean,
     options?: string[]
-  }>,
-  created_at: Date
+    }>
+  },
+  created_at: timestamptz
 }
 
-// survey_responses — one document per registration
+-- survey_responses — one row per registration
 {
-  _id: ObjectId,
-  registration_id: string,  // UUID ref → PostgreSQL registrations
-  event_id: string,          // UUID ref → PostgreSQL events
-  answers: Record<string, unknown>,  // key-value, matches survey_schema fields
-  submitted_at: Date
+  id: uuid,
+  registration_id: uuid,
+  event_id: uuid,
+  answers_json: Record<string, unknown>,
+  submitted_at: timestamptz
 }
 
-// raw_uploads — immutable log per ETL upload
+-- raw_uploads — immutable ETL metadata row
 {
-  _id: ObjectId,
+  id: uuid,
   filename: string,
-  uploaded_by: string,  // UUID ref → contacts or user
-  uploaded_at: Date,
+  uploaded_by: uuid,
+  uploaded_at: timestamptz,
   etl_job_id: string,
   row_count: number,
   status: 'processing' | 'completed' | 'failed',
-  flagged_rows: Array<Record<string, unknown>>
+  flagged_rows_json: Array<Record<string, unknown>>
 }
 ```
 
@@ -638,7 +654,7 @@ slug  VARCHAR(150) UNIQUE
 ```typescript
 // Correct — Application Layer join
 const registrations = await registrationRepo.findByEvent(eventId)  // PostgreSQL
-const surveyResponses = await surveyRepo.findByRegistrationIds(     // MongoDB
+const surveyResponses = await surveyRepo.findByRegistrationIds(     // PostgreSQL JSONB
   registrations.map(r => r.id)
 )
 
@@ -654,7 +670,7 @@ CREATE INDEX ON registrations(event_id, status);
 CREATE INDEX ON registrations(contact_id);
 ```
 
-**Indexes (MongoDB — required):**
+**Indexes (dynamic-data tables — required):**
 ```javascript
 db.survey_schemas.createIndex({ event_id: 1 })
 db.survey_responses.createIndex({ registration_id: 1 })
@@ -732,7 +748,7 @@ GET /api/events/:eventId/analytics      → requireRole('admin', 'viewer') + req
 GET /api/events/:eventId/yorimind       → requireRole('admin', 'viewer') + requireEventAccess
 GET /api/events/:eventId/registrations  → requireRole('admin', 'viewer') + requireEventAccess
 ```
-Viewer cannot: POST, PATCH, DELETE anything. Cannot access `/admin/contacts`, `/admin/contacts/upload`, `/admin/contacts/flagged`, or `POST /api/blast`.
+Viewer cannot: POST, PATCH, DELETE anything. Cannot access `/app/contacts/upload`, `/app/contacts/flagged`, or `POST /api/blast`.
 
 **Fastify auth middleware pattern:**
 ```typescript
@@ -807,7 +823,6 @@ fastify.post('/api/registrations', {
 | Secret | Env Variable | Note |
 |---|---|---|
 | PostgreSQL | `DATABASE_URL` | `postgresql://user:pass@postgres:5432/yorindo` |
-| MongoDB | `MONGODB_URL` | `mongodb://mongodb:27017/yorindo` |
 | Redis | `REDIS_URL` | `redis://redis:6379` (internal Docker network) |
 | JWT signing | `JWT_SECRET` | Min 32 chars random, different dev/prod |
 | JWT refresh secret | `JWT_REFRESH_SECRET` | Separate secret for refresh tokens |
@@ -876,7 +891,7 @@ All ETL, blast, and notification delivery are async via BullMQ. API endpoints re
 ```
 
 **Real-time Live Monitor (Fase 3 — `/scan`):**
-Polling every 5 seconds from client. Dashboard at `/admin/events/[id]` polls `GET /api/events/:id/attendance-stats` every 5s during active event. SSE or WebSocket deferred to post-MVP.
+Polling every 5 seconds from client. Dashboard at `/app/events/[id]/check-in` polls `GET /api/events/:id/attendance-stats` every 5s during active event. SSE or WebSocket deferred to post-MVP.
 
 ---
 
@@ -884,13 +899,13 @@ Polling every 5 seconds from client. Dashboard at `/admin/events/[id]` polls `GE
 
 **7-step process (must be followed exactly):**
 
-1. Admin uploads Excel/CSV at `/admin/contacts/upload` → file saved to VPS `/tmp/uploads/` (Docker `uploads_tmp` volume) via multipart upload
+1. Admin uploads Excel/CSV at `/app/contacts/upload` → file saved to VPS `/tmp/uploads/` (Docker `uploads_tmp` volume) via multipart upload
 2. Upload triggers `POST /api/etl/upload` → BullMQ ETL job enqueued with `{ filePath, uploadedBy, uploadedAt }`
 3. `etl.worker.ts` dequeues job, reads file from `uploads_tmp` volume, parses to array of objects via `xlsx` library; deletes temp file after parsing
 4. Send batch of 50 rows to GPT-4o with standard system prompt: normalize formats, map to lookup table slugs, output JSON array with `confidence` score per field
 5. Validate GPT-4o response with Zod schema. If validation fails → retry batch (max 3 retries)
 6. Records with confidence < 0.7 (any field) → insert to `flagged_records` table. Valid records → `ContactRepository.upsert()` to PostgreSQL (insert new or update existing by phone)
-7. After all batches complete: generate ETL report, log to `raw_uploads` MongoDB collection, notify admin
+7. After all batches complete: generate ETL report, persist a `raw_uploads` row with JSONB metadata, notify admin
 
 **ETL GPT-4o system prompt (do not change without architectural review):**
 - Role: "Kamu adalah data cleaning agent untuk Yorindo Communication."
@@ -906,10 +921,10 @@ Polling every 5 seconds from client. Dashboard at `/admin/events/[id]` polls `GE
 
 **Cron + Snapshot + Cache pattern:**
 
-1. Cron job 02:00 WIB: query Core DB (PostgreSQL + MongoDB), generate snapshot JSON per event
+1. Cron job 02:00 WIB: query Core DB (PostgreSQL + JSONB-backed dynamic tables), generate snapshot JSON per event
 2. Snapshot structure: `{ event, funnel_data, historical_comparison, attendee_segments }`
 3. Save snapshot to VPS filesystem: `$SNAPSHOT_DIR/event_{id}_{date}.json` (Docker `snapshots_data` volume)
-4. Admin opens `/admin/events/[id]/yorimind` → frontend calls `GET /api/events/:id/yorimind`
+4. Admin opens `/app/events/[id]/report` → frontend calls `GET /api/events/:id/yorimind`
 5. Backend checks Redis cache for key `yorimind:event:{id}`. Cache hit → return cached JSON
 6. Cache miss: read latest snapshot from VPS filesystem (`SNAPSHOT_DIR/event_{id}_{date}.json`) → call Claude API
 7. Claude API call: system prompt defines YoriMind persona; input = snapshot JSON; model = `claude-sonnet-4-6`
@@ -966,7 +981,7 @@ services:
     volumes:
       - snapshots_data:/data/snapshots
       - uploads_tmp:/tmp/uploads
-    depends_on: [postgres, mongodb, redis]
+    depends_on: [postgres, redis]
     restart: unless-stopped
     logging:
       driver: json-file
@@ -987,13 +1002,6 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes: [postgres_data:/var/lib/postgresql/data]
     restart: unless-stopped
-
-  mongodb:
-    image: mongo:7
-    expose: ["27017"]
-    volumes: [mongo_data:/data/db]
-    restart: unless-stopped
-
   redis:
     image: redis:7-alpine
     expose: ["6379"]
@@ -1025,10 +1033,6 @@ services:
 
   postgres:
     ports: ["5432:5432"]   # expose to host for DB tools
-
-  mongodb:
-    ports: ["27017:27017"]
-
   redis:
     ports: ["6379:6379"]
 ```
@@ -1099,7 +1103,7 @@ Application audit logs stored in PostgreSQL `audit_logs` table — not in applic
 ### Decision Impact Analysis
 
 **Implementation Sequence (Sprint 1 → Sprint 2):**
-1. `yorindo-api`: `docker-compose.yml` + PostgreSQL + MongoDB running locally
+1. `yorindo-api`: `docker-compose.yml` + PostgreSQL + Redis running locally
 2. PostgreSQL: run schema migrations (contacts, events, registrations, users, lookup tables)
 3. Auth: `users` table created, JWT middleware wired, login/refresh endpoints implemented
 4. `yorindo-app`: scaffold + custom auth store (Zustand) + routing
@@ -1139,12 +1143,12 @@ contact_id, event_id, created_at, updated_at, ticket_token, attended_at
 contactId, event_Id, createdAt
 ```
 
-**MongoDB Collection Names — snake_case:**
+**Dynamic-data table names — snake_case:**
 ```
 survey_schemas      survey_responses      raw_uploads
 ```
 
-**MongoDB Field Names — snake_case (to match PostgreSQL convention):**
+**JSON payload field names — snake_case (to match PostgreSQL convention):**
 ```typescript
 // Correct — consistent with PostgreSQL
 { event_id, registration_id, submitted_at, created_at }
@@ -1199,7 +1203,7 @@ src/workers/etl.worker.ts
 src/workers/blast.worker.ts
 src/lib/queue.ts
 src/lib/postgres.ts
-src/lib/mongodb.ts
+src/lib/postgres.ts
 src/middleware/auth.middleware.ts
 ```
 
@@ -1630,9 +1634,9 @@ expect(parseInt(after.rows[0].count)).toBe(parseInt(before.rows[0].count) + 1)
 
 **All AI agents MUST:**
 - Use TypeScript strict mode — no `any` types, no type assertions without justification
-- Place ALL PostgreSQL and MongoDB queries in `repositories/` files — never in services or routes
+- Place ALL PostgreSQL queries in `repositories/` files — never in services or routes
 - Use camelCase for JSON API response fields (even though DB columns are snake_case)
-- Use snake_case for all PostgreSQL column names and MongoDB field names
+- Use snake_case for all PostgreSQL column names and JSON payload keys where persisted
 - Return errors using `{ error: { code, message, details[] } }` — no exceptions
 - Write all dates as ISO 8601 UTC strings in API responses
 - Use `registrationRepo`, `contactRepo`, etc. (singleton instances) — never `new Repository()` in routes
@@ -1653,12 +1657,12 @@ expect(parseInt(after.rows[0].count)).toBe(parseInt(before.rows[0].count) + 1)
 - Hand-write API fetch calls — use React Query hooks; mock responses live in `src/mocks/handlers/`
 - Render `DevToolbar` in production — the `NODE_ENV` check inside the component handles this; do not add extra conditionals
 - Edit files in `src/mocks/` for production logic — mocks are dev/test only
-- Use Mongoose, Prisma, Knex, or any ORM — direct `pg` Pool for PostgreSQL, native `mongodb` driver
+- Use Prisma, Knex, or any ORM — direct `pg` Pool for PostgreSQL
 - Use Express — Fastify only for backend
 - Use Pages Router in Next.js — App Router only
 - Make direct HTTP calls to any AI provider from route handlers — always go through `IEtlNormalizationService` / `IYoriMindService` / `ISmartFilterService` adapters
 - Write to `audit_logs` via UPDATE/DELETE — INSERT only
-- Attempt database-level JOIN across PostgreSQL and MongoDB — Application Layer join only
+- Scatter persistence logic outside repositories or introduce a second operational database without an explicit architecture decision
 - Use auto-increment integer primary keys in PostgreSQL — UUID only
 - Import `@supabase/ssr`, `@supabase/supabase-js`, or any Supabase package — not used in this stack
 - Upload files to VPS disk directly without Docker volume — always use the `uploads_tmp` volume path
@@ -1673,7 +1677,7 @@ Decisions that must not be changed without careful consideration (large migratio
 |---|---|---|---|
 | Primary key type | UUID v4 (`gen_random_uuid`) | Auto-increment integer | Integer cannot merge DBs without ID conflicts |
 | DB for contacts | PostgreSQL (relational) | Full NoSQL | Contacts need UNIQUE constraint + JOIN |
-| DB for surveys | MongoDB (document) | JSON column in PostgreSQL | Survey structure too dynamic — schema migration every event not scalable |
+| DB for surveys | PostgreSQL JSONB | Separate document database | Keeps dynamic form data in the primary operational store while preserving schema flexibility |
 | Queue for blast | BullMQ (Redis-backed) | Direct synchronous API call | Sync call timeout at 1000+ emails, unrecoverable on failure |
 | Auth provider | Custom JWT (jsonwebtoken + bcrypt) | Supabase Auth, Auth0 | Zero external dependency; full control over token lifecycle and RBAC |
 | File storage | VPS filesystem (Docker volume) | Supabase Storage, S3 | No external dependency; Docker volume survives restarts; MinIO S3 upgrade path |
@@ -1720,7 +1724,7 @@ yorindo-api/
 │   │   └── index.ts                ← All process.env access; throws on missing required
 │   ├── lib/
 │   │   ├── postgres.ts             ← Singleton pg.Pool; exported as `db`
-│   │   ├── mongodb.ts              ← Singleton MongoClient; exported as `mongo`
+│   │   ├── postgres.ts             ← Shared PostgreSQL helpers for JSONB-heavy repositories
 │   │   ├── redis.ts                ← Singleton IORedis; exported as `redis`
 │   │   ├── queue.ts                ← BullMQ Queue factory using lib/redis; etlQueue, blastQueue
 │   │   └── storage.ts              ← VPS filesystem read/write (snapshots, uploads)
@@ -1737,9 +1741,9 @@ yorindo-api/
 │   │   ├── flagged.repo.ts         ← F1: flagged_records review workflow
 │   │   ├── industry.repo.ts        ← F1: industries lookup table
 │   │   ├── jobTitle.repo.ts        ← F1: job_titles lookup table
-│   │   ├── surveySchema.repo.ts    ← F2: MongoDB survey_schemas
-│   │   ├── surveyResponse.repo.ts  ← F2/F3: MongoDB survey_responses
-│   │   ├── rawUpload.repo.ts       ← F1: MongoDB raw_uploads (immutable log)
+│   │   ├── surveySchema.repo.ts    ← F2: PostgreSQL survey_schemas (JSONB)
+│   │   ├── surveyResponse.repo.ts  ← F2/F3: PostgreSQL survey_responses (JSONB)
+│   │   ├── rawUpload.repo.ts       ← F1: PostgreSQL raw_uploads (immutable JSONB log)
 │   │   └── audit.repo.ts           ← INSERT-only audit_logs; never UPDATE/DELETE
 │   ├── services/
 │   │   ├── auth.service.ts         ← login, refresh, logout; token generation
@@ -1986,7 +1990,7 @@ yorindo-app/
 
 **Data Boundaries:**
 - PostgreSQL owns: contacts, events, registrations, users, user_events, flagged_records, audit_logs, industries, job_titles
-- MongoDB owns: survey_schemas, survey_responses, raw_uploads
+- PostgreSQL owns: survey_schemas, survey_responses, raw_uploads
 - Redis owns: JWT blacklist (`jti:{jti}`), YoriMind cache (`yorimind:event:{id}`), BullMQ queue state
 - VPS filesystem (`snapshots_data` volume): YoriMind JSON snapshots only
 - VPS filesystem (`uploads_tmp` volume): temporary ETL files only (deleted after worker processes)
@@ -2063,7 +2067,7 @@ blast.worker.ts     → Everpro API        (WhatsApp Business delivery)
 
 ### Coherence Validation ✅
 
-**Decision Compatibility:** All technology choices are version-compatible and interoperate without conflicts. Next.js 14 + TanStack Query v5 + Zustand 4.x — no known conflicts. Fastify 4.x TypeScript support is first-class. pg + PostgreSQL 16, mongodb 6.x + mongo:7, BullMQ 3.x + IORedis + redis:7-alpine — all confirmed compatible. MSW 2.x + Vitest + @faker-js/faker confirmed working in dual browser/Node mode.
+**Decision Compatibility:** All technology choices are version-compatible and interoperate without conflicts. Next.js 16 + TanStack Query v5 + Zustand 4.x — no known conflicts. Fastify 4.x TypeScript support is first-class. pg + PostgreSQL 16, BullMQ 3.x + IORedis + redis:7-alpine — all confirmed compatible. MSW 2.x + Vitest + @faker-js/faker confirmed working in dual browser/Node mode.
 
 **Pattern Consistency:** Repository pattern enforced across all domains. snake_case DB → camelCase API transformation defined via `toContact()` / `toRegistration()` helpers. Error schema `{ error: { code, message, details[] } }` applied consistently across all routes. BullMQ always uses shared `lib/redis.ts` connection — no duplicate clients.
 
@@ -2076,7 +2080,7 @@ blast.worker.ts     → Everpro API        (WhatsApp Business delivery)
 | Feature | Status | Key Coverage |
 |---|---|---|
 | F1 — Contact Database | ✅ | ETL → BullMQ → GPT-4o → upsert/flag; paginated search with indexes; smart filter; flagged review |
-| F2 — Event Registration | ✅ | Event CRUD; MongoDB survey builder; public form (rate-limited); approval workflow; QR JWT; blast queue |
+| F2 — Event Registration | ✅ | Event CRUD; JSONB-backed survey builder; public form (rate-limited); approval workflow; QR JWT; blast queue |
 | F3 — Check-in PWA | ✅ | html5-qrcode camera; IndexedDB offline queue; flush on reconnect; live attendance poll (5s) |
 | F4 — Analytics/YoriMind | ✅ | node-cron snapshot at 02:00 WIB; VPS filesystem; Claude Sonnet; Redis TTL 24h; Recharts |
 
@@ -2103,7 +2107,7 @@ blast.worker.ts     → Everpro API        (WhatsApp Business delivery)
 | Missing scaffold packages | Added `@fastify/multipart`, `xlsx`, `node-cron`, `qrcode` + `@types/jsonwebtoken`, `@types/bcrypt`, `@types/node-cron`, `@types/qrcode` |
 | PDF export unspecified | `pdfkit` selected; chart-in-PDF deferred to Sprint 3; marked in Deferred Decisions |
 | BE QR rendering | `qrcode` npm — PNG Buffer → base64 inline image in Brevo HTML email |
-| MongoDB "Atlas" references | Corrected to "self-hosted" throughout (deployment was simplified to Docker Compose only) |
+| Legacy document-store references | Corrected to "self-hosted" throughout (deployment was simplified to Docker Compose only) |
 
 ---
 
@@ -2144,7 +2148,7 @@ blast.worker.ts     → Everpro API        (WhatsApp Business delivery)
 **Key Strengths:**
 - Two-repo separation with TypeScript type contract as coordination mechanism — teams stay unblocked
 - MSW + DevToolbar enables full FE development with zero BE dependency
-- Repository pattern strictly enforced — DB can be swapped (pg → RDS, mongo → Atlas) with 3–5 file changes
+- Repository pattern strictly enforced — infrastructure can evolve (pg on VPS → managed Postgres) with limited file changes
 - All infrastructure self-hosted via Docker Compose — zero external dependency except Everpro + Brevo
 - UUID primary keys throughout — RDS migration is a single env var change
 - Clear enforcement rules for AI agents — both MUST and MUST NOT lists cover 25+ conflict points
@@ -2155,7 +2159,7 @@ blast.worker.ts     → Everpro API        (WhatsApp Business delivery)
 - WebSocket / SSE for live attendance counter (post-MVP, currently polling 5s)
 - Separate worker container for ETL/blast (when VPS load warrants it — no code changes required)
 - Read replica for analytics queries (when reporting queries impact write performance)
-- MongoDB → Atlas when Docker operational overhead grows
+- Optional document-store extraction only if PostgreSQL JSONB becomes a proven bottleneck under real production load
 
 ---
 
@@ -2175,7 +2179,7 @@ mkdir yorindo-api && cd yorindo-api
 # Run: npx tsx scripts/migrate.ts  (after creating db/migrations/*.sql)
 
 # Step 2 — yorindo-app
-npx create-next-app@14 yorindo-app --typescript --tailwind --eslint --app --src-dir --import-alias "@/*"
+npx create-next-app@16 yorindo-app --typescript --tailwind --eslint --app --src-dir --import-alias "@/*"
 # Run post-init setup (see Frontend Scaffold section)
 ```
 
@@ -2211,7 +2215,7 @@ src/
       UserRepository.ts
       FlaggedRecordsRepository.ts
       SuppressionRepository.ts
-    mongo/              ← Phase 2: real MongoDB implementations
+    postgres/           ← Phase 2: real PostgreSQL implementations
       SurveyRepository.ts
     memory/             ← Phase 1: in-memory implementations (test + dev without DB)
       InMemoryContactRepository.ts

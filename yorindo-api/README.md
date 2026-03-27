@@ -120,7 +120,7 @@ Quick reference:
 | Blast | `POST /api/events/:id/blast` |
 | Users | `GET/POST /api/users`, … |
 | ETL | `POST /api/etl/upload` |
-| Vendors | `GET/POST /api/vendors`, `PUT/DELETE /api/vendors/:id` |
+| Vendors | `GET/POST /api/vendors`, `GET/PATCH/DELETE /api/vendors/:id`, `GET/POST /api/events/:id/sponsors`, `PATCH/DELETE /api/events/:id/sponsors/:vendorId` |
 | Templates | `GET/POST /api/templates`, `PUT/DELETE /api/templates/:id` |
 
 ---

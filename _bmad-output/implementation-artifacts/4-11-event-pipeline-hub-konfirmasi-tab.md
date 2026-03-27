@@ -44,7 +44,7 @@ Then it returns seeded data: stat counts + registration list with `{ id, contact
 ```
 src/
   app/
-    (admin)/
+    app/
       events/
         [id]/
           confirmation/

@@ -9,7 +9,7 @@
 
 All of **Epic 1** must complete before Phase 1 feature work begins (type contracts + MSW handlers + service interfaces are the foundation).
 
-FE builds against MSW browser handlers. BE builds with Fastify routes fully wired, but backed by **in-memory repository implementations** and **mock service adapters** — no PostgreSQL/MongoDB/Redis/Brevo/Everpro, or any AI provider required. Both teams can develop, review, and unit-test in parallel.
+FE builds against MSW browser handlers. BE builds with Fastify routes fully wired, but backed by **in-memory repository implementations** and **mock service adapters** — no PostgreSQL/Redis/Brevo/Everpro, or any AI provider required. Both teams can develop, review, and unit-test in parallel.
 
 ### FE Deliverables (MSW-backed)
 

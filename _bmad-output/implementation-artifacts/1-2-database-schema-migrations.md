@@ -179,7 +179,7 @@ CREATE TABLE IF NOT EXISTS users (
   id            TEXT PRIMARY KEY,
   email         VARCHAR(200) UNIQUE NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
-  role          VARCHAR(20) NOT NULL,  -- 'super_admin', 'event_admin', 'staff', 'vendor_client', 'participant'
+  role          VARCHAR(20) NOT NULL,  -- 'admin', 'viewer', 'staff'
   name          VARCHAR(200),
   created_at    TIMESTAMPTZ DEFAULT NOW(),
   updated_at    TIMESTAMPTZ DEFAULT NOW()
@@ -295,7 +295,7 @@ migrate().catch(err => { console.error(err); process.exit(1) })
 
 Seed must insert:
 - 2 industries: `{ slug: 'teknologi', name: 'Teknologi Informasi' }`, `{ slug: 'kesehatan', name: 'Kesehatan' }`
-- 2 users: admin (`role: 'event_admin'`) + staff (`role: 'staff'`), both with bcrypt-hashed passwords
+- 3 users: admin (`role: 'admin'`), viewer (`role: 'viewer'`), and staff (`role: 'staff'`), all with bcrypt-hashed passwords
 - 3 events: one `draft`, one `published`, one `completed`
 - 10 contacts with varied industry/city/company_size
 
