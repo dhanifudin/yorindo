@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/node'
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import helmet from '@fastify/helmet'
@@ -45,6 +46,10 @@ export async function buildServer() {
     const isValidation = error.validation != null
 
     fastify.log.error(error)
+
+    if (statusCode >= 500) {
+      Sentry.captureException(error)
+    }
 
     return reply.status(statusCode).send({
       error: {
