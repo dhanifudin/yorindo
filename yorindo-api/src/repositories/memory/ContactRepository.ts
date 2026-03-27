@@ -17,6 +17,15 @@ function consentStatus(i: number) {
   return 'active' as const
 }
 
+/**
+ * Mengubah slug industri FE menjadi id lookup yang dipakai di seed repository.
+ */
+function toIndustryId(industry?: string): string | undefined {
+  if (!industry) return undefined
+  const found = INDONESIAN_INDUSTRIES.find((item) => item.slug === industry || item.id === industry)
+  return found?.id ?? industry
+}
+
 export class InMemoryContactRepository implements IContactRepository {
   private contacts: Map<string, Contact> = new Map()
 
@@ -24,6 +33,9 @@ export class InMemoryContactRepository implements IContactRepository {
     this._seed()
   }
 
+  /**
+   * Menyiapkan data kontak deterministik untuk dev dan test tanpa DB sungguhan.
+   */
   private _seed(): void {
     for (let i = 0; i < 120; i++) {
       const id = SEED_CONTACT_IDS[i]!
@@ -55,9 +67,59 @@ export class InMemoryContactRepository implements IContactRepository {
     }
   }
 
+  /**
+   * Mengurutkan koleksi kontak memory berdasarkan field yang diminta.
+   */
+  private _sort(data: Contact[], params: PaginationParams): Contact[] {
+    const sortBy = params.sortBy ?? 'createdAt'
+    const sortDir = params.sortDir ?? 'desc'
+    const direction = sortDir === 'asc' ? 1 : -1
+
+    return [...data].sort((a, b) => {
+      const left = this._sortValue(a, sortBy)
+      const right = this._sortValue(b, sortBy)
+      if (left < right) return -1 * direction
+      if (left > right) return 1 * direction
+      return 0
+    })
+  }
+
+  /**
+   * Mengubah field kontak ke nilai yang aman dibandingkan saat sorting.
+   */
+  private _sortValue(contact: Contact, sortBy: string): string | number {
+    switch (sortBy) {
+      case 'name':
+        return contact.name.toLowerCase()
+      case 'email':
+        return (contact.email ?? '').toLowerCase()
+      case 'phone':
+        return contact.phone
+      case 'industry':
+      case 'industryId':
+        return (contact.industryId ?? '').toLowerCase()
+      case 'city':
+        return (contact.city ?? '').toLowerCase()
+      case 'company':
+        return (contact.company ?? '').toLowerCase()
+      case 'companySize':
+        return contact.companySize ?? ''
+      case 'created_at':
+      case 'createdAt':
+        return new Date(contact.createdAt).getTime()
+      default:
+        return new Date(contact.createdAt).getTime()
+    }
+  }
+
+  /**
+   * Mengambil daftar kontak dengan filter, sorting, lalu pagination in-memory.
+   */
   async findAll(params: PaginationParams, filters?: ContactFilters): Promise<{ data: Contact[]; total: number }> {
     let data = Array.from(this.contacts.values()).filter(c => c.deletedAt === null)
+    const industryId = toIndustryId(filters?.industry)
 
+    if (industryId) data = data.filter(c => c.industryId === industryId)
     if (filters?.city) data = data.filter(c => c.city === filters.city)
     if (filters?.companySize) data = data.filter(c => c.companySize === filters.companySize)
     if (filters?.flagCategory) data = data.filter(c => c.flagCategory === filters.flagCategory)
@@ -65,8 +127,15 @@ export class InMemoryContactRepository implements IContactRepository {
     if (filters?.missingEmail) data = data.filter(c => c.email === null)
     if (filters?.search) {
       const q = filters.search.toLowerCase()
-      data = data.filter(c => c.name.toLowerCase().includes(q) || c.phone.includes(q))
+      data = data.filter(c =>
+        c.name.toLowerCase().includes(q) ||
+        c.phone.includes(q) ||
+        (c.email ?? '').toLowerCase().includes(q) ||
+        (c.company ?? '').toLowerCase().includes(q),
+      )
     }
+
+    data = this._sort(data, params)
 
     const total = data.length
     const start = (params.page - 1) * params.pageSize
@@ -139,12 +208,17 @@ export class InMemoryContactRepository implements IContactRepository {
     return Array.from(this.contacts.values()).some(c => c.phone === hashedPhone)
   }
 
+  /**
+   * Menghitung facet filter dari kontak aktif agar UI bisa menampilkan opsi filter.
+   */
   async findFacets(): Promise<FacetResult> {
     const all = Array.from(this.contacts.values()).filter(c => c.deletedAt === null)
+    const industryMap = new Map<string, number>()
     const cityMap = new Map<string, number>()
     const sizeMap = new Map<string, number>()
 
     for (const c of all) {
+      if (c.industryId) industryMap.set(c.industryId, (industryMap.get(c.industryId) ?? 0) + 1)
       if (c.city) cityMap.set(c.city, (cityMap.get(c.city) ?? 0) + 1)
       if (c.companySize) sizeMap.set(c.companySize, (sizeMap.get(c.companySize) ?? 0) + 1)
     }

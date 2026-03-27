@@ -7,7 +7,7 @@ import { InMemoryUserRepository } from '../repositories/memory/UserRepository.js
 import { InMemoryFlaggedRecordsRepository } from '../repositories/memory/FlaggedRecordsRepository.js'
 import { InMemorySuppressionRepository } from '../repositories/memory/SuppressionRepository.js'
 import { InMemorySurveyRepository } from '../repositories/memory/SurveyRepository.js'
-import { SEED_CONTACT_IDS, SEED_EVENT_IDS, SEED_REGISTRATION_IDS } from '../repositories/memory/_seeds.js'
+import { INDONESIAN_INDUSTRIES, SEED_CONTACT_IDS, SEED_EVENT_IDS, SEED_REGISTRATION_IDS } from '../repositories/memory/_seeds.js'
 
 // ─── Contact Repository ───────────────────────────────────────────────────────
 
@@ -25,6 +25,22 @@ describe('InMemoryContactRepository', () => {
     const { data, total } = await repo.findAll({ page: 1, pageSize: 10 })
     expect(data.length).toBe(10)
     expect(total).toBe(120)
+  })
+
+  it('findAll filters by industry', async () => {
+    const teknologiId = INDONESIAN_INDUSTRIES.find((industry) => industry.slug === 'teknologi')!.id
+    const { data, total } = await repo.findAll(
+      { page: 1, pageSize: 20 },
+      { industry: 'teknologi' },
+    )
+    expect(total).toBeGreaterThan(0)
+    expect(data.every((contact) => contact.industryId === teknologiId)).toBe(true)
+  })
+
+  it('findAll sorts by name ascending', async () => {
+    const { data } = await repo.findAll({ page: 1, pageSize: 5, sortBy: 'name', sortDir: 'asc' })
+    const names = data.map((contact) => contact.name)
+    expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b)))
   })
 
   it('findById returns contact by id', async () => {
