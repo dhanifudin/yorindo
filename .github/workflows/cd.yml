@@ -72,6 +72,7 @@ jobs:
 
           Path('.deploy.env').write_text(os.environ['VPS_ENV_FILE'], encoding='utf-8')
           PY
+          echo "IMAGE_TAG=${{ github.ref_name }}" >> .deploy.env
       - name: Ensure VPS directories exist
         uses: appleboy/ssh-action@v1
         with:

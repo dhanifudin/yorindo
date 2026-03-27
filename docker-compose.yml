@@ -11,7 +11,7 @@ services:
     restart: unless-stopped
 
   api:
-    image: dhanifudin/yorindo-api:latest
+    image: dhanifudin/yorindo-api:${IMAGE_TAG:-latest}
     expose:
       - "3000"
     env_file: .env
@@ -34,7 +34,7 @@ services:
         max-file: "5"
 
   app:
-    image: dhanifudin/yorindo-app:latest
+    image: dhanifudin/yorindo-app:${IMAGE_TAG:-latest}
     expose:
       - "3000"
     env_file: .env
