@@ -21,7 +21,7 @@ export const userEventAssignments: Map<string, Set<string>> = new Map([
   [MOCK_USER_IDS.viewer, new Set(['event-001'])],
 ])
 
-export let usersStore: StoredUser[] = [
+export const usersStore: StoredUser[] = [
   {
     id: MOCK_USER_IDS.admin,
     name: 'Admin Yorindo',
