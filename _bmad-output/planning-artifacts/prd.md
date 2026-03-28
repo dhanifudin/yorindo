@@ -543,7 +543,7 @@ All data is scoped to one organization. No tenant isolation required at the data
 
 ### RBAC Matrix
 
-Three internal roles with strict permission boundaries; participant accounts only exist when experimental participant features are enabled:
+Core product roles with strict permission boundaries:
 
 | Role | Scope | Key Permissions | Account Management |
 |---|---|---|---|
@@ -551,7 +551,7 @@ Three internal roles with strict permission boundaries; participant accounts onl
 | `viewer` | Assigned events | Read-only analytics, reports, and approval-queue visibility for assigned events | No write access; cannot manage users or send blasts |
 | `staff` | Assigned event (check-in only) | QR scan, KTP-assisted identity verification, name search, manual check-in override, capacity view | No dashboard access; check-in PWA only |
 
-**Account creation flow:** `admin` creates all internal accounts. `viewer` and `staff` are internal or client-facing assigned users depending on deployment needs. Vendor report access can continue to use magic links without a dedicated role. Participants are database records by default and only become accounts when experimental participant features are enabled.
+**Account creation flow:** `admin` creates and manages internal accounts. `viewer` and `staff` are internal or client-facing assigned users depending on deployment needs. Vendor report access can continue to use magic links without a dedicated role. `participant` is also a supported role in the current product model.
 
 **Permission enforcement:** JWT with role claim, validated server-side on every request via the API's OpenAPI-aware validation/auth middleware. Role claim is not trusted from client - always resolved from database on token issue.
 
@@ -670,7 +670,7 @@ All external service calls (Everpro, Brevo, AI provider) are abstracted behind s
 | **Basic Analytics & Report** | Attendance report, registration funnel, participant demographics (industry, job title, age); `profileCompleteness` score computed on every registration create/update; magic link report delivery (signed URL + HMAC + expiry) |
 | **Vendor DPA Acceptance Gate** | Checkbox + timestamp + DPA version reference stored per vendor record; re-acceptance required on DPA version change |
 | **Admin Safety Layer** | Event state machine (Draft → Published → Live → Completed → Archived; Cancel action → Archived + mandatory blast + QR invalidation); soft delete 30-day recovery; full audit trail; destructive action confirmations |
-| **3-Role RBAC** | `admin` / `viewer` / `staff`; JWT (15min access + 7-day refresh) + Redis blacklist; `admin`-only account creation/management. `participant` role exists only for experimental participant-account features |
+| **RBAC** | `admin` / `viewer` / `staff` / `participant`; JWT (15min access + 7-day refresh) + Redis blacklist; `admin`-only internal account creation/management |
 | **Security Baseline** | Rate limiting (per-IP public, per-user authenticated); input sanitization; reCAPTCHA v3; HMAC webhook verification; staff PWA session expiry (configurable hours — baseline device security) |
 | **UU PDP Compliance** | Consent capture at registration; `consentStatus` field (`legacy_unverified` \| `re-consent-sent` \| `consented` \| `suppressed`); suppression list; anonymization path for erasure requests; vendor DPA gate |
 | **Data Model Foundation** | `identitySignals` subdocument (`phones[]`, `emails[]`, `nameVariants[]`, `companyHistory[]` — arrays of objects with metadata); `profileCompleteness` score field; Lead Intelligence Suite config fields in event schema (toggles, consent fields) — UI ships Growth Phase 1 |

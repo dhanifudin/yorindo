@@ -2,6 +2,7 @@ import type { Event, EventOverviewMetrics, UpcomingUncontactedResult, EventStatu
 import type { PaginationParams } from './IContactRepository.js'
 
 export interface EventFilters {
+  ids?: EntityId[]
   status?: EventStatus
   city?: string
   search?: string

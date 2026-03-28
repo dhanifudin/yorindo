@@ -9,8 +9,6 @@ interface AuthStore {
   user: AuthUser | null
   eventKeys: Record<string, string>
   setAuth: (token: string, user: AuthStore['user'], eventKeys?: Record<string, string>) => void
-  /** @deprecated use setAuth */
-  setAccessToken: (token: string, user: AuthStore['user']) => void
   clearAuth: () => void
 }
 
@@ -19,6 +17,5 @@ export const useAuthStore = create<AuthStore>((set) => ({
   user: null,
   eventKeys: {},
   setAuth: (accessToken, user, eventKeys = {}) => set({ accessToken, user, eventKeys }),
-  setAccessToken: (accessToken, user) => set({ accessToken, user }),
   clearAuth: () => set({ accessToken: null, user: null, eventKeys: {} }),
 }))

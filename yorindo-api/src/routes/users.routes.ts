@@ -9,14 +9,14 @@ import { validateOpenApiRequest, validateOpenApiResponse } from '../lib/openapi-
 const CreateUserBody = z.object({
   email: z.string().email(),
   password: z.string().min(8),
-  name: z.string().min(1).nullable(),
+  name: z.string().min(1),
   role: z.enum(['admin', 'viewer', 'staff', 'participant']),
 })
 
 const UpdateUserBody = z.object({
   name: z.string().min(1).nullable().optional(),
   role: z.enum(['admin', 'viewer', 'staff', 'participant']).optional(),
-})
+}).refine((data) => Object.keys(data).length > 0, { message: 'At least one field is required' })
 
 const PaginationQuery = z.object({
   page: z.coerce.number().min(1).optional().default(1),
@@ -28,6 +28,60 @@ const UserEventParams = z.object({ id: z.string().min(1), eventId: z.string().mi
 const AssignEventBody = z.object({ eventId: z.string().min(1) })
 
 export const usersRoutes: FastifyPluginAsync = async (fastify) => {
+  fastify.get('/api/users/me/assigned-events', { preHandler: requireAuth }, async (request, reply) => {
+    const payload = request.user as JwtPayload
+    if (payload.role === 'admin') {
+      const result = await eventRepository.findAll({ page: 1, pageSize: 200 })
+      const responseBody = {
+        data: result.data.map((event) => ({
+          id: event.id,
+          name: event.name,
+          slug: event.slug,
+          description: event.description ?? '',
+          status: event.status,
+          eventDate: event.date,
+          timezone: event.timezone,
+          capacity: event.capacity ?? undefined,
+          targetCriteria: event.targetCriteria ?? {},
+          surveySchema: {},
+          venue: event.venue ?? undefined,
+          industryTags: event.targetCriteria?.industries ?? [],
+          eventType: 'conference',
+          topicTags: [],
+          createdAt: event.createdAt,
+          updatedAt: event.updatedAt,
+        })),
+      }
+      validateOpenApiResponse({ path: '/users/me/assigned-events', method: 'get', status: 200, body: responseBody })
+      return reply.status(200).send(responseBody)
+    }
+
+    const eventIds = await userRepository.getAssignedEvents(payload.sub)
+    const events = (await Promise.all(eventIds.map((eventId) => eventRepository.findById(eventId)))).filter(Boolean)
+    const responseBody = {
+      data: events.map((event) => ({
+        id: event!.id,
+        name: event!.name,
+        slug: event!.slug,
+        description: event!.description ?? '',
+        status: event!.status,
+        eventDate: event!.date,
+        timezone: event!.timezone,
+        capacity: event!.capacity ?? undefined,
+        targetCriteria: event!.targetCriteria ?? {},
+        surveySchema: {},
+        venue: event!.venue ?? undefined,
+        industryTags: event!.targetCriteria?.industries ?? [],
+        eventType: 'conference',
+        topicTags: [],
+        createdAt: event!.createdAt,
+        updatedAt: event!.updatedAt,
+      })),
+    }
+    validateOpenApiResponse({ path: '/users/me/assigned-events', method: 'get', status: 200, body: responseBody })
+    return reply.status(200).send(responseBody)
+  })
+
   // Apply roles logic to the users feature routes
   fastify.addHook('preHandler', requireAuth)
   fastify.addHook('preHandler', requireAdmin)
@@ -60,17 +114,21 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
       passwordHash,
     })
 
-    // Write Audit Log
+    // Write Audit Log (non-blocking)
     const payload = request.user as JwtPayload
-    await auditLogRepository.create({
-      action: 'user.created',
-      actorId: payload.sub,
-      actorRole: payload.role,
-      eventId: null,
-      targetId: user.id,
-      targetType: 'user',
-      metadata: { role },
-    })
+    try {
+      await auditLogRepository.create({
+        action: 'user.created',
+        actorId: payload.sub,
+        actorRole: payload.role,
+        eventId: null,
+        targetId: user.id,
+        targetType: 'user',
+        metadata: { role },
+      })
+    } catch (auditErr) {
+      console.warn('Audit log write failed on user.created:', auditErr)
+    }
 
     // Remove password hash from response
     const { passwordHash: _hash, ...safeUser } = user
@@ -81,7 +139,12 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
   // ─── GET /api/users ───────────────────────────────────────────────────────
   fastify.get('/api/users', async (request, reply) => {
     const query = PaginationQuery.safeParse(request.query)
-    const params = query.success ? query.data : { page: 1, pageSize: 50 }
+    if (!query.success) {
+      return reply.status(400).send({
+        error: { code: 'VALIDATION_ERROR', message: 'Invalid query params', details: query.error.issues },
+      })
+    }
+    const params = query.data
     validateOpenApiRequest({ path: '/users', method: 'get', query: params })
 
     const { data: users, total } = await userRepository.findAll(params)
@@ -98,8 +161,21 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
 
   // ─── PATCH /api/users/:id ─────────────────────────────────────────────────
   fastify.patch('/api/users/:id', async (request, reply) => {
-    const { id } = request.params as { id: string }
-    
+    const paramsResult = UserIdParams.safeParse(request.params)
+    if (!paramsResult.success) {
+      return reply.status(400).send({
+        error: { code: 'VALIDATION_ERROR', message: 'Invalid params', details: paramsResult.error.issues },
+      })
+    }
+    const { id } = paramsResult.data
+
+    const payload = request.user as JwtPayload
+    if (id === payload.sub) {
+      return reply.status(400).send({
+        error: { code: 'FORBIDDEN', message: 'Cannot modify your own account', details: [] },
+      })
+    }
+
     const result = UpdateUserBody.safeParse(request.body)
     if (!result.success) {
       return reply.status(400).send({
@@ -120,18 +196,21 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
       })
     }
 
-    // Write Audit Log
-    const payload = request.user as JwtPayload
+    // Write Audit Log (non-blocking)
     const action = result.data.role ? 'user.role-changed' : 'user.updated'
-    await auditLogRepository.create({
-      action: action,
-      actorId: payload.sub,
-      actorRole: payload.role,
-      eventId: null,
-      targetId: updated.id,
-      targetType: 'user',
-      metadata: result.data,
-    })
+    try {
+      await auditLogRepository.create({
+        action: action,
+        actorId: payload.sub,
+        actorRole: payload.role,
+        eventId: null,
+        targetId: updated.id,
+        targetType: 'user',
+        metadata: result.data,
+      })
+    } catch (auditErr) {
+      console.warn('Audit log write failed on user.updated:', auditErr)
+    }
 
     const { passwordHash: _hash, ...safeUser } = updated
     validateOpenApiResponse({ path: '/users/{id}', method: 'patch', status: 200, body: safeUser })
@@ -140,35 +219,44 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
 
   // ─── DELETE /api/users/:id ────────────────────────────────────────────────
   fastify.delete('/api/users/:id', async (request, reply) => {
-    const { id } = request.params as { id: string }
+    const paramsResult = UserIdParams.safeParse(request.params)
+    if (!paramsResult.success) {
+      return reply.status(400).send({
+        error: { code: 'VALIDATION_ERROR', message: 'Invalid params', details: paramsResult.error.issues },
+      })
+    }
+    const { id } = paramsResult.data
+
+    const payload = request.user as JwtPayload
+    if (id === payload.sub) {
+      return reply.status(400).send({
+        error: { code: 'FORBIDDEN', message: 'Cannot delete your own account', details: [] },
+      })
+    }
 
     const existing = await userRepository.findByIdIncludingDeleted(id)
-    if (!existing) {
+    if (!existing || existing.deletedAt) {
       return reply.status(404).send({
         error: { code: 'NOT_FOUND', message: 'User not found', details: [] },
       })
     }
 
-    if (existing.deletedAt) {
-      return reply.status(404).send({
-        error: { code: 'NOT_FOUND', message: 'User not found', details: [] },
-      })
-    }
-
-    // delete
     await userRepository.delete(id)
 
-    // Write Audit Log
-    const payload = request.user as JwtPayload
-    await auditLogRepository.create({
-      action: 'user.deactivated',
-      actorId: payload.sub,
-      actorRole: payload.role,
-      eventId: null,
-      targetId: id,
-      targetType: 'user',
-      metadata: null,
-    })
+    // Write Audit Log (non-blocking)
+    try {
+      await auditLogRepository.create({
+        action: 'user.deactivated',
+        actorId: payload.sub,
+        actorRole: payload.role,
+        eventId: null,
+        targetId: id,
+        targetType: 'user',
+        metadata: null,
+      })
+    } catch (auditErr) {
+      console.warn('Audit log write failed on user.deactivated:', auditErr)
+    }
 
     return reply.status(204).send()
   })
@@ -235,13 +323,23 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'User or event not found', details: [] } })
     }
 
+    if (user.role !== 'staff' && user.role !== 'viewer') {
+      return reply.status(403).send({
+        error: {
+          code: 'FORBIDDEN',
+          message: 'Only staff and viewer accounts can receive event assignments',
+          details: [],
+        },
+      })
+    }
+
     const assigned = await userRepository.getAssignedEvents(user.id)
     if (assigned.includes(event.id)) {
       return reply.status(409).send({ error: { code: 'CONFLICT', message: 'Assignment already exists', details: [] } })
     }
 
     const payload = request.user as JwtPayload
-    await userRepository.assignEvent(user.id, event.id, payload.sub)
+    const assignment = await userRepository.assignEvent(user.id, event.id, payload.sub)
     await auditLogRepository.create({
       action: 'user.event-assigned',
       actorId: payload.sub,
@@ -256,7 +354,7 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
       id: `${user.id}:${event.id}`,
       userId: user.id,
       eventId: event.id,
-      grantedAt: new Date().toISOString(),
+      grantedAt: assignment.grantedAt,
     }
     validateOpenApiResponse({ path: '/users/{id}/events', method: 'post', status: 201, body: responseBody })
     return reply.status(201).send(responseBody)
@@ -273,6 +371,11 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
     const user = await userRepository.findById(params.data.id)
     if (!user) {
       return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'User not found', details: [] } })
+    }
+
+    const assigned = await userRepository.getAssignedEvents(user.id)
+    if (!assigned.includes(params.data.eventId)) {
+      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Event assignment not found', details: [] } })
     }
 
     await userRepository.revokeEvent(user.id, params.data.eventId)

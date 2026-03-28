@@ -29,16 +29,16 @@ describe('DevToolbar store integration', () => {
     useAuthStore.getState().clearAuth()
   })
 
-  it('setAccessToken updates user with dev-staff role', () => {
-    const { setAccessToken } = useAuthStore.getState()
-    setAccessToken('dev-token', { id: 'cuid2devstaffuser0000001', role: 'staff' })
+  it('setAuth updates user with dev-staff role', () => {
+    const { setAuth } = useAuthStore.getState()
+    setAuth('dev-token', { id: 'cuid2devstaffuser0000001', role: 'staff' })
     const { user } = useAuthStore.getState()
     expect(user).toEqual({ id: 'cuid2devstaffuser0000001', role: 'staff' })
   })
 
   it('clearAuth removes user and token', () => {
-    const { setAccessToken, clearAuth } = useAuthStore.getState()
-    setAccessToken('dev-token', { id: 'cuid2devadminuser0000001', role: 'admin' })
+    const { setAuth, clearAuth } = useAuthStore.getState()
+    setAuth('dev-token', { id: 'cuid2devadminuser0000001', role: 'admin' })
     clearAuth()
     const { user, accessToken } = useAuthStore.getState()
     expect(user).toBeNull()

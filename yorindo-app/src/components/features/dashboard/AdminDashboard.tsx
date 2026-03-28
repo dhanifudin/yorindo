@@ -47,7 +47,7 @@ export function AdminDashboard() {
   const { data: contactsData, isLoading: contactsLoading } = useTotalContacts()
   const { data: vendorsData } = useVendors()
 
-  const accessToken = useAuthStore((s) => s.accessToken)
+  const authUser = useAuthStore((s) => s.user)
   const isLoading = userLoading || eventsLoading || contactsLoading
 
   const allEvents = eventsData?.data ?? []
@@ -63,7 +63,7 @@ export function AdminDashboard() {
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 8)
 
-  const greeting = currentUser?.name ?? accessToken ?? 'Admin'
+  const greeting = currentUser?.name ?? authUser?.name ?? 'Admin'
   const today = formatIndonesianDate(new Date())
 
   const STAT_PILLS = [

@@ -12,7 +12,8 @@ export function useAssignedEvents() {
       if (accessToken === 'dev-token' && user?.id) headers['X-User-Id'] = user.id
       const res = await fetch('/api/users/me/assigned-events', { headers })
       if (!res.ok) throw new Error('Failed to fetch assigned events')
-      return res.json()
+      const body = await res.json()
+      return Array.isArray(body) ? body : (body.data ?? [])
     },
     enabled: !!accessToken,
   })

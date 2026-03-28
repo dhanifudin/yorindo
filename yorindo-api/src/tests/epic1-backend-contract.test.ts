@@ -5,6 +5,7 @@ import { buildServer } from '../server.js'
 let app: FastifyInstance
 let adminToken = ''
 let staffToken = ''
+let viewerToken = ''
 let seededEventId = ''
 let seededActiveEventId = ''
 
@@ -27,6 +28,13 @@ beforeAll(async () => {
     payload: { email: 'staff@yorindo.id', password: 'Password123!' },
   })
   staffToken = staffLogin.json().accessToken
+
+  const viewerLogin = await app.inject({
+    method: 'POST',
+    url: '/api/auth/login',
+    payload: { email: 'viewer@yorindo.id', password: 'Password123!' },
+  })
+  viewerToken = viewerLogin.json().accessToken
 
   const eventsResponse = await app.inject({
     method: 'GET',
@@ -59,6 +67,30 @@ describe('Epic 1 backend contract routes', () => {
     const body = response.json()
     expect(body.data.length).toBeGreaterThan(0)
     expect(body.pagination.total).toBeGreaterThan(0)
+  })
+
+  it('limits viewer event list to assigned events only', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/events?page=1&pageSize=20',
+      headers: { authorization: `Bearer ${viewerToken}` },
+    })
+
+    expect(response.statusCode).toBe(200)
+    const body = response.json()
+    expect(body.data).toHaveLength(1)
+    expect(body.data[0].id).toBe(seededActiveEventId)
+  })
+
+  it('returns EVENT_ACCESS_DENIED for viewer on unassigned event detail', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/events/cuid2event00000000000004',
+      headers: { authorization: `Bearer ${viewerToken}` },
+    })
+
+    expect(response.statusCode).toBe(403)
+    expect(response.json().error.code).toBe('EVENT_ACCESS_DENIED')
   })
 
   it('lists event registrations from /api/events/:id/registrations', async () => {

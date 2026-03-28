@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { buildServer } from '../server.js'
 import { config } from '../config/index.js'
 import { userRepository, auditLogRepository } from '../container.js'
-import { SEED_USER_IDS } from '../repositories/memory/_seeds.js'
+import { SEED_EVENT_IDS, SEED_USER_IDS } from '../repositories/memory/_seeds.js'
 import jwt from 'jsonwebtoken'
 import type { FastifyInstance } from 'fastify'
 import type { JwtPayload } from '../middleware/auth.js'
@@ -124,12 +124,45 @@ describe('Users API', () => {
 
       expect(response.statusCode).toBe(204)
 
-      const checkDb = await userRepository.findById(user.id)
-      expect(checkDb).toBeNull()
+      // Soft-deleted: findById returns null (filters deletedAt), but record still exists
+      const checkActive = await userRepository.findById(user.id)
+      expect(checkActive).toBeNull()
+      const checkIncludingDeleted = await userRepository.findByIdIncludingDeleted(user.id)
+      expect(checkIncludingDeleted).not.toBeNull()
+      expect(checkIncludingDeleted?.deletedAt).not.toBeNull()
 
       const auditLogs = await auditLogRepository.findAllByTarget(user.id)
       const log = auditLogs.find(a => a.action === 'user.deactivated')
       expect(log).toBeDefined()
+    })
+  })
+
+  describe('Event assignments', () => {
+    it('allows assigning an event to a viewer and returns grantedAt metadata', async () => {
+      const response = await fastify.inject({
+        method: 'POST',
+        url: `/api/users/${SEED_USER_IDS.viewer}/events`,
+        headers: { Authorization: `Bearer ${getAuthToken('admin')}` },
+        payload: { eventId: SEED_EVENT_IDS[3] },
+      })
+
+      expect(response.statusCode).toBe(201)
+      const body = response.json()
+      expect(body.userId).toBe(SEED_USER_IDS.viewer)
+      expect(body.eventId).toBe(SEED_EVENT_IDS[3])
+      expect(body.grantedAt).toBeTruthy()
+    })
+
+    it('rejects assigning an event to an admin account', async () => {
+      const response = await fastify.inject({
+        method: 'POST',
+        url: `/api/users/${SEED_USER_IDS.admin}/events`,
+        headers: { Authorization: `Bearer ${getAuthToken('admin')}` },
+        payload: { eventId: SEED_EVENT_IDS[3] },
+      })
+
+      expect(response.statusCode).toBe(403)
+      expect(response.json().error.code).toBe('FORBIDDEN')
     })
   })
 })

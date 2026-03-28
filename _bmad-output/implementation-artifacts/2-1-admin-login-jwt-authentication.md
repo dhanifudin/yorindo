@@ -13,7 +13,7 @@
 
 As an internal team member,
 I want to log in with my email and password and see a proper login form with error states,
-So that I can securely access the admin platform and the JWT stored in authStore is used for subsequent API calls.
+So that I can securely access the app platform and the JWT stored in authStore is used for subsequent API calls.
 
 > **Phase 1 FE scope:** Build the login page UI, form validation, and authStore integration — all wired to the existing MSW auth handler (`/api/auth/login` always returns accessToken). No real JWT validation in Phase 1.
 
@@ -27,7 +27,7 @@ Then it shows email and password fields, a submit button, and handles loading st
 
 **AC2:** Given valid credentials submitted,
 When `POST /api/auth/login` is called and MSW returns `{ accessToken, user: { id, role: 'admin' } }`,
-Then `authStore.setAccessToken(token, user)` is called and the user is redirected to `/admin`
+Then `authStore.setAuth(token, user, eventKeys?)` is called and the user is redirected to `/app`
 
 **AC3:** Given the form is submitted with empty fields,
 When client-side Zod validation runs,
@@ -38,7 +38,7 @@ Then any email/password combination succeeds — the form works end-to-end in de
 
 **AC5:** Given the user is already authenticated (authStore has accessToken),
 When `/login` is navigated to,
-Then they are redirected to `/admin` immediately
+Then they are redirected to `/app` immediately
 
 **AC6 (2026-03-28 — eventKeys):** Given `POST /api/auth/login` succeeds,
 When the MSW response includes `eventKeys: { [eventId]: string }`,
@@ -61,26 +61,25 @@ Then `authStore.setAuth(token, user, eventKeys)` stores the eventKeys map; for e
   - [x] Add loading state on submit button (disabled + spinner during API call)
 
 - [x] **Task 3: Wire to MSW auth handler and authStore**
-  - [x] On successful login, call `useAuthStore().setAccessToken(data.accessToken, data.user)`
-  - [x] On success, `router.push('/admin')`
+  - [x] On successful login, call `useAuthStore().setAuth(data.accessToken, data.user, data.eventKeys ?? {})`
+  - [x] On success, `router.push('/app')`
   - [x] On error (non-2xx), show "Invalid credentials" below the form (no field-level hint)
   - [x] Use `fetch('/api/auth/login', ...)` directly (React Query mutation optional, plain fetch acceptable)
 
 - [x] **Task 4: Redirect already-authenticated users**
   - [x] In `login/page.tsx`, check `useAuthStore().accessToken` on mount
-  - [x] If accessToken exists, redirect to `/admin` using `useRouter().push('/admin')`
+  - [x] If accessToken exists, redirect to `/app` using `useRouter().push('/app')`
   - [x] Note: `useAuthStore` requires `'use client'` — handle with `useEffect` + redirect
 
-- [x] **Task 5: Add auth-required redirect stub for admin routes**
-  - [x] Create `src/middleware.ts` at the src/ root (Next.js middleware)
+- [x] **Task 5: Add auth-required redirect stub for app routes**
   - [x] Protect `/app/*` routes: if no `authStore` accessToken → redirect to `/login`
-  - [x] Note: Zustand is client-side; middleware reads from a cookie or sessionStorage token. In Phase 1, use a simple session approach: after login, write `accessToken` to `sessionStorage`; middleware checks for its presence via a cookie or header. The full JWT middleware guard is Phase 2. For Phase 1, the redirect guard can be a simple client-side check in the admin layout.
+  - [x] Note: Phase 1 uses a client-side guard in `src/app/app/layout.tsx`, not Next middleware. The full JWT middleware guard is Phase 2.
   - [x] Create `src/app/app/layout.tsx` with client-side auth check: if no authStore token, redirect to `/login`
 
 - [x] **Task 6: Write vitest tests**
   - [x] Test: form shows validation errors on empty submit
-  - [x] Test: successful login calls setAccessToken and redirects
-  - [x] Test: login page redirects to /admin if already authenticated
+  - [x] Test: successful login calls `setAuth` and redirects
+  - [x] Test: login page redirects to /app if already authenticated
 
 ---
 
@@ -126,22 +125,22 @@ Use `useAuthStore().setAuth(token, user, eventKeys)` after login. `eventKeys` de
 ### File Locations (from architecture)
 - Login page: `src/app/login/page.tsx`
 - Login form component: `src/components/forms/LoginForm.tsx`
-- Middleware: `src/middleware.ts`
+- App layout guard: `src/app/app/layout.tsx`
 - Admin layout guard: `src/app/app/layout.tsx`
 - authStore: `src/store/authStore.ts` (already exists, do not modify shape)
 
 ### Route Architecture
 ```
-/login                     ← Public; redirect to /admin if authenticated
-/admin                     ← Protected; requires authStore.accessToken
+/login                     ← Public; redirect to /app if authenticated
+/app                       ← Protected; requires authStore.accessToken
 /app/contacts              ← Protected (Epic 3)
 /app/events                ← Protected (Epic 4)
 /scan                      ← Protected; staff + admin only (Epic 7)
 /register/[eventSlug]      ← Public (Epic 6)
 ```
 
-### Phase 1 Middleware Constraint
-Next.js middleware (`src/middleware.ts`) runs on the Edge and cannot access Zustand store directly. For Phase 1, implement auth guard as a **client-side redirect in `app/layout.tsx`**:
+### Phase 1 Route Guard Constraint
+Phase 1 uses a **client-side redirect in `app/layout.tsx`**:
 ```typescript
 'use client'
 import { useAuthStore } from '@/store/authStore'
@@ -193,8 +192,8 @@ In dev mode, the DevToolbar (already in layout.tsx from Story 1.5) sets `authSto
 1. Added `QueryProvider` client component wrapping `QueryClientProvider` — inserted into root `layout.tsx` so React Query is available for all subsequent stories.
 2. Created `src/app/login/layout.tsx` — centered full-screen layout with gray background.
 3. Created `src/components/forms/LoginForm.tsx` — RHF + Zod v4 (`z.string().email()`, `z.string().min(8)`), `zodResolver` from `@hookform/resolvers/zod` v5 (compatible with Zod v4). Plain `fetch` for login call, inline error state for API errors, loading spinner on button during submission.
-4. Created `src/app/login/page.tsx` — `'use client'`, checks authStore on mount via `useEffect`, redirects to `/admin` if already authenticated; returns `null` during redirect to prevent flash.
-5. Created `src/app/app/layout.tsx` — client-side guard: `useEffect` redirects to `/login` if no `accessToken`; returns `null` to prevent flash of protected app content. Also includes a simple top nav with logout button (calls `POST /api/auth/logout` + `clearAuth()` + redirect).
+4. Created `src/app/login/page.tsx` — `'use client'`, checks authStore on mount via `useEffect`, redirects to `/app` if already authenticated; returns `null` during redirect to prevent flash.
+5. Created `src/app/app/layout.tsx` — client-side guard: redirects to `/login` if no `accessToken`, applies role-based route restrictions, attempts silent refresh once on `401`, and returns `null` to prevent flash of protected content.
 6. Created `src/app/app/page.tsx` — placeholder admin dashboard.
 
 ### Debug Log

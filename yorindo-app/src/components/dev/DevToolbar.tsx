@@ -24,7 +24,7 @@ function triggerInstallPrompt() {
 }
 
 export function DevToolbar() {
-  const { user, setAccessToken } = useAuthStore()
+  const { user, setAuth } = useAuthStore()
   const [isExpanded, setIsExpanded] = useState(false)
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -70,7 +70,7 @@ export function DevToolbar() {
               ? 'bg-yellow-400 font-bold text-yellow-900'
               : 'bg-white text-gray-700 hover:bg-yellow-50'
           }`}
-          onClick={() => setAccessToken('dev-token', MOCK_USERS[role])}
+          onClick={() => setAuth('dev-token', MOCK_USERS[role])}
         >
           {role}
         </button>

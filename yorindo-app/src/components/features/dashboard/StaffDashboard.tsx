@@ -49,13 +49,13 @@ export function StaffDashboard() {
   const { data: currentUser, isLoading: userLoading } = useCurrentUser()
   const { data: assignedEvents, isLoading: eventsLoading } = useAssignedEvents()
 
-  const accessToken = useAuthStore((s) => s.accessToken)
+  const authUser = useAuthStore((s) => s.user)
 
   const todayEvents = (assignedEvents ?? []).filter(
     (e) => e.status === 'active' && isToday(e.eventDate, e.timezone)
   )
 
-  const greeting = currentUser?.name ?? accessToken ?? 'Staff'
+  const greeting = currentUser?.name ?? authUser?.name ?? 'Staff'
   const today = formatIndonesianDate(new Date())
 
   return (
