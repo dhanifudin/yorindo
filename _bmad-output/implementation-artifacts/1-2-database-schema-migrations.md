@@ -381,8 +381,144 @@ Seed must insert:
 - `scripts/seed.ts`
 - `src/tests/migrate.test.ts`
 
+## Migration 005 Addendum (2026-03-28)
+
+> Added to scope by Sprint Change Proposal 2026-03-28 + participant profile decisions (party mode 2026-03-28).
+> File: `migrations/005_sprint_changes_2026_03_28.sql`
+> Must run before any Phase 2 BE work on Epics 4, 5, 6, 11.
+
+```sql
+-- ─────────────────────────────────────────────
+-- events table: paid event + registration close + dual survey
+-- ─────────────────────────────────────────────
+ALTER TABLE events ADD COLUMN IF NOT EXISTS is_paid              BOOL DEFAULT FALSE;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS price                DECIMAL(12,2) NULLABLE;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS payment_method       VARCHAR(50) NULLABLE;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS registration_closed  BOOL DEFAULT FALSE;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS post_survey_enabled  BOOL DEFAULT FALSE;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS post_survey_schema   JSONB NULLABLE;
+-- rename survey_schema → registration_survey_schema (safe: column preserved, data intact)
+ALTER TABLE events RENAME COLUMN survey_schema TO registration_survey_schema;
+
+-- ─────────────────────────────────────────────
+-- registrations table: simplified status + attendance dimension
+-- ─────────────────────────────────────────────
+-- Add attendance_status column
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS attendance_status VARCHAR(20) NULLABLE
+  CHECK (attendance_status IN ('attended', 'no_show'));
+
+-- Update reg_status enum: remove waitlisted + cancelled, add provisional
+-- PostgreSQL cannot DROP enum values — use a migration-safe rename approach:
+ALTER TYPE reg_status ADD VALUE IF NOT EXISTS 'provisional';
+-- Note: 'waitlisted' and 'cancelled' values cannot be removed from PostgreSQL enum.
+-- Application layer enforces the new valid set: provisional | pending | approved | rejected
+-- Existing rows with waitlisted/cancelled status must be backfilled in seed/migration script:
+UPDATE registrations SET status = 'rejected' WHERE status = 'cancelled';
+UPDATE registrations SET status = 'pending'  WHERE status = 'waitlisted';
+
+-- ─────────────────────────────────────────────
+-- contacts table: SSO identity + participant profile staleness
+-- ─────────────────────────────────────────────
+ALTER TABLE contacts ADD COLUMN IF NOT EXISTS google_sub         VARCHAR(255) UNIQUE NULLABLE;
+ALTER TABLE contacts ADD COLUMN IF NOT EXISTS profile_updated_at TIMESTAMPTZ NULLABLE;
+-- profile_updated_at is set when participant updates their own profile via /account/profile
+-- NULL = never updated by participant (populated from ETL/admin import)
+-- Staleness threshold: 180 days (application-configured, not DB-enforced)
+
+-- ─────────────────────────────────────────────
+-- New table: survey_responses
+-- ─────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS survey_responses (
+  id              TEXT PRIMARY KEY,
+  event_id        TEXT NOT NULL REFERENCES events(id),
+  registration_id TEXT NOT NULL REFERENCES registrations(id),
+  survey_type     VARCHAR(20) NOT NULL CHECK (survey_type IN ('registration', 'post_event')),
+  responses       JSONB NOT NULL,
+  submitted_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- ─────────────────────────────────────────────
+-- Indexes for new columns
+-- ─────────────────────────────────────────────
+CREATE INDEX IF NOT EXISTS idx_contacts_google_sub ON contacts(google_sub) WHERE google_sub IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_contacts_profile_updated_at ON contacts(profile_updated_at);
+CREATE INDEX IF NOT EXISTS idx_survey_responses_event_id ON survey_responses(event_id, survey_type);
+CREATE INDEX IF NOT EXISTS idx_survey_responses_registration_id ON survey_responses(registration_id);
+CREATE INDEX IF NOT EXISTS idx_registrations_attendance_status ON registrations(attendance_status);
+
+-- ─────────────────────────────────────────────
+-- events table: encrypted QR event key
+-- ─────────────────────────────────────────────
+ALTER TABLE events ADD COLUMN IF NOT EXISTS event_key TEXT NULLABLE;
+-- event_key: base64-encoded 256-bit AES-GCM key, generated server-side per event at publish time
+-- Distributed to staff at login as part of eventKeys map; used by staff device to decrypt QR payload
+-- Phase 2: generate on event publish, rotate on staff revocation
+
+-- ─────────────────────────────────────────────
+-- registrations table: check-in audit columns
+-- ─────────────────────────────────────────────
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS check_in_method VARCHAR(20) NULLABLE
+  CHECK (check_in_method IN ('qr', 'manual'));
+-- 'qr'     = staff scanned encrypted QR on their authorized device
+-- 'manual' = staff found participant via name search + matched KTP
+-- NULL     = not yet checked in
+
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS checked_in_by TEXT REFERENCES users(id) NULLABLE;
+-- CUID2 FK to users — records which staff member performed the check-in
+-- Enables per-staff audit trail and fraud detection
+
+CREATE INDEX IF NOT EXISTS idx_registrations_check_in_method ON registrations(check_in_method);
+CREATE INDEX IF NOT EXISTS idx_registrations_checked_in_by ON registrations(checked_in_by);
+```
+
+> **Tasks to add to story implementation:**
+> - [ ] Create `migrations/005_sprint_changes_2026_03_28.sql` with the SQL above (including all new columns through check_in_method + checked_in_by)
+> - [ ] Add `'005_sprint_changes_2026_03_28.sql'` to the migrations array in `scripts/migrate.ts`
+> - [ ] Update `scripts/seed.ts` to avoid inserting `waitlisted`/`cancelled` status values
+> - [ ] Update integration test to assert 5 migrations run in order
+> - [ ] Note: `event_key` is NULL in seed data (Phase 2 concern — key generation at event publish)
+
+## Migration 006 Addendum (2026-03-28)
+
+> Added to scope by SCP-2026-03-28-D (wilayah.id location integration).
+> File: `migrations/006_location_fields.sql`
+> Must run before any Phase 2 BE work that reads contact location data.
+
+```sql
+-- ─────────────────────────────────────────────
+-- contacts table: structured location fields (wilayah.id integration)
+-- ─────────────────────────────────────────────
+ALTER TABLE contacts ADD COLUMN IF NOT EXISTS province_code TEXT NULLABLE;
+-- province_code: dot-separated Kemendagri code, e.g. "31" (DKI Jakarta)
+-- Source: wilayah.id API / ETL city-to-code mapping
+
+ALTER TABLE contacts ADD COLUMN IF NOT EXISTS province_name TEXT NULLABLE;
+-- province_name: denormalized display name, e.g. "DKI Jakarta"
+
+ALTER TABLE contacts ADD COLUMN IF NOT EXISTS city_code TEXT NULLABLE;
+-- city_code: dot-separated regency/city code, e.g. "31.71" (Kota Jakarta Pusat)
+-- ALWAYS store as TEXT — codes are dot-separated strings, never integers
+
+ALTER TABLE contacts ADD COLUMN IF NOT EXISTS city_name TEXT NULLABLE;
+-- city_name: denormalized display name, e.g. "Kota Jakarta Pusat"
+
+-- Existing contacts.city TEXT preserved as legacy free-text fallback
+
+CREATE INDEX IF NOT EXISTS idx_contacts_province_code ON contacts(province_code);
+CREATE INDEX IF NOT EXISTS idx_contacts_city_code ON contacts(city_code);
+```
+
+> **Tasks to add to story implementation:**
+> - [ ] Create `migrations/006_location_fields.sql` with the SQL above
+> - [ ] Add `'006_location_fields.sql'` to the migrations array in `scripts/migrate.ts`
+> - [ ] Update integration test to assert 6 migrations run in order
+> - [ ] Update seed contacts to include sample `province_code`/`city_code` values (e.g., Jakarta contacts get `"31"`/`"31.71"`)
+
 ## Change Log
 
 | Date | Change | Author |
 |------|--------|--------|
 | 2026-03-22 | Story created (BE Foundation) | bmad-context-engine |
+| 2026-03-28 | Migration 005 addendum added: paid event fields, dual survey, registration status update, attendance_status, contacts.google_sub + profile_updated_at, survey_responses table | Sprint Change Proposal 2026-03-28 + party mode session |
+| 2026-03-28 | Migration 005 extended: events.event_key (AES-GCM key), registrations.check_in_method ('qr'\|'manual'), registrations.checked_in_by (CUID2 FK) | SCP-2026-03-28-B |
+| 2026-03-28 | Migration 006 addendum added: contacts.province_code, province_name, city_code, city_name (TEXT, nullable, indexed) | SCP-2026-03-28-D |

@@ -40,6 +40,11 @@ Then any email/password combination succeeds — the form works end-to-end in de
 When `/login` is navigated to,
 Then they are redirected to `/admin` immediately
 
+**AC6 (2026-03-28 — eventKeys):** Given `POST /api/auth/login` succeeds,
+When the MSW response includes `eventKeys: { [eventId]: string }`,
+Then `authStore.setAuth(token, user, eventKeys)` stores the eventKeys map; for each `[eventId, key]` pair, `scanStore.setEventKey(eventId, key)` persists the key to IndexedDB for offline use by the QR scan flow (Story 7.2)
+`eventKeys` is an empty object `{}` for `admin`/`viewer` roles; populated for `staff` based on event assignments
+
 ---
 
 ## Tasks / Subtasks
@@ -83,23 +88,40 @@ Then they are redirected to `/admin` immediately
 
 ### MSW Auth Handler (already built in Story 1.6)
 The `auth.ts` handler at `src/mocks/handlers/auth.ts` already handles:
-- `POST /api/auth/login` → always returns `{ accessToken: 'mock-token-xxx', user: { id: 'user-001', role: 'admin' } }` (300ms delay)
+- `POST /api/auth/login` → returns auth response (300ms delay)
 - `POST /api/auth/refresh` → returns new accessToken (200ms delay)
 - `POST /api/auth/logout` → 204 No Content (200ms delay)
 
-No new MSW handlers needed for this story.
+**Update required (AC6):** Update `POST /api/auth/login` MSW response to include `eventKeys`:
+```typescript
+// For staff role mock:
+{
+  accessToken: 'mock-token-staff',
+  user: { id: 'user-002', role: 'staff', name: 'Staff Member' },
+  eventKeys: { 'event-001': 'bW9ja0FFU0tleUZvckV2ZW50MDAxPT0=' }  // base64 mock AES key
+}
+// For admin/viewer role mock:
+{
+  accessToken: 'mock-token-admin',
+  user: { id: 'user-001', role: 'admin', name: 'Admin User' },
+  eventKeys: {}
+}
+```
 
 ### authStore (already built in Story 1.5)
 ```typescript
-// src/store/authStore.ts — DO NOT ADD NEW FIELDS
+// src/store/authStore.ts — updated shape for AC6
 interface AuthStore {
   accessToken: string | null
-  user: { id: string; role: 'admin' | 'staff' | 'viewer' } | null
-  setAccessToken: (token: string, user: AuthStore['user']) => void
+  user: { id: string; role: 'admin' | 'staff' | 'viewer' | 'participant'; name?: string; email?: string } | null
+  eventKeys: Record<string, string>  // { [eventId]: base64AesKey } — added for QR scan flow
+  setAuth: (token: string, user: AuthStore['user'], eventKeys?: Record<string, string>) => void
   clearAuth: () => void
 }
 ```
-Use `useAuthStore().setAccessToken(token, user)` after login. DO NOT add new fields.
+Use `useAuthStore().setAuth(token, user, eventKeys)` after login. `eventKeys` defaults to `{}` if not provided.
+
+**IndexedDB persistence:** After login, for each `[eventId, key]` in `eventKeys`, call `scanStore.setEventKey(eventId, key)` (Story 7.1 `scanStore` already uses IndexedDB). This makes keys available offline during event-day check-in.
 
 ### File Locations (from architecture)
 - Login page: `src/app/login/page.tsx`
@@ -208,3 +230,4 @@ All 6 tasks complete. 30/30 tests pass (7 new tests: 4 in LoginForm.test.tsx, 3 
 |------|--------|--------|
 | 2026-03-20 | Story created (FE Phase 1) | bmad-create-story |
 | 2026-03-20 | All 6 tasks implemented; 30/30 tests pass | bmad-dev-story |
+| 2026-03-28 | AC6 added: eventKeys in login response; authStore shape updated; MSW handler updated | SCP-2026-03-28-B |

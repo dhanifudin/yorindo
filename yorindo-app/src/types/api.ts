@@ -330,13 +330,11 @@ export interface EventSponsor {
   event_id: string
   vendor_id: string
   vendor_name: string
-  tier: 'standard' | 'premium' | 'lead_intelligence'
   display_order: number
 }
 
 export interface AttachSponsorBody {
   vendorId: string
-  tier: EventSponsor['tier']
   displayOrder?: number
 }
 
@@ -345,6 +343,5 @@ export interface PublicEventSponsor {
   name: string
   logo_url?: string
   website?: string
-  tier: EventSponsor['tier']
   display_order: number
 }

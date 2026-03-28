@@ -1,9 +1,11 @@
 # Epic 6: Participant Registration & Approval Workflow
 
-Participants can discover events and complete registration via mobile-first forms; admins can manage the full approval-to-ticket pipeline with automated notifications, waitlist management, and calendar link delivery.
+Participants can discover events and complete registration via mobile-first forms (SSO or manual); admins can manage the full approval-to-ticket pipeline with automated notifications and calendar link delivery.
 
-> **Phase 1 (FE):** Public event landing page (`/register/[eventSlug]`); registration form (phone pre-fill, dynamic survey fields, consent checkbox, Google Calendar link on success); double opt-in confirmation page; approval queue table (TanStack Table, approve/reject/waitlist actions, score display); waitlist view; ticket display page (QR code via `react-qr-code`); self-cancellation page — all wired to MSW registrations handler
-> **Phase 2 (BE):** `GET /api/events/:slug/public`, `POST /api/registrations`, `GET /api/contacts/lookup`, approval scoring service, `PATCH /api/registrations/:id/status`, double opt-in delivery + expiry cron, waitlist promotion logic, `qrcode` ticket JWT generation, notification dispatch, `POST /api/registrations/:id/cancel`, bot detection (NFR-S7), all registration repositories
+> **Updated 2026-03-28** — Meeting: participant status simplified into two independent dimensions — **registration status** (`provisional` → `pending` → `approved` / `rejected`) and **attendance status** (`attended` / `no_show`, set at check-in). Waitlist status removed. Cancellation status removed — Story 6.7 (self-cancellation) retired.
+
+> **Phase 1 (FE):** Public event landing page (`/register/[eventSlug]`); registration form (SSO login or manual, dynamic survey fields, consent checkbox, Google Calendar link on success); double opt-in confirmation page; approval queue table (TanStack Table, approve/reject actions, score display); ticket display page (QR code via `react-qr-code`) — all wired to MSW registrations handler
+> **Phase 2 (BE):** `GET /api/events/:slug/public`, `POST /api/registrations` (for manual-path registrations: flags potential duplicate contacts for admin review via Story 3-5 merge workflow; SSO registrations skip duplicate detection; no auto-merge), `GET /api/auth/sso/callback`, approval scoring service, `PATCH /api/registrations/:id/status`, double opt-in delivery + expiry cron, `qrcode` ticket JWT generation, notification dispatch, bot detection (NFR-S7), all registration repositories. `GET /api/contacts/lookup` removed — no client-side pre-fill.
 
 ## Story 6.1: Public Event Landing Page
 
@@ -17,9 +19,9 @@ So that I can make an informed decision about whether to register.
 **When** `GET /register/{eventSlug}` is accessed (no authentication required),
 **Then** the event name, start date, end date, venue, description, and remaining capacity are displayed
 
-**Given** the event has reached full capacity (approved registrations = capacity),
-**When** the landing page is accessed,
-**Then** "Registrasi Penuh — Daftarkan ke Waiting List" is shown instead of the registration CTA
+**Given** the count of `approved` registrations reaches `events.capacity`,
+**When** this threshold is crossed (on any approval action),
+**Then** the event's registration is automatically closed: `events.registration_closed` is set to `true`, `POST /api/registrations` returns HTTP 409 `{ error: { code: 'REGISTRATION_CLOSED', message: 'Kuota telah terpenuhi' } }`, and the public landing page shows "Pendaftaran Ditutup — Kuota Telah Terpenuhi" with the registration form hidden
 
 **Given** an event with `status: 'draft'` or `'cancelled'`,
 **When** the landing page is accessed,
@@ -33,19 +35,31 @@ So that I can make an informed decision about whether to register.
 
 ## Story 6.2: Participant Registration Form (Mobile-First)
 
+> **Updated 2026-03-28** — Meeting: participant can now choose between SSO login (auto-fills profile data) or manual form fill. SSO is offered as an option, not forced — manual path remains fully functional.
+> **Updated 2026-03-28 (field order + no lookup):** Fixed field order changed to email-first. Phone lookup removed — duplicate contact merging is handled by the backend at registration time.
+
 As a participant,
-I want to complete a registration form on my phone with pre-filled data if I've registered before,
-So that I can register quickly without re-entering information I've already provided.
+I want to complete a registration form on my phone, either by logging in via SSO for auto-filled data or by filling it manually,
+So that I can register quickly regardless of whether I have an SSO account.
 
 **Acceptance Criteria:**
 
-**Given** the registration form renders,
-**Then** it always displays these fixed fields in this order, all required unless noted:
-`phone`, `name`, `email`, `company_email`, `company_name`, `company_location`, `position` (jabatan), `industry_type`
+**Given** the registration form renders (step 0 — contact info),
+**When** the page loads,
+**Then** a "Lanjutkan dengan Google" button is shown above the manual form fields; the manual form is the default path — the SSO button is optional, not required
 
-**Given** a participant enters their phone number,
-**When** the field loses focus and `GET /api/contacts/lookup?phone={phone}` is called,
-**Then** if a matching contact exists, the following fields are pre-filled from the contact record: `name`, `email`, `company_name`, `position`; remaining fixed fields (`company_email`, `company_location`, `industry_type`) are pre-filled if available in the contact record (FR24)
+**Given** I click "Lanjutkan dengan Google",
+**When** the OAuth flow completes (Phase 1: mock Google auth dialog; Phase 2: real Google OAuth),
+**Then** the system looks up the participant's contact record by verified email (`contacts.google_sub` linked or email match); if a contact profile exists, ALL fixed fields are pre-filled and shown with a "✓ Terisi dari profil" badge (locked read-only); `phone` is pre-filled but always remains editable; if no contact exists, only `name` and `email` are pre-filled and participant completes remaining fields manually
+
+**Given** I do not click the SSO button,
+**When** the form renders,
+**Then** it displays these fixed fields in this order, all required unless noted:
+`email`, `name`, `phone`, `company_email`, `company_name`, `company_location`, `position` (jabatan), `industry_type`
+
+> **Note (2026-03-28):** AC aligned with Story 6-8 implementation (already in review). Story 6-8 implements the SSO button pattern correctly — the "Lanjutkan dengan Google" button pre-fills name+email only; phone always manual. Story 6-8 is the authoritative implementation reference.
+
+> **Note (field order 2026-03-28):** No phone-based contact lookup on the FE. The FE submits all fixed fields as-is. For **manual registrations only**: the backend detects potential duplicate contacts at registration time and flags them for admin review — merging is manual, performed by admin via Story 3-5 (Duplicate Profile Detection & Merge). SSO registrations skip duplicate detection entirely (identity verified via Google OAuth).
 
 **Given** the registration form is submitted,
 **When** `POST /api/registrations` is called (unprotected, rate-limited 10/IP/hour),
@@ -102,8 +116,10 @@ So that my slot is only reserved after I explicitly confirm my intent.
 
 ## Story 6.4: Registration Approval Queue & Admin Review
 
+> **Updated 2026-03-28** — Meeting: waitlist status removed. Approval actions simplified to approve / reject only. Attendance status (`attended` / `no_show`) is a separate dimension set at check-in (Epic 7) — not managed here.
+
 As an admin,
-I want to review pending registrations, see their rule-based approval score, and approve, reject, or waitlist them,
+I want to review pending registrations, see their AI-scored qualification, and approve or reject them,
 So that I control who attends the event based on qualification criteria.
 
 **Acceptance Criteria:**
@@ -114,7 +130,7 @@ So that I control who attends the event based on qualification criteria.
 
 **Given** I approve a registration,
 **When** `PATCH /api/registrations/:id/status` is called with `{ status: 'approved' }`,
-**Then** the registration status updates, a QR ticket JWT is generated and stored in `ticket_token`, a blast job is enqueued to notify the participant, and a `registration.approved` audit entry is written
+**Then** the registration status updates, a QR ticket JWT is generated and stored in `ticket_token`, a blast job is enqueued to notify the participant, a `registration.approved` audit entry is written, and if approving this registration fills the event quota the registration form is automatically closed (see Story 6.1)
 
 **Given** I reject a registration,
 **When** `PATCH /api/registrations/:id/status` is called with `{ status: 'rejected' }`,
@@ -126,33 +142,13 @@ So that I control who attends the event based on qualification criteria.
 
 **Given** the registrations table in the FE,
 **When** it renders,
-**Then** TanStack Table v8 server-side mode shows data with status filter tabs and approval action buttons per row
+**Then** TanStack Table v8 server-side mode shows data with status filter tabs (pending / approved / rejected) and approve/reject action buttons per row; there is no waitlist action or tab
 
 ---
 
-## Story 6.5: Waitlist Management & Auto-Promotion
+## ~~Story 6.5: Waitlist Management & Auto-Promotion~~ *(Retired 2026-03-28)*
 
-As a participant,
-I want to be added to a waitlist when an event is full and automatically promoted when a slot opens,
-So that I have a fair chance to attend even if I registered late.
-
-**Acceptance Criteria:**
-
-**Given** an event at full capacity (approved = capacity),
-**When** a new registration is submitted and approved by admin,
-**Then** the registration is created with `status: 'waitlisted'` instead of `approved`
-
-**Given** a waitlisted registration and an approved participant cancels,
-**When** the cancellation is processed,
-**Then** the next waitlisted registration is automatically promoted to `approved`, their ticket is generated, and a notification is sent
-
-**Given** an auto-promoted participant does not confirm within the configurable deadline,
-**When** the deadline passes,
-**Then** their slot is returned to the waitlist and the next participant is promoted (FR32); after 2 failed auto-promotion attempts for the same slot, it returns to admin review
-
-**Given** the waitlist queue,
-**When** viewed by admin,
-**Then** participants are listed in FIFO order with their queue position displayed
+> **Retired 2026-03-28** — Meeting: waitlist status removed from the participant status model. Registration is automatically closed when the quota is reached (Story 6.1 / Story 6.4). No waitlist, no auto-promotion logic. This story is intentionally kept for history — do not implement.
 
 
 ---
@@ -183,23 +179,8 @@ So that I have a scannable ticket to present at event check-in.
 
 ---
 
-## Story 6.7: Participant Self-Cancellation
+## ~~Story 6.7: Participant Self-Cancellation~~ *(Retired 2026-03-28)*
 
-As an approved participant,
-I want to cancel my registration via a link in my ticket before the event's cancellation deadline,
-So that I can release my slot for other participants if I can no longer attend.
-
-**Acceptance Criteria:**
-
-**Given** an approved participant clicks the cancellation link in their ticket,
-**When** `POST /api/registrations/:id/cancel` is called with the cancellation token,
-**Then** the registration status is updated to `cancelled`, the slot is released (capacity count decremented), and the waitlist auto-promotion is triggered
-
-**Given** the event's cancellation deadline has passed,
-**When** the self-cancellation link is clicked,
-**Then** the endpoint returns HTTP 403 with a message "Cancellation deadline has passed" and the link in the ticket is shown as deactivated (FR30)
-
-**Given** a self-cancellation is processed,
-**Then** a `registration.self-cancelled` audit entry is written with `actor_id = registrationId` and `cancellation_type = 'self'`
+> **Retired 2026-03-28** — Meeting: cancellation status removed from the participant status model. No self-cancellation flow. This story is intentionally kept for history — do not implement.
 
 ---

@@ -13,8 +13,8 @@ let deletedEventsStore: (Event & { deletedAt: string })[] = []
 // ─── Event Sponsors In-Memory Store ──────────────────────────────────────────
 export const eventSponsorsStore = new Map<string, EventSponsor[]>([
   ['event-001', [
-    { id: 'es-001-1', event_id: 'event-001', vendor_id: 'vendor-001', vendor_name: 'Alibaba Cloud', tier: 'premium', display_order: 0 },
-    { id: 'es-001-2', event_id: 'event-001', vendor_id: 'vendor-003', vendor_name: 'PT Mandiri Sekuritas', tier: 'standard', display_order: 1 },
+    { id: 'es-001-1', event_id: 'event-001', vendor_id: 'vendor-001', vendor_name: 'Alibaba Cloud', display_order: 0 },
+    { id: 'es-001-2', event_id: 'event-001', vendor_id: 'vendor-003', vendor_name: 'PT Mandiri Sekuritas', display_order: 1 },
   ]],
 ])
 
@@ -192,7 +192,6 @@ export const eventHandlers = [
         name: s.vendor_name,
         logo_url: undefined,
         website: undefined,
-        tier: s.tier,
         display_order: s.display_order,
       }))
       .sort((a, b) => a.display_order - b.display_order)
@@ -256,7 +255,6 @@ export const eventHandlers = [
       event_id: eventId,
       vendor_id: body.vendorId,
       vendor_name: vendor.name,
-      tier: body.tier,
       display_order: body.displayOrder ?? existing.length,
     }
     eventSponsorsStore.set(eventId, [...existing, newSponsor])
@@ -265,7 +263,7 @@ export const eventHandlers = [
 
   http.patch('/api/events/:id/sponsors/:vendorId', async ({ params, request }) => {
     await delay(300)
-    const body = await request.json() as Partial<Pick<EventSponsor, 'tier' | 'display_order'>>
+    const body = await request.json() as Partial<Pick<EventSponsor, 'display_order'>>
     const eventId = params.id as string
     const vendorId = params.vendorId as string
     const sponsors = eventSponsorsStore.get(eventId) ?? []
