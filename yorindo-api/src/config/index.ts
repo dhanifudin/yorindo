@@ -19,21 +19,13 @@ export const config = {
   jwtRefreshSecret: required('JWT_REFRESH_SECRET'),
 
   // Feature flags — disabled by default; enable per environment as features mature
-<<<<<<< HEAD
   enableExperimental: optional('ENABLE_EXPERIMENTAL', 'false') === 'true',  // gates participant SSO login (Phase 2)
 
   // Service adapter selection — defaults drive Phase 1 (in-memory / mock)
   repositoryImpl: optional('REPOSITORY_IMPL', 'memory'),   // 'memory' | 'postgres'
   serviceImpl: optional('SERVICE_IMPL', 'mock'),           // 'mock' | 'real'
-  emailProvider: optional('EMAIL_PROVIDER', 'mock'),        // 'mock' | 'brevo' | 'mailtrap'
-  whatsappProvider: optional('WHATSAPP_PROVIDER', 'mock'),  // 'mock' | 'everpro'
-=======
-  enableExperimental: optional('ENABLE_EXPERIMENTAL', 'false') === 'true',
-
-  // Service adapter selection — defaults drive Phase 1 (in-memory / mock)
-  repositoryImpl: optional('REPOSITORY_IMPL', 'memory'),   // 'memory' | 'postgres'
-  serviceImpl: optional('SERVICE_IMPL', 'mock'),            // 'mock' | 'real'
->>>>>>> bf54484246278290d046ae923a7feb6e73e27e60
+  emailProvider: optional('EMAIL_PROVIDER', 'mock'),       // 'mock' | 'brevo' | 'mailtrap'
+  whatsappProvider: optional('WHATSAPP_PROVIDER', 'mock'), // 'mock' | 'everpro'
 
   // AI provider selection — defaults to mock in Phase 1
   etlAiProvider: optional('ETL_AI_PROVIDER', 'mock'),
