@@ -1,7 +1,7 @@
 // FE-owned types — derived from openapi.yaml (Story 1.4).
 // BE adopts these shapes when implementing; do NOT auto-generate from spec.
 
-export type FlagCategory = 'spam' | 'not-potential' | 'invalid-data' | 'duplicate' | null
+export type FlagCategory = 'invalid-data' | 'duplicate' | null
 
 export interface Contact {
   id: string
@@ -211,7 +211,7 @@ export interface AudienceRecommendationsResponse {
   recommendations: AudienceRecommendation[]
   totalMatched: number
   totalExcluded: number
-  excludedReasons: Record<string, number> // e.g. { 'not-potential': 5, 'spam': 3 }
+  excludedReasons: Record<string, number> // e.g. { 'invalid-data': 5, 'duplicate': 3 }
 }
 
 export interface RecommendedEvent {
@@ -263,7 +263,10 @@ export interface EmergencyBlastResponse {
 // ─── Contacts Health & Facets ─────────────────────────────────────────────────
 
 export interface ContactsHealth {
+  flagged: number
   duplicates: number
+  missingEmail: number
+  missingPhone: number
 }
 
 export interface FacetItem {
@@ -328,13 +331,13 @@ export interface EventSponsor {
   event_id: string
   vendor_id: string
   vendor_name: string
-  tier: 'premium' | 'standard' | 'supporting'
+  tier: 'premium' | 'standard' | 'supporter'
   display_order: number
 }
 
 export interface AttachSponsorBody {
   vendorId: string
-  tier: EventSponsor['tier']
+  tier?: EventSponsor['tier'] | null
   displayOrder?: number
 }
 

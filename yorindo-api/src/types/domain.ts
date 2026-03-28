@@ -34,7 +34,7 @@ export interface Vendor {
 // ─── Contact ─────────────────────────────────────────────────────────────────
 
 export type ConsentStatus = 'active' | 'suppressed' | 'legacy_unverified'
-export type FlagCategory = 'spam' | 'not-potential' | null
+export type FlagCategory = 'invalid-data' | 'duplicate' | null
 export type CompanySize = '<50' | '50-200' | '200-1000' | '>1000'
 export type ContactSource = 'excel_upload' | 'form' | 'manual'
 

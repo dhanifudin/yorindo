@@ -43,14 +43,14 @@ describe('useAudienceRecommendations', () => {
     }
   })
 
-  it('does not include not-potential or spam contacts', async () => {
+  it('does not include invalid-data or duplicate contacts', async () => {
     const { result } = renderHook(() => useAudienceRecommendations('event-001', true), {
       wrapper: makeWrapper(),
     })
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 3000 })
 
-    // The MSW handler excludes flagCategory === 'not-potential' | 'spam'
+    // The MSW handler excludes flagCategory === 'invalid-data' | 'duplicate'
     // Verify excluded count is populated
     const data = result.current.data
     expect(data?.totalExcluded).toBeGreaterThan(0)

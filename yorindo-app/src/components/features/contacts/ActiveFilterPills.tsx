@@ -13,9 +13,10 @@ const FILTER_LABELS: Record<string, string> = {
   companySize: 'Ukuran',
   q: 'Pencarian',
   missingEmail: 'Email Kosong',
+  missingPhone: 'Telepon Kosong',
 }
 
-const FILTER_KEYS = ['industry', 'city', 'companySize', 'q', 'missingEmail']
+const FILTER_KEYS = ['industry', 'city', 'companySize', 'q', 'missingEmail', 'missingPhone']
 
 interface ActiveFilterPillsProps {
   total?: number
@@ -38,6 +39,7 @@ export function ActiveFilterPills({ total }: ActiveFilterPillsProps) {
     params.delete(key)
     params.delete('page')
     if (key === 'missingEmail') setFilter({ missingEmail: false })
+    if (key === 'missingPhone') setFilter({ missingPhone: false })
     router.push(`${pathname}?${params.toString()}`)
   }
 
@@ -45,7 +47,7 @@ export function ActiveFilterPills({ total }: ActiveFilterPillsProps) {
     const params = new URLSearchParams(searchParams.toString())
     FILTER_KEYS.forEach((k) => params.delete(k))
     params.delete('page')
-    setFilter({ missingEmail: false })
+    setFilter({ missingEmail: false, missingPhone: false })
     router.push(`${pathname}?${params.toString()}`)
   }
 
