@@ -6,7 +6,7 @@ Both development teams have fully operational environments with a shared OpenAPI
 **Architecture requirements:** Both repo scaffolds, OpenAPI 3.0 spec, Docker Compose (prod + dev override), DB migrations 001–004, CI/CD pipeline (GitHub Actions → GHCR → VPS SSH deploy), MSW handlers for all API domains, DevToolbar (role switcher), `src/types/api.ts` FE-owned type definitions.
 
 ## Epic 2: Team & Access Management
-Admin can create and manage internal user accounts (`admin`, `viewer`, `staff`); team members can securely log in with JWT and are automatically restricted to their role's permitted capabilities. A `participant` role exists only when experimental participant features are enabled. Audit trail begins here.
+Admin can create and manage internal user accounts (`admin`, `viewer`, `staff`, `participant`); team members can securely log in with JWT and are automatically restricted to their role's permitted capabilities. Audit trail begins here.
 **FRs covered:** FR47, FR48
 **FR49 audit trail:** login, account-created, role-changed actions logged in this epic.
 **NFRs:** NFR-S1, NFR-S2, NFR-S3, NFR-S9, NFR-S10, NFR-S11

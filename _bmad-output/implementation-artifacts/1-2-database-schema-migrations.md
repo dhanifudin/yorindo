@@ -115,7 +115,7 @@ CREATE TABLE IF NOT EXISTS contacts (
   source            VARCHAR(50),                  -- 'excel_upload', 'form', 'manual'
   completeness_score NUMERIC(4,3) DEFAULT 0,       -- 0.000 to 1.000
   consent_status    VARCHAR(30) DEFAULT 'legacy_unverified', -- 'active', 'suppressed', 'legacy_unverified'
-  flag_category     VARCHAR(50),                  -- 'spam', 'not-potential', null = clean
+  flag_category     VARCHAR(50),                  -- 'invalid-data', 'duplicate', null = clean
   deleted_at        TIMESTAMPTZ,
   created_at        TIMESTAMPTZ DEFAULT NOW(),
   updated_at        TIMESTAMPTZ DEFAULT NOW()

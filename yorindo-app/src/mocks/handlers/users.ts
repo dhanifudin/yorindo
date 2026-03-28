@@ -160,7 +160,7 @@ export const userHandlers = [
     }
     userEventAssignments.get(userId)!.add(body.eventId)
     return HttpResponse.json(
-      { userId, eventId: body.eventId, grantedAt: new Date().toISOString() },
+      { id: `${userId}:${body.eventId}`, userId, eventId: body.eventId, grantedAt: new Date().toISOString() },
       { status: 201 }
     )
   }),

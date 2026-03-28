@@ -70,10 +70,10 @@ development_status:
   # ─────────────────────────────────────────────
   epic-2: in-progress
   2-1-admin-login-jwt-authentication: done  # Patches: render-phase router.replace; participant in JwtPayload; authStore eventKeys+setAuth; MSW login eventKeys+name+any-password; LoginForm→setAuth; refresh mock drops user; TODO(story-7.1) scanStore.setEventKey
-  2-2-user-account-management: review
-  be-2-2-user-account-management: review
-  2-3-role-based-route-guards-frontend: review
-  2-4-event-access-assignment-for-staff-viewer: review
+  2-2-user-account-management: done  # Patches: server-side pagination; role-change confirm dialog; onError toasts; shadcn Select in create form; 409 error message
+  be-2-2-user-account-management: done  # Patches: soft delete; self-delete+self-role guard; UserIdParams validation; non-blocking audit logs; empty PATCH reject; GET 400 on bad params; revoke 404 if not assigned; soft-delete test assertion
+  2-3-role-based-route-guards-frontend: done  # Patches: setAuth replaces deprecated setAccessToken in refresh handler
+  2-4-event-access-assignment-for-staff-viewer: done  # Patches: event search input + pageSize=200 in EventAssignmentDialog
   epic-2-retrospective: optional
 
   # ─────────────────────────────────────────────

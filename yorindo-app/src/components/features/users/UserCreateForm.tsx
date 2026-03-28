@@ -1,12 +1,19 @@
 'use client'
 
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useCreateUser } from '@/hooks/useUsers'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 const schema = z.object({
   name: z.string().min(1, 'Nama wajib diisi'),
@@ -23,22 +30,25 @@ interface UserCreateFormProps {
 }
 
 export function UserCreateForm({ onSuccess, onCancel }: UserCreateFormProps) {
-  const { mutate, isPending, isError } = useCreateUser()
+  const { mutate, isPending, error } = useCreateUser()
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: { role: 'viewer' },
   })
 
+  const apiError = error as (Error & { status?: number }) | null
+  const errorMessage = apiError?.status === 409
+    ? 'Email sudah digunakan. Gunakan email lain.'
+    : apiError ? 'Gagal membuat akun. Silakan coba lagi.' : null
+
   const onSubmit = (values: FormValues) => {
     mutate(values, { onSuccess })
   }
-
-  const selectClassName =
-    'h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50'
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
@@ -50,6 +60,7 @@ export function UserCreateForm({ onSuccess, onCancel }: UserCreateFormProps) {
           <Input
             id="user-name"
             type="text"
+            autoComplete="name"
             {...register('name')}
             aria-invalid={!!errors.name}
           />
@@ -63,6 +74,7 @@ export function UserCreateForm({ onSuccess, onCancel }: UserCreateFormProps) {
           <Input
             id="user-email"
             type="email"
+            autoComplete="email"
             {...register('email')}
             aria-invalid={!!errors.email}
           />
@@ -71,12 +83,23 @@ export function UserCreateForm({ onSuccess, onCancel }: UserCreateFormProps) {
 
         <div>
           <Label htmlFor="user-role">Role</Label>
-          <select id="user-role" {...register('role')} className={selectClassName}>
-            <option value="admin">Admin</option>
-            <option value="staff">Staff (Check-in only)</option>
-            <option value="viewer">Viewer (Read-only)</option>
-            <option value="participant">Participant</option>
-          </select>
+          <Controller
+            name="role"
+            control={control}
+            render={({ field }) => (
+              <Select value={field.value} onValueChange={field.onChange}>
+                <SelectTrigger id="user-role">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="staff">Staff (Check-in only)</SelectItem>
+                  <SelectItem value="viewer">Viewer (Read-only)</SelectItem>
+                  <SelectItem value="participant">Participant</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+          />
         </div>
 
         <div>
@@ -86,6 +109,7 @@ export function UserCreateForm({ onSuccess, onCancel }: UserCreateFormProps) {
           <Input
             id="user-password"
             type="password"
+            autoComplete="new-password"
             {...register('password')}
             aria-invalid={!!errors.password}
           />
@@ -93,7 +117,7 @@ export function UserCreateForm({ onSuccess, onCancel }: UserCreateFormProps) {
         </div>
       </div>
 
-      {isError && <p className="text-sm text-destructive">Gagal membuat akun. Silakan coba lagi.</p>}
+      {errorMessage && <p className="text-sm text-destructive">{errorMessage}</p>}
 
       <div className="flex justify-end gap-3 pt-2">
         <Button type="button" variant="outline" onClick={onCancel}>

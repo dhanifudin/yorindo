@@ -41,7 +41,7 @@ describe('LoginForm', () => {
     })
   })
 
-  it('calls setAccessToken and redirects to /app on successful login', async () => {
+  it('calls setAuth and redirects to /app on successful login', async () => {
     const user = userEvent.setup()
     render(<LoginForm />)
 

@@ -1,8 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { User, CreateUserBody, Event, PaginatedResponse } from '@/types/api'
 
-async function fetchUsers(): Promise<PaginatedResponse<User>> {
-  const res = await fetch('/api/users?page=1&pageSize=100')
+async function fetchUsers(page: number, pageSize: number): Promise<PaginatedResponse<User>> {
+  const res = await fetch(`/api/users?page=${page}&pageSize=${pageSize}`)
   if (!res.ok) throw new Error('Failed to fetch users')
   return res.json()
 }
@@ -13,7 +13,11 @@ async function createUser(body: CreateUserBody): Promise<User> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
-  if (!res.ok) throw new Error('Failed to create user')
+  if (!res.ok) {
+    const err = new Error('Failed to create user') as Error & { status: number }
+    err.status = res.status
+    throw err
+  }
   return res.json()
 }
 
@@ -32,8 +36,11 @@ async function deleteUser(id: string): Promise<void> {
   if (!res.ok) throw new Error('Failed to delete user')
 }
 
-export function useUsers() {
-  return useQuery({ queryKey: ['users'], queryFn: fetchUsers })
+export function useUsers(page = 1, pageSize = 20) {
+  return useQuery({
+    queryKey: ['users', page, pageSize],
+    queryFn: () => fetchUsers(page, pageSize),
+  })
 }
 
 export function useCreateUser() {

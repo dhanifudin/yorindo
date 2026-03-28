@@ -1,8 +1,8 @@
 # Epic 2: Team & Access Management
 
-Admin can create and manage internal user accounts (`admin`, `viewer`, `staff`); team members can securely log in with JWT and are automatically restricted to their role's permitted capabilities. A `participant` account/role only exists when experimental participant features are enabled.
+Admin can create and manage internal user accounts (`admin`, `viewer`, `staff`, `participant`); team members can securely log in with JWT and are automatically restricted to their role's permitted capabilities.
 
-> **Phase 1 (FE):** Login page with form + error states (MSW auth handler); user management table + create/edit/deactivate modals; route guard middleware (`middleware.ts`); event assignment UI for staff and viewer accounts - all wired to MSW
+> **Phase 1 (FE):** Login page with form + error states (MSW auth handler); user management table + create/edit/deactivate modals; client-side `/app` route guard in `app/layout.tsx`; event assignment UI for staff and viewer accounts - all wired to MSW
 > **Phase 2 (BE):** `POST /api/auth/login|refresh|logout`, `GET/POST/PATCH/DELETE /api/users`, `POST/DELETE /api/users/:id/events`, JWT middleware, bcrypt, Redis token blacklist, `requireEventAccess` middleware
 
 ## Story 2.1: Admin Login & JWT Authentication
@@ -72,7 +72,7 @@ So that I can control who has access to the platform and what they can do.
 
 **Given** a non-admin tries to access `/app/users` on the FE,
 **When** the route guard runs,
-**Then** they are redirected to `/app` with no flash of restricted content
+**Then** they are redirected to their allowed surface (`/app/events` for viewer, `/app/scan` for staff) with no flash of restricted content
 
 ---
 
@@ -92,11 +92,11 @@ So that staff cannot access admin pages and viewers cannot access write-action p
 
 **Given** a `staff` user is authenticated,
 **When** they navigate to `/app/contacts` or `/app/events`,
-**Then** they are redirected to `/scan` (their permitted surface)
+**Then** they are redirected to `/app/scan` (their permitted surface)
 
 **Given** a `viewer` user is authenticated,
 **When** they navigate to `/app/contacts/upload` or any PATCH/POST action page,
-**Then** they are redirected to the read-only analytics pages they are assigned to
+**Then** they are redirected to the read-only event pages they are assigned to, and backend event list/detail reads only return assigned events
 
 **Given** an `admin` user is authenticated,
 **When** they navigate to any route,

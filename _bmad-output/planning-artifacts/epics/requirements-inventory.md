@@ -177,7 +177,7 @@ NFR-A2: Admin dashboard and check-in PWA fully keyboard-navigable; all interacti
 
 - **Custom JWT auth:** Access token 15min (Zustand memory), refresh token 7d (httpOnly cookie). Token blacklist in Redis. Role resolved from DB on issue.
 
-- **Roles:** `admin` (full platform control, user management, templates, vendor config, state overrides), `viewer` (read-only analytics/report access for assigned events), `staff` (assigned events via `user_events` — scan + check-in only). `participant` is not part of the default role set; it is activated only when experimental participant features are enabled (SSO, waitlist self-service, personal dashboard).
+- **Roles:** `admin` (full platform control, user management, templates, vendor config, state overrides), `viewer` (read-only analytics/report access for assigned events), `staff` (assigned events via `user_events` — scan + check-in only), `participant` (participant-facing dashboard/account role where applicable in the current product model).
 
 - **Offline scan:** next-pwa NetworkFirst for API, CacheFirst for static. IndexedDB via `idb`. `queueScan()` + `flushScanQueue()` on reconnect.
 

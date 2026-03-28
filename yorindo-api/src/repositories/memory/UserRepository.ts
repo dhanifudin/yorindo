@@ -1,12 +1,12 @@
 import { createId } from '@paralleldrive/cuid2'
-import type { IUserRepository } from '../../interfaces/repositories/IUserRepository.js'
+import type { IUserRepository, UserEventAssignmentRecord } from '../../interfaces/repositories/IUserRepository.js'
 import type { PaginationParams } from '../../interfaces/repositories/IContactRepository.js'
 import type { User, UserRole } from '../../types/domain.js'
 import { SEED_USER_IDS, SEED_EVENT_IDS, PASSWORD123_HASH } from './_seeds.js'
 
 export class InMemoryUserRepository implements IUserRepository {
   private users: Map<string, User> = new Map()
-  private userEvents: Map<string, Set<string>> = new Map() // userId → Set<eventId>
+  private userEvents: Map<string, Map<string, UserEventAssignmentRecord>> = new Map() // userId → eventId → metadata
 
   constructor() {
     this._seed()
@@ -34,13 +34,22 @@ export class InMemoryUserRepository implements IUserRepository {
       this.users.set(user.id, user)
     }
 
+    const seededAt = new Date('2026-01-01T00:00:00.000Z').toISOString()
+    const seedAssignments = (userId: string, eventIds: string[]) => {
+      const map = new Map<string, UserEventAssignmentRecord>()
+      for (const eventId of eventIds) {
+        map.set(eventId, { userId, eventId, grantedById: SEED_USER_IDS.admin, grantedAt: seededAt })
+      }
+      this.userEvents.set(userId, map)
+    }
+
     // Assign staff to all published/active/completed events so scan tests work
-    this.userEvents.set(SEED_USER_IDS.staff, new Set([
+    seedAssignments(SEED_USER_IDS.staff, [
       SEED_EVENT_IDS[2]!, SEED_EVENT_IDS[3]!,
       SEED_EVENT_IDS[4]!, SEED_EVENT_IDS[5]!,
       SEED_EVENT_IDS[6]!, SEED_EVENT_IDS[7]!,
-    ]))
-    this.userEvents.set(SEED_USER_IDS.viewer, new Set([SEED_EVENT_IDS[2]!]))
+    ])
+    seedAssignments(SEED_USER_IDS.viewer, [SEED_EVENT_IDS[2]!])
   }
 
   async findAll(params: PaginationParams): Promise<{ data: User[]; total: number }> {
@@ -85,19 +94,28 @@ export class InMemoryUserRepository implements IUserRepository {
   }
 
   async delete(id: string): Promise<void> {
-    this.users.delete(id)
-    this.userEvents.delete(id)
+    const existing = this.users.get(id)
+    if (existing) {
+      this.users.set(id, { ...existing, deletedAt: new Date().toISOString() })
+    }
   }
 
-  async assignEvent(userId: string, eventId: string, _grantedById: string): Promise<void> {
+  async assignEvent(userId: string, eventId: string, grantedById: string): Promise<UserEventAssignmentRecord> {
     if (!this.userEvents.has(userId)) {
-      this.userEvents.set(userId, new Set())
+      this.userEvents.set(userId, new Map())
     }
-    this.userEvents.get(userId)!.add(eventId)
+    const assignment: UserEventAssignmentRecord = {
+      userId,
+      eventId,
+      grantedById,
+      grantedAt: new Date().toISOString(),
+    }
+    this.userEvents.get(userId)!.set(eventId, assignment)
+    return assignment
   }
 
   async getAssignedEvents(userId: string): Promise<string[]> {
-    return Array.from(this.userEvents.get(userId) ?? [])
+    return Array.from(this.userEvents.get(userId)?.keys() ?? [])
   }
 
   async revokeEvent(userId: string, eventId: string): Promise<void> {

@@ -20,6 +20,7 @@ RUN mkdir -p /app/uploads && chown -R yorindo:nodejs /app/uploads
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/openapi.yaml ./openapi.yaml
 COPY --chown=yorindo:nodejs uploads/.gitignore ./uploads/.gitignore
 
 USER yorindo

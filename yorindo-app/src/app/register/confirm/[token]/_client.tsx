@@ -27,7 +27,7 @@ interface ConfirmResult {
 
 export default function ConfirmPage({ params }: ConfirmPageProps) {
   const { token } = use(params)
-  const { setAccessToken } = useAuthStore()
+  const { setAuth } = useAuthStore()
   const router = useRouter()
   const [participantAuthDone, setParticipantAuthDone] = useState(false)
   const authAttemptedRef = useRef(false)
@@ -63,14 +63,14 @@ export default function ConfirmPage({ params }: ConfirmPageProps) {
         })
         if (!res.ok) return
         const authData = await res.json()
-        setAccessToken(authData.accessToken, authData.user)
+        setAuth(authData.accessToken, authData.user)
         setParticipantAuthDone(true)
       } catch {
         // Silent fail — participant auth is a UX enhancement, not a blocker
       }
     }
     createAccount()
-  }, [data, participantAuthDone, setAccessToken])
+  }, [data, participantAuthDone, setAuth])
 
   if (isLoading) {
     return (

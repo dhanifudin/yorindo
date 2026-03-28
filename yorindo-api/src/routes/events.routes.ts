@@ -7,6 +7,7 @@ import {
   queueService,
   registrationRepository,
   surveyRepository,
+  userRepository,
   yoriMindService,
 } from '../container.js'
 import { requireAdmin, requireAuth, requireRoles, type JwtPayload } from '../middleware/auth.js'
@@ -190,6 +191,24 @@ async function requireEventOr404(reply: FastifyReply, eventId: string) {
   return event
 }
 
+async function requireEventAccessOr403(
+  reply: FastifyReply,
+  user: JwtPayload | undefined,
+  eventId: string,
+) {
+  if (!user || user.role === 'admin' || user.role === 'participant') return true
+
+  const assigned = await userRepository.getAssignedEvents(user.sub)
+  if (!assigned.includes(eventId)) {
+    await reply.status(403).send({
+      error: { code: 'EVENT_ACCESS_DENIED', message: 'No access to this event', details: [] },
+    })
+    return false
+  }
+
+  return true
+}
+
 export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get('/api/events', { preHandler: requireAuth }, async (request, reply) => {
     const parsed = EventListQuerySchema.safeParse(request.query)
@@ -204,7 +223,11 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     if (query.sortBy) paginationParams.sortBy = query.sortBy
     if (query.sortDir) paginationParams.sortDir = query.sortDir
 
-    const eventFilters: { status?: 'draft' | 'published' | 'active' | 'completed' | 'cancelled' | 'archived' } = {}
+    const eventFilters: { ids?: string[]; status?: 'draft' | 'published' | 'active' | 'completed' | 'cancelled' | 'archived' } = {}
+    const user = request.user as JwtPayload | undefined
+    if (user && user.role !== 'admin' && user.role !== 'participant') {
+      eventFilters.ids = await userRepository.getAssignedEvents(user.sub)
+    }
     if (query.status) eventFilters.status = query.status
 
     const result = await eventRepository.findAll(paginationParams, eventFilters)
@@ -264,6 +287,8 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     if (!parsed.success) return replyValidationError(reply, parsed.error.issues, 'Invalid event id')
     const event = await requireEventOr404(reply, parsed.data.id)
     if (!event) return
+    const allowed = await requireEventAccessOr403(reply, request.user as JwtPayload | undefined, event.id)
+    if (!allowed) return
     const surveySchema = await surveyRepository.findByEventId(event.id)
     validateOpenApiRequest({ path: '/events/{id}', method: 'get', params: parsed.data })
     const responseBody = toEventDto(event, surveySchema?.fields ?? {})
@@ -315,6 +340,8 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     }
     const event = await requireEventOr404(reply, params.data.id)
     if (!event) return
+    const allowed = await requireEventAccessOr403(reply, request.user as JwtPayload | undefined, event.id)
+    if (!allowed) return
     validateOpenApiRequest({ path: '/events/{id}/registrations', method: 'get', params: params.data, query: query.data })
 
     const registrationFilters: { status?: 'pending' | 'confirmed' | 'approved' | 'rejected' | 'waitlisted' | 'attended' | 'cancelled' } = {}
@@ -348,6 +375,8 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     if (!params.success) return replyValidationError(reply, params.error.issues, 'Invalid event id')
     const event = await requireEventOr404(reply, params.data.id)
     if (!event) return
+    const allowed = await requireEventAccessOr403(reply, request.user as JwtPayload | undefined, event.id)
+    if (!allowed) return
     validateOpenApiRequest({ path: '/events/{id}/analytics', method: 'get', params: params.data })
     const registrations = await registrationRepository.findByEvent(event.id, { page: 1, pageSize: 500 })
     const total = registrations.total
@@ -375,6 +404,8 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     if (!params.success) return replyValidationError(reply, params.error.issues, 'Invalid event id')
     const event = await requireEventOr404(reply, params.data.id)
     if (!event) return
+    const allowed = await requireEventAccessOr403(reply, request.user as JwtPayload | undefined, event.id)
+    if (!allowed) return
     validateOpenApiRequest({ path: '/events/{id}/yorimind', method: 'get', params: params.data })
     const registrations = await registrationRepository.findByEvent(event.id, { page: 1, pageSize: 100 })
     const snapshot = {
@@ -414,6 +445,8 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     if (!params.success) return replyValidationError(reply, params.error.issues, 'Invalid event id')
     const event = await requireEventOr404(reply, params.data.id)
     if (!event) return
+    const allowed = await requireEventAccessOr403(reply, request.user as JwtPayload | undefined, event.id)
+    if (!allowed) return
     validateOpenApiRequest({ path: '/events/{id}/attendance-stats', method: 'get', params: params.data })
     const registrations = await registrationRepository.findByEvent(event.id, { page: 1, pageSize: 500 })
     const attended = registrations.data.filter((registration) => registration.status === 'attended').length
@@ -431,6 +464,8 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     if (!params.success) return replyValidationError(reply, params.error.issues, 'Invalid event id')
     const event = await requireEventOr404(reply, params.data.id)
     if (!event) return
+    const allowed = await requireEventAccessOr403(reply, request.user as JwtPayload | undefined, event.id)
+    if (!allowed) return
     validateOpenApiRequest({ path: '/events/{id}/checkin/stats', method: 'get', params: params.data })
     const registrations = await registrationRepository.findByEvent(event.id, { page: 1, pageSize: 500 })
     const approved = registrations.data.filter((registration) => registration.status === 'approved').length
@@ -449,6 +484,11 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     if (!params.success) return replyValidationError(reply, params.error.issues, 'Invalid event id')
     const event = await requireEventOr404(reply, params.data.id)
     if (!event) return
+    const user = request.user as JwtPayload | undefined
+    if (user) {
+      const allowed = await requireEventAccessOr403(reply, user, event.id)
+      if (!allowed) return
+    }
     validateOpenApiRequest({ path: '/events/{id}/survey', method: 'get', params: params.data })
     const schema = await surveyRepository.findByEventId(event.id)
     if (!schema) {

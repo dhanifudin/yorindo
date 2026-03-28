@@ -20,7 +20,7 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 
 > **Note:** Stack revised 2026-03-19 to align with System Design Document (Yolanda Roring, KADA Program v1.0 March 2026). All prior Express/Vite/MongoDB-only decisions superseded.
 > **Note:** Deployment simplified 2026-03-19 — all infrastructure self-hosted via Docker Compose on VPS. External services: Everpro (WhatsApp) and Brevo (email) only. Supabase, Railway, Upstash, Atlas, Cloudflare, Sentry, Uptime Robot removed.
-> **Reconciliation note (2026-03-27):** The authoritative implementation model is OpenAPI contract-first, Next.js 16 + Fastify + TypeScript, PostgreSQL + JSONB as the planning default persistent store, 3-role RBAC (`admin`, `viewer`, `staff`) with optional `participant` role only when experimental participant-account features are enabled, `/app/*` for internal dashboards, and KTP-based manual identity verification for lost-ticket recovery. Any older references below should be interpreted through this reconciled model.
+> **Reconciliation note (2026-03-27):** The authoritative implementation model is OpenAPI contract-first, Next.js 16 + Fastify + TypeScript, PostgreSQL + JSONB as the planning default persistent store, RBAC with `admin`, `viewer`, `staff`, and `participant`, `/app/*` for internal dashboards, and KTP-based manual identity verification for lost-ticket recovery. Any older references below should be interpreted through this reconciled model.
 
 ## Reconciled Decisions (Authoritative)
 
@@ -28,7 +28,7 @@ Use this section as the source of truth when any lower section or historical exa
 
 - Contract: `openapi.yaml` is the sprint gate; shared TypeScript types are derived from the approved OpenAPI contract rather than replacing it.
 - Stack: `yorindo-app` uses Next.js 16 App Router; `yorindo-api` uses Fastify + TypeScript.
-- Roles: final dashboard access uses `admin`, `viewer`, and `staff`; `participant` exists only when experimental participant-account features (SSO, waitlist self-service, personal dashboard) are enabled.
+- Roles: dashboard/product access uses `admin`, `viewer`, `staff`, and `participant`, with route and capability restrictions applied per role.
 - Routes: internal product workspace lives under `/app/*`; check-in remains under `/scan`; public registration remains under `/register/*`.
 - Check-in recovery: lost-ticket handling uses cached participant lookup plus KTP-assisted manual verification; OTP is not part of the event-day recovery flow.
 - Data planning default: PostgreSQL plus JSONB is the canonical planning model for operational data; legacy Mongo-oriented examples lower in the file are retained only as historical implementation notes.
@@ -140,7 +140,7 @@ Three UX surfaces: public participant registration (mobile-first, zero-account),
 
 3. **Write Path vs Read Path** — Enforced at routing level. Write endpoints only accept mutations (INSERT/UPDATE). Read endpoints only execute SELECT. Claude AI (YoriMind) never queries live DB — reads daily snapshot JSON from VPS filesystem only.
 
-4. **Custom JWT + RBAC** — Final internal/product roles are `admin`, `viewer`, and `staff`. Access token: 15 minutes, HS256, payload `{ sub, role, jti }`. Refresh token: 7 days, stored in httpOnly cookie. Role enforcement: middleware checks JWT role before handler. Event-scoped enforcement applies to `staff` and `viewer` via `user_events`; `admin` bypasses event-scope checks unless a narrower deployment policy is introduced. Public registration endpoints remain unauthenticated and rate-limited. The `participant` role is only activated when experimental participant-account features are enabled.
+4. **Custom JWT + RBAC** — Product roles are `admin`, `viewer`, `staff`, and `participant`. Access token: 15 minutes, HS256, payload `{ sub, role, jti }`. Refresh token: 7 days, stored in httpOnly cookie. Role enforcement: middleware checks JWT role before handler. Event-scoped enforcement applies to `staff` and `viewer` via `user_events`; `admin` bypasses event-scope checks unless a narrower deployment policy is introduced. Public registration endpoints remain unauthenticated and rate-limited.
 
 5. **BullMQ async processing** — Two workers: `etl.worker.ts` (processes ETL jobs) and `blast.worker.ts` (sends email/WA with rate limiting for Brevo/Everpro). All heavy async work goes through BullMQ. API endpoints return `202 Accepted` for queued work.
 
