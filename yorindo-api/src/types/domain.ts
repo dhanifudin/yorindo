@@ -219,6 +219,17 @@ export interface FacetResult {
   companySizes: Array<{ size: string; count: number }>
 }
 
+export type DuplicateMatchReason = 'same_phone' | 'same_email' | 'similar_name'
+export type DuplicateFieldChoice = 'primary' | 'duplicate'
+
+export interface DuplicatePair {
+  id: UUID
+  primary: Contact
+  duplicate: Contact
+  matchScore: number
+  matchReasons: DuplicateMatchReason[]
+}
+
 // ─── Raw Upload ──────────────────────────────────────────────────────────────
 
 export interface RawUpload {

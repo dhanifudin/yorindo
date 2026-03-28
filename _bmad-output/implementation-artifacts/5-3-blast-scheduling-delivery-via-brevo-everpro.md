@@ -109,17 +109,46 @@ export const blastWorker = new Worker('marketing', processBlastJob, {
 ### Template Variable Substitution
 
 ```typescript
+import qrcode from 'qrcode'
+
+async function buildVariables(
+  contact: Contact,
+  event: Event,
+  registration: Registration,
+  template: Template,
+): Promise<Record<string, string>> {
+  const vars: Record<string, string> = {
+    name: contact.name,
+    event_title: event.name,
+    date: format(event.date, 'dd MMMM yyyy', { locale: id }),
+    venue: event.venue,
+  }
+
+  // QR code: only for confirmation/ticket_delivery email templates (SCP-2026-03-28-F)
+  if (
+    (template.type === 'confirmation' || template.type === 'ticket_delivery') &&
+    template.channel === 'email' &&
+    registration.ticket_token
+  ) {
+    const ticketUrl = `${config.baseUrl}/tickets/${registration.ticket_token}`
+    const qrDataUrl = await qrcode.toDataURL(ticketUrl, { width: 200, margin: 1 })
+    vars.qr_code = `<img src="${qrDataUrl}" alt="QR Tiket" width="200" style="display:block;" />`
+  } else {
+    vars.qr_code = ''  // removes {{qr_code}} placeholder if conditions not met
+  }
+
+  return vars
+}
+
 function substituteVariables(template: string, data: Record<string, string>): string {
   return template.replace(/\{\{(\w+)\}\}/g, (_, key) => data[key] ?? `{{${key}}}`)
 }
+```
 
-// Usage per recipient:
-const personalizedBody = substituteVariables(template.body, {
-  name: contact.name,
-  event_title: event.name,
-  date: format(event.date, 'dd MMMM yyyy', { locale: id }),
-  venue: event.venue,
-})
+**WhatsApp QR delivery:** When `template.channel === 'whatsapp'` and `template.type === 'confirmation'|'ticket_delivery'` and `ticket_token` is set:
+1. Send the text message first (without QR — WhatsApp cannot inline images in text)
+2. Then send a separate Everpro image message: `IWhatsAppService.sendImage(to, ticketUrl, caption: 'QR Tiket Anda')`
+3. `IWhatsAppService` interface gains `sendImage(to: string, imageUrl: string, caption?: string): Promise<void>`
 ```
 
 ### Brevo REST API Integration
@@ -204,6 +233,9 @@ Tests use `MockEmailService` and `MockWhatsAppService` (from Story 1.8). Never c
 3. **Retry:** mock email service throws on first call, succeeds on second → job completes successfully
 4. **Failure rate:** 10 of 100 recipients fail after all retries → `blast.high-failure-rate` audit entry written
 5. **Scheduled delay:** job with `scheduledAt` in future → `job.opts.delay` set correctly in BullMQ
+6. **QR code — email (SCP-2026-03-28-F):** confirmation template with `{{qr_code}}` + registration with `ticket_token` set → sent email body contains `<img src="data:image/png;base64,` string
+7. **QR code — no token:** confirmation template with `{{qr_code}}` + registration without `ticket_token` → `{{qr_code}}` replaced with empty string; no `<img>` tag in body
+8. **WhatsApp QR:** confirmation template + `channel=whatsapp` + `ticket_token` set → `whatsappService.send()` called for text AND `whatsappService.sendImage()` called with ticket URL
 
 ### Dependencies
 
@@ -240,8 +272,8 @@ Tests use `MockEmailService` and `MockWhatsAppService` (from Story 1.8). Never c
   - [ ] Subtask 4.2: Error handling identical to Brevo
 
 - [ ] Task 5: Update `src/container.ts`
-  - [ ] Subtask 5.1: Wire BrevoEmailService when SERVICE_IMPL=real
-  - [ ] Subtask 5.2: Wire EverproWhatsAppService when SERVICE_IMPL=real
+  - [ ] Subtask 5.1: Wire `BrevoEmailService` when `EMAIL_PROVIDER=brevo`; set `EMAIL_PROVIDER=brevo` + `BREVO_API_KEY` in `.env`
+  - [ ] Subtask 5.2: Wire `EverproWhatsAppService` when `WHATSAPP_PROVIDER=everpro`; set `WHATSAPP_PROVIDER=everpro` + `EVERPRO_API_KEY` in `.env`
 
 - [ ] Task 6: Write vitest tests (using mocks — NO real API calls)
   - [ ] Subtask 6.1: Email channel — send() called for non-suppressed contacts
@@ -286,3 +318,4 @@ Tests use `MockEmailService` and `MockWhatsAppService` (from Story 1.8). Never c
 | Date | Change | Author |
 |------|--------|--------|
 | 2026-03-22 | Story created from epic-5 BE blast delivery | bmad-context-engine |
+| 2026-03-28 | QR code generation added: `buildVariables()` resolves `{{qr_code}}` → base64 `<img>` for email; WhatsApp sends separate image message via `sendImage()`; 3 new test cases; `IWhatsAppService.sendImage()` method added | SCP-2026-03-28-F |

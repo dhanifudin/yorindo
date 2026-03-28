@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
 import { contactRepository } from '../container.js'
-import type { CompanySize, Contact } from '../types/domain.js'
+import type { CompanySize, Contact, DuplicatePair } from '../types/domain.js'
 import { INDONESIAN_INDUSTRIES } from '../repositories/memory/_seeds.js'
 
 const COMPANY_SIZE_TO_DOMAIN: Record<string, CompanySize> = {
@@ -27,6 +27,20 @@ const ContactsQuerySchema = z.object({
   sortBy: z.string().trim().optional(),
   sortDir: z.enum(['asc', 'desc']).optional(),
 })
+
+const DuplicatesQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(10),
+})
+
+const MergeParamsSchema = z.object({
+  id: z.string().trim().min(1),
+})
+
+const MergeBodySchema = z.object({
+  mergeIntoId: z.string().trim().optional(),
+  fieldSelections: z.record(z.enum(['primary', 'duplicate'])).optional(),
+}).optional()
 
 type ContactsQuery = z.infer<typeof ContactsQuerySchema>
 
@@ -80,7 +94,22 @@ function toContactDto(contact: Contact) {
     city: contact.city ?? '',
     companySize: toApiCompanySize(contact.companySize),
     completenessScore: contact.completenessScore,
+    flagCategory: contact.flagCategory,
     createdAt: contact.createdAt,
+    updatedAt: contact.updatedAt,
+  }
+}
+
+/**
+ * Membentuk DTO pasangan duplikat agar FE bisa menampilkan perbandingan record.
+ */
+function toDuplicatePairDto(pair: DuplicatePair) {
+  return {
+    id: pair.id,
+    primary: toContactDto(pair.primary),
+    duplicate: toContactDto(pair.duplicate),
+    matchScore: pair.matchScore,
+    matchReasons: pair.matchReasons,
   }
 }
 
@@ -145,5 +174,69 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
         totalPages: Math.ceil(total / query.pageSize),
       },
     })
+  })
+
+  fastify.get('/api/contacts/duplicates', async (request, reply) => {
+    const result = DuplicatesQuerySchema.safeParse(request.query)
+    if (!result.success) {
+      return reply.status(400).send({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Invalid query params',
+          details: result.error.issues,
+        },
+      })
+    }
+
+    const query = result.data
+    const { data, total } = await contactRepository.findDuplicates({
+      page: query.page,
+      pageSize: query.pageSize,
+    })
+
+    return reply.status(200).send({
+      data: data.map(toDuplicatePairDto),
+      pagination: {
+        page: query.page,
+        pageSize: query.pageSize,
+        total,
+        totalPages: Math.ceil(total / query.pageSize),
+      },
+    })
+  })
+
+  fastify.post('/api/contacts/:id/merge', async (request, reply) => {
+    const paramsResult = MergeParamsSchema.safeParse(request.params)
+    const bodyResult = MergeBodySchema.safeParse(request.body)
+
+    if (!paramsResult.success || !bodyResult.success) {
+      return reply.status(400).send({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Invalid merge payload',
+          details: [
+            ...(paramsResult.success ? [] : paramsResult.error.issues),
+            ...(bodyResult.success ? [] : bodyResult.error.issues),
+          ],
+        },
+      })
+    }
+
+    const merged = await contactRepository.mergeDuplicate(
+      paramsResult.data.id,
+      bodyResult.data?.fieldSelections,
+    )
+
+    if (!merged) {
+      return reply.status(404).send({
+        error: {
+          code: 'NOT_FOUND',
+          message: 'Duplicate pair not found',
+          details: [],
+        },
+      })
+    }
+
+    return reply.status(200).send(toContactDto(merged))
   })
 }

@@ -28,9 +28,11 @@ Then the page shows: event name, date, venue, description, and remaining capacit
 When the page renders,
 Then a "Daftar Sekarang" (Register Now) CTA button is shown linking to the registration form (Story 6.2)
 
-**AC3:** Given capacity is full (mocked state),
+**AC3:** Given `events.registration_closed === true` (auto-set when `approved_count` reaches `events.capacity`),
 When the page renders,
-Then "Registrasi Penuh — Daftarkan ke Waiting List" replaces the CTA
+Then the registration form is hidden and a closed-registration notice is shown: "Pendaftaran Ditutup — Kuota Telah Terpenuhi"; no waitlist CTA is shown
+
+> **Updated 2026-03-28** — Waitlist removed. Auto-close is triggered by the backend when approved registrations reach capacity (`events.registration_closed = true`). MSW should include a `registration_closed: true` event variant in the seed data to test this state.
 
 **AC4:** Given a slug that doesn't match any event,
 Then the page shows a 404/not-found state
@@ -111,7 +113,7 @@ Do NOT wrap `/register/*` routes in any auth guard. These must be accessible wit
 
 1. Added `http.get('/api/events/public/:slug')` handler to `events.ts` — matches by slug and `status === 'published'`.
 2. Created `src/app/register/layout.tsx` — minimal public layout (no auth, no sidebar).
-3. Created `src/components/features/registration/EventLandingCard.tsx` — mobile-first card; `Intl.DateTimeFormat` Indonesian locale; isFull check disables CTA.
+3. Created `src/components/features/registration/EventLandingCard.tsx` — mobile-first card; `Intl.DateTimeFormat` Indonesian locale; `registration_closed` check hides form and shows "Pendaftaran Ditutup — Kuota Telah Terpenuhi" (no waitlist CTA).
 4. Created `src/app/register/[eventSlug]/page.tsx` — client component with useQuery; calls Next.js `notFound()` on 404.
 5. Created `src/app/register/[eventSlug]/not-found.tsx` — 404 page.
 6. Created `src/hooks/usePublicEvent.test.ts` — 2 tests (published event returned, 404 for unknown slug).
@@ -146,3 +148,4 @@ All 6 tasks complete. 42/42 tests pass (2 new; 40 pre-existing). `tsc --noEmit` 
 |------|--------|--------|
 | 2026-03-20 | Story created (FE Phase 1) | bmad-create-story |
 | 2026-03-20 | All 6 tasks implemented; 42/42 tests pass | bmad-dev-story |
+| 2026-03-28 | AC3 updated: waitlist CTA removed; auto-close via `registration_closed` field | bmad-correct-course |
