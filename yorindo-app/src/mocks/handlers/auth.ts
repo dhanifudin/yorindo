@@ -2,27 +2,35 @@ import { http, HttpResponse, delay } from 'msw'
 import { MOCK_USER_IDS } from './users'
 import { makeMockCuid2 } from './id'
 
-// MSW seed accounts — password is always 'Password123!' for any of these
+// MSW seed accounts — any password works in Phase 1 dev mode
 const MOCK_USERS = [
-  { id: MOCK_USER_IDS.admin, email: 'admin@yorindo.id', role: 'admin' as const },
-  { id: MOCK_USER_IDS.staff, email: 'staff@yorindo.id', role: 'staff' as const },
-  { id: MOCK_USER_IDS.viewer, email: 'viewer@yorindo.id', role: 'viewer' as const },
+  { id: MOCK_USER_IDS.admin,  email: 'admin@yorindo.id',  role: 'admin' as const,  name: 'Admin Yorindo' },
+  { id: MOCK_USER_IDS.staff,  email: 'staff@yorindo.id',  role: 'staff' as const,  name: 'Budi Santoso' },
+  { id: MOCK_USER_IDS.viewer, email: 'viewer@yorindo.id', role: 'viewer' as const, name: 'Viewer Yorindo' },
 ]
+
+// Staff event keys for offline QR check-in (Story 7.2)
+const STAFF_EVENT_KEYS: Record<string, string> = {
+  'event-001': 'bW9ja0FFU0tleUZvckV2ZW50MDAxPT0=',
+  'event-003': 'bW9ja0FFU0tleUZvckV2ZW50MDAzPT0=',
+}
 
 export const authHandlers = [
   http.post('/api/auth/login', async ({ request }) => {
     await delay(300)
     const body = await request.json() as { email?: string; password?: string }
     const found = MOCK_USERS.find((u) => u.email === body.email)
-    if (!found || body.password !== 'Password123!') {
+    if (!found || !body.password) {
       return HttpResponse.json(
         { error: { code: 'UNAUTHORIZED', message: 'Kredensial tidak valid', details: [] } },
         { status: 401 }
       )
     }
+    const eventKeys = found.role === 'staff' ? STAFF_EVENT_KEYS : {}
     return HttpResponse.json({
       accessToken: `mock-token-${found.role}`,
-      user: { id: found.id, role: found.role },
+      user: { id: found.id, role: found.role, name: found.name },
+      eventKeys,
     })
   }),
 
@@ -30,7 +38,6 @@ export const authHandlers = [
     await delay(200)
     return HttpResponse.json({
       accessToken: 'mock-access-token-refreshed',
-      user: { id: MOCK_USER_IDS.admin, role: 'admin' },
     })
   }),
 

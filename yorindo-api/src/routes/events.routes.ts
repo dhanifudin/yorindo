@@ -11,6 +11,7 @@ import {
 } from '../container.js'
 import { requireAdmin, requireAuth, requireRoles, type JwtPayload } from '../middleware/auth.js'
 import type { Event, Registration } from '../types/domain.js'
+import { validateOpenApiRequest, validateOpenApiResponse } from '../lib/openapi-contract.js'
 
 const EventIdParamsSchema = z.object({
   id: z.string().trim().min(1),
@@ -170,7 +171,7 @@ function toRegistrationWithContactDto(registration: Registration, contact: Await
   return {
     ...toRegistrationDto(registration),
     contactName: contact?.name ?? 'Unknown Contact',
-    contactEmail: contact?.email ?? '',
+    contactEmail: contact?.email ?? null,
     contactPhone: contact?.phone ?? '',
     contactFlagCategory: contact?.flagCategory ?? null,
     aiScore: Math.max(0, Math.min(99, Math.round((registration.aiScore ?? 0) * 100))),
@@ -195,6 +196,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     if (!parsed.success) return replyValidationError(reply, parsed.error.issues, 'Invalid query params')
 
     const query = parsed.data
+    validateOpenApiRequest({ path: '/events', method: 'get', query })
     const paginationParams: { page: number; pageSize: number; sortBy?: string; sortDir?: 'asc' | 'desc' } = {
       page: query.page,
       pageSize: query.pageSize,
@@ -212,7 +214,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       return toEventDto(event, surveySchema?.fields ?? {})
     }))
 
-    return reply.status(200).send({
+    const responseBody = {
       data,
       pagination: {
         page: query.page,
@@ -220,7 +222,9 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
         total: result.total,
         totalPages: Math.ceil(result.total / query.pageSize),
       },
-    })
+    }
+    validateOpenApiResponse({ path: '/events', method: 'get', status: 200, body: responseBody })
+    return reply.status(200).send(responseBody)
   })
 
   fastify.post('/api/events', { preHandler: [requireAuth, requireAdmin] }, async (request, reply) => {
@@ -228,6 +232,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     if (!parsed.success) return replyValidationError(reply, parsed.error.issues, 'Invalid request body')
 
     const payload = parsed.data
+    validateOpenApiRequest({ path: '/events', method: 'post', body: payload })
     const event = await eventRepository.create({
       name: payload.name,
       slug: payload.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
@@ -249,8 +254,9 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       status: 'draft',
       deletedAt: null,
     })
-
-    return reply.status(201).send(toEventDto(event))
+    const responseBody = toEventDto(event)
+    validateOpenApiResponse({ path: '/events', method: 'post', status: 201, body: responseBody })
+    return reply.status(201).send(responseBody)
   })
 
   fastify.get('/api/events/:id', { preHandler: requireAuth }, async (request, reply) => {
@@ -259,7 +265,10 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     const event = await requireEventOr404(reply, parsed.data.id)
     if (!event) return
     const surveySchema = await surveyRepository.findByEventId(event.id)
-    return reply.status(200).send(toEventDto(event, surveySchema?.fields ?? {}))
+    validateOpenApiRequest({ path: '/events/{id}', method: 'get', params: parsed.data })
+    const responseBody = toEventDto(event, surveySchema?.fields ?? {})
+    validateOpenApiResponse({ path: '/events/{id}', method: 'get', status: 200, body: responseBody })
+    return reply.status(200).send(responseBody)
   })
 
   fastify.put('/api/events/:id', { preHandler: [requireAuth, requireAdmin] }, async (request, reply) => {
@@ -306,6 +315,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     }
     const event = await requireEventOr404(reply, params.data.id)
     if (!event) return
+    validateOpenApiRequest({ path: '/events/{id}/registrations', method: 'get', params: params.data, query: query.data })
 
     const registrationFilters: { status?: 'pending' | 'confirmed' | 'approved' | 'rejected' | 'waitlisted' | 'attended' | 'cancelled' } = {}
     if (query.data.status) registrationFilters.status = query.data.status
@@ -320,7 +330,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       return toRegistrationWithContactDto(registration, contact)
     }))
 
-    return reply.status(200).send({
+    const responseBody = {
       data,
       pagination: {
         page: query.data.page,
@@ -328,7 +338,9 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
         total: result.total,
         totalPages: Math.ceil(result.total / query.data.pageSize),
       },
-    })
+    }
+    validateOpenApiResponse({ path: '/events/{id}/registrations', method: 'get', status: 200, body: responseBody })
+    return reply.status(200).send(responseBody)
   })
 
   fastify.get('/api/events/:id/analytics', { preHandler: [requireAuth, requireRoles('admin', 'viewer')] }, async (request, reply) => {
@@ -336,11 +348,12 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     if (!params.success) return replyValidationError(reply, params.error.issues, 'Invalid event id')
     const event = await requireEventOr404(reply, params.data.id)
     if (!event) return
+    validateOpenApiRequest({ path: '/events/{id}/analytics', method: 'get', params: params.data })
     const registrations = await registrationRepository.findByEvent(event.id, { page: 1, pageSize: 500 })
     const total = registrations.total
     const approved = registrations.data.filter((registration) => ['approved', 'attended'].includes(registration.status)).length
     const attended = registrations.data.filter((registration) => registration.status === 'attended').length
-    return reply.status(200).send({
+    const responseBody = {
       funnelData: [
         { stage: 'registered', count: total },
         { stage: 'approved', count: approved },
@@ -352,7 +365,9 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
         date: registration.createdAt.slice(0, 10),
         count: 1,
       })),
-    })
+    }
+    validateOpenApiResponse({ path: '/events/{id}/analytics', method: 'get', status: 200, body: responseBody })
+    return reply.status(200).send(responseBody)
   })
 
   fastify.get('/api/events/:id/yorimind', { preHandler: [requireAuth, requireRoles('admin', 'viewer')] }, async (request, reply) => {
@@ -360,6 +375,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     if (!params.success) return replyValidationError(reply, params.error.issues, 'Invalid event id')
     const event = await requireEventOr404(reply, params.data.id)
     if (!event) return
+    validateOpenApiRequest({ path: '/events/{id}/yorimind', method: 'get', params: params.data })
     const registrations = await registrationRepository.findByEvent(event.id, { page: 1, pageSize: 100 })
     const snapshot = {
       eventId: event.id,
@@ -378,7 +394,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       }))),
     }
     const result = await yoriMindService.analyze(snapshot)
-    return reply.status(200).send({
+    const responseBody = {
       analysis: result.summary,
       root_causes: result.insights,
       recommendations: result.recommendations.map((action) => ({
@@ -388,7 +404,9 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       })),
       summary: result.summary,
       tracked_metrics: ['registrationCount', 'approvedCount', 'attendedCount'],
-    })
+    }
+    validateOpenApiResponse({ path: '/events/{id}/yorimind', method: 'get', status: 200, body: responseBody })
+    return reply.status(200).send(responseBody)
   })
 
   fastify.get('/api/events/:id/attendance-stats', { preHandler: [requireAuth, requireRoles('admin', 'staff')] }, async (request, reply) => {
@@ -396,13 +414,16 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     if (!params.success) return replyValidationError(reply, params.error.issues, 'Invalid event id')
     const event = await requireEventOr404(reply, params.data.id)
     if (!event) return
+    validateOpenApiRequest({ path: '/events/{id}/attendance-stats', method: 'get', params: params.data })
     const registrations = await registrationRepository.findByEvent(event.id, { page: 1, pageSize: 500 })
     const attended = registrations.data.filter((registration) => registration.status === 'attended').length
-    return reply.status(200).send({
+    const responseBody = {
       total: registrations.total,
       attended,
       pending: Math.max(registrations.total - attended, 0),
-    })
+    }
+    validateOpenApiResponse({ path: '/events/{id}/attendance-stats', method: 'get', status: 200, body: responseBody })
+    return reply.status(200).send(responseBody)
   })
 
   fastify.get('/api/events/:id/checkin/stats', { preHandler: [requireAuth, requireRoles('admin', 'staff')] }, async (request, reply) => {
@@ -410,14 +431,17 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     if (!params.success) return replyValidationError(reply, params.error.issues, 'Invalid event id')
     const event = await requireEventOr404(reply, params.data.id)
     if (!event) return
+    validateOpenApiRequest({ path: '/events/{id}/checkin/stats', method: 'get', params: params.data })
     const registrations = await registrationRepository.findByEvent(event.id, { page: 1, pageSize: 500 })
     const approved = registrations.data.filter((registration) => registration.status === 'approved').length
     const attended = registrations.data.filter((registration) => registration.status === 'attended').length
-    return reply.status(200).send({
+    const responseBody = {
       approved,
       attended,
       total: approved + attended,
-    })
+    }
+    validateOpenApiResponse({ path: '/events/{id}/checkin/stats', method: 'get', status: 200, body: responseBody })
+    return reply.status(200).send(responseBody)
   })
 
   fastify.get('/api/events/:id/survey', async (request, reply) => {
@@ -425,6 +449,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     if (!params.success) return replyValidationError(reply, params.error.issues, 'Invalid event id')
     const event = await requireEventOr404(reply, params.data.id)
     if (!event) return
+    validateOpenApiRequest({ path: '/events/{id}/survey', method: 'get', params: params.data })
     const schema = await surveyRepository.findByEventId(event.id)
     if (!schema) {
       return reply.status(404).send({
@@ -432,6 +457,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       })
     }
     const surveyPayload = schema.schema ? { schema: schema.schema, uiSchema: schema.uiSchema ?? {} } : fieldsToSurveyContract(schema.fields)
+    validateOpenApiResponse({ path: '/events/{id}/survey', method: 'get', status: 200, body: surveyPayload })
     return reply.status(200).send(surveyPayload)
   })
 
@@ -446,6 +472,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     }
     const event = await requireEventOr404(reply, params.data.id)
     if (!event) return
+    validateOpenApiRequest({ path: '/events/{id}/survey', method: 'put', params: params.data, body: body.data })
     const existing = await surveyRepository.findByEventId(event.id)
     const savedSurvey = await surveyRepository.upsert(event.id, {
       id: existing?.id ?? `${event.id}-survey`,
@@ -456,10 +483,12 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       createdAt: existing?.createdAt ?? new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     })
-    return reply.status(200).send({
+    const responseBody = {
       schema: savedSurvey.schema ?? {},
       uiSchema: savedSurvey.uiSchema ?? {},
-    })
+    }
+    validateOpenApiResponse({ path: '/events/{id}/survey', method: 'put', status: 200, body: responseBody })
+    return reply.status(200).send(responseBody)
   })
 
   fastify.get('/api/events/:id/audience-recommendations', { preHandler: [requireAuth, requireAdmin] }, async (request, reply) => {
@@ -473,6 +502,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     }
     const event = await requireEventOr404(reply, params.data.id)
     if (!event) return
+    validateOpenApiRequest({ path: '/events/{id}/audience-recommendations', method: 'get', params: params.data, query: query.data })
     const contacts = await contactRepository.findAll({ page: 1, pageSize: 200 })
     const recommendations = contacts.data
       .map((contact, index) => ({
@@ -492,12 +522,14 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       }))
       .filter((contact) => contact.score >= query.data.minScore)
       .slice(0, query.data.limit)
-    return reply.status(200).send({
+    const responseBody = {
       recommendations,
       totalMatched: recommendations.length,
       totalExcluded: 0,
       excludedReasons: {},
-    })
+    }
+    validateOpenApiResponse({ path: '/events/{id}/audience-recommendations', method: 'get', status: 200, body: responseBody })
+    return reply.status(200).send(responseBody)
   })
 
   fastify.post('/api/events/:id/blast', { preHandler: [requireAuth, requireAdmin] }, async (request, reply) => {
@@ -512,6 +544,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
 
     const event = await requireEventOr404(reply, params.data.id)
     if (!event) return
+    validateOpenApiRequest({ path: '/events/{id}/blast', method: 'post', params: params.data, body: body.data })
     const payload = request.user as JwtPayload
     const contactFilters: { industry?: string; city?: string; companySize?: string } = {}
     if (body.data.filters?.industry) contactFilters.industry = body.data.filters.industry
@@ -543,11 +576,13 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       },
     })
 
-    return reply.status(202).send({
+    const responseBody = {
       jobId,
       status: body.data.scheduledAt ? 'scheduled' : 'queued',
       scheduledAt: body.data.scheduledAt,
       recipientCount,
-    })
+    }
+    validateOpenApiResponse({ path: '/events/{id}/blast', method: 'post', status: 202, body: responseBody })
+    return reply.status(202).send(responseBody)
   })
 }

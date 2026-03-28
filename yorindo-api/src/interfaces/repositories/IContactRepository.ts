@@ -12,6 +12,7 @@ export interface ContactFilters {
   city?: string
   companySize?: string
   missingEmail?: boolean
+  missingPhone?: boolean
   flagCategory?: string
   consentStatus?: string
   search?: string
@@ -26,7 +27,7 @@ export interface IContactRepository {
   upsert(data: Omit<Contact, 'id' | 'createdAt' | 'updatedAt'>): Promise<Contact>
   update(id: EntityId, data: Partial<Contact>): Promise<Contact | null>
   softDelete(id: EntityId): Promise<void>
-  countHealth(): Promise<{ flagged: number; duplicates: number; missingEmail: number }>
+  countHealth(): Promise<{ flagged: number; duplicates: number; missingEmail: number; missingPhone: number }>
   findFacets(): Promise<FacetResult>
   anonymize(id: EntityId, hashedPhone: string): Promise<void>
   existsByPhoneHash(hashedPhone: string): Promise<boolean>

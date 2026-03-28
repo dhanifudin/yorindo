@@ -8,7 +8,7 @@
 
 ## Status
 
-review
+done
 
 ## Context
 
@@ -370,6 +370,11 @@ Seed must insert:
 - 5 tests pass, 2 DB integration tests skip (expected in Phase 1 — no DB running)
 - SQL files are fully idempotent: `CREATE TABLE IF NOT EXISTS`, `CREATE INDEX IF NOT EXISTS`, enum guards via `DO $$ ... EXCEPTION WHEN duplicate_object`
 - Seed guards: exits with code 1 if `NODE_ENV=production`
+- Migration 005 implemented: paid event fields, dual survey, attendance_status, google_sub, profile_updated_at, survey_responses table, event_key, check_in_method, checked_in_by; `ALTER TYPE reg_status ADD VALUE IF NOT EXISTS 'provisional'`; backfill for waitlisted→pending / cancelled→rejected
+- Migration 006 implemented: province_code, province_name, city_code, city_name on contacts (all TEXT NULLABLE); indexes added
+- `scripts/migrate.ts` updated to run all 6 migrations in order
+- `scripts/seed.ts` fixed: explicit CUID2 IDs on all INSERT statements (bug fix — TEXT PRIMARY KEY has no DEFAULT); province/city codes populated for seeded contacts; new event columns included
+- Integration test updated to assert 6 migrations, survey_responses table, location columns, check-in columns
 
 ## File List
 
@@ -377,6 +382,8 @@ Seed must insert:
 - `migrations/002_users_access.sql`
 - `migrations/003_audit_flagged.sql`
 - `migrations/004_indexes.sql`
+- `migrations/005_sprint_changes_2026_03_28.sql`
+- `migrations/006_location_fields.sql`
 - `scripts/migrate.ts`
 - `scripts/seed.ts`
 - `src/tests/migrate.test.ts`
@@ -472,11 +479,11 @@ CREATE INDEX IF NOT EXISTS idx_registrations_checked_in_by ON registrations(chec
 ```
 
 > **Tasks to add to story implementation:**
-> - [ ] Create `migrations/005_sprint_changes_2026_03_28.sql` with the SQL above (including all new columns through check_in_method + checked_in_by)
-> - [ ] Add `'005_sprint_changes_2026_03_28.sql'` to the migrations array in `scripts/migrate.ts`
-> - [ ] Update `scripts/seed.ts` to avoid inserting `waitlisted`/`cancelled` status values
-> - [ ] Update integration test to assert 5 migrations run in order
-> - [ ] Note: `event_key` is NULL in seed data (Phase 2 concern — key generation at event publish)
+> - [x] Create `migrations/005_sprint_changes_2026_03_28.sql` with the SQL above (including all new columns through check_in_method + checked_in_by)
+> - [x] Add `'005_sprint_changes_2026_03_28.sql'` to the migrations array in `scripts/migrate.ts`
+> - [x] Update `scripts/seed.ts` to avoid inserting `waitlisted`/`cancelled` status values
+> - [x] Update integration test to assert 6 migrations run in order (combined with migration 006)
+> - [x] Note: `event_key` is NULL in seed data (Phase 2 concern — key generation at event publish)
 
 ## Migration 006 Addendum (2026-03-28)
 
@@ -509,10 +516,10 @@ CREATE INDEX IF NOT EXISTS idx_contacts_city_code ON contacts(city_code);
 ```
 
 > **Tasks to add to story implementation:**
-> - [ ] Create `migrations/006_location_fields.sql` with the SQL above
-> - [ ] Add `'006_location_fields.sql'` to the migrations array in `scripts/migrate.ts`
-> - [ ] Update integration test to assert 6 migrations run in order
-> - [ ] Update seed contacts to include sample `province_code`/`city_code` values (e.g., Jakarta contacts get `"31"`/`"31.71"`)
+> - [x] Create `migrations/006_location_fields.sql` with the SQL above
+> - [x] Add `'006_location_fields.sql'` to the migrations array in `scripts/migrate.ts`
+> - [x] Update integration test to assert 6 migrations run in order
+> - [x] Update seed contacts to include sample `province_code`/`city_code` values (Jakarta→"31"/"31.71", Bandung→"32"/"32.73", etc.)
 
 ## Change Log
 

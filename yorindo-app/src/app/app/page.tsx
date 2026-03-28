@@ -13,9 +13,17 @@ export default function DashboardPage() {
   const user = useAuthStore((s) => s.user)
   const router = useRouter()
 
+  const knownRoles = ['admin', 'viewer', 'staff', 'participant']
+
   useEffect(() => {
-    if (!accessToken) router.replace('/login')
-  }, [accessToken, router])
+    if (!accessToken) {
+      router.replace('/login')
+      return
+    }
+    if (user && !knownRoles.includes(user.role)) {
+      router.replace('/login')
+    }
+  }, [accessToken, user, router])
 
   if (!accessToken || !user) return null
 
@@ -24,6 +32,5 @@ export default function DashboardPage() {
   if (user.role === 'staff') return <StaffDashboard />
   if (user.role === 'participant') return <ParticipantDashboard />
 
-  router.replace('/login')
   return null
 }

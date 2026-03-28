@@ -97,6 +97,7 @@ npm start             # run compiled output (production)
 npm test              # run all tests once
 npm run test:watch    # watch mode
 npm run test:coverage # coverage report
+npm run openapi:lint  # lint the OpenAPI contract
 npm run migrate       # run database migrations (Phase 2)
 npm run seed          # seed database with sample data (Phase 2)
 ```
@@ -106,6 +107,7 @@ npm run seed          # seed database with sample data (Phase 2)
 ## API Reference
 
 The full OpenAPI 3.0 specification is at [`openapi.yaml`](openapi.yaml).
+The API now also fails fast at startup if `openapi.yaml` is missing or invalid, and exposes the parsed contract at `GET /api/openapi.json` for local verification.
 
 Quick reference:
 

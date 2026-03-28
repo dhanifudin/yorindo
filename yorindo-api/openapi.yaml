@@ -4,6 +4,7 @@ info:
   version: 1.0.0
   license:
     name: Proprietary
+    url: https://yorindo.id/license
   description: |
     Yorindo event management platform API.
 
@@ -154,7 +155,7 @@ components:
     # ─── Contact ───────────────────────────────────────────────────────────────
     Contact:
       type: object
-      required: [id, name, phone, email, industryId, jobTitleId, city, companySize, completenessScore, createdAt, updatedAt]
+      required: [id, name, phone, completenessScore, consentStatus, createdAt, updatedAt]
       properties:
         id:
           type: string
@@ -168,29 +169,47 @@ components:
         email:
           type: string
           format: email
+          nullable: true
           example: budi@example.com
         industryId:
           type: string
+          nullable: true
           example: teknologi
-          description: Slug from industries lookup table
+          description: Industry id from industries lookup table
         jobTitleId:
           type: string
+          nullable: true
           example: direktur
-          description: Slug from job_titles lookup table
+          description: Id from job_titles lookup table
         city:
           type: string
+          nullable: true
           example: Jakarta
-        companySize:
+        company:
           type: string
-          enum: [micro, small, medium, large, enterprise]
-          example: large
+          nullable: true
+          example: PT Teknologi Maju
+        companySize:
+          nullable: true
+          enum: [small, medium, large, enterprise, '', null]
+          example: medium
+        source:
+          nullable: true
+          enum: [excel_upload, form, manual, null]
+        consentStatus:
+          type: string
+          enum: [active, suppressed, legacy_unverified]
+          example: active
+        flagCategory:
+          nullable: true
+          enum: [invalid-data, duplicate, null]
         completenessScore:
           type: number
           format: float
           minimum: 0
           maximum: 1
           example: 0.85
-          description: GPT-4o computed data quality score (0=incomplete, 1=complete)
+          description: Data quality score (0=incomplete, 1=complete)
         createdAt:
           type: string
           format: date-time
@@ -281,8 +300,6 @@ components:
           additionalProperties: true
           description: Audience targeting criteria (JSONB)
         surveySchema:
-          type: object
-          additionalProperties: true
           description: Survey template schema (JSONB)
         venue:
           type: string
@@ -443,14 +460,14 @@ components:
             contactEmail:
               type: string
               format: email
+              nullable: true
               example: budi@example.com
             contactPhone:
               type: string
               example: "+6281234567890"
             contactFlagCategory:
-              type: string
               nullable: true
-              enum: [spam, not-potential, invalid-data, duplicate]
+              enum: [invalid-data, duplicate, null]
               description: Inherited from contact record; null if no flag
             aiScore:
               type: integer
@@ -620,7 +637,7 @@ components:
           example: Admin Yorindo
         role:
           type: string
-          enum: [admin, staff, viewer]
+          enum: [admin, staff, viewer, participant]
           example: admin
         createdAt:
           type: string
@@ -640,10 +657,20 @@ components:
           type: string
         role:
           type: string
-          enum: [admin, staff, viewer]
+          enum: [admin, staff, viewer, participant]
         password:
           type: string
           minLength: 8
+
+    UpdateUserBody:
+      type: object
+      properties:
+        name:
+          type: string
+          nullable: true
+        role:
+          type: string
+          enum: [admin, staff, viewer, participant]
 
     PaginatedUsers:
       type: object
@@ -698,7 +725,15 @@ components:
               type: string
             role:
               type: string
-              enum: [admin, staff, viewer]
+              enum: [admin, staff, viewer, participant]
+
+    RefreshResponse:
+      type: object
+      required: [accessToken]
+      properties:
+        accessToken:
+          type: string
+          description: Short-lived JWT access token
 
     # ─── Analytics ─────────────────────────────────────────────────────────────
     AnalyticsDashboard:
@@ -1146,7 +1181,7 @@ components:
     # ─── Contact Health & Facets ────────────────────────────────────────────────
     ContactHealth:
       type: object
-      required: [flagged, duplicates, missingEmail]
+      required: [flagged, duplicates, missingEmail, missingPhone]
       properties:
         flagged:
           type: integer
@@ -1157,6 +1192,9 @@ components:
         missingEmail:
           type: integer
           example: 58
+        missingPhone:
+          type: integer
+          example: 21
 
     FacetItem:
       type: object
@@ -1441,6 +1479,7 @@ components:
           type: boolean
           example: false
         report:
+          type: object
           nullable: true
           description: Full report data; null if DPA not yet accepted
           allOf:
@@ -1746,7 +1785,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthResponse'
+                $ref: '#/components/schemas/RefreshResponse'
         '401':
           description: Invalid or expired refresh token cookie
           content:
@@ -1936,7 +1975,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
 
-  /contacts/flagged/{id}:
+  /contacts/flagged-records/{id}:
     post:
       summary: Approve or reject a flagged record (admin only)
       operationId: resolveFlaggedRecord
@@ -2026,6 +2065,139 @@ paths:
                 $ref: '#/components/schemas/ApiError'
         '404':
           description: Contact not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /contacts/health:
+    get:
+      summary: Get contact database health metrics
+      operationId: getContactsHealth
+      tags: [Contacts]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Contact health metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactHealth'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /contacts/industry-suggestions:
+    get:
+      summary: Suggest canonical industry slugs from free-form text
+      operationId: getIndustrySuggestions
+      tags: [Contacts]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Industry suggestions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IndustrySuggestionsResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /contacts/duplicates:
+    get:
+      summary: List likely duplicate contacts
+      operationId: listDuplicateContacts
+      tags: [Contacts]
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: Paginated duplicate contact pairs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDuplicates'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /contacts/{id}/merge:
+    post:
+      summary: Merge a duplicate contact pair into the primary contact
+      operationId: mergeDuplicateContact
+      tags: [Contacts]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fieldSelections:
+                  type: object
+                  additionalProperties: true
+      responses:
+        '200':
+          description: Contact merged successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contact'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Duplicate pair not found
           content:
             application/json:
               schema:
@@ -3442,11 +3614,9 @@ paths:
       summary: Verify QR ticket and mark attendance (admin/staff)
       operationId: scanVerify
       description: >
-        Verifies the QR ticket JWT and marks the participant as attended.
-        A `200` response is always returned for a structurally valid request — the `status` field in the body
-        indicates the scan outcome (`success`, `already_attended`, or `invalid`).
-        A `401` is returned only when the caller's **staff/admin Bearer token** is missing or expired,
-        not for invalid ticket tokens (those return 200 with status: invalid).
+        Verifies the QR ticket token and marks the participant as attended.
+        A `200` response is returned for successful or duplicate scans.
+        Invalid or expired ticket tokens return `401` with `INVALID_TICKET`.
       tags: [Scan]
       security:
         - BearerAuth: []
@@ -3472,7 +3642,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
         '401':
-          description: Caller's Bearer token is missing or expired
+          description: Caller's Bearer token is missing/expired or the ticket token is invalid
           content:
             application/json:
               schema:
@@ -3526,6 +3696,80 @@ paths:
                 $ref: '#/components/schemas/ApiError'
         '403':
           description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /etl/jobs/{jobId}:
+    get:
+      summary: Get ETL job status
+      operationId: getEtlJobStatus
+      tags: [ETL]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ETL job status payload
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /participants/erasure-request:
+    post:
+      summary: Request participant data erasure
+      operationId: requestParticipantErasure
+      tags: [Participants]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone, email]
+              properties:
+                phone:
+                  type: string
+                  minLength: 8
+                email:
+                  type: string
+                  format: email
+      responses:
+        '202':
+          description: Erasure request accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataRightsResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Contact not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Suppression already exists
           content:
             application/json:
               schema:
@@ -3705,6 +3949,90 @@ paths:
                 $ref: '#/components/schemas/ApiError'
         '409':
           description: Email already in use
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /users/{id}:
+    patch:
+      summary: Update a user (admin only)
+      operationId: updateUser
+      tags: [Users]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserBody'
+      responses:
+        '200':
+          description: User updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+    delete:
+      summary: Delete a user (admin only)
+      operationId: deleteUser
+      tags: [Users]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: User deleted
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: User not found
           content:
             application/json:
               schema:

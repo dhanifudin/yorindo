@@ -8,6 +8,7 @@ import {
 } from '../container.js'
 import { requireAdmin, requireAuth, requireRoles } from '../middleware/auth.js'
 import type { Contact, Registration } from '../types/domain.js'
+import { validateOpenApiRequest, validateOpenApiResponse } from '../lib/openapi-contract.js'
 
 const RegistrationIdParamsSchema = z.object({
   id: z.string().trim().min(1),
@@ -87,6 +88,7 @@ export const registrationsRoutes: FastifyPluginAsync = async (fastify) => {
     if (!parsed.success) return validationError(reply, parsed.error.issues, 'Invalid registration payload')
 
     const payload = parsed.data
+    validateOpenApiRequest({ path: '/registrations', method: 'post', body: payload })
     const event = await eventRepository.findById(payload.eventId)
     if (!event) {
       return reply.status(404).send({
@@ -128,7 +130,9 @@ export const registrationsRoutes: FastifyPluginAsync = async (fastify) => {
       await surveyRepository.saveResponse(registration.id, payload.surveyAnswers)
     }
 
-    return reply.status(201).send(toRegistrationDto(registration, payload.surveyAnswers ?? {}))
+    const responseBody = toRegistrationDto(registration, payload.surveyAnswers ?? {})
+    validateOpenApiResponse({ path: '/registrations', method: 'post', status: 201, body: responseBody })
+    return reply.status(201).send(responseBody)
   })
 
   fastify.get('/api/registrations', { preHandler: requireAuth }, async (request, reply) => {
@@ -136,6 +140,7 @@ export const registrationsRoutes: FastifyPluginAsync = async (fastify) => {
     if (!parsed.success) return validationError(reply, parsed.error.issues, 'Invalid registration query')
 
     const query = parsed.data
+    validateOpenApiRequest({ path: '/registrations', method: 'get', query })
     const paginationParams: { page: number; pageSize: number; sortBy?: string; sortDir?: 'asc' | 'desc' } = {
       page: query.page,
       pageSize: query.pageSize,
@@ -151,7 +156,7 @@ export const registrationsRoutes: FastifyPluginAsync = async (fastify) => {
 
     const data = await Promise.all(result.data.map(async (registration) => toRegistrationDto(registration, await getSurveyAnswers(registration))))
 
-    return reply.status(200).send({
+    const responseBody = {
       data,
       pagination: {
         page: query.page,
@@ -159,19 +164,24 @@ export const registrationsRoutes: FastifyPluginAsync = async (fastify) => {
         total: result.total,
         totalPages: Math.ceil(result.total / query.pageSize),
       },
-    })
+    }
+    validateOpenApiResponse({ path: '/registrations', method: 'get', status: 200, body: responseBody })
+    return reply.status(200).send(responseBody)
   })
 
   fastify.get('/api/registrations/:id', { preHandler: requireAuth }, async (request, reply) => {
     const parsed = RegistrationIdParamsSchema.safeParse(request.params)
     if (!parsed.success) return validationError(reply, parsed.error.issues, 'Invalid registration id')
+    validateOpenApiRequest({ path: '/registrations/{id}', method: 'get', params: parsed.data })
     const registration = await registrationRepository.findById(parsed.data.id)
     if (!registration) {
       return reply.status(404).send({
         error: { code: 'NOT_FOUND', message: 'Registration not found', details: [] },
       })
     }
-    return reply.status(200).send(toRegistrationDto(registration, await getSurveyAnswers(registration)))
+    const responseBody = toRegistrationDto(registration, await getSurveyAnswers(registration))
+    validateOpenApiResponse({ path: '/registrations/{id}', method: 'get', status: 200, body: responseBody })
+    return reply.status(200).send(responseBody)
   })
 
   fastify.post('/api/registrations/:id/status', { preHandler: [requireAuth, requireAdmin] }, async (request, reply) => {
@@ -183,30 +193,37 @@ export const registrationsRoutes: FastifyPluginAsync = async (fastify) => {
         ...(body.success ? [] : body.error.issues),
       ], 'Invalid registration status update payload')
     }
+    validateOpenApiRequest({ path: '/registrations/{id}/status', method: 'post', params: params.success ? params.data : undefined, body: body.success ? body.data : undefined })
     const updated = await registrationRepository.updateStatus(params.data.id, body.data.status)
     if (!updated) {
       return reply.status(404).send({
         error: { code: 'NOT_FOUND', message: 'Registration not found', details: [] },
       })
     }
-    return reply.status(200).send(toRegistrationDto(updated, await getSurveyAnswers(updated)))
+    const responseBody = toRegistrationDto(updated, await getSurveyAnswers(updated))
+    validateOpenApiResponse({ path: '/registrations/{id}/status', method: 'post', status: 200, body: responseBody })
+    return reply.status(200).send(responseBody)
   })
 
   fastify.post('/api/registrations/:id/cancel', { preHandler: requireAuth }, async (request, reply) => {
     const params = RegistrationIdParamsSchema.safeParse(request.params)
     if (!params.success) return validationError(reply, params.error.issues, 'Invalid registration id')
+    validateOpenApiRequest({ path: '/registrations/{id}/cancel', method: 'post', params: params.data })
     const updated = await registrationRepository.updateStatus(params.data.id, 'cancelled')
     if (!updated) {
       return reply.status(404).send({
         error: { code: 'NOT_FOUND', message: 'Registration not found', details: [] },
       })
     }
-    return reply.status(200).send(toRegistrationDto(updated, await getSurveyAnswers(updated)))
+    const responseBody = toRegistrationDto(updated, await getSurveyAnswers(updated))
+    validateOpenApiResponse({ path: '/registrations/{id}/cancel', method: 'post', status: 200, body: responseBody })
+    return reply.status(200).send(responseBody)
   })
 
   fastify.post('/api/registrations/:id/clear-flag', { preHandler: [requireAuth, requireRoles('admin', 'staff')] }, async (request, reply) => {
     const params = RegistrationIdParamsSchema.safeParse(request.params)
     if (!params.success) return validationError(reply, params.error.issues, 'Invalid registration id')
+    validateOpenApiRequest({ path: '/registrations/{id}/clear-flag', method: 'post', params: params.data })
     const updated = await registrationRepository.update(params.data.id, { flagOverride: true })
     if (!updated) {
       return reply.status(404).send({
@@ -214,16 +231,21 @@ export const registrationsRoutes: FastifyPluginAsync = async (fastify) => {
       })
     }
     const contact = await contactRepository.findById(updated.contactId)
-    return reply.status(200).send(toRegistrationWithContactDto(updated, contact))
+    const responseBody = toRegistrationWithContactDto(updated, contact)
+    validateOpenApiResponse({ path: '/registrations/{id}/clear-flag', method: 'post', status: 200, body: responseBody })
+    return reply.status(200).send(responseBody)
   })
 
   fastify.put('/api/registrations/bulk-approve', { preHandler: [requireAuth, requireRoles('admin', 'staff')] }, async (request, reply) => {
     const body = BulkApproveBodySchema.safeParse(request.body)
     if (!body.success) return validationError(reply, body.error.issues, 'Invalid bulk approve payload')
+    validateOpenApiRequest({ path: '/registrations/bulk-approve', method: 'put', body: body.data })
     const result = await registrationRepository.bulkApprove(body.data.ids)
-    return reply.status(200).send({
+    const responseBody = {
       approved: result.approved,
       total: body.data.ids.length,
-    })
+    }
+    validateOpenApiResponse({ path: '/registrations/bulk-approve', method: 'put', status: 200, body: responseBody })
+    return reply.status(200).send(responseBody)
   })
 }

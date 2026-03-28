@@ -11,11 +11,12 @@ import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
 import { AuthService } from '../services/auth.service.js'
 import { requireAuth, type JwtPayload } from '../middleware/auth.js'
-import { userRepository } from '../container.js'
+import { userRepository, auditLogRepository } from '../container.js'
 import { getRedisOptional } from '../lib/redis.js'
+import { validateOpenApiRequest, validateOpenApiResponse } from '../lib/openapi-contract.js'
 
-const REFRESH_COOKIE = 'refreshToken'
-const REFRESH_COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000 // 7 days (ms)
+const REFRESH_COOKIE = 'refresh_token'
+const REFRESH_COOKIE_MAX_AGE = 7 * 24 * 60 * 60 // 7 days (seconds)
 
 const LoginBodySchema = z.object({
   email: z.string().email(),
@@ -35,9 +36,23 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     const { email, password } = result.data
+    validateOpenApiRequest({ path: '/auth/login', method: 'post', body: result.data })
 
     try {
       const { accessToken, refreshToken, user } = await authService.login(email, password)
+      try {
+        await auditLogRepository.create({
+          action: 'login',
+          actorId: user.id,
+          actorRole: user.role,
+          eventId: null,
+          targetId: user.id,
+          targetType: 'user',
+          metadata: null,
+        })
+      } catch (auditErr) {
+        console.warn('Audit log write failed on login:', auditErr)
+      }
 
       reply.setCookie(REFRESH_COOKIE, refreshToken, {
         httpOnly: true,
@@ -47,7 +62,9 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
         path: '/api/auth',
       })
 
-      return reply.status(200).send({ accessToken, user })
+      const responseBody = { accessToken, user }
+      validateOpenApiResponse({ path: '/auth/login', method: 'post', status: 200, body: responseBody })
+      return reply.status(200).send(responseBody)
     } catch (err: unknown) {
       const e = err as { statusCode?: number; code?: string; message: string }
       return reply.status(e.statusCode ?? 500).send({
@@ -67,7 +84,9 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
 
     try {
       const { accessToken } = await authService.refresh(refreshToken)
-      return reply.status(200).send({ accessToken })
+      const responseBody = { accessToken }
+      validateOpenApiResponse({ path: '/auth/refresh', method: 'post', status: 200, body: responseBody })
+      return reply.status(200).send(responseBody)
     } catch (err: unknown) {
       const e = err as { statusCode?: number; code?: string; message: string }
       return reply.status(e.statusCode ?? 500).send({

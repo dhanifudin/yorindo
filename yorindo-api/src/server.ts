@@ -15,8 +15,27 @@ import { eventsRoutes } from './routes/events.routes.js'
 import { registrationsRoutes } from './routes/registrations.routes.js'
 import { scanRoutes } from './routes/scan.routes.js'
 import { authPlugin } from './middleware/auth.js'
+import { loadOpenApiDocument } from './lib/openapi.js'
+
+function normalizeFastifyPath(url: string): string {
+  return url
+    .replace(/^\/api/, '')
+    .replace(/:([A-Za-z0-9_]+)/g, '{$1}')
+}
 
 export async function buildServer() {
+  const openapi = loadOpenApiDocument()
+  const documentedRoutes = new Set<string>()
+  const registeredRoutes = new Set<string>()
+
+  for (const [routePath, pathItem] of Object.entries(openapi.paths ?? {})) {
+    for (const [method, operation] of Object.entries(pathItem as Record<string, unknown>)) {
+      if (['get', 'post', 'put', 'patch', 'delete'].includes(method) && operation) {
+        documentedRoutes.add(`${method.toUpperCase()} ${routePath}`)
+      }
+    }
+  }
+
   const fastify = Fastify({
     logger: {
       level: process.env['LOG_LEVEL'] ?? 'info',
@@ -43,6 +62,16 @@ export async function buildServer() {
     limits: {
       fileSize: 10 * 1024 * 1024, // 10MB
     },
+  })
+
+  fastify.addHook('onRoute', (routeOptions) => {
+    const methods = Array.isArray(routeOptions.method) ? routeOptions.method : [routeOptions.method]
+    for (const method of methods) {
+      const upper = typeof method === 'string' ? method.toUpperCase() : ''
+      if (!['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(upper)) continue
+      if (routeOptions.url === '/api/openapi.json') continue
+      registeredRoutes.add(`${upper} ${normalizeFastifyPath(routeOptions.url)}`)
+    }
   })
 
   // Global error handler — standardized error shape
@@ -75,6 +104,17 @@ export async function buildServer() {
   await fastify.register(eventsRoutes)
   await fastify.register(registrationsRoutes)
   await fastify.register(scanRoutes)
+
+  fastify.get('/api/openapi.json', async (_request, reply) => {
+    return reply.status(200).send(openapi)
+  })
+
+  await fastify.after()
+
+  const undocumentedRoutes = Array.from(registeredRoutes).filter((routeKey) => !documentedRoutes.has(routeKey))
+  if (undocumentedRoutes.length > 0) {
+    throw new Error(`OpenAPI contract is missing registered routes: ${undocumentedRoutes.join(', ')}`)
+  }
 
   return fastify
 }

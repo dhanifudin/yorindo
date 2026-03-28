@@ -33,6 +33,7 @@ const ROLE_BADGE: Record<User['role'], string> = {
   admin: 'bg-blue-100 text-blue-700',
   staff: 'bg-green-100 text-green-700',
   viewer: 'bg-muted text-muted-foreground',
+  participant: 'bg-amber-100 text-amber-700',
 }
 
 export default function UsersPage() {
@@ -41,10 +42,11 @@ export default function UsersPage() {
   const [detailUser, setDetailUser] = useState<User | null>(null)
   const [usersPage, setUsersPage] = useState(0)
   const { data: users, isLoading } = useUsers()
+  const allUsers = users?.data ?? []
 
   const pagedUsers = useMemo(
-    () => (users ?? []).slice(usersPage * PAGE_SIZE, (usersPage + 1) * PAGE_SIZE),
-    [users, usersPage]
+    () => allUsers.slice(usersPage * PAGE_SIZE, (usersPage + 1) * PAGE_SIZE),
+    [allUsers, usersPage]
   )
   const { mutate: updateRole } = useUpdateUserRole()
   const { mutate: deleteUser } = useDeleteUser()
@@ -185,6 +187,7 @@ export default function UsersPage() {
                               <SelectItem value="admin">Admin</SelectItem>
                               <SelectItem value="staff">Staff</SelectItem>
                               <SelectItem value="viewer">Viewer</SelectItem>
+                              <SelectItem value="participant">Participant</SelectItem>
                             </SelectContent>
                           </Select>
                           <Badge className={ROLE_BADGE[user.role]}>{user.role}</Badge>
@@ -231,7 +234,7 @@ export default function UsersPage() {
           <TablePagination
             page={usersPage}
             pageSize={PAGE_SIZE}
-            total={users?.length ?? 0}
+            total={allUsers.length}
             onPrev={() => setUsersPage((p) => Math.max(0, p - 1))}
             onNext={() => setUsersPage((p) => p + 1)}
           />

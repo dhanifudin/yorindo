@@ -19,6 +19,7 @@ export const SEED_USER_IDS = {
   admin:  'cuid2adminuser000000001x',
   staff:  'cuid2staffuser000000001x',
   viewer: 'cuid2vieweruser00000001x',
+  participant: 'cuid2participantuser0001',
 } as const
 
 // ─── Vendor IDs ────────────────────────────────────────────────────────────────

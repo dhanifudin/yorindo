@@ -7,6 +7,9 @@ type AuthUser = SessionUser | { id: string; role: 'participant'; name?: string; 
 interface AuthStore {
   accessToken: string | null
   user: AuthUser | null
+  eventKeys: Record<string, string>
+  setAuth: (token: string, user: AuthStore['user'], eventKeys?: Record<string, string>) => void
+  /** @deprecated use setAuth */
   setAccessToken: (token: string, user: AuthStore['user']) => void
   clearAuth: () => void
 }
@@ -14,6 +17,8 @@ interface AuthStore {
 export const useAuthStore = create<AuthStore>((set) => ({
   accessToken: null,
   user: null,
+  eventKeys: {},
+  setAuth: (accessToken, user, eventKeys = {}) => set({ accessToken, user, eventKeys }),
   setAccessToken: (accessToken, user) => set({ accessToken, user }),
-  clearAuth: () => set({ accessToken: null, user: null }),
+  clearAuth: () => set({ accessToken: null, user: null, eventKeys: {} }),
 }))

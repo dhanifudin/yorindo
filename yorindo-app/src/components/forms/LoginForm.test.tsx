@@ -53,9 +53,10 @@ describe('LoginForm', () => {
       expect(mockPush).toHaveBeenCalledWith('/app')
     })
 
-    const { accessToken, user: authUser } = useAuthStore.getState()
+    const { accessToken, user: authUser, eventKeys } = useAuthStore.getState()
     expect(accessToken).toBe('mock-token-admin')
     expect(authUser?.role).toBe('admin')
+    expect(eventKeys).toEqual({})
   })
 
   it('shows loading state while submitting', async () => {

@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import type { User, Event } from '@/types/api'
+import { fetchUserAssignedEvents } from '@/hooks/useUsers'
 
 interface EventAssignmentDialogProps {
   user: User
@@ -24,20 +25,23 @@ export function EventAssignmentDialog({ user, open, onClose }: EventAssignmentDi
     enabled: open,
   })
 
-  const { data: assignmentData } = useQuery<{ eventIds: string[] }>({
+  const { data: assignmentData } = useQuery<{ data: Event[] }>({
     queryKey: ['user-events', user.id],
-    queryFn: () => fetch(`/api/users/${user.id}/events`).then((r) => r.json()),
+    queryFn: () => fetchUserAssignedEvents(user.id),
     enabled: open,
   })
 
-  // Sync pending set from server data (update-state-while-rendering pattern)
-  const [loadedAssignmentData, setLoadedAssignmentData] = useState<typeof assignmentData>(undefined)
-  if (assignmentData !== loadedAssignmentData) {
-    setLoadedAssignmentData(assignmentData)
-    if (assignmentData?.eventIds) {
-      setPending(new Set(assignmentData.eventIds))
+  useEffect(() => {
+    if (!open) {
+      setPending(new Set())
     }
-  }
+  }, [open])
+
+  useEffect(() => {
+    if (assignmentData?.data) {
+      setPending(new Set(assignmentData.data.map((event) => event.id)))
+    }
+  }, [assignmentData])
 
   const assignMutation = useMutation({
     mutationFn: (eventId: string) =>
@@ -66,7 +70,7 @@ export function EventAssignmentDialog({ user, open, onClose }: EventAssignmentDi
   }
 
   const handleSave = async () => {
-    const current = new Set(assignmentData?.eventIds ?? [])
+    const current = new Set((assignmentData?.data ?? []).map((event) => event.id))
     const toAdd = [...pending].filter((id) => !current.has(id))
     const toRemove = [...current].filter((id) => !pending.has(id))
 
