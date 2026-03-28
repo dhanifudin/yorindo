@@ -73,3 +73,26 @@ export async function requireAdmin(
     })
   }
 }
+
+export function requireRoles(...roles: JwtPayload['role'][]) {
+  return async function requireRoleSet(
+    request: FastifyRequest,
+    reply: FastifyReply,
+  ): Promise<void> {
+    if (!request.user) {
+      return reply.status(401).send({
+        error: { code: 'UNAUTHORIZED', message: 'Authentication required', details: [] },
+      })
+    }
+
+    if (!roles.includes(request.user.role)) {
+      return reply.status(403).send({
+        error: {
+          code: 'FORBIDDEN',
+          message: `Required role: ${roles.join(' | ')}`,
+          details: [],
+        },
+      })
+    }
+  }
+}

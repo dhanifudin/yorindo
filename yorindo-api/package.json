@@ -5,6 +5,7 @@
   "type": "module",
   "main": "dist/main.js",
   "scripts": {
+    "lint": "tsc --noEmit",
     "build": "tsc",
     "start": "node dist/main.js",
     "dev": "tsx --watch --experimental-specifier-resolution=node src/main.ts",

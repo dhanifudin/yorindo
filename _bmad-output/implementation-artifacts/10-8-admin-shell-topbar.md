@@ -29,7 +29,7 @@ So that I can quickly navigate to key actions and know who I'm logged in as with
 - Spacer: `<div className="flex-1" />`
 - "Buat Event" button: `<Button asChild size="sm" className="gap-1.5"><Link href="/app/events"><Plus className="h-3.5 w-3.5" />Buat Event</Link></Button>`
 - Bell icon: `<button>` with `<Bell className="h-4 w-4" />` — static, no functionality, styled like an icon button
-- Avatar chip: user initials, `bg-primary text-primary-foreground`, `rounded-full`, `w-8 h-8`, shows first char of `user.id` uppercased (or first char of user email if id is UUID — use role initial as fallback: A/S/V/P)
+- Avatar chip: user initials, `bg-primary text-primary-foreground`, `rounded-full`, `w-8 h-8`, shows first char of `user.id` uppercased (or first char of user email if the opaque ID is unavailable — use role initial as fallback: A/S/V/P)
 
 **AC3:** On desktop: topbar spans the content area only (not over the sidebar). The sidebar remains fixed-left; topbar sits in the `flex-1` column.
 
