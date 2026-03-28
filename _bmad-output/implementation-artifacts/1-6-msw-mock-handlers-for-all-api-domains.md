@@ -142,7 +142,7 @@ const INDUSTRIES = ['teknologi', 'kesehatan', 'manufaktur', 'keuangan', 'pendidi
 const COMPANY_SIZES = ['micro', 'small', 'medium', 'large', 'enterprise']
 
 const contactsPool: Contact[] = Array.from({ length: 247 }, (_, i) => ({
-  id: faker.string.uuid(),
+  id: createId(),
   name: faker.person.fullName(),
   phone: `+62${faker.string.numeric(10)}`,
   email: faker.internet.email(),
@@ -193,11 +193,11 @@ import type { Event } from '@/types/api'
 
 // Seeded mutable store — mutations persist within session
 let eventsStore: Event[] = [
-  { id: faker.string.uuid(), name: 'Seminar ERP Jakarta', slug: 'seminar-erp-jakarta', description: '...', status: 'published', eventDate: '2026-04-15T02:00:00.000Z', timezone: 'Asia/Jakarta', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-  { id: faker.string.uuid(), name: 'Workshop AI Surabaya', slug: 'workshop-ai-surabaya', description: '...', status: 'draft', eventDate: '2026-05-01T02:00:00.000Z', timezone: 'Asia/Jakarta', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-  { id: faker.string.uuid(), name: 'Forum Kesehatan Digital', slug: 'forum-kesehatan-digital', description: '...', status: 'active', eventDate: '2026-03-20T02:00:00.000Z', timezone: 'Asia/Jakarta', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-  { id: faker.string.uuid(), name: 'Konferensi Manufaktur 2025', slug: 'konferensi-manufaktur-2025', description: '...', status: 'completed', eventDate: '2025-11-10T02:00:00.000Z', timezone: 'Asia/Jakarta', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-  { id: faker.string.uuid(), name: 'Summit Properti Bali', slug: 'summit-properti-bali', description: '...', status: 'cancelled', eventDate: '2026-02-28T02:00:00.000Z', timezone: 'Asia/Jakarta', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+  { id: createId(), name: 'Seminar ERP Jakarta', slug: 'seminar-erp-jakarta', description: '...', status: 'published', eventDate: '2026-04-15T02:00:00.000Z', timezone: 'Asia/Jakarta', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+  { id: createId(), name: 'Workshop AI Surabaya', slug: 'workshop-ai-surabaya', description: '...', status: 'draft', eventDate: '2026-05-01T02:00:00.000Z', timezone: 'Asia/Jakarta', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+  { id: createId(), name: 'Forum Kesehatan Digital', slug: 'forum-kesehatan-digital', description: '...', status: 'active', eventDate: '2026-03-20T02:00:00.000Z', timezone: 'Asia/Jakarta', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+  { id: createId(), name: 'Konferensi Manufaktur 2025', slug: 'konferensi-manufaktur-2025', description: '...', status: 'completed', eventDate: '2025-11-10T02:00:00.000Z', timezone: 'Asia/Jakarta', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+  { id: createId(), name: 'Summit Properti Bali', slug: 'summit-properti-bali', description: '...', status: 'cancelled', eventDate: '2026-02-28T02:00:00.000Z', timezone: 'Asia/Jakarta', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
 ]
 
 export const eventHandlers = [
@@ -214,7 +214,7 @@ export const eventHandlers = [
   http.post('/api/events', async ({ request }) => {
     await delay(600)
     const body = await request.json() as Partial<Event>
-    const newEvent: Event = { id: faker.string.uuid(), slug: faker.helpers.slugify(body.name ?? 'new-event'), status: 'draft', description: '', timezone: 'Asia/Jakarta', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), ...body } as Event
+    const newEvent: Event = { id: createId(), slug: faker.helpers.slugify(body.name ?? 'new-event'), status: 'draft', description: '', timezone: 'Asia/Jakarta', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), ...body } as Event
     eventsStore.push(newEvent)
     return HttpResponse.json(newEvent, { status: 201 })
   }),
@@ -287,7 +287,7 @@ export const scanHandlers = [
     return HttpResponse.json({
       status: 'success',
       registration: {
-        id: faker.string.uuid(),
+        id: createId(),
         contactName: faker.person.fullName(),
         eventName: 'Seminar ERP Jakarta',
       },
@@ -357,7 +357,7 @@ export const authHandlers = [
 - **DO NOT** hard-code 20 contacts — use the seeded pool with slicing for correct pagination
 - **DO NOT** make filtering case-sensitive in ways that break the spec — normalize to lowercase
 - **DO NOT** forget `faker.seed(42)` on the contacts pool — deterministic data prevents flaky tests
-- **DO NOT** use `Math.random()` for IDs — use `faker.string.uuid()`
+- **DO NOT** use `Math.random()` for IDs — use `createId()`
 - **DO NOT** create handlers with different URL patterns than the openapi.yaml spec — AC8 requires conformance
 
 ### Registrations Handler Key Detail

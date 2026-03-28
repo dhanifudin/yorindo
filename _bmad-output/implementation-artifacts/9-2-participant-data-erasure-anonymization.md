@@ -75,7 +75,7 @@ src/
 ### Architecture Constraints (MUST FOLLOW)
 
 1. **Repository Pattern** — All DB mutations go through repository methods. Never write raw SQL in the route handler or service.
-2. **No PII in audit logs** — `data-erasure.completed` audit entry must NOT include the original phone or email. Log only `contactId` (UUID).
+2. **No PII in audit logs** — `data-erasure.completed` audit entry must NOT include the original phone or email. Log only `contactId` (opaque string ID).
 3. **Transactional anonymization** — The 3 mutations (contacts update, consent_records update, audit log insert) should run in a PostgreSQL transaction. Use `pg` client directly for the transaction block.
 4. **BullMQ `transactional` queue** — Not the `marketing` queue. Erasure is higher priority.
 
@@ -143,7 +143,7 @@ export class ErasureService {
     await this.auditRepo.create({
       action: 'data-erasure.completed',
       actorId: 'system',
-      targetId: contactId,  // UUID only — no PII
+      targetId: contactId,  // opaque ID only — no PII
       metadata: {},         // Deliberately empty — no PII in audit
     })
   }
@@ -180,7 +180,7 @@ Add implementations to:
 2. **Identity mismatch:** phone exists but email doesn't match → 422 IDENTITY_MISMATCH
 3. **Already erased:** contact.name is 'ANONYMIZED' → 409 ALREADY_ERASED
 4. **Anonymization:** ErasureService.anonymizeContact() → contact.name = 'ANONYMIZED', phone = sha256 hash, email = null; consent_status = 'suppressed'; audit entry written
-5. **No PII in audit:** audit entry metadata is empty `{}`; only contactId (UUID) stored
+5. **No PII in audit:** audit entry metadata is empty `{}`; only contactId (opaque ID) stored
 6. **Suppression detection:** existsByPhoneHash() returns true after erasure → ETL skips re-creation
 
 ### Dependencies

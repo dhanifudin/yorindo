@@ -81,6 +81,20 @@ export class InMemoryRegistrationRepository implements IRegistrationRepository {
     }
   }
 
+  async findAll(params: PaginationParams, filters?: RegistrationFilters): Promise<{ data: Registration[]; total: number }> {
+    let data = Array.from(this.registrations.values())
+
+    if (filters?.eventId) data = data.filter(r => r.eventId === filters.eventId)
+    if (filters?.status) data = data.filter(r => r.status === filters.status)
+    if (filters?.flagged) data = data.filter(r => r.flagOverride)
+    if (filters?.aiScoreMin !== undefined) data = data.filter(r => (r.aiScore ?? 0) >= filters.aiScoreMin!)
+    if (filters?.aiScoreMax !== undefined) data = data.filter(r => (r.aiScore ?? 0) <= filters.aiScoreMax!)
+
+    const total = data.length
+    const start = (params.page - 1) * params.pageSize
+    return { data: data.slice(start, start + params.pageSize), total }
+  }
+
   async findByEvent(eventId: string, params: PaginationParams, filters?: RegistrationFilters): Promise<{ data: Registration[]; total: number }> {
     let data = Array.from(this.registrations.values()).filter(r => r.eventId === eventId)
 
@@ -98,6 +112,10 @@ export class InMemoryRegistrationRepository implements IRegistrationRepository {
     return this.registrations.get(id) ?? null
   }
 
+  async findByTicketToken(ticketToken: string): Promise<Registration | null> {
+    return Array.from(this.registrations.values()).find(reg => reg.ticketToken === ticketToken) ?? null
+  }
+
   async create(data: Omit<Registration, 'id' | 'createdAt'>): Promise<Registration> {
     const reg: Registration = {
       id: createId(),
@@ -108,12 +126,25 @@ export class InMemoryRegistrationRepository implements IRegistrationRepository {
     return reg
   }
 
+  async update(id: string, data: Partial<Registration>): Promise<Registration | null> {
+    const existing = this.registrations.get(id)
+    if (!existing) return null
+    const updated: Registration = {
+      ...existing,
+      ...data,
+      id,
+    }
+    this.registrations.set(id, updated)
+    return updated
+  }
+
   async updateStatus(id: string, status: RegistrationStatus): Promise<Registration | null> {
     const existing = this.registrations.get(id)
     if (!existing) return null
     const updated: Registration = {
       ...existing,
       status,
+      ticketToken: (status === 'approved' || status === 'attended') ? (existing.ticketToken ?? `ticket-${createId()}`) : existing.ticketToken,
       approvedAt: status === 'approved' ? new Date().toISOString() : existing.approvedAt,
       attendedAt: status === 'attended' ? new Date().toISOString() : existing.attendedAt,
     }

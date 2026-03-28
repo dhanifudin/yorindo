@@ -110,7 +110,7 @@ And no story in Epic 2 or later begins until this story is marked done
 - [ ] [Review][Patch] Missing required `/api/blast` endpoint group [`yorindo-api/openapi.yaml:1851`]
 - [ ] [Review][Patch] Multiple operations omit AC2-required response schemas/status coverage [`yorindo-api/openapi.yaml:973`]
 - [ ] [Review][Patch] Several collection endpoints do not meet the required pagination and sorting contract [`yorindo-api/openapi.yaml:1204`]
-- [ ] [Review][Patch] `Contact.industryId` and `Contact.jobTitleId` conflict with the global UUID ID rule [`yorindo-api/openapi.yaml:175`]
+- [ ] [Review][Patch] `Contact.industryId` and `Contact.jobTitleId` conflict with the global opaque-ID rule [`yorindo-api/openapi.yaml:175`]
 - [ ] [Review][Patch] `/auth/refresh` does not document the refresh-cookie security requirement [`yorindo-api/openapi.yaml:1032`]
 - [ ] [Review][Patch] `BlastConfigBody` does not constrain `filters` vs `contactIds` selection [`yorindo-api/openapi.yaml:825`]
 - [ ] [Review][Patch] Audience recommendations response shape conflicts with the endpoint `limit` parameter [`yorindo-api/openapi.yaml:1798`]
@@ -133,7 +133,7 @@ Woohoo! Your API description is valid. 🎉
 ### Key Schema Decisions
 - All 4xx/5xx responses: `ApiError` schema `{ error: { code, message, details[] } }`
 - All collection endpoints: `$ref` to `Pagination` schema + `$ref` parameters
-- **All `id` fields: `type: string` — NO `format: uuid`** — CUID2 strings throughout; remove all `format: uuid` annotations
+- **All `id` fields: `type: string` — opaque/CUID2-style IDs only** — remove all `format: uuid` annotations and UUID terminology
 - Status enums: Event (`draft|published|active|completed|cancelled|archived`), Registration (`provisional|pending|approved|rejected|expired`), AttendanceStatus (`attended|no_show`), User (`admin|staff|viewer|participant`)
 - Timezone enum: `Asia/Jakarta|Asia/Makassar|Asia/Jayapura`
 - `completenessScore` on Contact: float 0.0–1.0

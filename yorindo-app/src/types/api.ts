@@ -263,9 +263,7 @@ export interface EmergencyBlastResponse {
 // ─── Contacts Health & Facets ─────────────────────────────────────────────────
 
 export interface ContactsHealth {
-  flagged: number
   duplicates: number
-  missingEmail: number
 }
 
 export interface FacetItem {

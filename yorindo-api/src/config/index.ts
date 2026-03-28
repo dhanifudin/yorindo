@@ -20,6 +20,7 @@ export const config = {
 
   // Service adapter selection — defaults drive Phase 1 (in-memory / mock)
   repositoryImpl: optional('REPOSITORY_IMPL', 'memory'),   // 'memory' | 'postgres'
+  serviceImpl: optional('SERVICE_IMPL', 'mock'),           // 'mock' | 'real'
   emailProvider: optional('EMAIL_PROVIDER', 'mock'),        // 'mock' | 'brevo' | 'mailtrap'
   whatsappProvider: optional('WHATSAPP_PROVIDER', 'mock'),  // 'mock' | 'everpro'
 
