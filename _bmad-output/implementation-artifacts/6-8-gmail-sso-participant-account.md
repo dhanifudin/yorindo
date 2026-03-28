@@ -278,7 +278,7 @@ The existing `GET /api/registrations/confirm/:token` success response must inclu
 return HttpResponse.json({
   message: 'Registrasi berhasil dikonfirmasi',
   registration: {
-    id: faker.string.uuid(),
+    id: createId(),
     status: 'pending',
     eventName: 'Seminar ERP Jakarta',
     eventSlug: 'seminar-erp-jakarta',
@@ -290,7 +290,7 @@ return HttpResponse.json({
 return HttpResponse.json({
   message: 'Registrasi berhasil dikonfirmasi',
   registration: {
-    id: faker.string.uuid(),
+    id: createId(),
     status: 'pending',
     eventName: 'Seminar ERP Jakarta',
     eventSlug: 'seminar-erp-jakarta',

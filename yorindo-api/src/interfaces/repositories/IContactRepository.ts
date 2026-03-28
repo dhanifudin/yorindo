@@ -1,4 +1,4 @@
-import type { Contact, DuplicateFieldChoice, DuplicatePair, FacetResult, UUID } from '../../types/domain.js'
+import type { Contact, DuplicateFieldChoice, DuplicatePair, FacetResult, EntityId } from '../../types/domain.js'
 
 export interface PaginationParams {
   page: number
@@ -19,15 +19,15 @@ export interface ContactFilters {
 
 export interface IContactRepository {
   findAll(params: PaginationParams, filters?: ContactFilters): Promise<{ data: Contact[]; total: number }>
-  findById(id: UUID): Promise<Contact | null>
+  findById(id: EntityId): Promise<Contact | null>
   findByPhone(phone: string): Promise<Contact | null>
   findDuplicates(params: PaginationParams): Promise<{ data: DuplicatePair[]; total: number }>
-  mergeDuplicate(primaryId: UUID, fieldSelections?: Record<string, DuplicateFieldChoice>): Promise<Contact | null>
+  mergeDuplicate(primaryId: EntityId, fieldSelections?: Record<string, DuplicateFieldChoice>): Promise<Contact | null>
   upsert(data: Omit<Contact, 'id' | 'createdAt' | 'updatedAt'>): Promise<Contact>
-  update(id: UUID, data: Partial<Contact>): Promise<Contact | null>
-  softDelete(id: UUID): Promise<void>
+  update(id: EntityId, data: Partial<Contact>): Promise<Contact | null>
+  softDelete(id: EntityId): Promise<void>
   countHealth(): Promise<{ flagged: number; duplicates: number; missingEmail: number }>
   findFacets(): Promise<FacetResult>
-  anonymize(id: UUID, hashedPhone: string): Promise<void>
+  anonymize(id: EntityId, hashedPhone: string): Promise<void>
   existsByPhoneHash(hashedPhone: string): Promise<boolean>
 }

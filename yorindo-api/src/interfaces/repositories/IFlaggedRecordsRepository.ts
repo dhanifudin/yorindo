@@ -1,10 +1,10 @@
-import type { FlaggedRecord, FlaggedRecordStatus, Contact, UUID } from '../../types/domain.js'
+import type { FlaggedRecord, FlaggedRecordStatus, Contact, EntityId } from '../../types/domain.js'
 import type { PaginationParams } from './IContactRepository.js'
 
 export interface IFlaggedRecordsRepository {
   findAll(params: PaginationParams, status?: FlaggedRecordStatus): Promise<{ data: FlaggedRecord[]; total: number }>
-  findById(id: UUID): Promise<FlaggedRecord | null>
+  findById(id: EntityId): Promise<FlaggedRecord | null>
   create(data: Omit<FlaggedRecord, 'id' | 'createdAt'>): Promise<FlaggedRecord>
-  resolve(id: UUID, resolvedData: Partial<Contact>, resolvedById: UUID): Promise<void>
-  discard(id: UUID, resolvedById: UUID): Promise<void>
+  resolve(id: EntityId, resolvedData: Partial<Contact>, resolvedById: EntityId): Promise<void>
+  discard(id: EntityId, resolvedById: EntityId): Promise<void>
 }

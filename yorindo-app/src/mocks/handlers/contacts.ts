@@ -41,7 +41,7 @@ export const contactHandlers = [
 
   http.get('/api/contacts/health', async () => {
     await delay(300)
-    return HttpResponse.json({ flagged: 34, duplicates: 12, missingEmail: 58 })
+    return HttpResponse.json({ duplicates: 12 })
   }),
 
   http.get('/api/contacts/facets', async () => {

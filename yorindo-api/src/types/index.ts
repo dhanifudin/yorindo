@@ -16,13 +16,13 @@ export interface ApiError {
   }
 }
 
-export type UUID = string
+export type EntityId = string
 
 export interface AuditEntry {
-  id: UUID
+  id: EntityId
   action: string
-  actorId: UUID | 'system'
-  targetId: UUID | null
+  actorId: EntityId | 'system'
+  targetId: EntityId | null
   metadata: Record<string, unknown>
   createdAt: Date
 }

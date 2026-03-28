@@ -11,6 +11,10 @@ import { authRoutes } from './routes/auth.routes.js'
 import { contactRoutes } from './routes/contacts.routes.js'
 import { etlRoutes } from './routes/etl.routes.js'
 import { usersRoutes } from './routes/users.routes.js'
+import { eventsRoutes } from './routes/events.routes.js'
+import { registrationsRoutes } from './routes/registrations.routes.js'
+import { scanRoutes } from './routes/scan.routes.js'
+import { authPlugin } from './middleware/auth.js'
 
 export async function buildServer() {
   const fastify = Fastify({
@@ -34,6 +38,7 @@ export async function buildServer() {
   await fastify.register(cookie, {
     secret: process.env['JWT_REFRESH_SECRET'] ?? 'dev-secret',
   })
+  await fastify.register(authPlugin)
   await fastify.register(multipart, {
     limits: {
       fileSize: 10 * 1024 * 1024, // 10MB
@@ -67,6 +72,9 @@ export async function buildServer() {
   await fastify.register(contactRoutes)
   await fastify.register(etlRoutes)
   await fastify.register(usersRoutes)
+  await fastify.register(eventsRoutes)
+  await fastify.register(registrationsRoutes)
+  await fastify.register(scanRoutes)
 
   return fastify
 }

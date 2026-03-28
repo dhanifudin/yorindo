@@ -1,9 +1,8 @@
 'use client'
 
 import { useState, useCallback, useEffect } from 'react'
-import { useSearchParams, useRouter, usePathname } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { useContacts } from '@/hooks/useContacts'
-import { useFilterStore } from '@/store/filterStore'
 import { Button } from '@/components/ui/button'
 import { HealthBar } from './HealthBar'
 import { EventBanner } from './EventBanner'
@@ -22,9 +21,6 @@ export function ContactsCommandCenter() {
   const [selectMode, setSelectMode] = useState(false)
   const [resetKey, setResetKey] = useState(0)
   const searchParams = useSearchParams()
-  const router = useRouter()
-  const pathname = usePathname()
-  const { setFilter } = useFilterStore()
   const { data: contacts } = useContacts()
 
   const hasFilters = FILTER_KEYS.some((k) => !!searchParams.get(k))
@@ -51,21 +47,8 @@ export function ContactsCommandCenter() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page])
 
-  const handleStatClick = (type: 'flagged' | 'duplicates' | 'missingEmail') => {
-    if (type === 'missingEmail') {
-      const params = new URLSearchParams(searchParams.toString())
-      if (params.get('missingEmail') === 'true') {
-        params.delete('missingEmail')
-        setFilter({ missingEmail: false })
-      } else {
-        params.set('missingEmail', 'true')
-        params.delete('page')
-        setFilter({ missingEmail: true })
-      }
-      router.push(`${pathname}?${params.toString()}`)
-    } else {
-      setTriageMode(type)
-    }
+  const handleStatClick = (type: 'duplicates') => {
+    setTriageMode(type)
   }
 
   return (

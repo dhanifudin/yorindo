@@ -58,7 +58,7 @@ Three UX surfaces: public participant registration (mobile-first, zero-account),
 - Reliability: 99.5% uptime; 100% event-day availability; 0 offline scan records lost
 - Security: Custom JWT (15min access / 7d refresh httpOnly cookie); QR ticket JWT HS256 single-use; rate limit 10 submit/IP/hour on public registration
 - Scalability: 500K contact records; ≥ 5 concurrent events; ≥ 500 simultaneous registration sessions; 30K-contact blast throughput
-- Data Integrity: hybrid SQL + NoSQL; immutable raw_uploads log; UUID primary keys throughout PostgreSQL
+- Data Integrity: PostgreSQL + JSONB; immutable raw_uploads log; CUID2/opaque string primary keys throughout operational data
 
 **Scale & Complexity:**
 - Primary domain: Full-stack web (Next.js PWA + Fastify REST API)
@@ -493,7 +493,7 @@ module.exports = withPWA({ /* next config */ })
 - Database strategy: PostgreSQL (self-hosted) with JSONB for dynamic survey, raw upload, and event-configuration payloads — fixed, see Appendix Decision Log
 - Auth provider: Custom JWT (jsonwebtoken + bcrypt) — do not replace with Supabase Auth or Auth0
 - Repository pattern: mandatory — zero DB queries outside `repositories/` files
-- UUID primary keys: `gen_random_uuid()` on all PostgreSQL tables — no auto-increment
+- Opaque app-generated IDs: CUID2-style string primary keys on all PostgreSQL tables — no auto-increment
 - QR ticket: HS256 JWT, single-use, expiry = eventDate + 1 day
 - AI model assignments: GPT-4o for ETL, claude-sonnet-4-6 for YoriMind, claude-haiku-4-5-20251001 for Smart Filter — do not swap models
 
@@ -507,7 +507,7 @@ module.exports = withPWA({ /* next config */ })
 
 **Deferred Decisions (post-MVP):**
 - VPS → container orchestration (Kubernetes / ECS) when Docker Compose can't handle load
-- PostgreSQL → managed RDS when VPS can't scale further (UUID design makes this zero-friction — update `DATABASE_URL` only)
+- PostgreSQL → managed RDS when VPS can't scale further (app-generated string IDs keep this zero-friction — update `DATABASE_URL` only)
 - Read replica for analytics queries
 - PDF export: `pdfkit` selected for BE-side report generation (lightweight, streaming, no Chromium); chart-in-PDF deferred to Sprint 3 — MVP exports text + table only; FE offers chart PNG download separately
 
@@ -529,12 +529,12 @@ module.exports = withPWA({ /* next config */ })
 
 ```sql
 -- contacts
-id          UUID PRIMARY KEY DEFAULT gen_random_uuid()
+id          TEXT PRIMARY KEY
 name        VARCHAR(200) NOT NULL
 phone       VARCHAR(20) UNIQUE NOT NULL  -- normalized: +62XXXXXXXXXX
 email       VARCHAR(200) UNIQUE
-industry_id UUID REFERENCES industries(id)
-job_title_id UUID REFERENCES job_titles(id)
+industry_id TEXT REFERENCES industries(id)
+job_title_id TEXT REFERENCES job_titles(id)
 city        VARCHAR(100)
 company     VARCHAR(200)
 company_size VARCHAR(20)  -- '<50', '50-200', '200-1000', '>1000'
@@ -544,21 +544,21 @@ updated_at  TIMESTAMPTZ DEFAULT NOW()
 -- INDEX: industry_id, job_title_id, city
 
 -- events
-id          UUID PRIMARY KEY DEFAULT gen_random_uuid()
+id          TEXT PRIMARY KEY
 name        VARCHAR(300) NOT NULL
 slug        VARCHAR(150) UNIQUE NOT NULL
 date        TIMESTAMPTZ NOT NULL
 city        VARCHAR(100)
-vendor_id   UUID REFERENCES vendors(id)
-survey_schema_id UUID NULL REFERENCES survey_schemas(id)
+vendor_id   TEXT REFERENCES vendors(id)
+survey_schema_id TEXT NULL REFERENCES survey_schemas(id)
 status      event_status NOT NULL DEFAULT 'draft'
 -- ENUM: draft, published, active, completed, cancelled
 created_at  TIMESTAMPTZ DEFAULT NOW()
 
 -- registrations
-id          UUID PRIMARY KEY DEFAULT gen_random_uuid()
-contact_id  UUID REFERENCES contacts(id) ON DELETE CASCADE
-event_id    UUID REFERENCES events(id) ON DELETE CASCADE
+id          TEXT PRIMARY KEY
+contact_id  TEXT REFERENCES contacts(id) ON DELETE CASCADE
+event_id    TEXT REFERENCES events(id) ON DELETE CASCADE
 status      reg_status NOT NULL DEFAULT 'pending'
 -- ENUM: pending, approved, rejected, waitlisted, attended, cancelled
 ticket_token TEXT  -- JWT, null until approved
@@ -568,7 +568,7 @@ created_at   TIMESTAMPTZ DEFAULT NOW()
 UNIQUE(contact_id, event_id)  -- one registration per contact per event
 
 -- vendors (event organizer / venue partner — admin managed)
-id         UUID PRIMARY KEY DEFAULT gen_random_uuid()
+id         TEXT PRIMARY KEY
 name       VARCHAR(200) NOT NULL
 contact    VARCHAR(200)   -- PIC name
 phone      VARCHAR(20)
@@ -576,7 +576,7 @@ email      VARCHAR(200)
 created_at TIMESTAMPTZ DEFAULT NOW()
 
 -- users (internal Yorindo team + assigned staff/viewer accounts)
-id            UUID PRIMARY KEY DEFAULT gen_random_uuid()
+id            TEXT PRIMARY KEY
 email         VARCHAR(200) UNIQUE NOT NULL
 password_hash VARCHAR(255) NOT NULL          -- bcrypt hash
 role          VARCHAR(20) NOT NULL           -- 'admin' | 'staff' | 'viewer'
@@ -585,24 +585,24 @@ created_at    TIMESTAMPTZ DEFAULT NOW()
 updated_at    TIMESTAMPTZ DEFAULT NOW()
 
 -- audit_logs (INSERT only — never UPDATE or DELETE)
-id          UUID PRIMARY KEY DEFAULT gen_random_uuid()
+id          TEXT PRIMARY KEY
 action      VARCHAR(100) NOT NULL   -- '{resource}.{verb}' e.g. 'registration.approved'
-actor_id    UUID REFERENCES users(id)
+actor_id    TEXT REFERENCES users(id)
 actor_role  VARCHAR(20) NOT NULL
-target_id   UUID                    -- UUID of the resource acted on
+target_id   TEXT                    -- opaque ID of the resource acted on
 target_type VARCHAR(50) NOT NULL    -- 'registration', 'contact', 'event', etc.
-event_id    UUID REFERENCES events(id)  -- NULLABLE; not all actions are event-scoped
+event_id    TEXT REFERENCES events(id)  -- NULLABLE; not all actions are event-scoped
 metadata    JSONB                   -- e.g. { previous_status: 'pending' }
 created_at  TIMESTAMPTZ DEFAULT NOW()
 -- INDEX on actor_id, event_id, target_id for audit queries
 
 -- industries (lookup — admin managed, not auto-created by ETL)
-id    UUID PRIMARY KEY DEFAULT gen_random_uuid()
+id    TEXT PRIMARY KEY
 name  VARCHAR(100) NOT NULL  -- 'Kesehatan', 'Manufaktur', 'Keuangan'
 slug  VARCHAR(100) UNIQUE    -- 'kesehatan', 'manufaktur'
 
 -- job_titles (lookup)
-id    UUID PRIMARY KEY DEFAULT gen_random_uuid()
+id    TEXT PRIMARY KEY
 name  VARCHAR(150) NOT NULL
 level VARCHAR(50)  -- 'C-Level', 'Director', 'Manager', 'Staff'
 slug  VARCHAR(150) UNIQUE
@@ -613,8 +613,8 @@ slug  VARCHAR(150) UNIQUE
 ```typescript
 -- survey_schemas — one row per event version
 {
-  id: uuid,
-  event_id: uuid,
+  id: string,
+  event_id: string,
   version: number,
   schema_json: {
     fields: Array<{
@@ -630,18 +630,18 @@ slug  VARCHAR(150) UNIQUE
 
 -- survey_responses — one row per registration
 {
-  id: uuid,
-  registration_id: uuid,
-  event_id: uuid,
+  id: string,
+  registration_id: string,
+  event_id: string,
   answers_json: Record<string, unknown>,
   submitted_at: timestamptz
 }
 
 -- raw_uploads — immutable ETL metadata row
 {
-  id: uuid,
+  id: string,
   filename: string,
-  uploaded_by: uuid,
+  uploaded_by: string,
   uploaded_at: timestamptz,
   etl_job_id: string,
   row_count: number,
@@ -700,10 +700,10 @@ db.survey_responses.createIndex({ event_id: 1 })
 **`user_events` — event assignment table (PostgreSQL):**
 ```sql
 user_events (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id     UUID REFERENCES users(id) ON DELETE CASCADE,
-  event_id    UUID REFERENCES events(id) ON DELETE CASCADE,
-  granted_by  UUID REFERENCES users(id),
+  id          TEXT PRIMARY KEY,
+  user_id     TEXT REFERENCES users(id) ON DELETE CASCADE,
+  event_id    TEXT REFERENCES events(id) ON DELETE CASCADE,
+  granted_by  TEXT REFERENCES users(id),
   granted_at  TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(user_id, event_id)
 )
@@ -1091,7 +1091,7 @@ Application audit logs stored in PostgreSQL `audit_logs` table — not in applic
 
 | Decision | V1 Implementation | Migration Effect |
 |---|---|---|
-| UUID primary keys | `gen_random_uuid()` all tables | No conflict merging DBs; RDS migration zero-friction |
+| Opaque string primary keys | App-generated CUID2 IDs on all tables | No conflict merging DBs; RDS migration zero-friction |
 | Env config total | All in `.env`, accessed via `config/index.ts` | Change `.env` only — code unchanged |
 | Repository pattern | All queries in `repositories/` | Swap DB: update 3–5 files, no route changes |
 | Local filesystem storage | Docker volume for snapshots + uploads | Swap to S3/MinIO: update `lib/storage.ts` only |
@@ -1455,7 +1455,7 @@ Async enqueued:
 ```
 Frontend converts to event-local timezone using `Intl.DateTimeFormat` with `event.timezone` (`"Asia/Jakarta"`, `"Asia/Makassar"`, `"Asia/Jayapura"`).
 
-**UUID in responses — plain string, no transformation needed:**
+**Opaque IDs in responses — plain string, no transformation needed:**
 ```json
 { "id": "550e8400-e29b-41d4-a716-446655440000" }
 ```
@@ -1534,8 +1534,8 @@ fastify.post<{ Body: CreateRegistrationBody }>(
 import { z } from 'zod'
 
 export const CreateRegistrationBodySchema = z.object({
-  contact_id: z.string().uuid(),
-  event_id: z.string().uuid(),
+  contact_id: z.string(),
+  event_id: z.string(),
   survey_answers: z.record(z.unknown()).optional()
 })
 export type CreateRegistrationBody = z.infer<typeof CreateRegistrationBodySchema>
@@ -1663,7 +1663,7 @@ expect(parseInt(after.rows[0].count)).toBe(parseInt(before.rows[0].count) + 1)
 - Make direct HTTP calls to any AI provider from route handlers — always go through `IEtlNormalizationService` / `IYoriMindService` / `ISmartFilterService` adapters
 - Write to `audit_logs` via UPDATE/DELETE — INSERT only
 - Scatter persistence logic outside repositories or introduce a second operational database without an explicit architecture decision
-- Use auto-increment integer primary keys in PostgreSQL — UUID only
+- Use auto-increment integer primary keys in PostgreSQL — opaque app-generated IDs only
 - Import `@supabase/ssr`, `@supabase/supabase-js`, or any Supabase package — not used in this stack
 - Upload files to VPS disk directly without Docker volume — always use the `/app/uploads` mounted volume path
 
@@ -1675,7 +1675,7 @@ Decisions that must not be changed without careful consideration (large migratio
 
 | Decision | Choice Made | Rejected Alternative | Reason |
 |---|---|---|---|
-| Primary key type | UUID v4 (`gen_random_uuid`) | Auto-increment integer | Integer cannot merge DBs without ID conflicts |
+| Primary key type | CUID2 / opaque string IDs | Auto-increment integer | Integer cannot merge DBs without ID conflicts |
 | DB for contacts | PostgreSQL (relational) | Full NoSQL | Contacts need UNIQUE constraint + JOIN |
 | DB for surveys | PostgreSQL JSONB | Separate document database | Keeps dynamic form data in the primary operational store while preserving schema flexibility |
 | Queue for blast | BullMQ (Redis-backed) | Direct synchronous API call | Sync call timeout at 1000+ emails, unrecoverable on failure |
@@ -2092,7 +2092,7 @@ blast.worker.ts     → Everpro API        (WhatsApp Business delivery)
 | 0 offline scan records lost | IndexedDB queue + `flushScanQueue()` on reconnect; conflicts surfaced after sync |
 | 500K contacts | PostgreSQL + 5 defined indexes on contacts + registrations |
 | ACID registration | `UNIQUE(contact_id, event_id)` PostgreSQL constraint |
-| Security | JWT blacklist (Redis); rate limit 10/IP/hour; httpOnly refresh cookie; UUID PKs |
+| Security | JWT blacklist (Redis); rate limit 10/IP/hour; httpOnly refresh cookie; opaque string PKs |
 | UTC timestamps | UTC storage confirmed; `Intl.DateTimeFormat` conversion on FE |
 
 ---
@@ -2150,7 +2150,7 @@ blast.worker.ts     → Everpro API        (WhatsApp Business delivery)
 - MSW + DevToolbar enables full FE development with zero BE dependency
 - Repository pattern strictly enforced — infrastructure can evolve (pg on VPS → managed Postgres) with limited file changes
 - All infrastructure self-hosted via Docker Compose — zero external dependency except Everpro + Brevo
-- UUID primary keys throughout — RDS migration is a single env var change
+- Opaque string primary keys throughout — RDS migration is a single env var change
 - Clear enforcement rules for AI agents — both MUST and MUST NOT lists cover 25+ conflict points
 - Offline scan resilience is fully specified — IndexedDB queue + flush + conflict surfacing
 
