@@ -77,3 +77,63 @@ describe('GET /api/contacts', () => {
     expect(res.json().error.code).toBe('VALIDATION_ERROR')
   })
 })
+
+describe('Duplicate contacts routes', () => {
+  it('returns duplicate pairs with pagination', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/contacts/duplicates?page=1&pageSize=3',
+    })
+
+    expect(res.statusCode).toBe(200)
+    const body = res.json()
+    expect(body.data).toHaveLength(3)
+    expect(body.pagination.total).toBe(6)
+    expect(body.data[0]).toHaveProperty('primary')
+    expect(body.data[0]).toHaveProperty('duplicate')
+  })
+
+  it('merges a duplicate pair and removes it from the duplicate list', async () => {
+    const beforeRes = await app.inject({
+      method: 'GET',
+      url: '/api/contacts/duplicates?page=1&pageSize=10',
+    })
+    const beforeBody = beforeRes.json()
+    const pair = beforeBody.data[0]
+
+    const mergeRes = await app.inject({
+      method: 'POST',
+      url: `/api/contacts/${pair.primary.id}/merge`,
+      payload: {
+        mergeIntoId: pair.primary.id,
+        fieldSelections: {
+          email: 'duplicate',
+          city: 'duplicate',
+        },
+      },
+    })
+
+    expect(mergeRes.statusCode).toBe(200)
+    const merged = mergeRes.json()
+    expect(merged.id).toBe(pair.primary.id)
+    expect(merged.email).toBe(pair.duplicate.email)
+    expect(merged.city).toBe(pair.duplicate.city)
+
+    const afterRes = await app.inject({
+      method: 'GET',
+      url: '/api/contacts/duplicates?page=1&pageSize=10',
+    })
+    const afterBody = afterRes.json()
+    expect(afterBody.pagination.total).toBe(beforeBody.pagination.total - 1)
+  })
+
+  it('returns 404 when merging an unknown duplicate pair', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/contacts/not-a-real-contact-id/merge',
+    })
+
+    expect(res.statusCode).toBe(404)
+    expect(res.json().error.code).toBe('NOT_FOUND')
+  })
+})
