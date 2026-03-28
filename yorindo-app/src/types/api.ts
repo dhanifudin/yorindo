@@ -328,17 +328,20 @@ export interface EventSponsor {
   event_id: string
   vendor_id: string
   vendor_name: string
+  tier: 'premium' | 'standard' | 'supporting'
   display_order: number
 }
 
 export interface AttachSponsorBody {
   vendorId: string
+  tier: EventSponsor['tier']
   displayOrder?: number
 }
 
 export interface PublicEventSponsor {
   vendor_id: string
   name: string
+  tier: EventSponsor['tier']
   logo_url?: string
   website?: string
   display_order: number
