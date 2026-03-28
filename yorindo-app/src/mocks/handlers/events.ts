@@ -13,8 +13,8 @@ let deletedEventsStore: (Event & { deletedAt: string })[] = []
 // ─── Event Sponsors In-Memory Store ──────────────────────────────────────────
 export const eventSponsorsStore = new Map<string, EventSponsor[]>([
   ['event-001', [
-    { id: 'es-001-1', event_id: 'event-001', vendor_id: 'vendor-001', vendor_name: 'Alibaba Cloud', display_order: 0 },
-    { id: 'es-001-2', event_id: 'event-001', vendor_id: 'vendor-003', vendor_name: 'PT Mandiri Sekuritas', display_order: 1 },
+    { id: 'es-001-1', event_id: 'event-001', vendor_id: 'vendor-001', vendor_name: 'Alibaba Cloud', tier: 'premium', display_order: 0 },
+    { id: 'es-001-2', event_id: 'event-001', vendor_id: 'vendor-003', vendor_name: 'PT Mandiri Sekuritas', tier: 'standard', display_order: 1 },
   ]],
 ])
 
@@ -190,6 +190,7 @@ export const eventHandlers = [
       .map((s) => ({
         vendor_id: s.vendor_id,
         name: s.vendor_name,
+        tier: s.tier,
         logo_url: undefined,
         website: undefined,
         display_order: s.display_order,
@@ -255,6 +256,7 @@ export const eventHandlers = [
       event_id: eventId,
       vendor_id: body.vendorId,
       vendor_name: vendor.name,
+      tier: body.tier ?? 'standard',
       display_order: body.displayOrder ?? existing.length,
     }
     eventSponsorsStore.set(eventId, [...existing, newSponsor])
@@ -512,7 +514,7 @@ export const eventHandlers = [
 
     const excludedReasons: Record<string, number> = {}
     const eligible = contactsPool.filter((contact) => {
-      if (contact.flagCategory === 'not-potential' || contact.flagCategory === 'spam') {
+      if (contact.flagCategory === 'invalid-data' || contact.flagCategory === 'duplicate') {
         const key = contact.flagCategory
         excludedReasons[key] = (excludedReasons[key] ?? 0) + 1
         return false

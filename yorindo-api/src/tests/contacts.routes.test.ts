@@ -78,6 +78,47 @@ describe('GET /api/contacts', () => {
   })
 })
 
+describe('GET /api/contacts/industry-suggestions', () => {
+  it('returns canonical industry suggestions for a free-form query', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/contacts/industry-suggestions?q=teknologi%20informasi',
+    })
+
+    expect(res.statusCode).toBe(200)
+    const body = res.json()
+    expect(body.suggestions.length).toBeGreaterThan(0)
+    expect(body.suggestions[0].slug).toBe('teknologi')
+    expect(body.matchedSlug).toBe('teknologi')
+    expect(body.fallback).toBe(false)
+  })
+
+  it('returns fallback when no canonical industry is a confident match', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/contacts/industry-suggestions?q=xyzabc',
+    })
+
+    expect(res.statusCode).toBe(200)
+    const body = res.json()
+    expect(body.matchedSlug).toBeNull()
+    expect(body.fallback).toBe(true)
+  })
+
+  it('returns empty suggestions for a query shorter than 2 characters', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/contacts/industry-suggestions?q=t',
+    })
+
+    expect(res.statusCode).toBe(200)
+    const body = res.json()
+    expect(body.suggestions).toEqual([])
+    expect(body.matchedSlug).toBeNull()
+    expect(body.fallback).toBe(false)
+  })
+})
+
 describe('Duplicate contacts routes', () => {
   it('returns duplicate pairs with pagination', async () => {
     const res = await app.inject({

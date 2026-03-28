@@ -38,7 +38,7 @@ export function SponsorPanel({ eventId }: SponsorPanelProps) {
   const handleAttach = () => {
     if (!selectedVendorId) return
     attachSponsor(
-      { vendorId: selectedVendorId },
+      { vendorId: selectedVendorId, tier: 'standard' },
       {
         onSuccess: () => {
           setShowAddForm(false)

@@ -28,6 +28,10 @@ const ContactsQuerySchema = z.object({
   sortDir: z.enum(['asc', 'desc']).optional(),
 })
 
+const IndustrySuggestionsQuerySchema = z.object({
+  q: z.string().trim().default(''),
+})
+
 const DuplicatesQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(10),
@@ -43,6 +47,37 @@ const MergeBodySchema = z.object({
 }).optional()
 
 type ContactsQuery = z.infer<typeof ContactsQuerySchema>
+
+/**
+ * Menormalkan teks bebas agar pencocokan industri lebih konsisten.
+ */
+function normalizeText(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+/**
+ * Memberi skor sederhana untuk kecocokan query bebas dengan slug industri canonical.
+ */
+function scoreIndustryMatch(query: string, slug: string, label: string): number {
+  const q = normalizeText(query)
+  const s = normalizeText(slug)
+  const l = normalizeText(label)
+  if (!q) return 0
+  if (q === s || q === l) return 0.95
+  if (s.includes(q) || l.includes(q)) return 0.85
+
+  const tokens = q.split(' ').filter(Boolean)
+  if (tokens.length === 0) return 0
+
+  const matchedTokens = tokens.filter((token) => s.includes(token) || l.includes(token)).length
+  if (matchedTokens === 0) return 0
+
+  return Math.min(0.8, 0.45 + (matchedTokens / tokens.length) * 0.3)
+}
 
 /**
  * Mengubah nilai company size FE ke enum internal repository.
@@ -163,6 +198,46 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
         total,
         totalPages: Math.ceil(total / query.pageSize),
       },
+    })
+  })
+
+  fastify.get('/api/contacts/industry-suggestions', async (request, reply) => {
+    const result = IndustrySuggestionsQuerySchema.safeParse(request.query)
+    if (!result.success) {
+      return reply.status(400).send({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Invalid query params',
+          details: result.error.issues,
+        },
+      })
+    }
+
+    const query = result.data.q
+    if (!query || query.length < 2) {
+      return reply.status(200).send({
+        suggestions: [],
+        matchedSlug: null,
+        fallback: false,
+      })
+    }
+
+    const suggestions = INDONESIAN_INDUSTRIES
+      .map((industry) => ({
+        slug: industry.slug,
+        label: industry.name,
+        confidence: Number(scoreIndustryMatch(query, industry.slug, industry.name).toFixed(2)),
+      }))
+      .filter((industry) => industry.confidence > 0)
+      .sort((a, b) => b.confidence - a.confidence)
+      .slice(0, 5)
+
+    const best = suggestions[0]
+
+    return reply.status(200).send({
+      suggestions,
+      matchedSlug: best && best.confidence >= 0.6 ? best.slug : null,
+      fallback: !best || best.confidence < 0.6,
     })
   })
 

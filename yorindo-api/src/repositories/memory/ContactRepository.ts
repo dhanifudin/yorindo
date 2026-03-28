@@ -70,7 +70,7 @@ export class InMemoryContactRepository implements IContactRepository {
         source: SOURCES[i % SOURCES.length]!,
         completenessScore: Math.round((0.4 + (i % 7) * 0.09) * 1000) / 1000,
         consentStatus: status,
-        flagCategory: i % 15 === 0 ? 'spam' : i % 22 === 0 ? 'not-potential' : null,
+        flagCategory: i % 15 === 0 ? 'invalid-data' : i % 22 === 0 ? 'duplicate' : null,
         deletedAt: null,
         createdAt: new Date(Date.now() - i * 86400000).toISOString(),
         updatedAt: new Date().toISOString(),
