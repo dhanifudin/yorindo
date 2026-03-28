@@ -26,6 +26,17 @@ function toIndustryId(industry?: string): string | undefined {
   return found?.id ?? industry
 }
 
+/**
+ * Menyediakan tiga pasangan nomor telepon duplikat yang stabil untuk health pulse.
+ */
+function seedPhone(i: number): string {
+  if (i === 108 || i === 109) return '+62811000000108'
+  if (i === 110 || i === 111) return '+62811000000110'
+  if (i === 112 || i === 113) return '+62811000000112'
+  if (i >= 115) return `+62811000000${i}`
+  return `+6281${faker.number.int({ min: 100000000, max: 999999999 })}`
+}
+
 export class InMemoryContactRepository implements IContactRepository {
   private contacts: Map<string, Contact> = new Map()
 
@@ -46,9 +57,7 @@ export class InMemoryContactRepository implements IContactRepository {
       const contact: Contact = {
         id,
         name: faker.person.fullName(),
-        phone: i >= 115
-          ? `+62811000000${i}`
-          : `+6281${faker.number.int({ min: 100000000, max: 999999999 })}`,
+        phone: seedPhone(i),
         email: i % 8 === 0 ? null : faker.internet.email(),
         industryId: i % 5 === 0 ? null : industry.id,
         jobTitleId: i % 7 === 0 ? null : jobTitle.id,
@@ -65,6 +74,27 @@ export class InMemoryContactRepository implements IContactRepository {
       }
       this.contacts.set(id, contact)
     }
+  }
+
+  /**
+   * Mengumpulkan id kontak aktif yang berbagi phone atau email dengan kontak lain.
+   */
+  private _findDuplicateIds(data: Contact[]): Set<string> {
+    const phoneCounts = new Map<string, number>()
+    const emailCounts = new Map<string, number>()
+
+    for (const contact of data) {
+      phoneCounts.set(contact.phone, (phoneCounts.get(contact.phone) ?? 0) + 1)
+      if (contact.email) emailCounts.set(contact.email, (emailCounts.get(contact.email) ?? 0) + 1)
+    }
+
+    const duplicateIds = new Set<string>()
+    for (const contact of data) {
+      if ((phoneCounts.get(contact.phone) ?? 0) > 1) duplicateIds.add(contact.id)
+      if (contact.email && (emailCounts.get(contact.email) ?? 0) > 1) duplicateIds.add(contact.id)
+    }
+
+    return duplicateIds
   }
 
   /**
@@ -186,7 +216,7 @@ export class InMemoryContactRepository implements IContactRepository {
     const all = Array.from(this.contacts.values()).filter(c => c.deletedAt === null)
     return {
       flagged: all.filter(c => c.flagCategory !== null).length,
-      duplicates: 0,
+      duplicates: this._findDuplicateIds(all).size,
       missingEmail: all.filter(c => c.email === null).length,
     }
   }

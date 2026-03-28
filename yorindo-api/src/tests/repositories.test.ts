@@ -106,8 +106,11 @@ describe('InMemoryContactRepository', () => {
 
   it('countHealth returns correct health stats', async () => {
     const health = await repo.countHealth()
-    expect(health.flagged).toBeGreaterThanOrEqual(0)
-    expect(health.missingEmail).toBeGreaterThanOrEqual(0)
+    expect(health).toEqual({
+      flagged: 13,
+      duplicates: 6,
+      missingEmail: 15,
+    })
   })
 })
 
