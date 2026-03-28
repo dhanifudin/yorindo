@@ -43,6 +43,30 @@ describe('InMemoryContactRepository', () => {
     expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b)))
   })
 
+  it('findDuplicates returns seeded duplicate pairs', async () => {
+    const { data, total } = await repo.findDuplicates({ page: 1, pageSize: 10 })
+    expect(total).toBe(6)
+    expect(data[0]).toHaveProperty('primary')
+    expect(data[0]).toHaveProperty('duplicate')
+  })
+
+  it('mergeDuplicate resolves one duplicate pair', async () => {
+    const before = await repo.findDuplicates({ page: 1, pageSize: 10 })
+    const pair = before.data[0]
+
+    const merged = await repo.mergeDuplicate(pair.primary.id, {
+      email: 'duplicate',
+      city: 'duplicate',
+    })
+
+    expect(merged).not.toBeNull()
+    expect(merged?.email).toBe(pair.duplicate.email)
+    expect(merged?.city).toBe(pair.duplicate.city)
+
+    const after = await repo.findDuplicates({ page: 1, pageSize: 10 })
+    expect(after.total).toBe(before.total - 1)
+  })
+
   it('findById returns contact by id', async () => {
     const { data } = await repo.findAll({ page: 1, pageSize: 1 })
     const found = await repo.findById(data[0].id)
@@ -107,6 +131,7 @@ describe('InMemoryContactRepository', () => {
   it('countHealth returns correct health stats', async () => {
     const health = await repo.countHealth()
     expect(health.flagged).toBeGreaterThanOrEqual(0)
+    expect(health.duplicates).toBe(6)
     expect(health.missingEmail).toBeGreaterThanOrEqual(0)
   })
 })

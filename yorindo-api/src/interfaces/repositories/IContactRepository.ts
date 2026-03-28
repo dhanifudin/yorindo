@@ -1,4 +1,4 @@
-import type { Contact, FacetResult, UUID } from '../../types/domain.js'
+import type { Contact, DuplicateFieldChoice, DuplicatePair, FacetResult, UUID } from '../../types/domain.js'
 
 export interface PaginationParams {
   page: number
@@ -21,6 +21,8 @@ export interface IContactRepository {
   findAll(params: PaginationParams, filters?: ContactFilters): Promise<{ data: Contact[]; total: number }>
   findById(id: UUID): Promise<Contact | null>
   findByPhone(phone: string): Promise<Contact | null>
+  findDuplicates(params: PaginationParams): Promise<{ data: DuplicatePair[]; total: number }>
+  mergeDuplicate(primaryId: UUID, fieldSelections?: Record<string, DuplicateFieldChoice>): Promise<Contact | null>
   upsert(data: Omit<Contact, 'id' | 'createdAt' | 'updatedAt'>): Promise<Contact>
   update(id: UUID, data: Partial<Contact>): Promise<Contact | null>
   softDelete(id: UUID): Promise<void>

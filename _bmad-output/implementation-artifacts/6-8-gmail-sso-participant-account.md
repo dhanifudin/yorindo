@@ -56,6 +56,28 @@ This is a **breaking change** to the store shape — all existing consumers of `
 
 **AC11:** `npm run build` passes with 0 TypeScript errors.
 
+**AC12 (2026-03-28 — contact lookup on SSO):** When SSO OAuth completes and `POST /api/auth/google` is called,
+The backend (Phase 2) performs `GET /api/contacts/lookup?email={googleEmail}`:
+- **Contact found:** links `contacts.google_sub = googleSub`; returns full contact profile fields alongside the auth token so the registration form pre-fills ALL fixed fields (`email`, `name`, `phone`, `company_email`, `company_name`, `company_location`, `position`, `industry_type`)
+- **Contact not found:** creates a new contact with name + email from Google; returns partial profile; participant completes remaining fields in the registration form
+
+Phase 1 (MSW): `POST /api/auth/google` response extended with a `contactProfile` field:
+```typescript
+contactProfile: {
+  phone?: string
+  company_email?: string
+  company_name?: string
+  company_location?: string
+  position?: string
+  industry_type?: string
+}
+```
+When `ssoFilled === true` and `contactProfile` is returned, pre-fill all matching form fields (locked read-only, shown with "✓ Terisi dari profil" badge). `phone` field is always editable — never locked.
+
+**AC13 (2026-03-28 — profile page entry point):** After participant authenticates, the confirmation page and participant dashboard both show a "Lengkapi Profil →" link when `contactProfile` has missing fields. Clicking it navigates to `/account/profile`.
+
+> **Code review note (2026-03-28):** Extend `POST /api/auth/google` MSW handler to return `contactProfile: { phone: '0812-0000-0001', company_name: 'PT Mock Corp', position: 'Manager', ... }` for `contact-001`. Update registration form to accept and pre-fill `contactProfile` fields on SSO success.
+
 ---
 
 ## Tasks / Subtasks

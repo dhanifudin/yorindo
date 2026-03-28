@@ -42,6 +42,16 @@ Then a score threshold field appears conditionally
 When the event list refreshes,
 Then the new event appears at the top with a "Draft" badge
 
+**AC7 (2026-03-28 — paid/free toggle):** Given the event creation form,
+When it renders,
+Then a "Berbayar" toggle is shown. When off (default): price field is hidden and `is_paid` is saved as `false` with `price: 0`. When on: a price input field appears (numeric, required, minimum 0) and `payment_method` field appears (text, optional placeholder "e.g. Transfer Bank"). Both fields are admin-only — price is NOT displayed on the public event landing page or registration form in the current sprint (payment gateway integration deferred).
+
+**AC8 (2026-03-28 — preview button):** Given the event creation or edit form,
+When the "Preview Formulir" button is clicked,
+Then the `FormPreviewModal` (Story 4-4) opens showing the complete registration form preview with fixed fields and current survey schema. If no survey has been configured yet, only the fixed fields are shown.
+
+> **Code review note (2026-03-28):** Add `is_paid` (bool), `price` (number, default 0), `payment_method` (string, optional) to the RHF+Zod schema. `price` field conditionally rendered when `is_paid === true`. No changes to public-facing pages (`/register/[slug]`). Add "Preview Formulir" button linking to `FormPreviewModal` from Story 4-4 — implement the button now, the modal component will be available when Story 4-4 is done.
+
 ---
 
 ## Tasks / Subtasks
@@ -96,7 +106,7 @@ interface Event {
   id: string
   name: string
   slug: string
-  status: 'draft' | 'published' | 'active' | 'completed' | 'cancelled'
+  status: 'draft' | 'published' | 'active' | 'completed' | 'cancelled' | 'archived'
   eventDate: string
   timezone: string
   venue: string
@@ -105,6 +115,11 @@ interface Event {
   approvalMode: 'auto' | 'manual' | 'hybrid'
   notificationChannel: 'email' | 'whatsapp'
   scanFormat: 'qr' | 'otp'
+  is_paid: boolean         // AC7 (2026-03-28): default false
+  price: number            // AC7 (2026-03-28): default 0
+  payment_method: string | null  // AC7 (2026-03-28)
+  banner_url: string | null      // SCP-2026-03-28-E: Story 4.13
+  poster_url: string | null      // SCP-2026-03-28-E: Story 4.13
   createdAt: string
 }
 ```
@@ -175,3 +190,5 @@ All 7 tasks complete. 36/36 tests pass (3 new in useEvents.test.ts; 33 pre-exist
 |------|--------|--------|
 | 2026-03-20 | Story created (FE Phase 1) | bmad-create-story |
 | 2026-03-20 | All 7 tasks implemented; 36/36 tests pass | bmad-dev-story |
+| 2026-03-28 | AC7 added: paid/free toggle (admin-only, no public display, payment gateway deferred); AC8 added: Preview Formulir button | Sprint Change Proposal 2026-03-28 |
+| 2026-03-28 | Dev Notes: Event interface synced with AC7 payment fields + SCP-2026-03-28-E banner_url/poster_url | bmad-correct-course |

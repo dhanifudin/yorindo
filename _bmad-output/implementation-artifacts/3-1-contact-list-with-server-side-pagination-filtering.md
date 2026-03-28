@@ -28,9 +28,11 @@ Then TanStack Table v8 displays paginated contact data (20 per page default) fro
 **AC2:** Given the table is rendered,
 Then columns show: name, email, phone, industry, city, company, company size, created_at — all sortable
 
-**AC3:** Given filter inputs for industry, city, companySize are changed,
+**AC3:** Given filter inputs for industry, province/city (LocationPicker), and companySize are changed,
 When the filter value changes (debounced 300ms),
-Then the table re-fetches with the new filter params and updates without a full page reload
+Then the table re-fetches with the new filter params (`province_code`, `city_code`) and updates without a full page reload
+
+> **Updated 2026-03-28 (SCP-2026-03-28-D):** Free-text `city` filter replaced by structured `province_code` + `city_code` cascade (LocationPicker component).
 
 **AC4:** Given page navigation controls,
 When "Next" or "Previous" is clicked,
@@ -39,9 +41,16 @@ Then `page` param increments/decrements and React Query re-fetches the new page
 **AC5:** Given the table is loading (React Query fetch in progress),
 Then a skeleton loader (or loading indicator) is shown in the table body
 
-**AC6:** Given `filterStore` (industry, city, companySize, page),
+**AC6:** Given `filterStore` (industry, province_code, city_code, companySize, page),
 When filters or page changes,
 Then filterStore is updated and the query key includes current filter state
+
+**AC7 (2026-03-28):** Given the filter bar renders,
+Then a `LocationPicker` component is shown:
+- Province: shadcn `<Select>` — fetches `https://wilayah.id/api/provinces.json` (SWR, 1hr cache); falls back to `src/data/wilayah-static.json` if unreachable
+- City: shadcn `<Combobox>` with search — fetches `https://wilayah.id/api/regencies/{province_code}.json` when province is selected
+- Selecting a city sets both `province_code` and `city_code` in filterStore
+- Clearing province also clears city
 
 ---
 
@@ -66,9 +75,22 @@ Then filterStore is updated and the query key includes current filter state
 
 - [x] **Task 4: Filter bar component**
   - [x] Create `src/components/features/contacts/ContactsFilterBar.tsx`
-  - [x] Add inputs for: industry (select), city (text), companySize (select)
+  - [x] Add inputs for: industry (select), companySize (select)
   - [x] On change: debounce 300ms, update `filterStore` via `setFilter()`
   - [x] Add "Reset Filters" button: calls `filterStore.resetFilter()`
+
+- [ ] **Task 8 (2026-03-28): LocationPicker + location filter (AC7, SCP-2026-03-28-D)**
+  - [ ] Create `src/components/ui/LocationPicker.tsx` (shared component — reused in Stories 5.2 and 6.2)
+    - Props: `value: { province_code: string | null; city_code: string | null }`, `onChange`
+    - Province: shadcn `<Select>`, SWR fetch `https://wilayah.id/api/provinces.json` (1hr cache)
+    - City: shadcn `<Combobox>` with search, SWR fetch `.../regencies/{province_code}.json` (30min cache, load on demand)
+    - Falls back to `src/data/wilayah-static.json` if wilayah.id unreachable
+    - Clearing province resets city to null
+  - [ ] Generate `src/data/wilayah-static.json` via one-time `scripts/generate-wilayah-static.ts` (fetches all provinces + all regencies, commits result)
+  - [ ] Wire LocationPicker into `ContactsFilterBar` — replaces free-text city input
+  - [ ] Update `useContacts` query key and fetch URL: `province_code` + `city_code` params replace `city`
+  - [ ] Update `filterStore` shape: replace `city: string` with `province_code: string | null`, `city_code: string | null`
+  - [ ] Test: province select → city combobox loads correct options; clear province → city cleared
 
 - [x] **Task 5: Pagination controls**
   - [x] Create `src/components/features/contacts/ContactsPagination.tsx`
