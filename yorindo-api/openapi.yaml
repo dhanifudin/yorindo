@@ -190,10 +190,12 @@ components:
           nullable: true
           example: PT Teknologi Maju
         companySize:
+          type: string
           nullable: true
           enum: [small, medium, large, enterprise, '', null]
           example: medium
         source:
+          type: string
           nullable: true
           enum: [excel_upload, form, manual, null]
         consentStatus:
@@ -201,6 +203,7 @@ components:
           enum: [active, suppressed, legacy_unverified]
           example: active
         flagCategory:
+          type: string
           nullable: true
           enum: [invalid-data, duplicate, null]
         completenessScore:
@@ -466,6 +469,7 @@ components:
               type: string
               example: "+6281234567890"
             contactFlagCategory:
+              type: string
               nullable: true
               enum: [invalid-data, duplicate, null]
               description: Inherited from contact record; null if no flag
