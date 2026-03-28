@@ -149,6 +149,16 @@ function toDuplicatePairDto(pair: DuplicatePair) {
 }
 
 export const contactRoutes: FastifyPluginAsync = async (fastify) => {
+  fastify.get('/api/contacts/health', async (_request, reply) => {
+    const health = await contactRepository.countHealth()
+
+    return reply.status(200).send({
+      flagged: health.flagged,
+      duplicates: health.duplicates,
+      missingEmail: health.missingEmail,
+    })
+  })
+
   fastify.get('/api/contacts', async (request, reply) => {
     const result = ContactsQuerySchema.safeParse(request.query)
     if (!result.success) {

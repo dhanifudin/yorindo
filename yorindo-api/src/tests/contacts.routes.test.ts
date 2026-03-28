@@ -15,6 +15,22 @@ afterAll(async () => {
   await app.close()
 })
 
+describe('GET /api/contacts/health', () => {
+  it('returns contacts health counters', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/contacts/health',
+    })
+
+    expect(res.statusCode).toBe(200)
+    expect(res.json()).toEqual({
+      flagged: 13,
+      duplicates: 6,
+      missingEmail: 15,
+    })
+  })
+})
+
 describe('GET /api/contacts', () => {
   it('returns paginated contacts with default page size', async () => {
     const res = await app.inject({

@@ -209,7 +209,7 @@ flowchart TD
     F --> G["AI Normalization\nClaude / OpenAI\ncompute completeness_score"]
 
     G --> H{Flag check}
-    H -->|"spam / invalid / duplicate"| I[("flagged_records\nPostgreSQL")]
+    H -->|"low-confidence / invalid / duplicate"| I[("flagged_records\nPostgreSQL")]
     H -->|"clean"| J{Phone exists?}
 
     J -->|"Yes — update"| K["UPDATE contacts\nwhere phone = normalized"]
@@ -485,7 +485,7 @@ Primary entity for the contact database.
 | source | VARCHAR(50) | 'excel_upload', 'form', 'manual' |
 | completeness_score | NUMERIC(4,3) | 0.000–1.000, AI-computed in ETL |
 | consent_status | VARCHAR(30) | 'active', 'suppressed', 'legacy_unverified' |
-| flag_category | VARCHAR(50) | 'spam', 'not-potential', null = clean |
+| flag_category | VARCHAR(50) | 'invalid-data', 'duplicate', null = clean |
 | deleted_at | TIMESTAMPTZ | Soft delete |
 
 #### `events`

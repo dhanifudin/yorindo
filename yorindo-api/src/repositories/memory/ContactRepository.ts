@@ -135,7 +135,6 @@ export class InMemoryContactRepository implements IContactRepository {
         matchReasons: pair.matchReasons,
       })
     }
-
     return pairs
   }
 

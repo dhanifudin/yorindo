@@ -421,7 +421,7 @@ So that I can bulk-accept the AI recommendation list or review and act on indivi
 
 **Given** I am on the Registrasi tab (`/app/events/:id/registrations`),
 **When** the tab loads,
-**Then** it shows a filterable table of registrations with columns: Name, Company, Phone, AI Score, Registration Status (pending/approved/rejected), Attendance Status (attended/no_show — visible for completed/live events only), Flag Badge (if contact has flagCategory `spam` or `not-potential`)
+**Then** it shows a filterable table of registrations with columns: Name, Company, Phone, AI Score, Registration Status (pending/approved/rejected), Attendance Status (attended/no_show — visible for completed/live events only), Flag Badge (if contact has flagCategory `invalid-data` or `duplicate`)
 
 **Given** the table header,
 **When** I click "Terima Semua Rekomendasi AI",
@@ -431,7 +431,7 @@ So that I can bulk-accept the AI recommendation list or review and act on indivi
 **When** I click "Setujui" or "Tolak",
 **Then** `PATCH /api/registrations/:id/status` is called and the row updates optimistically
 
-**Given** a registration where the contact has `flagCategory: 'spam'` or `'not-potential'`,
+**Given** a registration where the contact has `flagCategory: 'invalid-data'` or `'duplicate'`,
 **When** the row renders,
 **Then** a flag badge (red/orange) is shown automatically — no extra API call needed (flag data is part of the registration response)
 
