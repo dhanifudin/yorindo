@@ -26,13 +26,15 @@ So that I can track my upcoming events and access my tickets without contacting 
 
 **AC2:** Greeting: *"Hai, {name}!"* where `name` comes from `authStore.user.name` — no extra API call. If `name` is undefined/empty, fall back to `authStore.user.email`.
 
-**AC3:** **Upcoming Events tab** ("Mendatang") — fetches `GET /api/participants/me/registrations` and displays registrations with `status: 'approved' | 'pending' | 'waitlisted'` where `eventDate >= today`. Sorted by `eventDate` ascending. Columns per row: Event Name, Date (formatted Indonesian), Venue, Status badge (color-coded), "Lihat Tiket" button (only for `approved`), "Batalkan" button (for `approved` + `pending`).
+**AC3:** **Upcoming Events tab** ("Mendatang") — fetches `GET /api/participants/me/registrations` and displays registrations with `status: 'approved' | 'pending'` where `eventDate >= today`. Sorted by `eventDate` ascending. Columns per row: Event Name, Date (formatted Indonesian), Venue, Status badge (color-coded), "Lihat Tiket" button (only for `approved`).
+
+> **Updated 2026-03-28** — `waitlisted` status removed. "Batalkan" button removed — Story 6-7 (self-cancellation) retired; no participant cancellation flow.
 
 **AC4:** **My Tickets tab** ("Tiket Saya") — same endpoint; filters to `status: 'approved'` only. Each entry renders as a card: event name, date, venue, status badge, and an inline QR code rendered with `react-qr-code` using `ticketToken` as the value.
 
-**AC5:** **Cancellation flow** — "Batalkan" button opens an `AlertDialog` (shadcn/ui). On confirm: `POST /api/registrations/{id}/cancel` → invalidate `['participant', 'registrations']` query → toast success *"Pendaftaran dibatalkan."*. On API error: toast error *"Gagal membatalkan pendaftaran. Coba lagi."*. Cancel button closes dialog without action.
+~~**AC5:** Cancellation flow~~ — **Removed 2026-03-28**. Story 6-7 (self-cancellation) retired; participant cancellation is no longer part of the status model. Remove any "Batalkan" button and `POST /api/registrations/:id/cancel` call from this component.
 
-**AC6:** MSW handler `GET /api/participants/me/registrations` added to `src/mocks/handlers/registrations.ts`. Returns an array of 3–4 mock registration objects spanning statuses `approved`, `pending`, and `waitlisted`. Each mock object shape:
+**AC6:** MSW handler `GET /api/participants/me/registrations` added to `src/mocks/handlers/registrations.ts`. Returns an array of 3–4 mock registration objects spanning statuses `approved` and `pending`. Each mock object shape:
 ```ts
 {
   id: string
@@ -40,11 +42,10 @@ So that I can track my upcoming events and access my tickets without contacting 
   eventName: string
   eventDate: string   // ISO date, eventDate >= today for "Mendatang" items
   venue: string
-  status: 'approved' | 'pending' | 'waitlisted' | 'cancelled'
+  status: 'approved' | 'pending'
   ticketToken: string // only meaningful when status === 'approved'
 }
 ```
-Also add `POST /api/registrations/:id/cancel` stub to the same file if not already present (returns `{ success: true }`).
 
 **AC7:** Component lives at `src/components/features/dashboard/ParticipantDashboard.tsx`. TanStack Query key: `['participant', 'registrations']`. Two tabs use shadcn/ui `<Tabs>` / `<TabsList>` / `<TabsTrigger>` / `<TabsContent>`.
 
@@ -59,13 +60,33 @@ Also add `POST /api/registrations/:id/cancel` stub to the same file if not alrea
 
 **AC10:** `npm run build` passes with 0 TypeScript errors.
 
+**AC11 (2026-03-28 — participant profile page):** `/account/profile` page exists within `ParticipantShell`. Shows all fixed profile fields (`email` read-only, `name`, `phone`, `company_email`, `company_name`, `company_location`, `position`, `industry_type`) in an editable form. On save: `PATCH /api/contacts/:id` is called with updated fields; on success toast "Profil diperbarui" and `profile_updated_at` is refreshed in the response. Navigation link to "/account/profile" appears in `ParticipantShell` top bar as "Profil Saya".
+
+MSW handler: `PATCH /api/contacts/:id` already exists — update it to accept participant profile fields and return the updated contact with `profile_updated_at: new Date().toISOString()`.
+
+**AC12 (2026-03-28 — profile staleness reminder):** When participant loads the dashboard (`/app`), the FE calls `GET /api/participants/me/profile` to retrieve the contact record including `profile_updated_at`.
+
+Staleness conditions (either triggers the reminder):
+- `profile_updated_at` is `null` (never updated by participant — may have outdated imported data)
+- `profile_updated_at` is older than **180 days** from today
+
+When stale: render a non-dismissible amber banner at the top of the dashboard:
+> "Profil Anda mungkin sudah tidak akurat. Perbarui informasi seperti jabatan atau perusahaan agar tetap relevan. **[Perbarui Profil →]**"
+
+The banner links to `/account/profile`. It disappears immediately after a successful `PATCH /api/contacts/:id` (query invalidation of `['participant', 'profile']`).
+
+MSW handler: `GET /api/participants/me/profile` (new) returns the mock contact object for `contact-001` with `profile_updated_at: null` by default (triggers the reminder in dev). Add to `src/mocks/handlers/registrations.ts` or a new `src/mocks/handlers/participants.ts`.
+
+> **Phase 2 BE note:** cron job (`node-cron`) sends a WhatsApp/email reminder to participants whose `profile_updated_at` is null or > 180 days, once per month. Reminder uses the event notification channel configured in `contacts.notification_channel`. This is a Phase 2 concern — Phase 1 covers only the in-app banner.
+
+> **Code review note (2026-03-28):** Add "Profil Saya" link to `ParticipantShell` top bar. Create `/account/profile` page. Add `GET /api/participants/me/profile` MSW handler returning `contact-001` with `profile_updated_at: null`. Implement staleness check in dashboard mount.
+
 ---
 
 ## Tasks / Subtasks
 
 - [x] **Task 1 — MSW handlers (AC: 6)**
-  - [x] Add `GET /api/participants/me/registrations` to `src/mocks/handlers/registrations.ts` returning 3–4 mock registrations with varied statuses and `eventDate >= today`
-  - [x] Add `POST /api/registrations/:id/cancel` stub to `src/mocks/handlers/registrations.ts` if not present (return `{ success: true }`) — already existed from Story 6.7; no change needed
+  - [x] Add `GET /api/participants/me/registrations` to `src/mocks/handlers/registrations.ts` returning 3–4 mock registrations with statuses `approved`/`pending` and `eventDate >= today` — **update: remove `waitlisted` entries; Story 6-7 cancel stub no longer needed**
   - [x] Verify handlers are exported from `src/mocks/handlers/index.ts`
 
 - [x] **Task 2 — ParticipantShell layout (AC: 9)**
@@ -80,17 +101,15 @@ Also add `POST /api/registrations/:id/cancel` stub to the same file if not alrea
   - [x] If `role === 'participant'`, render `<ParticipantShell>{children}</ParticipantShell>`
   - [x] Otherwise render existing `<AdminShell>{children}</AdminShell>`
 
-- [x] **Task 4 — ParticipantDashboard component (AC: 1–5, 7, 8)**
+- [x] **Task 4 — ParticipantDashboard component (AC: 1–4, 7, 8)**
   - [x] Create `src/components/features/dashboard/ParticipantDashboard.tsx`
   - [x] Read `user.name` and `user.email` from `useAuthStore` for greeting (AC2)
   - [x] `useQuery` with key `['participant', 'registrations']` → `GET /api/participants/me/registrations` (AC7)
   - [x] Skeleton state: placeholder rows matching tab content shape (AC8)
   - [x] Two shadcn Tabs: "Mendatang" and "Tiket Saya" (AC3, AC4)
-  - [x] Mendatang tab: filter approved/pending/waitlisted with eventDate >= today, sorted asc (AC3)
+  - [x] Mendatang tab: filter `approved`/`pending` with `eventDate >= today`, sorted asc (AC3) — **update: remove `waitlisted` filter; remove "Batalkan" button**
   - [x] Tiket Saya tab: filter approved only, render inline QR with `react-qr-code` `<QRCode value={ticketToken} size={160} />` (AC4)
-  - [x] Status badge: color-coded (approved=default/green, pending=secondary/yellow, waitlisted=outline/gray)
-  - [x] "Batalkan" button → opens AlertDialog, on confirm calls cancel mutation (AC5)
-  - [x] Cancel mutation: `useMutation` → `POST /api/registrations/{id}/cancel` → `queryClient.invalidateQueries(['participant', 'registrations'])` → toast (AC5)
+  - [x] Status badge: color-coded (approved=default/green, pending=secondary/yellow)
   - [x] Empty states per tab (AC8)
 
 - [x] **Task 5 — Wire ParticipantDashboard into page.tsx (AC: 1)**
@@ -99,6 +118,25 @@ Also add `POST /api/registrations/:id/cancel` stub to the same file if not alrea
 
 - [x] **Task 6 — TypeScript check (AC: 10)**
   - [x] Run `npm run build` in `yorindo-app/` — ✓ Compiled successfully in 8.9s, 0 TypeScript errors
+
+- [ ] **Task 7 — Participant profile page (AC: 11)**
+  - [ ] Create `src/app/app/account/profile/page.tsx` within `ParticipantShell`
+  - [ ] Render editable form: `email` (read-only), `name`, `phone`, `company_email`, `company_name`, `company_location`, `position`, `industry_type`
+  - [ ] On save: `PATCH /api/contacts/:id` with updated fields
+  - [ ] On success: toast "Profil diperbarui"; invalidate `['participant', 'profile']` query
+  - [ ] Add "Profil Saya" navigation link to `ParticipantShell` top bar pointing to `/account/profile`
+  - [ ] Update `PATCH /api/contacts/:id` MSW handler to return updated contact with `profile_updated_at: new Date().toISOString()`
+
+- [ ] **Task 8 — Profile MSW handler (AC: 12)**
+  - [ ] Add `GET /api/participants/me/profile` handler to `src/mocks/handlers/participants.ts` (create file if absent) or `registrations.ts`
+  - [ ] Returns mock contact object for `contact-001` with `profile_updated_at: null` (triggers staleness reminder in dev)
+  - [ ] Ensure handler is exported from `src/mocks/handlers/index.ts`
+
+- [ ] **Task 9 — Staleness reminder banner (AC: 12)**
+  - [ ] In `ParticipantDashboard.tsx`, add `useQuery` with key `['participant', 'profile']` → `GET /api/participants/me/profile`
+  - [ ] Staleness check: `profile_updated_at === null` OR `profile_updated_at` older than 180 days from today
+  - [ ] When stale: render non-dismissible amber banner at top of dashboard: "Profil Anda mungkin sudah tidak akurat. Perbarui informasi seperti jabatan atau perusahaan agar tetap relevan. **[Perbarui Profil →]**" (link to `/account/profile`)
+  - [ ] Banner disappears after successful `PATCH /api/contacts/:id` (invalidate `['participant', 'profile']`)
 
 ---
 

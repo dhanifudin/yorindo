@@ -2,10 +2,9 @@
 
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { useEventSponsors, useAttachSponsor, useUpdateSponsorTier, useRemoveSponsor } from '@/hooks/useEventSponsors'
+import { useEventSponsors, useAttachSponsor, useRemoveSponsor } from '@/hooks/useEventSponsors'
 import { useVendors } from '@/hooks/useVendors'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,14 +17,6 @@ import {
 } from '@/components/ui/alert-dialog'
 import type { EventSponsor } from '@/types/api'
 
-const TIER_CONFIG: Record<EventSponsor['tier'], { label: string; className: string }> = {
-  standard: { label: 'Standard', className: 'bg-muted text-muted-foreground' },
-  premium: { label: 'Premium', className: 'bg-blue-100 text-blue-700' },
-  lead_intelligence: { label: 'Lead Intel', className: 'bg-purple-100 text-purple-700' },
-}
-
-const TIER_OPTIONS: EventSponsor['tier'][] = ['standard', 'premium', 'lead_intelligence']
-
 interface SponsorPanelProps {
   eventId: string
 }
@@ -34,12 +25,10 @@ export function SponsorPanel({ eventId }: SponsorPanelProps) {
   const { data: sponsors = [], isLoading } = useEventSponsors(eventId)
   const { data: vendorsData } = useVendors()
   const { mutate: attachSponsor, isPending: isAttaching } = useAttachSponsor(eventId)
-  const { mutate: updateTier } = useUpdateSponsorTier(eventId)
   const { mutate: removeSponsor, isPending: isRemoving } = useRemoveSponsor(eventId)
 
   const [showAddForm, setShowAddForm] = useState(false)
   const [selectedVendorId, setSelectedVendorId] = useState('')
-  const [selectedTier, setSelectedTier] = useState<EventSponsor['tier']>('standard')
   const [removeTarget, setRemoveTarget] = useState<EventSponsor | null>(null)
 
   const allVendors = vendorsData?.data ?? []
@@ -49,23 +38,16 @@ export function SponsorPanel({ eventId }: SponsorPanelProps) {
   const handleAttach = () => {
     if (!selectedVendorId) return
     attachSponsor(
-      { vendorId: selectedVendorId, tier: selectedTier },
+      { vendorId: selectedVendorId },
       {
         onSuccess: () => {
           setShowAddForm(false)
           setSelectedVendorId('')
-          setSelectedTier('standard')
           toast.success('Vendor berhasil ditambahkan')
         },
         onError: () => toast.error('Gagal menambahkan vendor'),
       }
     )
-  }
-
-  const handleTierChange = (vendorId: string, tier: EventSponsor['tier']) => {
-    updateTier({ vendorId, tier }, {
-      onError: () => toast.error('Gagal mengubah tier'),
-    })
   }
 
   const handleRemove = () => {
@@ -102,26 +84,16 @@ export function SponsorPanel({ eventId }: SponsorPanelProps) {
       {/* Add sponsor inline form */}
       {showAddForm && (
         <div className="rounded-lg border border-dashed border-border p-3 space-y-2 bg-muted/30">
-          <select
-            value={selectedVendorId}
-            onChange={(e) => setSelectedVendorId(e.target.value)}
-            className={`${selectClassName} w-full`}
-            aria-label="Pilih vendor"
-          >
-            <option value="">— Pilih vendor —</option>
-            {availableVendors.map((v) => (
-              <option key={v.id} value={v.id}>{v.name}</option>
-            ))}
-          </select>
           <div className="flex gap-2">
             <select
-              value={selectedTier}
-              onChange={(e) => setSelectedTier(e.target.value as EventSponsor['tier'])}
+              value={selectedVendorId}
+              onChange={(e) => setSelectedVendorId(e.target.value)}
               className={`${selectClassName} flex-1`}
-              aria-label="Pilih tier"
+              aria-label="Pilih vendor"
             >
-              {TIER_OPTIONS.map((t) => (
-                <option key={t} value={t}>{TIER_CONFIG[t].label}</option>
+              <option value="">— Pilih vendor —</option>
+              {availableVendors.map((v) => (
+                <option key={v.id} value={v.id}>{v.name}</option>
               ))}
             </select>
             <Button
@@ -153,39 +125,23 @@ export function SponsorPanel({ eventId }: SponsorPanelProps) {
         <p className="text-sm text-muted-foreground">Belum ada vendor</p>
       )}
 
-      {sponsors.map((sponsor) => {
-        const tierCfg = TIER_CONFIG[sponsor.tier]
-        return (
-          <div
-            key={sponsor.id}
-            className="flex items-center gap-2"
+      {sponsors.map((sponsor) => (
+        <div
+          key={sponsor.id}
+          className="flex items-center gap-2"
+        >
+          <span className="flex-1 text-sm font-medium truncate">{sponsor.vendor_name}</span>
+          <button
+            type="button"
+            onClick={() => setRemoveTarget(sponsor)}
+            disabled={isRemoving}
+            className="text-muted-foreground hover:text-destructive transition-colors text-sm"
+            aria-label={`Hapus ${sponsor.vendor_name}`}
           >
-            <span className="flex-1 text-sm font-medium truncate">{sponsor.vendor_name}</span>
-            <select
-              value={sponsor.tier}
-              onChange={(e) => handleTierChange(sponsor.vendor_id, e.target.value as EventSponsor['tier'])}
-              className={`${selectClassName} w-28`}
-              aria-label={`Tier ${sponsor.vendor_name}`}
-            >
-              {TIER_OPTIONS.map((t) => (
-                <option key={t} value={t}>{TIER_CONFIG[t].label}</option>
-              ))}
-            </select>
-            <Badge className={`text-xs shrink-0 ${tierCfg.className}`}>
-              {tierCfg.label}
-            </Badge>
-            <button
-              type="button"
-              onClick={() => setRemoveTarget(sponsor)}
-              disabled={isRemoving}
-              className="text-muted-foreground hover:text-destructive transition-colors text-sm"
-              aria-label={`Hapus ${sponsor.vendor_name}`}
-            >
-              ×
-            </button>
-          </div>
-        )
-      })}
+            ×
+          </button>
+        </div>
+      ))}
 
       <AlertDialog open={!!removeTarget} onOpenChange={(open) => { if (!open) setRemoveTarget(null) }}>
         <AlertDialogContent>

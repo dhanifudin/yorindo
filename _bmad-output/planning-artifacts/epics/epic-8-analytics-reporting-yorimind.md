@@ -1,8 +1,10 @@
 # Epic 8: Analytics, Reporting & YoriMind
 
-Admin can access AI-powered event performance insights via the YoriMind panel with funnel charts and demographic breakdowns; vendors can securely download post-event reports via time-limited magic links with mandatory DPA acceptance.
+Admin can access AI-powered event performance insights and survey response analytics from within the Event Pipeline Hub (Laporan tab); vendors can securely download post-event reports via time-limited magic links with mandatory DPA acceptance.
 
-> **Phase 1 (FE):** Post-event report page (attendance funnel chart via Recharts, demographic breakdowns, metric cards); vendor magic link landing page + DPA acceptance gate; analytics dashboard (filters, date range, export buttons); YoriMind panel (analysis text, root causes, recommendations table, "Refresh Insights" button, skeleton during 1200ms load); PDF + Excel download buttons — all wired to MSW yorimind/report handlers
+> **Updated 2026-03-28** — Meeting: YoriMind has no dedicated top-level menu. It is accessed exclusively via the Laporan tab inside the Event Pipeline Hub (`/app/events/:id/report`), making AI insights seamlessly contextual to the event being viewed. This was already implemented structurally in Story 4.12; this epic's scope remains unchanged — only the navigation entry point is clarified.
+
+> **Phase 1 (FE):** Post-event report page (attendance funnel chart via Recharts, demographic breakdowns, metric cards); vendor magic link landing page + DPA acceptance gate; analytics dashboard (filters, date range, export buttons); YoriMind panel embedded in Laporan tab (analysis text, root causes, recommendations table, "Refresh Insights" button, skeleton during 1200ms load); PDF + Excel download buttons — all wired to MSW yorimind/report handlers
 > **Phase 2 (BE):** Report generation BullMQ job (triggered on event completion), `GET /api/events/:id/report`, vendor magic link generation + 7-day expiry + download-force header (NFR-S12), DPA acceptance endpoint, `GET /api/events/:id/yorimind` (node-cron + Redis TTL + `IYoriMindService` adapter — provider set by `YORIMIND_AI_PROVIDER` env var), `GET /api/events/:id/report/download?format=xlsx|pdf` (xlsx + pdfkit), access logging (NFR-S13, NFR-S16). Vendor identity and recipient resolution come from the vendor roster + event sponsor endpoints documented in OpenAPI.
 
 ## Story 8.1: Post-Event Attendance Report Generation

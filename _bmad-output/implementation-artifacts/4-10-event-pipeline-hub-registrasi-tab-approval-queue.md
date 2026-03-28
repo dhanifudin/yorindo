@@ -225,7 +225,7 @@ http.get('/api/registrations', ({ request }) => {
   - [ ] Subtask 4.5: On close: `scrollToIndex(lastReviewedIndex, { align: 'center' })`
 
 - [ ] Task 5: Build `<RegistrationFilters>` component
-  - [ ] Subtask 5.1: Status filter (pending/approved/rejected/waitlisted)
+  - [ ] Subtask 5.1: Status filter (pending/approved/rejected) — no waitlist tab
   - [ ] Subtask 5.2: AI score range filter
   - [ ] Subtask 5.3: Flag toggle (show only flagged)
   - [ ] Subtask 5.4: Active filter count badge + "Reset filter" ghost button
@@ -291,3 +291,4 @@ http.get('/api/registrations', ({ request }) => {
 | Date | Change | Author |
 |------|--------|--------|
 | 2026-03-22 | Story created from epic-4 + ux-event-pipeline.md | bmad-context-engine |
+| 2026-03-28 | Subtask 5.1: removed `waitlisted` from status filter options | bmad-correct-course |
