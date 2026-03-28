@@ -36,12 +36,12 @@ async function fetchContacts(params: {
 
 export function useContacts() {
   const searchParams = useSearchParams()
-  const { flagFilter, missingEmail, missingPhone } = useFilterStore()
+  const { industry: storeIndustry, city: storeCity, companySize: storeCompanySize, page: storePage, flagFilter, missingEmail, missingPhone } = useFilterStore()
 
-  const industry = searchParams.get('industry') ?? ''
-  const city = searchParams.get('city') ?? ''
-  const companySize = searchParams.get('companySize') ?? ''
-  const page = parseInt(searchParams.get('page') ?? '1', 10)
+  const industry = storeIndustry || searchParams.get('industry') || ''
+  const city = storeCity || searchParams.get('city') || ''
+  const companySize = storeCompanySize || searchParams.get('companySize') || ''
+  const page = storePage || parseInt(searchParams.get('page') ?? '1', 10)
   const q = searchParams.get('q') ?? ''
 
   return useQuery({

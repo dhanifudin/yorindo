@@ -62,7 +62,7 @@ export interface User {
   id: string
   email: string
   name: string
-  role: 'admin' | 'staff' | 'viewer'
+  role: 'admin' | 'staff' | 'viewer' | 'participant'
   createdAt: string
   updatedAt: string
 }
@@ -71,6 +71,11 @@ export interface UserEvent {
   userId: string
   eventId: string
   grantedAt: string
+}
+
+export interface AuthResponse {
+  accessToken: string
+  user: Pick<User, 'id' | 'role'> & { name?: string; email?: string }
 }
 
 export interface ScanResult {

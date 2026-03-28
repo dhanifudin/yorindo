@@ -152,13 +152,13 @@ describe('POST /api/auth/refresh', () => {
       payload: { email: 'admin@yorindo.id', password: 'Password123!' },
     })
     const cookies = loginRes.cookies
-    const refreshCookie = cookies.find(c => c.name === 'refreshToken')
+    const refreshCookie = cookies.find(c => c.name === 'refresh_token')
     expect(refreshCookie).toBeDefined()
 
     const refreshRes = await app.inject({
       method: 'POST',
       url: '/api/auth/refresh',
-      cookies: { refreshToken: refreshCookie!.value },
+      cookies: { refresh_token: refreshCookie!.value },
     })
     expect(refreshRes.statusCode).toBe(200)
     expect(refreshRes.json()).toHaveProperty('accessToken')

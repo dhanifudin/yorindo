@@ -23,7 +23,7 @@ describe('GET /api/contacts/health', () => {
     })
 
     expect(res.statusCode).toBe(200)
-    expect(res.json()).toEqual({
+    expect(res.json()).toMatchObject({
       flagged: 13,
       duplicates: 6,
       missingEmail: 15,

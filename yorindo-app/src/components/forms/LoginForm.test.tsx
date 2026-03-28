@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { LoginForm } from './LoginForm'
 import { useAuthStore } from '@/store/authStore'
@@ -53,9 +53,10 @@ describe('LoginForm', () => {
       expect(mockPush).toHaveBeenCalledWith('/app')
     })
 
-    const { accessToken, user: authUser } = useAuthStore.getState()
+    const { accessToken, user: authUser, eventKeys } = useAuthStore.getState()
     expect(accessToken).toBe('mock-token-admin')
     expect(authUser?.role).toBe('admin')
+    expect(eventKeys).toEqual({})
   })
 
   it('shows loading state while submitting', async () => {

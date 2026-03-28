@@ -107,7 +107,7 @@ describe('Users API', () => {
   })
 
   describe('DELETE /api/users/:id', () => {
-    it('soft deletes a user and creates an audit log', async () => {
+    it('deletes a user and creates an audit log', async () => {
       // First create a temp user to delete
       const user = await userRepository.create({
         email: 'to-delete@yorindo.id',
@@ -125,7 +125,6 @@ describe('Users API', () => {
       expect(response.statusCode).toBe(204)
 
       const checkDb = await userRepository.findById(user.id)
-      // Since it's memory repo, it physcially deletes it
       expect(checkDb).toBeNull()
 
       const auditLogs = await auditLogRepository.findAllByTarget(user.id)

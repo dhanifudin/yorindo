@@ -12,7 +12,10 @@ export function MSWProvider({ children }: { children: React.ReactNode }) {
     if (MOCKS_ENABLED) {
       import('@/mocks/browser')
         .then(({ worker }) => worker.start({ onUnhandledRequest: 'warn' }))
-        .then(() => setMswReady(true))
+        .then(() => {
+          console.info('[MSW] Mocking enabled')
+          setMswReady(true)
+        })
     }
   }, [])
 

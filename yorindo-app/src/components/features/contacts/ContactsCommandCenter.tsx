@@ -14,7 +14,7 @@ import { ContactsTable } from './ContactsTable'
 import { ContactsPagination } from './ContactsPagination'
 import { ActionToolbar } from './ActionToolbar'
 
-const FILTER_KEYS = ['industry', 'city', 'companySize', 'q', 'missingEmail', 'missingPhone']
+const FILTER_KEYS = ['industry', 'city', 'companySize', 'q', 'missingEmail', 'missingPhone', 'flagFilter']
 
 export function ContactsCommandCenter() {
   const [triageMode, setTriageMode] = useState<'flagged' | 'duplicates' | null>(null)
@@ -50,6 +50,18 @@ export function ContactsCommandCenter() {
     handleClearSelection()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page])
+
+  useEffect(() => {
+    setFilter({
+      industry: searchParams.get('industry') ?? '',
+      city: searchParams.get('city') ?? '',
+      companySize: searchParams.get('companySize') ?? '',
+      page: parseInt(searchParams.get('page') ?? '1', 10),
+      flagFilter: (searchParams.get('flagFilter') ?? '') as '' | 'flagged' | 'unflagged',
+      missingEmail: searchParams.get('missingEmail') === 'true',
+      missingPhone: searchParams.get('missingPhone') === 'true',
+    })
+  }, [searchParams, setFilter])
 
   const handleStatClick = (type: 'duplicates' | 'missingEmail' | 'missingPhone') => {
     if (type === 'duplicates') {

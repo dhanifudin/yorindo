@@ -148,7 +148,7 @@ export interface BlastHistoryEntry {
 
 // ─── User ────────────────────────────────────────────────────────────────────
 
-export type UserRole = 'admin' | 'viewer' | 'staff'
+export type UserRole = 'admin' | 'viewer' | 'staff' | 'participant'
 
 export interface User {
   id: EntityId
@@ -158,6 +158,7 @@ export interface User {
   name: string | null
   createdAt: ISODateString
   updatedAt: ISODateString
+  deletedAt: ISODateString | null
 }
 
 // ─── Flagged Record ──────────────────────────────────────────────────────────

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import type { User, Event } from '@/types/api'
+import { fetchUserAssignedEvents } from '@/hooks/useUsers'
 
 interface EventAssignmentDialogProps {
   user: User
@@ -17,6 +18,7 @@ interface EventAssignmentDialogProps {
 export function EventAssignmentDialog({ user, open, onClose }: EventAssignmentDialogProps) {
   const queryClient = useQueryClient()
   const [pending, setPending] = useState<Set<string>>(new Set())
+  const [syncedAssignment, setSyncedAssignment] = useState<typeof assignmentData>(undefined)
 
   const { data: eventsData } = useQuery<{ data: Event[] }>({
     queryKey: ['events'],
@@ -24,19 +26,17 @@ export function EventAssignmentDialog({ user, open, onClose }: EventAssignmentDi
     enabled: open,
   })
 
-  const { data: assignmentData } = useQuery<{ eventIds: string[] }>({
+  const { data: assignmentData } = useQuery<{ data: Event[] }>({
     queryKey: ['user-events', user.id],
-    queryFn: () => fetch(`/api/users/${user.id}/events`).then((r) => r.json()),
+    queryFn: () => fetchUserAssignedEvents(user.id),
     enabled: open,
   })
 
-  // Sync pending set from server data (update-state-while-rendering pattern)
-  const [loadedAssignmentData, setLoadedAssignmentData] = useState<typeof assignmentData>(undefined)
-  if (assignmentData !== loadedAssignmentData) {
-    setLoadedAssignmentData(assignmentData)
-    if (assignmentData?.eventIds) {
-      setPending(new Set(assignmentData.eventIds))
-    }
+  // Sync pending from server data when assignmentData arrives or changes
+  // (React-approved pattern: setState during render triggers an immediate re-render with new state)
+  if (assignmentData !== syncedAssignment) {
+    setSyncedAssignment(assignmentData)
+    setPending(new Set(assignmentData?.data?.map((event) => event.id) ?? []))
   }
 
   const assignMutation = useMutation({
@@ -66,7 +66,7 @@ export function EventAssignmentDialog({ user, open, onClose }: EventAssignmentDi
   }
 
   const handleSave = async () => {
-    const current = new Set(assignmentData?.eventIds ?? [])
+    const current = new Set((assignmentData?.data ?? []).map((event) => event.id))
     const toAdd = [...pending].filter((id) => !current.has(id))
     const toRemove = [...current].filter((id) => !pending.has(id))
 
@@ -90,7 +90,7 @@ export function EventAssignmentDialog({ user, open, onClose }: EventAssignmentDi
   }
 
   return (
-    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+    <Dialog open={open} onOpenChange={(v) => { if (!v) { setPending(new Set()); setSyncedAssignment(undefined); onClose(); } }}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Assign Event — {user.name}</DialogTitle>

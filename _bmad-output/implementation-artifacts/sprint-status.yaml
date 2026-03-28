@@ -1,5 +1,5 @@
 generated: 2026-03-19
-last_updated: 2026-03-28 (SCP-2026-03-28-A/B/C/D/E/F applied + AI_PROVIDER simplification: 4-4 re-opened dual survey; 6-5+6-7 retired; waitlist removed; QR AES-256-GCM encrypt; CUID2 standard; Story 7.4 retired; per-service provider config (EMAIL/WHATSAPP) + single AI_PROVIDER toggle (replaces per-feature ETL_NORMALIZATION/SMART_FILTER/YORIMIND providers); ETL pre-normalization + algorithmic dedup; SERVICE_IMPL retired; vendor tier removed; wilayah.id location fields on contacts + LocationPicker; event banner/poster upload + unified registration checkout; TipTap channel-split editor + WhatsApp format serializer + QR Code block for confirmation/ticket_delivery)
+last_updated: 2026-03-28 (SCP-2026-03-28-A/B/C/D/E/F applied + AI_PROVIDER simplification + Epic 1 code review patches: cookie maxAge fix; CD tag trigger+DockerHub revert; scan 422 for invalid ticket; hard delete UserRepository; flagFilter URL sync; missingPhone filter fix; safePage pagination guard; audit log non-blocking; OpenAPI schema corrections + Epic 2 story 2-1 review patches: render-phase router fix; participant JwtPayload role; authStore eventKeys+setAuth; MSW login eventKeys+name+any-password; LoginForm→setAuth; refresh mock contract fix)
 project: yorindo
 project_key: NOKEY
 tracking_system: file-system
@@ -52,15 +52,15 @@ development_status:
   # Note: Story 1-2 has Migration 005 addendum (participant status schema) + Migration 006 (contact location fields, SCP-2026-03-28-D)
   # Note: Story 1-4 OpenAPI needs 6 new endpoints from Sprint Change Proposal 2026-03-28
   # ─────────────────────────────────────────────
-  epic-1: in-progress
-  1-1-backend-repository-scaffold-docker-compose: review
-  1-2-database-schema-migrations: in-progress  # Migration 006 added: province_code/city_code/province_name/city_name on contacts (SCP-2026-03-28-D)
-  1-3-frontend-repository-scaffold: review
-  1-4-openapi-30-specification: review       # AC updated 2026-03-28: 6 new endpoints + status enum corrections + eventKeys/scan/verify shape; Tasks 15+16+17 pending (Task 16: Contact+BlastFilters location fields SCP-D; Task 17: Event payment fields + RegistrationOrder SCP-E)
-  1-5-fe-type-definitions-msw-foundation-devtoolbar: review  # Tasks 7+8 added: WilayahProvince/City types + Contact location fields (SCP-D); Event payment fields + RegistrationOrder type (SCP-E)
-  1-6-msw-mock-handlers-for-all-api-domains: review
-  1-7-cicd-pipeline: review
-  1-8-service-adapter-scaffold-in-memory-repository-scaffold: review  # AC6: EMAIL/WHATSAPP_PROVIDER + single AI_PROVIDER toggle; AC9/10/11 added; CUID2 fix; Tasks 8–11 added (SCP-2026-03-28-C); vendor tier removed; AI_PROVIDER simplification applied
+  epic-1: done
+  1-1-backend-repository-scaffold-docker-compose: done
+  1-2-database-schema-migrations: done  # Migrations 005+006 implemented: paid event fields, dual survey, check-in audit, location fields; seed.ts fixed with CUID2 IDs + province/city codes
+  1-3-frontend-repository-scaffold: done
+  1-4-openapi-30-specification: done  # /users/{id} PATCH+DELETE added; Contact schema fixed (nullable email/flagCategory/companySize); RefreshResponse schema; UpdateUserBody schema; role enums include participant
+  1-5-fe-type-definitions-msw-foundation-devtoolbar: done
+  1-6-msw-mock-handlers-for-all-api-domains: done
+  1-7-cicd-pipeline: done  # Reverted to DockerHub + tag trigger (v*.*.*); IMAGE_TAG cross-job fix via job outputs
+  1-8-service-adapter-scaffold-in-memory-repository-scaffold: done  # UserRepository hard delete; SEED_EVENT_IDS for staff assignment; safePage guard; update() checks deletedAt
   epic-1-retrospective: optional
 
   # ─────────────────────────────────────────────
@@ -69,7 +69,7 @@ development_status:
   # Phase 2 (BE): Auth endpoints, JWT, user CRUD, Redis token blacklist
   # ─────────────────────────────────────────────
   epic-2: in-progress
-  2-1-admin-login-jwt-authentication: review  # AC updated 2026-03-28: AC6 + eventKeys in login response + authStore shape update
+  2-1-admin-login-jwt-authentication: done  # Patches: render-phase router.replace; participant in JwtPayload; authStore eventKeys+setAuth; MSW login eventKeys+name+any-password; LoginForm→setAuth; refresh mock drops user; TODO(story-7.1) scanStore.setEventKey
   2-2-user-account-management: review
   be-2-2-user-account-management: review
   2-3-role-based-route-guards-frontend: review

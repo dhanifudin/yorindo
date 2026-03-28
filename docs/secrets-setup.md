@@ -2,16 +2,15 @@
 
 ## GitHub Actions Secrets
 
-Configure these 6 secrets in **GitHub → Settings → Secrets and variables → Actions**:
+Configure these 5 required secrets in **GitHub → Settings → Secrets and variables → Actions**:
 
 | Secret | Purpose | How to obtain |
 |--------|---------|---------------|
-| `DOCKERHUB_USERNAME` | Docker Hub account username | Your Docker Hub username (e.g. `dhanifudin`) |
-| `DOCKERHUB_TOKEN` | Docker Hub access token | Docker Hub → Account Settings → Security → New Access Token (read/write/delete scope) |
 | `VPS_SSH_KEY` | SSH private key (PEM format) for VPS access | Generate with `ssh-keygen -t ed25519 -C "github-ci"`; add public key to VPS `~/.ssh/authorized_keys` |
 | `VPS_HOST` | VPS IP address or hostname | From your VPS provider dashboard |
 | `VPS_USER` | SSH username on VPS | e.g., `ubuntu`, `deploy`, `root` |
 | `VPS_ENV_FILE` | Full multiline contents of `/var/www/yorindo/.env` | Copy from the repository root `.env.example`, then replace all placeholder values |
+| `GHCR_TOKEN` | GitHub Container Registry token | Personal access token or fine-grained token with package write access |
 
 `VPS_ENV_FILE` should be stored as a **multiline secret**. Start from the repository root `.env.example`, then paste the final production values into the secret.
 
@@ -38,13 +37,12 @@ To enforce the CI test gate on pull requests:
 | Workflow | Trigger | Target |
 |----------|---------|--------|
 | `ci.yml` | Every PR + every push | Runs lint, typecheck, tests — blocks PR merge |
-| `cd.yml` | `git push origin v1.2.3` (semver tag) | Builds Docker images → Docker Hub → VPS at `demo.dhanifudin.com` |
+| `cd.yml` | Push to `main` | Builds Docker images → GHCR → VPS at `demo.dhanifudin.com` |
 | `deploy.yml` | same tag push | GitHub Pages static export → `yorindo.dhanifudin.com` (FE + MSW mocks) |
 
-To release:
+To deploy the containerized stack:
 ```bash
-git tag v1.0.0
-git push origin v1.0.0
+git push origin main
 ```
 
 ---
@@ -138,27 +136,26 @@ sudo apt install certbot
 sudo certbot --nginx -d demo.dhanifudin.com
 ```
 
-### 7. Authenticate Docker with Docker Hub
+### 7. Authenticate Docker with GHCR
 
 ```bash
-echo $DOCKERHUB_TOKEN | docker login -u $DOCKERHUB_USERNAME --password-stdin
+echo $GHCR_TOKEN | docker login ghcr.io -u GITHUB_USERNAME --password-stdin
 ```
 
 ### 8. Initial deploy
 
 ```bash
-git tag v1.0.0
-git push origin v1.0.0
+git push origin main
 ```
 
-After the tag is pushed, GitHub Actions uploads `docker-compose.yml`, refreshes `.env`, copies the latest nginx site config to `/var/www/yorindo/nginx/nginx.conf`, then runs the remote `docker compose pull && docker compose up -d` sequence for you. The VPS nginx service reverse-proxies traffic to app port `5000` and API port `5001`.
+After the push reaches `main`, GitHub Actions builds/pushes GHCR images, uploads `docker-compose.yml`, refreshes `.env`, copies the latest nginx site config to `/var/www/yorindo/nginx/nginx.conf`, then runs the remote `docker compose pull && docker compose up -d` sequence for you. The VPS nginx service reverse-proxies traffic to app port `5000` and API port `5001`.
 
 ---
 
-## Docker Hub Image Naming
+## GHCR Image Naming
 
-- API: `dhanifudin/yorindo-api:{tag}` and `:latest`
-- App: `dhanifudin/yorindo-app:{tag}` and `:latest`
+- API: `ghcr.io/dhanifudin/yorindo-api:{sha}` and `:latest`
+- App: `ghcr.io/dhanifudin/yorindo-app:{sha}` and `:latest`
 
 ---
 

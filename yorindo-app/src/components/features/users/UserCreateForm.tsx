@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label'
 const schema = z.object({
   name: z.string().min(1, 'Nama wajib diisi'),
   email: z.string().email('Format email tidak valid'),
-  role: z.enum(['admin', 'staff', 'viewer']),
+  role: z.enum(['admin', 'staff', 'viewer', 'participant']),
   password: z.string().min(8, 'Password minimal 8 karakter'),
 })
 
@@ -75,6 +75,7 @@ export function UserCreateForm({ onSuccess, onCancel }: UserCreateFormProps) {
             <option value="admin">Admin</option>
             <option value="staff">Staff (Check-in only)</option>
             <option value="viewer">Viewer (Read-only)</option>
+            <option value="participant">Participant</option>
           </select>
         </div>
 

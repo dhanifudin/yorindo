@@ -196,6 +196,7 @@ export class InMemoryContactRepository implements IContactRepository {
     if (filters?.flagCategory) data = data.filter(c => c.flagCategory === filters.flagCategory)
     if (filters?.consentStatus) data = data.filter(c => c.consentStatus === filters.consentStatus)
     if (filters?.missingEmail) data = data.filter(c => c.email === null)
+    if (filters?.missingPhone) data = data.filter(c => !c.phone)
     if (filters?.search) {
       const q = filters.search.toLowerCase()
       data = data.filter(c =>
@@ -209,7 +210,8 @@ export class InMemoryContactRepository implements IContactRepository {
     data = this._sort(data, params)
 
     const total = data.length
-    const start = (params.page - 1) * params.pageSize
+    const safePage = Math.max(1, params.page)
+    const start = (safePage - 1) * params.pageSize
     return { data: data.slice(start, start + params.pageSize), total }
   }
 
@@ -307,12 +309,13 @@ export class InMemoryContactRepository implements IContactRepository {
     }
   }
 
-  async countHealth(): Promise<{ flagged: number; duplicates: number; missingEmail: number }> {
+  async countHealth(): Promise<{ flagged: number; duplicates: number; missingEmail: number; missingPhone: number }> {
     const all = Array.from(this.contacts.values()).filter(c => c.deletedAt === null)
     return {
       flagged: all.filter(c => c.flagCategory !== null).length,
       duplicates: this._activeDuplicatePairs().length,
       missingEmail: all.filter(c => c.email === null).length,
+      missingPhone: all.filter(c => !c.phone).length,
     }
   }
 

@@ -17,7 +17,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>
 
 export function LoginForm() {
-  const { setAccessToken } = useAuthStore()
+  const { setAuth } = useAuthStore()
   const router = useRouter()
   const [apiError, setApiError] = useState<string | null>(null)
 
@@ -40,7 +40,8 @@ export function LoginForm() {
         return
       }
       const data = await res.json()
-      setAccessToken(data.accessToken, data.user)
+      setAuth(data.accessToken, data.user, data.eventKeys ?? {})
+      // TODO(story-7.1): for each [eventId, key] in data.eventKeys, call scanStore.setEventKey(eventId, key)
       router.push('/app')
     } catch {
       setApiError('Gagal terhubung ke server. Coba lagi.')

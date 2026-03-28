@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { contactRepository } from '../container.js'
 import type { CompanySize, Contact, DuplicatePair } from '../types/domain.js'
 import { INDONESIAN_INDUSTRIES } from '../repositories/memory/_seeds.js'
+import { validateOpenApiRequest, validateOpenApiResponse } from '../lib/openapi-contract.js'
 
 const COMPANY_SIZE_TO_DOMAIN: Record<string, CompanySize> = {
   small: '<50',
@@ -121,7 +122,7 @@ function toContactDto(contact: Contact) {
   return {
     id: contact.id,
     name: contact.name,
-    email: contact.email ?? '',
+    email: contact.email,
     phone: contact.phone,
     company: contact.company ?? '',
     industryId: toIndustrySlug(contact.industryId),
@@ -129,6 +130,7 @@ function toContactDto(contact: Contact) {
     city: contact.city ?? '',
     companySize: toApiCompanySize(contact.companySize),
     completenessScore: contact.completenessScore,
+    consentStatus: contact.consentStatus,
     flagCategory: contact.flagCategory,
     createdAt: contact.createdAt,
     updatedAt: contact.updatedAt,
@@ -152,11 +154,14 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get('/api/contacts/health', async (_request, reply) => {
     const health = await contactRepository.countHealth()
 
-    return reply.status(200).send({
+    const responseBody = {
       flagged: health.flagged,
       duplicates: health.duplicates,
       missingEmail: health.missingEmail,
-    })
+      missingPhone: health.missingPhone,
+    }
+    validateOpenApiResponse({ path: '/contacts/health', method: 'get', status: 200, body: responseBody })
+    return reply.status(200).send(responseBody)
   })
 
   fastify.get('/api/contacts', async (request, reply) => {
@@ -172,6 +177,7 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     const query: ContactsQuery = result.data
+    validateOpenApiRequest({ path: '/contacts', method: 'get', query })
     const paginationParams = {
       page: query.page,
       pageSize: query.pageSize,
@@ -200,7 +206,7 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
       filters,
     )
 
-    return reply.status(200).send({
+    const responseBody = {
       data: data.map(toContactDto),
       pagination: {
         page: query.page,
@@ -208,7 +214,9 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
         total,
         totalPages: Math.ceil(total / query.pageSize),
       },
-    })
+    }
+    validateOpenApiResponse({ path: '/contacts', method: 'get', status: 200, body: responseBody })
+    return reply.status(200).send(responseBody)
   })
 
   fastify.get('/api/contacts/industry-suggestions', async (request, reply) => {
@@ -222,14 +230,17 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
         },
       })
     }
+    validateOpenApiRequest({ path: '/contacts/industry-suggestions', method: 'get', query: result.data })
 
     const query = result.data.q
     if (!query || query.length < 2) {
-      return reply.status(200).send({
+      const responseBody = {
         suggestions: [],
         matchedSlug: null,
         fallback: false,
-      })
+      }
+      validateOpenApiResponse({ path: '/contacts/industry-suggestions', method: 'get', status: 200, body: responseBody })
+      return reply.status(200).send(responseBody)
     }
 
     const suggestions = INDONESIAN_INDUSTRIES
@@ -244,11 +255,13 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
 
     const best = suggestions[0]
 
-    return reply.status(200).send({
+    const responseBody = {
       suggestions,
       matchedSlug: best && best.confidence >= 0.6 ? best.slug : null,
       fallback: !best || best.confidence < 0.6,
-    })
+    }
+    validateOpenApiResponse({ path: '/contacts/industry-suggestions', method: 'get', status: 200, body: responseBody })
+    return reply.status(200).send(responseBody)
   })
 
   fastify.get('/api/contacts/duplicates', async (request, reply) => {
@@ -262,6 +275,7 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
         },
       })
     }
+    validateOpenApiRequest({ path: '/contacts/duplicates', method: 'get', query: result.data })
 
     const query = result.data
     const { data, total } = await contactRepository.findDuplicates({
@@ -269,7 +283,7 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
       pageSize: query.pageSize,
     })
 
-    return reply.status(200).send({
+    const responseBody = {
       data: data.map(toDuplicatePairDto),
       pagination: {
         page: query.page,
@@ -277,7 +291,9 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
         total,
         totalPages: Math.ceil(total / query.pageSize),
       },
-    })
+    }
+    validateOpenApiResponse({ path: '/contacts/duplicates', method: 'get', status: 200, body: responseBody })
+    return reply.status(200).send(responseBody)
   })
 
   fastify.post('/api/contacts/:id/merge', async (request, reply) => {
@@ -296,6 +312,7 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
         },
       })
     }
+    validateOpenApiRequest({ path: '/contacts/{id}/merge', method: 'post', params: paramsResult.data, body: bodyResult.data })
 
     const merged = await contactRepository.mergeDuplicate(
       paramsResult.data.id,
@@ -312,6 +329,8 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
       })
     }
 
-    return reply.status(200).send(toContactDto(merged))
+    const responseBody = toContactDto(merged)
+    validateOpenApiResponse({ path: '/contacts/{id}/merge', method: 'post', status: 200, body: responseBody })
+    return reply.status(200).send(responseBody)
   })
 }

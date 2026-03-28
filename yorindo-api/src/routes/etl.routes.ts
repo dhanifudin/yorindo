@@ -6,6 +6,7 @@ import { config } from '../config/index.js'
 import { pipeline } from 'stream/promises'
 import { createWriteStream } from 'fs'
 import { randomUUID } from 'crypto'
+import { validateOpenApiResponse } from '../lib/openapi-contract.js'
 
 export async function etlRoutes(fastify: FastifyInstance): Promise<void> {
 
@@ -66,10 +67,12 @@ export async function etlRoutes(fastify: FastifyInstance): Promise<void> {
         uploadedBy: (request as any).user?.id ?? 'admin-user',
       })
 
-      return reply.code(202).send({
+      const responseBody = {
         jobId,
         status: 'queued'
-      })
+      }
+      validateOpenApiResponse({ path: '/etl/upload', method: 'post', status: 202, body: responseBody })
+      return reply.code(202).send(responseBody)
     }
   })
 
@@ -83,6 +86,7 @@ export async function etlRoutes(fastify: FastifyInstance): Promise<void> {
         // To precisely match "not found" we could throw 404, but for simple adherence we return 404 if it's completely missing
       }
 
+      validateOpenApiResponse({ path: '/etl/jobs/{jobId}', method: 'get', status: 200, body: jobInfo })
       return reply.send(jobInfo)
     }
   })
