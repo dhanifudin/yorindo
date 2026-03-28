@@ -1,29 +1,29 @@
 /**
  * Domain Entity Types
  *
- * These types mirror the PostgreSQL schema (Story 1.2) and MongoDB collections.
+ * These types mirror the PostgreSQL schema (Story 1.2) and document-style survey payloads.
  * Both in-memory repositories (Phase 1) and Postgres repositories (Phase 2) use these shapes.
  */
 
-export type UUID = string
+export type EntityId = string
 export type ISODateString = string
 
 // ─── Lookup Types ─────────────────────────────────────────────────────────────
 
 export interface Industry {
-  id: UUID
+  id: EntityId
   slug: string
   name: string
 }
 
 export interface JobTitle {
-  id: UUID
+  id: EntityId
   slug: string
   name: string
 }
 
 export interface Vendor {
-  id: UUID
+  id: EntityId
   name: string
   contact: string | null
   phone: string | null
@@ -34,17 +34,17 @@ export interface Vendor {
 // ─── Contact ─────────────────────────────────────────────────────────────────
 
 export type ConsentStatus = 'active' | 'suppressed' | 'legacy_unverified'
-export type FlagCategory = 'spam' | 'not-potential' | null
+export type FlagCategory = 'invalid-data' | 'duplicate' | null
 export type CompanySize = '<50' | '50-200' | '200-1000' | '>1000'
 export type ContactSource = 'excel_upload' | 'form' | 'manual'
 
 export interface Contact {
-  id: UUID
+  id: EntityId
   name: string
   phone: string                    // normalized: +62XXXXXXXXXX
   email: string | null
-  industryId: UUID | null
-  jobTitleId: UUID | null
+  industryId: EntityId | null
+  jobTitleId: EntityId | null
   city: string | null
   company: string | null
   companySize: CompanySize | null
@@ -71,7 +71,7 @@ export interface TargetCriteria {
 }
 
 export interface Event {
-  id: UUID
+  id: EntityId
   name: string
   slug: string
   date: ISODateString
@@ -85,8 +85,8 @@ export interface Event {
   notificationChannel: NotificationChannel
   scanFormat: 'qr'
   targetCriteria: TargetCriteria | null
-  surveySchemaId: string | null     // MongoDB ObjectId as string
-  vendorId: UUID | null
+  surveySchemaId: string | null     // document-style survey schema id
+  vendorId: EntityId | null
   status: EventStatus
   deletedAt: ISODateString | null
   createdAt: ISODateString
@@ -102,7 +102,7 @@ export interface EventOverviewMetrics {
 }
 
 export interface UpcomingUncontactedResult {
-  eventId: UUID
+  eventId: EntityId
   eventName: string
   daysTillEvent: number
   uncontactedCount: number
@@ -120,9 +120,9 @@ export type RegistrationStatus =
   | 'cancelled'
 
 export interface Registration {
-  id: UUID
-  contactId: UUID
-  eventId: UUID
+  id: EntityId
+  contactId: EntityId
+  eventId: EntityId
   status: RegistrationStatus
   ticketToken: string | null
   aiScore: number | null           // 0.000 to 1.000
@@ -139,7 +139,7 @@ export interface ConfirmationStats {
 }
 
 export interface BlastHistoryEntry {
-  id: UUID
+  id: EntityId
   channel: 'email' | 'whatsapp'
   sentAt: ISODateString
   recipientCount: number
@@ -151,7 +151,7 @@ export interface BlastHistoryEntry {
 export type UserRole = 'admin' | 'viewer' | 'staff'
 
 export interface User {
-  id: UUID
+  id: EntityId
   email: string
   passwordHash: string
   role: UserRole
@@ -165,17 +165,17 @@ export interface User {
 export type FlaggedRecordStatus = 'pending' | 'resolved' | 'discarded'
 
 export interface FlaggedRecord {
-  id: UUID
+  id: EntityId
   rawData: Record<string, unknown>
   flags: string[]
   status: FlaggedRecordStatus
   uploadId: string | null
-  resolvedBy: UUID | null
+  resolvedBy: EntityId | null
   resolvedAt: ISODateString | null
   createdAt: ISODateString
 }
 
-// ─── Survey (MongoDB shape) ───────────────────────────────────────────────────
+// ─── Survey (document-style shape) ─────────────────────────────────────────────
 
 export interface SurveyField {
   key: string
@@ -186,17 +186,19 @@ export interface SurveyField {
 }
 
 export interface SurveySchema {
-  id: string              // MongoDB ObjectId string
-  eventId: UUID
+  id: string              // opaque survey schema id
+  eventId: EntityId
   fields: SurveyField[]
+  schema?: Record<string, unknown>
+  uiSchema?: Record<string, unknown>
   createdAt: ISODateString
   updatedAt: ISODateString
 }
 
 export interface SurveyResponse {
   id: string
-  eventId: UUID
-  registrationId: UUID
+  eventId: EntityId
+  registrationId: EntityId
   answers: Record<string, unknown>
   submittedAt: ISODateString
 }
@@ -204,8 +206,8 @@ export interface SurveyResponse {
 // ─── Suppression ─────────────────────────────────────────────────────────────
 
 export interface SuppressionRecord {
-  id: UUID
-  contactId: UUID
+  id: EntityId
+  contactId: EntityId
   phone: string
   reason: string
   createdAt: ISODateString
@@ -223,7 +225,7 @@ export type DuplicateMatchReason = 'same_phone' | 'same_email' | 'similar_name'
 export type DuplicateFieldChoice = 'primary' | 'duplicate'
 
 export interface DuplicatePair {
-  id: UUID
+  id: EntityId
   primary: Contact
   duplicate: Contact
   matchScore: number
@@ -233,9 +235,9 @@ export interface DuplicatePair {
 // ─── Raw Upload ──────────────────────────────────────────────────────────────
 
 export interface RawUpload {
-  id: UUID
+  id: EntityId
   filename: string
-  uploadedBy: UUID | null
+  uploadedBy: EntityId | null
   rowCount: number
   upsertedCount: number
   flaggedCount: number
@@ -247,12 +249,12 @@ export interface RawUpload {
 // ─── Audit Log ───────────────────────────────────────────────────────────────
 
 export interface AuditLog {
-  id: UUID
+  id: EntityId
   action: string
-  actorId: UUID | null
+  actorId: EntityId | null
   actorRole: string
-  eventId: UUID | null
-  targetId: UUID | null
+  eventId: EntityId | null
+  targetId: EntityId | null
   targetType: string | null
   metadata: Record<string, unknown> | null
   createdAt: ISODateString

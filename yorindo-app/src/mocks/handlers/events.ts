@@ -256,7 +256,7 @@ export const eventHandlers = [
       event_id: eventId,
       vendor_id: body.vendorId,
       vendor_name: vendor.name,
-      tier: body.tier,
+      tier: body.tier ?? 'standard',
       display_order: body.displayOrder ?? existing.length,
     }
     eventSponsorsStore.set(eventId, [...existing, newSponsor])
@@ -514,7 +514,7 @@ export const eventHandlers = [
 
     const excludedReasons: Record<string, number> = {}
     const eligible = contactsPool.filter((contact) => {
-      if (contact.flagCategory === 'not-potential' || contact.flagCategory === 'spam') {
+      if (contact.flagCategory === 'invalid-data' || contact.flagCategory === 'duplicate') {
         const key = contact.flagCategory
         excludedReasons[key] = (excludedReasons[key] ?? 0) + 1
         return false

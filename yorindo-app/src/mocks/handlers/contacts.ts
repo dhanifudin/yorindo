@@ -17,13 +17,13 @@ const INDUSTRIES = [
 ]
 const COMPANY_SIZES = ['micro', 'small', 'medium', 'large', 'enterprise'] as const
 const JOB_TITLES = ['direktur', 'manajer', 'supervisor', 'staff', 'koordinator']
-const FLAG_CATEGORIES: FlagCategory[] = ['spam', 'not-potential', 'invalid-data', 'duplicate']
+const FLAG_CATEGORIES: FlagCategory[] = ['invalid-data', 'duplicate']
 
 // Seeded pool of 247 contacts — deterministic with faker.seed(42)
 export const contactsPool: Contact[] = Array.from({ length: 247 }, (_, i) => ({
   id: makeMockCuid2(),
   name: faker.person.fullName(),
-  phone: `+62${faker.string.numeric(10)}`,
+  phone: i % 9 === 0 ? '' : `+62${faker.string.numeric(10)}`,
   email: i % 5 === 0 ? '' : faker.internet.email(),
   industryId: faker.helpers.arrayElement(INDUSTRIES),
   jobTitleId: faker.helpers.arrayElement(JOB_TITLES),
@@ -41,7 +41,12 @@ export const contactHandlers = [
 
   http.get('/api/contacts/health', async () => {
     await delay(300)
-    return HttpResponse.json({ flagged: 34, duplicates: 12, missingEmail: 58 })
+    return HttpResponse.json({
+      flagged: contactsPool.filter((contact) => contact.flagCategory !== null).length,
+      duplicates: 12,
+      missingEmail: contactsPool.filter((contact) => !contact.email).length,
+      missingPhone: contactsPool.filter((contact) => !contact.phone).length,
+    })
   }),
 
   http.get('/api/contacts/facets', async () => {
@@ -74,6 +79,7 @@ export const contactHandlers = [
     const companySize = url.searchParams.get('companySize') ?? ''
     const flagFilter = url.searchParams.get('flagFilter') ?? ''
     const missingEmail = url.searchParams.get('missingEmail') === 'true'
+    const missingPhone = url.searchParams.get('missingPhone') === 'true'
     const q = url.searchParams.get('q') ?? ''
 
     let filtered = contactsPool
@@ -83,6 +89,7 @@ export const contactHandlers = [
     if (flagFilter === 'flagged') filtered = filtered.filter((c) => c.flagCategory !== null)
     if (flagFilter === 'unflagged') filtered = filtered.filter((c) => c.flagCategory === null)
     if (missingEmail) filtered = filtered.filter((c) => !c.email)
+    if (missingPhone) filtered = filtered.filter((c) => !c.phone)
     if (q) filtered = filtered.filter((c) =>
       c.name.toLowerCase().includes(q.toLowerCase()) ||
       c.email?.toLowerCase().includes(q.toLowerCase()) ||

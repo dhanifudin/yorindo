@@ -33,7 +33,7 @@ const STATUSES: EventStatus[] = [
   'archived', 'archived',
 ]
 
-// Survey schema IDs for the first 3 events (24-char MongoDB ObjectId strings)
+// Survey schema IDs for the first 3 events (opaque seeded strings)
 export const SURVEY_SCHEMA_IDS = [
   '507f1f77bcf86cd799439011',
   '507f1f77bcf86cd799439012',

@@ -106,17 +106,17 @@ export function ActionToolbar({ total, searchParams, isVisible, selectedIds, onC
                 variant="outline"
                 size="sm"
                 disabled={bulkFlagMutation.isPending}
-                onClick={() => bulkFlagMutation.mutate({ ids: selectedIds, flagCategory: 'spam' })}
+                onClick={() => bulkFlagMutation.mutate({ ids: selectedIds, flagCategory: 'invalid-data' })}
               >
-                Tandai Spam
+                Tandai Data Invalid
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 disabled={bulkFlagMutation.isPending}
-                onClick={() => bulkFlagMutation.mutate({ ids: selectedIds, flagCategory: 'not-potential' })}
+                onClick={() => bulkFlagMutation.mutate({ ids: selectedIds, flagCategory: 'duplicate' })}
               >
-                Tidak Potensial
+                Tandai Duplikat
               </Button>
               <Button
                 variant="outline"

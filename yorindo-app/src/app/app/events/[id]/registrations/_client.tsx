@@ -302,7 +302,7 @@ export default function RegistrationsPage({ params }: RegistrationsPageProps) {
         const reg = row.original
         const showFlag =
           !reg.flagOverride &&
-          (reg.contactFlagCategory === 'spam' || reg.contactFlagCategory === 'not-potential')
+          (reg.contactFlagCategory === 'invalid-data' || reg.contactFlagCategory === 'duplicate')
         return (
           <div className="flex flex-col gap-0.5">
             <button
@@ -359,7 +359,7 @@ export default function RegistrationsPage({ params }: RegistrationsPageProps) {
         if (!filterValue) return true
         return (
           !row.original.flagOverride &&
-          (row.original.contactFlagCategory === 'spam' || row.original.contactFlagCategory === 'not-potential')
+          (row.original.contactFlagCategory === 'invalid-data' || row.original.contactFlagCategory === 'duplicate')
         )
       },
       cell: () => null,

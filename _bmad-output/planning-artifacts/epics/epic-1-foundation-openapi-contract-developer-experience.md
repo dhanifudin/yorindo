@@ -61,7 +61,7 @@ So that any team member can initialize the complete database schema from scratch
 **Then** all 4 migration files execute in order (001→002→003→004) with a success log per file and zero errors
 
 **Given** migration 001 runs,
-**Then** tables `contacts`, `events`, `registrations`, `vendors`, `industries`, `job_titles` exist with UUID PKs (`gen_random_uuid()`), correct column types, and FK constraints as per the authoritative schema in architecture.md
+**Then** tables `contacts`, `events`, `registrations`, `vendors`, `industries`, `job_titles` exist with app-generated CUID2 / opaque string PKs, correct column types, and FK constraints as per the authoritative schema in architecture.md
 
 **Given** migration 002 runs,
 **Then** tables `users` (id, email, password_hash, role, name, timestamps) and `user_events` (id, user_id FK, event_id FK, granted_by FK, granted_at, UNIQUE(user_id, event_id)) exist
