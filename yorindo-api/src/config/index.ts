@@ -18,16 +18,17 @@ export const config = {
   jwtSecret: required('JWT_SECRET'),
   jwtRefreshSecret: required('JWT_REFRESH_SECRET'),
 
+  // Feature flags — disabled by default; enable per environment as features mature
+  enableExperimental: optional('ENABLE_EXPERIMENTAL', 'false') === 'true',  // gates participant SSO login (Phase 2)
+
   // Service adapter selection — defaults drive Phase 1 (in-memory / mock)
   repositoryImpl: optional('REPOSITORY_IMPL', 'memory'),   // 'memory' | 'postgres'
-  emailProvider: optional('EMAIL_PROVIDER', 'mock'),        // 'mock' | 'brevo' | 'mailtrap'
-  whatsappProvider: optional('WHATSAPP_PROVIDER', 'mock'),  // 'mock' | 'everpro'
+  serviceImpl: optional('SERVICE_IMPL', 'mock'),            // 'mock' | 'real'
 
-  // AI provider — single toggle for all AI features (ETL normalization, YoriMind, SmartFilter)
-  aiProvider: optional('AI_PROVIDER', 'disabled'),          // 'disabled' | 'mock' | 'openai' | 'anthropic'
-
-  // Public base URL — used for QR code ticket links in confirmation emails
-  baseUrl: optional('BASE_URL', 'http://localhost:3000'),
+  // AI provider selection — defaults to mock in Phase 1
+  etlAiProvider: optional('ETL_AI_PROVIDER', 'mock'),
+  yorimindAiProvider: optional('YORIMIND_AI_PROVIDER', 'mock'),
+  smartFilterAiProvider: optional('SMART_FILTER_AI_PROVIDER', 'mock'),
 
   // Phase 2 only — optional strings; empty in Phase 1
   databaseUrl: optional('DATABASE_URL'),
