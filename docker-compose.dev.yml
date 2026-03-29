@@ -1,33 +1,50 @@
-# Development override — use with:
-# docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+# Standalone dev environment — no pre-built images required
+# Usage:
+#   docker compose -f docker-compose.dev.yml up
+#
+# App:  http://localhost:5173  (Next.js + MSW mocks)
+# API:  http://localhost:3000  (Fastify, hot-reload via tsx)
 
 services:
   api:
-    build: ./yorindo-api
-    command: npx tsx --watch --experimental-specifier-resolution=node src/main.ts
-    volumes:
-      - ./yorindo-api:/app
-      - /app/node_modules
+    image: node:24-alpine
+    working_dir: /app
+    command: sh -c "npm install && npm run dev"
+    env_file: ./yorindo-api/.env
     environment:
       NODE_ENV: development
-      # tsx watch uses legacyWatch for WSL2 filesystem compatibility
-      TSX_LEGACY_WATCH: "true"
+      PORT: "3000"
+      TSX_LEGACY_WATCH: "true"   # required for WSL2 / Docker Desktop file watching
+    volumes:
+      - ./yorindo-api:/app
+      - api_node_modules:/app/node_modules
     ports:
       - "3000:3000"
 
   app:
-    build: ./yorindo-app
-    volumes:
-      - ./yorindo-app:/app
-      - /app/node_modules
-      - /app/.next
+    image: node:24-alpine
+    working_dir: /app
+    command: sh -c "npm install && npm run dev"
+    env_file: ./yorindo-app/.env
     environment:
       NODE_ENV: development
-
-  postgres:
+      API_URL: "http://api:3000"
+      NEXT_TELEMETRY_DISABLED: "1"
+      WATCHPACK_POLLING: "true"  # required for WSL2 / Docker Desktop file watching
+    volumes:
+      - ./yorindo-app:/app
+      - app_node_modules:/app/node_modules
+      - /app/.next
     ports:
-      - "5432:5432"
+      - "5173:5173"
+    depends_on:
+      - api
 
   redis:
+    image: redis:7-alpine
     ports:
       - "6379:6379"
+
+volumes:
+  api_node_modules:
+  app_node_modules:

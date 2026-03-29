@@ -8,7 +8,6 @@ import { LoginForm } from '@/components/forms/LoginForm'
 import { MockGoogleAuthDialog } from '@/components/auth/MockGoogleAuthDialog'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
-import { EXPERIMENTAL_ENABLED } from '@/lib/featureFlags'
 
 export default function LoginPage() {
   const accessToken = useAuthStore((s) => s.accessToken)
@@ -39,13 +38,11 @@ export default function LoginPage() {
 
   return (
     <>
-      {EXPERIMENTAL_ENABLED && (
-        <MockGoogleAuthDialog
-          open={showSsoDialog}
-          onOpenChange={setShowSsoDialog}
-          onSuccess={handleParticipantLogin}
-        />
-      )}
+      <MockGoogleAuthDialog
+        open={showSsoDialog}
+        onOpenChange={setShowSsoDialog}
+        onSuccess={handleParticipantLogin}
+      />
       <div className="w-full max-w-[420px] bg-card rounded-2xl shadow-sm p-8 md:p-10">
         {/* Admin Portal badge */}
         <div className="mb-6 flex justify-center">
@@ -60,18 +57,16 @@ export default function LoginPage() {
           <p className="text-sm text-muted-foreground">Masuk ke akun admin Anda</p>
         </div>
         <LoginForm />
-        {EXPERIMENTAL_ENABLED && (
-          <div className="mt-4 text-center">
-            <Button
-              variant="link"
-              size="sm"
-              className="text-muted-foreground hover:text-primary"
-              onClick={() => setShowSsoDialog(true)}
-            >
-              Masuk sebagai Peserta (Google)
-            </Button>
-          </div>
-        )}
+        <div className="mt-4 text-center">
+          <Button
+            variant="link"
+            size="sm"
+            className="text-muted-foreground hover:text-primary"
+            onClick={() => setShowSsoDialog(true)}
+          >
+            Masuk sebagai Peserta (Google)
+          </Button>
+        </div>
 
         {/* Footer note */}
         <div className="mt-6 flex items-center justify-center gap-1.5 text-xs text-muted-foreground/60">
