@@ -23,6 +23,17 @@ const nextConfig = {
   turbopack: {
     root: workspaceRoot,
   }, // keep Turbopack scoped to yorindo-app so it does not infer the repo root from sibling lockfiles
+  // Proxy /api/* to Fastify — used in local dev and standalone deployments.
+  // In production the nginx reverse proxy handles routing before Next.js sees the request.
+  async rewrites() {
+    const apiUrl = process.env.API_URL ?? 'http://localhost:3000'
+    return [
+      {
+        source: '/api/:path*',
+        destination: `${apiUrl}/api/:path*`,
+      },
+    ]
+  },
 }
 
 const baseConfig = isExport ? nextConfig : withSerwist(nextConfig)

@@ -31,7 +31,7 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). You will be redirected to `/login`.
+Open [http://localhost:5173](http://localhost:5173). You will be redirected to `/login`.
 
 ### Test Credentials
 
@@ -64,19 +64,17 @@ cp yorindo-api/.env.example yorindo-api/.env
 # Edit yorindo-api/.env — change JWT_SECRET and JWT_REFRESH_SECRET
 
 # 3. Start all services with hot reload
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+docker compose -f docker-compose.dev.yml up
 ```
 
 Services started:
 
 | Service | URL |
 |---|---|
-| Next.js app | http://localhost:3000 |
-| Fastify API | http://localhost:3001 (via docker-compose.dev.yml port override) |
-| Postgres | localhost:5432 |
-| Redis | localhost:6379 |
+| Next.js app | http://localhost:5173 |
+| Fastify API | http://localhost:3000 |
 
-> **Tip:** The `docker-compose.dev.yml` override mounts source directories for hot reload on both FE and BE. Node modules and `.next` cache are preserved in anonymous volumes — the host `node_modules` is never used inside the container.
+> **Tip:** `docker-compose.dev.yml` mounts source directories for hot reload on both FE and BE. Node modules and `.next` cache are preserved in named volumes — the host `node_modules` is never used inside the container.
 
 ### Switching to a Real Database (Phase 2)
 

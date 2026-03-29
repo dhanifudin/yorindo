@@ -41,7 +41,6 @@ services:
       - "3000"
     env_file: .env
     environment:
-      NEXT_PUBLIC_ENABLE_EXPERIMENTAL: ""
       SENTRY_DSN: ${APP_SENTRY_DSN:-}
     restart: unless-stopped
 
