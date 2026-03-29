@@ -1,20 +1,16 @@
-import type { FastifyInstance, FastifyRequest } from 'fastify'
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { queueService } from '../container.js'
 import * as path from 'path'
-import * as fs from 'fs/promises'
-import { config } from '../config/index.js'
-import { pipeline } from 'stream/promises'
-import { createWriteStream } from 'fs'
 import { randomUUID } from 'crypto'
 import { validateOpenApiResponse } from '../lib/openapi-contract.js'
+import { requireAuth, requireAdmin, type JwtPayload } from '../middleware/auth.js'
+import { saveFile } from '../lib/storage.js'
 
 export async function etlRoutes(fastify: FastifyInstance): Promise<void> {
 
   fastify.post('/api/etl/upload', {
-    // Add schema or preHandler if we had auth ready, but let's assume middleware/auth is checked or we just add the logic
-    // preHandler: [fastify.authenticate] depending on how it's set up in other routes.
-    // For MVP phase 2, we just ensure it parses multipart correctly.
-    handler: async (request: FastifyRequest, reply) => {
+    preHandler: [requireAuth, requireAdmin],
+    handler: async (request: FastifyRequest, reply: FastifyReply) => {
       // Get the uploaded file
       const data = await request.file()
 
@@ -51,20 +47,24 @@ export async function etlRoutes(fastify: FastifyInstance): Promise<void> {
       }
 
       // Save the file to uploads
-      const uploadsDir = path.join(process.cwd(), 'uploads')
-      await fs.mkdir(uploadsDir, { recursive: true })
-
+      const buffer = await data.toBuffer()
       const uniqueFilename = `${randomUUID()}${extension}`
-      const targetPath = path.join(uploadsDir, uniqueFilename)
+      const targetPath = await saveFile(buffer, uniqueFilename)
 
-      await pipeline(data.file, createWriteStream(targetPath))
+      const eventIdRaw = (data.fields.eventId as any)?.value
+      const uploadSourceRaw = (data.fields.uploadSource as any)?.value
+
+      const eventId = typeof eventIdRaw === 'string' && eventIdRaw.trim() !== '' ? eventIdRaw : null
+      const uploadSource = typeof uploadSourceRaw === 'string' && uploadSourceRaw.trim() !== '' ? uploadSourceRaw : 'etl_import'
 
       // Enqueue job to 'etl'
+      const payload = request.user as JwtPayload
       const jobId = await queueService.enqueue('etl', {
         filePath: targetPath,
         originalFilename: data.filename,
-        // user id would typically come from request.user, stubbing for now
-        uploadedBy: (request as any).user?.id ?? 'admin-user',
+        uploadedBy: payload.sub,
+        eventId,
+        uploadSource
       })
 
       const responseBody = {
@@ -77,17 +77,19 @@ export async function etlRoutes(fastify: FastifyInstance): Promise<void> {
   })
 
   fastify.get('/api/etl/jobs/:jobId', {
-    handler: async (request: FastifyRequest<{ Params: { jobId: string } }>, reply) => {
+    preHandler: [requireAuth, requireAdmin],
+    handler: async (request: FastifyRequest<{ Params: { jobId: string } }>, reply: FastifyReply) => {
       const { jobId } = request.params
       const jobInfo = await queueService.getStatus(jobId)
 
-      if (jobInfo.status === 'failed' && !jobInfo.progress) {
-        // MockQueueService returns failed if it doesn't exist, our RealQueueService returns failed if not found
-        // To precisely match "not found" we could throw 404, but for simple adherence we return 404 if it's completely missing
+      if (!jobInfo || (jobInfo.status === 'failed' && !jobInfo.progress)) {
+        return reply.status(404).send({
+          error: { code: 'NOT_FOUND', message: 'Job not found', details: [] }
+        })
       }
 
       validateOpenApiResponse({ path: '/etl/jobs/{jobId}', method: 'get', status: 200, body: jobInfo })
-      return reply.send(jobInfo)
+      return reply.status(200).send(jobInfo)
     }
   })
 }

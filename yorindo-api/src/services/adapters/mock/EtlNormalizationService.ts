@@ -28,8 +28,8 @@ export class MockEtlNormalizationService implements IEtlNormalizationService {
       const hash = djb2(key + index)
       const isLowConfidence = hash % 5 === 0  // 20% low confidence
 
-      const phone = normalizePhone(String(row.phone ?? row.telepon ?? row.no_hp ?? ''))
-      const name = String(row.name ?? row.nama ?? '').trim()
+      const phone = normalizePhone(String(row.phone ?? row['No Handphone'] ?? row.telepon ?? row.no_hp ?? ''))
+      const name = String(row.name ?? row.nama ?? row.Nama ?? '').trim()
       const flags: string[] = []
 
       if (!name) flags.push('missing_name')
@@ -39,9 +39,9 @@ export class MockEtlNormalizationService implements IEtlNormalizationService {
       return {
         name: name || `Unknown ${index + 1}`,
         phone: phone || `+628000${String(index).padStart(6, '0')}`,
-        email: row.email ? String(row.email) : null,
-        city: row.city ? String(row.city) : null,
-        company: row.company ?? row.perusahaan ? String(row.company ?? row.perusahaan) : null,
+        email: (row.email ?? row.Email) ? String(row.email ?? row.Email) : null,
+        city: (row.city ?? row['Asal Kota']) ? String(row.city ?? row['Asal Kota']) : null,
+        company: (row.company ?? row.perusahaan ?? row['Nama Instansi']) ? String(row.company ?? row.perusahaan ?? row['Nama Instansi']) : null,
         companySize: null,
         industrySlug: null,
         jobTitleSlug: null,
