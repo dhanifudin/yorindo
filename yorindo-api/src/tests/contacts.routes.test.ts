@@ -31,6 +31,38 @@ describe('GET /api/contacts/health', () => {
   })
 })
 
+describe('GET /api/contacts/facets', () => {
+  it('returns filter facets with slug, label, and count', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/contacts/facets',
+    })
+
+    expect(res.statusCode).toBe(200)
+    const body = res.json()
+    expect(body.industry).toBeInstanceOf(Array)
+    expect(body.city).toBeInstanceOf(Array)
+    expect(body.companySize).toBeInstanceOf(Array)
+    expect(body.industry[0]).toMatchObject({
+      slug: expect.any(String),
+      label: expect.any(String),
+      count: expect.any(Number),
+    })
+    expect(body.city[0]).toMatchObject({
+      slug: expect.any(String),
+      label: expect.any(String),
+      count: expect.any(Number),
+    })
+    expect(body.companySize[0]).toMatchObject({
+      slug: expect.any(String),
+      label: expect.any(String),
+      count: expect.any(Number),
+    })
+    expect(body.city.reduce((sum: number, item: { count: number }) => sum + item.count, 0)).toBe(120)
+    expect(body.companySize.reduce((sum: number, item: { count: number }) => sum + item.count, 0)).toBe(120)
+  })
+})
+
 describe('GET /api/contacts', () => {
   it('returns paginated contacts with default page size', async () => {
     const res = await app.inject({

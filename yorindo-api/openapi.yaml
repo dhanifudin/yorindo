@@ -2095,6 +2095,27 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
 
+  /contacts/facets:
+    get:
+      summary: Get contact filter facets with counts
+      operationId: getContactFacets
+      tags: [Contacts]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Contact facets for filter dropdowns
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactFacets'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
   /contacts/industry-suggestions:
     get:
       summary: Suggest canonical industry slugs from free-form text
