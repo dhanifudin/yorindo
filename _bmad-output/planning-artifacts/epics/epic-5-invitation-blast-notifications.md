@@ -7,7 +7,7 @@ Admin can proactively invite targeted participants to events via WhatsApp (Everp
 
 ## Story 5.1: Notification Message Template Management
 
-As a super admin,
+As an admin,
 I want to create and edit notification message templates with named variable substitution,
 So that all outbound communications use consistent, personalized messaging.
 
@@ -37,23 +37,33 @@ So that all outbound communications use consistent, personalized messaging.
 
 ## Story 5.2: Segmented Blast Configuration & Audience Targeting
 
+> **Updated 2026-03-28** — Meeting: blast targeting now supports two modes — manual filter (same criteria as Story 4.5) and AI recommendation (system suggests the best audience segment). Admin can switch modes and must confirm before sending.
+
 As an admin,
-I want to configure a segmented invitation blast filtered by industry, city, job title, and attendance history,
-So that I send invitations only to participants who match the event's target profile.
+I want to configure a segmented invitation blast using either manual filters or AI-recommended audience targeting,
+So that I send invitations to the most relevant participants with or without AI assistance.
 
 **Acceptance Criteria:**
 
+**Given** I open the blast configuration for an event,
+**When** the blast config form renders,
+**Then** two targeting mode tabs are shown: "Manual" and "Rekomendasi AI"; manual mode pre-populates from the event's saved target criteria (Story 4.5); AI mode calls `POST /api/events/:id/audience-recommend` and shows the suggested segment with rationale
+
+**Given** I am in AI recommendation mode,
+**When** the recommendation loads,
+**Then** the suggested criteria and expected recipient count are shown with a brief explanation (e.g., "Disarankan berdasarkan industri paling aktif dan riwayat kehadiran rendah"); I can adjust the suggestion before sending
+
 **Given** I am authenticated as `admin`,
-**When** `POST /api/events/:id/blast` is called with `{ filters: { industry, city, jobTitle, neverAttended }, templateId, channel }`,
+**When** `POST /api/events/:id/blast` is called with `{ filters: { industry, city, jobTitle, mostActive, lowAttendance, neverAttended, lastAttendedBefore }, templateId, channel, targetingMode: 'manual'|'ai' }`,
 **Then** the blast job is enqueued in BullMQ with `202 Accepted` and `{ jobId, status: 'queued' }`
 
-**Given** the blast configuration form in the FE,
-**When** I adjust filters,
+**Given** the blast configuration form in either mode,
+**When** I adjust filters or accept an AI suggestion,
 **Then** the audience count updates live (same preview mechanism as Story 4.5)
 
 **Given** the blast is configured,
 **When** `requireAuth` and `requireRole('admin')` middleware run,
-**Then** staff and viewer roles receive HTTP 403 — blast is admin-only
+**Then** staff receives HTTP 403 and vendor magic-link users never see this surface — blast is admin-only
 
 **Given** a contact with `consent_status = 'suppressed'` matches the filters,
 **When** the blast worker processes the job,

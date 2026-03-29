@@ -33,7 +33,7 @@ This is the fourth story in the Event Pipeline Hub series. It implements the def
 
 **AC1:** Given I am on the Registrasi tab (`/app/events/:id/registrations`),
 When the tab loads,
-Then it shows a TanStack Table with columns: Name, Company, Phone, AI Score (`<AiScoreBadge>`), Status Badge, Flag Badge (only if flagCategory is `spam` or `not-potential`)
+Then it shows a TanStack Table with columns: Name, Company, Phone, AI Score (`<AiScoreBadge>`), Status Badge, Flag Badge (only if flagCategory is `invalid-data` or `duplicate`)
 
 **AC2:** Given the table header,
 When I click "Terima Semua Rekomendasi AI" (`<BulkApproveBar>` first click),
@@ -47,9 +47,9 @@ Then `PATCH /api/registrations/:id/status` with `{ status: 'approved' }` is call
 When I click "Tolak" (or in Contact Sheet footer),
 Then `PATCH /api/registrations/:id/status` with `{ status: 'rejected' }` is called optimistically; Sonner shows "Ditolak — [Batalkan]" action toast for 2 seconds; if Batalkan is clicked, status reverts via another PATCH
 
-**AC5:** Given a registration where `contact.flagCategory` is `spam` or `not-potential`,
+**AC5:** Given a registration where `contact.flagCategory` is `invalid-data` or `duplicate`,
 When the row renders,
-Then a flag Badge with dark background (`bg-red-700` for spam, `bg-orange-600` for not-potential) shows automatically — distinct from the AI score badge
+Then a flag Badge with strong visual contrast shows automatically — distinct from the AI score badge
 
 **AC6:** Given an admin clears the inherited flag for a registration,
 When `PATCH /api/registrations/:id/clear-flag` is called,
@@ -79,7 +79,7 @@ Then it returns deterministic seeded registrations including: AI scores (djb2 ha
 ```
 src/
   app/
-    (admin)/
+    app/
       events/
         [id]/
           registrations/
@@ -160,7 +160,7 @@ function djb2(str: string): number {
 const contactsPool = [
   { name: 'Budi Santoso', company: 'PT Maju Jaya', flagCategory: null },
   { name: 'Siti Rahma', company: 'CV Teknologi Nusantara', flagCategory: null },
-  { name: 'Agus Hartono', company: 'PT Spam Corp', flagCategory: 'spam' },
+  { name: 'Agus Hartono', company: 'PT Data Bermasalah', flagCategory: 'invalid-data' },
   // ... more contacts
 ]
 
@@ -186,7 +186,7 @@ http.get('/api/registrations', ({ request }) => {
 
 - Table renders 62 seeded rows from MSW
 - AiScoreBadge: score 0.92 → green ✓; 0.61 → amber ~; 0.34 → red ✗
-- Flag badge shows for spam contact row; not shown for clean contact
+- Flag badge shows for invalid-data/duplicate contact rows; not shown for clean contact
 - BulkApproveBar: first click → amber outline + countdown; second click → mutation fired
 - BulkApproveBar: 3s timeout without second click → button resets to idle
 - Individual reject: optimistic update + undo toast with 2s duration
@@ -225,7 +225,7 @@ http.get('/api/registrations', ({ request }) => {
   - [ ] Subtask 4.5: On close: `scrollToIndex(lastReviewedIndex, { align: 'center' })`
 
 - [ ] Task 5: Build `<RegistrationFilters>` component
-  - [ ] Subtask 5.1: Status filter (pending/approved/rejected/waitlisted)
+  - [ ] Subtask 5.1: Status filter (pending/approved/rejected) — no waitlist tab
   - [ ] Subtask 5.2: AI score range filter
   - [ ] Subtask 5.3: Flag toggle (show only flagged)
   - [ ] Subtask 5.4: Active filter count badge + "Reset filter" ghost button
@@ -291,3 +291,4 @@ http.get('/api/registrations', ({ request }) => {
 | Date | Change | Author |
 |------|--------|--------|
 | 2026-03-22 | Story created from epic-4 + ux-event-pipeline.md | bmad-context-engine |
+| 2026-03-28 | Subtask 5.1: removed `waitlisted` from status filter options | bmad-correct-course |

@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify'
 import { contactRepository, suppressionRepository } from '../container.js'
 import { ErasureService, ErasureError } from '../services/erasure.service.js'
 import type { AuditEntry } from '../services/blast.service.js'
+import { validateOpenApiRequest, validateOpenApiResponse } from '../lib/openapi-contract.js'
 
 const consoleAuditLogger = {
   async log(entry: AuditEntry): Promise<void> {
@@ -31,6 +32,11 @@ export async function participantRoutes(fastify: FastifyInstance): Promise<void>
     },
   }, async (request, reply) => {
     const { phone, email } = request.body
+    validateOpenApiRequest({
+      path: '/participants/erasure-request',
+      method: 'post',
+      body: { phone, email },
+    })
 
     const erasureService = new ErasureService(
       contactRepository,
@@ -40,6 +46,12 @@ export async function participantRoutes(fastify: FastifyInstance): Promise<void>
 
     try {
       const result = await erasureService.anonymizeContact({ phone, email })
+      validateOpenApiResponse({
+        path: '/participants/erasure-request',
+        method: 'post',
+        status: 202,
+        body: result,
+      })
       return reply.status(202).send(result)
     } catch (err) {
       if (err instanceof ErasureError) {

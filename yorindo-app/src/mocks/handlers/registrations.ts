@@ -3,6 +3,7 @@ import { faker } from '@faker-js/faker'
 import type { Registration, RegistrationWithContact, PaginatedResponse } from '@/types/api'
 import { contactsPool } from './contacts'
 import { djb2 } from '@/lib/djb2'
+import { makeMockCuid2 } from './id'
 
 type StoredRegistration = Registration & { flagOverride: boolean }
 
@@ -96,7 +97,7 @@ function enrichRegistration(reg: StoredRegistration, eventId: string): Registrat
 // Participant dashboard mock registrations (Story 11.6)
 // Mutable — cancel mutations update status in-place so re-fetches reflect the change
 type ParticipantReg = { id: string; eventId: string; eventName: string; eventDate: string; venue: string; status: 'approved' | 'pending' | 'waitlisted' | 'cancelled'; ticketToken: string }
-let participantRegistrations: ParticipantReg[] = [
+const participantRegistrations: ParticipantReg[] = [
   { id: 'preg-001', eventId: 'event-001', eventName: 'Seminar ERP Jakarta', eventDate: '2026-04-15T09:00:00+07:00', venue: 'Jakarta Convention Center', status: 'approved', ticketToken: 'TICKET-PARTICIPANT-A1B2C3' },
   { id: 'preg-002', eventId: 'event-007', eventName: 'Workshop Digital Marketing Bandung', eventDate: '2026-05-10T08:00:00+07:00', venue: 'Aula Gedung Sate, Bandung', status: 'pending', ticketToken: '' },
   { id: 'preg-003', eventId: 'event-008', eventName: 'Konferensi Startup Indonesia 2026', eventDate: '2026-06-20T08:00:00+07:00', venue: 'Bali Nusa Dua Convention Center', status: 'waitlisted', ticketToken: '' },
@@ -151,7 +152,7 @@ export const registrationHandlers = [
   http.post('/api/registrations', async () => {
     await delay(400)
     const newReg: StoredRegistration = {
-      id: faker.string.uuid(),
+      id: makeMockCuid2(),
       contactId: contactsPool[registrationsStore.length % contactsPool.length].id,
       eventId: 'event-001',
       status: 'pending',
@@ -192,7 +193,7 @@ export const registrationHandlers = [
       eventName: 'Seminar ERP Jakarta',
       eventDate: '2026-04-15T02:00:00.000Z',
       eventLocation: 'Jakarta Convention Center',
-      registrationId: faker.string.uuid(),
+      registrationId: makeMockCuid2(),
     })
   }),
 
@@ -208,12 +209,12 @@ export const registrationHandlers = [
     return HttpResponse.json({
       message: 'Registrasi berhasil dikonfirmasi',
       registration: {
-        id: faker.string.uuid(),
+        id: makeMockCuid2(),
         status: 'pending',
         eventName: 'Seminar ERP Jakarta',
         eventSlug: 'seminar-erp-jakarta',
         participantName: 'Budi Santoso',
-        contactId: 'contact-001',
+        contactId: makeMockCuid2(),
         participantEmail: 'budi.santoso@email.com',
       },
     })

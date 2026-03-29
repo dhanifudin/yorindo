@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { useEvents } from '@/hooks/useEvents'
@@ -151,8 +151,13 @@ export default function EventsPage() {
     })
   }, [tabEvents, activeStatus, searchQuery, tabStatuses, activeTab, startDate, endDate])
 
-  // Reset to page 0 when filters change
-  useEffect(() => { setEventsPage(0) }, [activeStatus, searchQuery, startDate, endDate, activeTab])
+  // Reset to page 0 when filters change (update state while rendering pattern)
+  const filterKey = [activeStatus, searchQuery, startDate, endDate, activeTab].join('|')
+  const [prevFilterKey, setPrevFilterKey] = useState(filterKey)
+  if (filterKey !== prevFilterKey) {
+    setPrevFilterKey(filterKey)
+    setEventsPage(0)
+  }
 
   const pagedEvents = filteredEvents.slice(eventsPage * PAGE_SIZE, (eventsPage + 1) * PAGE_SIZE)
 
@@ -523,7 +528,7 @@ export default function EventsPage() {
               )}
             </Button>
             {searchQuery && (
-              <span className="text-xs text-muted-foreground">"{searchQuery}"</span>
+              <span className="text-xs text-muted-foreground">&quot;{searchQuery}&quot;</span>
             )}
           </div>
 
@@ -647,8 +652,8 @@ export default function EventsPage() {
               </div>
 
               {/* Desktop table */}
-              <Card className="hidden md:block">
-                <Table>
+              <Card className="hidden w-full overflow-hidden md:block">
+                <Table className="lg:min-w-[900px] xl:min-w-full">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Nama Event</TableHead>

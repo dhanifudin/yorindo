@@ -3,7 +3,7 @@
 Admin can create, configure, clone, publish, and manage events through their full lifecycle — with capacity management, survey template builder, segmentation criteria preview, state machine controls, soft delete with recovery, and event cancellation.
 
 > **Phase 1 (FE):** Event creation form (RHF + Zod, all fields); event list with status badges + lifecycle action buttons; clone modal; survey builder (JSON Schema editor — adds/reorders fields with rjsf widget type selection: text, textarea, radio, select, checkboxes, range, date, time); audience count preview (debounced preview call); soft delete + restore UI with recovery countdown; event cancellation confirmation dialog — all wired to MSW events handler
-> **Phase 2 (BE):** `POST/PATCH/GET/DELETE /api/events`, state machine service (Draft→Published→Live→Completed→Archived), `POST /api/events/:id/clone`, survey schema JSONB storage, capacity preview endpoint, soft delete cron (purge after 30d), state-override endpoint (super admin), all event repositories, audit trail writes
+> **Phase 2 (BE):** `POST/PATCH/GET/DELETE /api/events`, state machine service (Draft→Published→Live→Completed→Archived), `POST /api/events/:id/clone`, survey schema JSONB storage, capacity preview endpoint, soft delete cron (purge after 30d), state-override endpoint (admin, safeguarded), `GET/POST/PATCH/DELETE /api/vendors`, `GET/POST /api/events/:id/sponsors`, `PATCH/DELETE /api/events/:id/sponsors/:vendorId`, all event repositories, audit trail writes
 
 ## Story 4.1: Event Creation with Full Configuration
 
@@ -48,9 +48,27 @@ So that the event is fully set up before I publish it for registrations.
 **Given** the event is created,
 **Then** an `event.created` audit entry is written with `actor_id`, `event_id`, and `created_at`
 
-**Given** the event creation form in the FE (`/admin/events` → new event),
+**Given** the event creation form in the FE (`/app/events` → new event),
 **When** I select approval mode `hybrid` and set a score threshold,
 **Then** both fields are included in the `POST /api/events` body and saved correctly
+
+> **Updated 2026-03-28** — Meeting: paid/free event support added
+
+**Given** the event creation form,
+**When** I toggle "Event Berbayar",
+**Then** a price field and payment method selector appear and are required before publishing; if the toggle is off the event is free and no payment fields are shown
+
+**Given** an event with `is_paid: true` and a configured price,
+**When** `POST /api/events` is called,
+**Then** `events.is_paid`, `events.price`, and `events.payment_method` are saved; the public registration page shows the ticket price prominently before the registration CTA
+
+**Given** an event with `is_paid: false`,
+**When** the public registration page renders,
+**Then** "Gratis" is displayed as the ticket type — no payment step in the registration flow
+
+**Given** the event creation or edit form,
+**When** I click "Preview Formulir",
+**Then** the unified survey preview modal opens (see Story 4.4 Builder & Event Form — Preview) showing both the registration form and post-event survey in separate tabs
 
 ---
 
@@ -74,7 +92,7 @@ So that events move predictably through states and invalid transitions are preve
 **When** `PATCH /api/events/:id` is called with `{ status: 'cancelled' }`,
 **Then** the event is cancelled, all `approved` registrations are updated to `cancelled`, and a blast notification job is enqueued to notify participants; `event.cancelled` audit entry is written
 
-**Given** a super admin uses the state override endpoint (`POST /api/events/:id/state-override`),
+**Given** an admin uses the state override endpoint (`POST /api/events/:id/state-override`),
 **When** a safeguarded override is requested with justification,
 **Then** the state transitions even if it would normally be blocked; an `event.state-override` audit entry is written with the justification
 
@@ -113,71 +131,163 @@ So that I can quickly set up a new event that is similar to a previous one witho
 
 ---
 
-## Story 4.4: Survey Template Builder
+## Story 4.4: Survey Template Builder & Response Dashboard
+
+> **Updated 2026-03-28** — Meeting: (1) Events now have two distinct, independently-structured surveys — "Survei Registrasi" (shown on the sign-up form, always enabled) and "Survei Post-Event" (distributed during/after the event, toggle per event). Previously a single survey schema was stored. (2) Full Google Forms field compatibility required (except file upload), adding section headers, multiple-choice grid, and checkbox grid. (3) A survey response dashboard per event added so admin and viewer can capture and analyse answers from both surveys.
 
 As an admin,
-I want to build a custom survey template for each event using a JSON Schema field editor,
-So that I can capture event-specific participant intent signals beyond the standard registration fields.
+I want to build two independently-structured survey templates per event (registration and post-event) using a Google Forms-equivalent field editor, and view all participant responses in a dedicated survey dashboard,
+So that I capture intent signals at registration and post-event feedback, and can act on the aggregated answers.
 
 **Acceptance Criteria:**
 
-**Given** I am on the survey builder page (`/admin/events/:id/builder`),
-**When** I add a custom field with a label, widget type, and optional choices,
-**Then** the field is appended to the `properties` map in the JSON Schema and the `ui:order` array in the UISchema; supported widget types mirror Google Forms (excluding file upload):
+### Builder — Dual Survey Structure
+
+**Given** I am on the survey builder page (`/app/events/:id/builder`),
+**When** the page loads,
+**Then** two tabs are shown: "Survei Registrasi" (always active) and "Survei Post-Event" (with an enable/disable toggle); each tab maintains its own independent JSON Schema + UISchema — changing fields in one does not affect the other
+
+**Given** the "Survei Post-Event" tab,
+**When** I toggle "Aktifkan Survei Post-Event",
+**Then** `events.post_survey_enabled` is saved as `true`; the post-event survey becomes distributable during or after the event; toggling off preserves the schema but stops distribution
+
+**Given** I save either survey,
+**When** `PUT /api/events/:id/survey/registration` or `PUT /api/events/:id/survey/post-event` is called,
+**Then** the payload `{ schema: JSONSchema7, uiSchema: UISchema }` is stored in the corresponding JSONB column (`registration_survey_schema`, `post_survey_schema`); `GET /api/events/:id/survey/:type` returns the same structure
+
+### Builder — Field Types (Google Forms parity, no file upload)
+
+**Given** I add a field to either survey,
+**Then** all of the following widget types are supported:
 - `text` — short answer (single-line free text)
 - `textarea` — paragraph (multi-line free text)
 - `radio` — multiple choice (select one via radio buttons)
 - `select` — dropdown (select one via dropdown)
 - `checkboxes` — checkboxes (multi-select)
 - `range` — linear scale (numeric min/max configurable, e.g. 1–5 or 1–10)
+- `grid_radio` — multiple-choice grid (rows × columns, select one per row)
+- `grid_checkbox` — checkbox grid (rows × columns, multi-select per row)
 - `date` — date picker
 - `time` — time picker
-
-**Given** I save the survey schema,
-**When** `PUT /api/events/:id/survey` is called,
-**Then** the payload `{ schema: JSONSchema7, uiSchema: UISchema }` is stored in `events.survey_schema JSONB` column in PostgreSQL; `GET /api/events/:id/survey` returns the same structure
-
-**Given** I reorder custom fields in the builder,
-**When** I save,
-**Then** the `uiSchema["ui:order"]` array reflects the displayed order; the rendered participant form respects this order
+- `section` — section header/divider (label + optional description, no response captured)
 
 **Given** a field of type `radio`, `select`, or `checkboxes`,
 **When** I add it,
-**Then** I can define the list of options (label + value pairs); the schema stores them as `enum` (radio/select) or `items.enum` (checkboxes) respectively
+**Then** I can define the list of options (label + value pairs); stored as `enum` (radio/select) or `items.enum` (checkboxes)
 
 **Given** a field of type `range`,
 **When** I add it,
-**Then** I can configure `minimum` and `maximum` (default 1–5); the schema stores them as `{ type: 'integer', minimum, maximum }`
+**Then** I can configure `minimum` and `maximum` (default 1–5); stored as `{ type: 'integer', minimum, maximum }`
 
-**Given** the event's survey schema,
-**When** a participant visits `/register/{slug}`,
-**Then** rjsf renders the custom fields after the fixed registration fields; only schema-defined fields appear — no hardcoded custom fields outside the schema
+**Given** a field of type `grid_radio` or `grid_checkbox`,
+**When** I add it,
+**Then** I can define row labels and column labels; stored as a nested schema object with `rows` and `columns` arrays
 
-**Given** I am on the survey builder page and have added or modified fields,
+**Given** I reorder fields in the builder,
+**When** I save,
+**Then** `uiSchema["ui:order"]` reflects the display order and the rendered form respects it
+
+### Builder & Event Form — Preview
+
+> **Updated 2026-03-28** — Preview is now a unified tabbed modal accessible from both the survey builder page and the event creation/edit form. It shows both surveys together so admin can experience the full participant journey in one place.
+
+**Given** I click "Preview Formulir" from either the survey builder page (`/app/events/:id/builder`) or the event creation/edit form,
+**When** the preview modal opens,
+**Then** it shows two tabs: "Formulir Registrasi" and "Survei Post-Event"; the modal is read-only and reflects the latest saved schema for each survey
+
+**Given** the "Formulir Registrasi" tab in the preview modal,
+**When** it renders,
+**Then** it shows the complete registration form via rjsf — fixed fields first (phone, name, email, company_email, company_name, company_location, position, industry_type), followed by the current registration survey fields in their defined order
+
+**Given** the "Survei Post-Event" tab in the preview modal,
+**When** it renders,
+**Then** it shows the post-event survey fields via rjsf in their defined order; if post-event survey is disabled (`post_survey_enabled: false`), the tab is visible but shows an empty state: "Survei Post-Event belum diaktifkan"
+
+**Given** I am on the survey builder and have unsaved changes,
 **When** I click "Preview Formulir",
-**Then** a modal or side panel opens rendering the complete registration form via rjsf — fixed fields first (phone, name, email, company_email, company_name, company_location, position, industry_type), followed by the current custom survey fields in their defined order; the preview is read-only and updates live as fields are added/reordered
+**Then** the preview reflects the current unsaved state (live preview) — no save required to preview
+
+### Registration Form Integration
+
+**Given** the event's registration survey schema,
+**When** a participant visits `/register/{slug}`,
+**Then** rjsf renders the registration survey fields after the fixed fields; only schema-defined fields appear — no hardcoded custom fields outside the schema
+
+### Survey Response Dashboard
+
+**Given** I navigate to `/app/events/:id/survey-responses`,
+**When** the page loads,
+**Then** two tabs are shown: "Survei Registrasi" and "Survei Post-Event"; each tab shows the total response count and is accessible to `admin` and `viewer` roles
+
+**Given** I am on either survey response tab,
+**When** the tab loads,
+**Then** `GET /api/events/:id/survey/responses?type=registration|post-event` returns all responses; an aggregate summary section shows per-question breakdowns (bar/pie chart for choice fields, response count + sample text for free-text, average + distribution for range/scale fields)
+
+**Given** the aggregate summary for a `radio`, `select`, or `checkboxes` field,
+**When** rendered,
+**Then** a bar or pie chart shows the count and percentage for each option
+
+**Given** the aggregate summary for a `range` or `grid_radio`/`grid_checkbox` field,
+**When** rendered,
+**Then** the average score and response distribution across the scale/grid are displayed
+
+**Given** the response tab,
+**When** I scroll below the aggregate summary,
+**Then** an individual responses table lists each participant (name, phone, submission timestamp) with a row-expand or side-drawer showing their complete answers question-by-question
+
+**Given** I search or filter in the response table,
+**When** I type a name/phone or apply a status filter,
+**Then** `GET /api/events/:id/survey/responses?type=...&search=...` is called and the table updates without full page reload
+
+**Given** I click "Export Responses",
+**When** `GET /api/events/:id/survey/responses/download?type=...&format=xlsx` is called,
+**Then** an `.xlsx` file downloads with one row per respondent and one column per question
 
 ---
 
 ## Story 4.5: Event Capacity & Target Criteria with Audience Preview
 
+> **Updated 2026-03-28** — Meeting: target criteria now supports multiple criteria stacked together (e.g., most active industry + low past attendance), and admin can either configure criteria manually or request AI-generated recommendations based on historical event data. Previously only a simple industry+city filter was supported.
+
 As an admin,
-I want to set event capacity with a waitlist buffer and configure target segment criteria with a live audience count preview,
-So that I know exactly how many matched participants are in the database before committing to a blast or publish.
+I want to set event capacity, configure multiple target segment criteria (manually or via AI recommendation), and preview the matching audience count,
+So that I know exactly how many qualified participants are in the database before committing to a blast or publish.
 
 **Acceptance Criteria:**
 
-**Given** I configure event capacity with `total: 200` and `buffer: 20`,
+**Given** I configure event capacity with `total: 200`,
 **When** the event is saved,
-**Then** `events.capacity` stores `200` and `events.waitlist_buffer` stores `20`; the registration system accepts up to 200 approved + 20 waitlisted
+**Then** `events.capacity` stores `200`; the registration system accepts up to 200 approved registrations
 
-**Given** I configure target criteria (`industry: 'manufaktur', city: 'Surabaya'`),
-**When** I click "Preview Audience",
-**Then** `POST /api/events/:id/audience-preview` returns the count of contacts in the database matching those filters (FR61), displayed immediately in the UI before saving
+**Given** the target criteria section on the event form,
+**When** I add criteria,
+**Then** I can stack multiple criteria simultaneously — supported criteria types:
+- `industry` — filter by one or more industry categories
+- `city` / `location` — filter by city or region
+- `job_title` — filter by position/jabatan keywords
+- `most_active` — contacts with the highest past event attendance count
+- `low_attendance` — contacts who have attended few or no past events (configurable threshold)
+- `never_attended` — contacts who have never attended any event
+- `last_attended_before` — contacts whose last attendance was before a given date
+
+**Given** multiple criteria are configured,
+**When** `POST /api/events/:id/audience-preview` is called,
+**Then** contacts must match ALL active criteria (AND logic); the response returns the matching count and a breakdown per criterion so admin can see which filter is most restrictive
+
+**Given** I click "Rekomendasi AI",
+**When** `POST /api/events/:id/audience-recommend` is called,
+**Then** `ITargetRecommendationService.recommend(eventSnapshot)` analyses historical attendance patterns for similar events and returns a ranked list of suggested criteria combinations with expected audience sizes; the admin can accept all, accept individual suggestions, or dismiss
+
+**Given** AI recommendations are returned,
+**When** I click "Terapkan Rekomendasi",
+**Then** the suggested criteria are pre-filled in the criteria builder for review and editing before saving — AI does not auto-save without admin confirmation
+
+**Given** I click "Preview Audience" (manual or after applying AI criteria),
+**Then** `POST /api/events/:id/audience-preview` returns the matching count (FR61), displayed immediately in the UI before saving
 
 **Given** the audience preview count is 0,
 **When** displayed in the FE,
-**Then** a warning is shown: "No contacts match these criteria — review filters before publishing"
+**Then** a warning is shown: "Tidak ada kontak yang cocok — tinjau filter sebelum mempublikasikan"
 
 ---
 
@@ -197,7 +307,7 @@ So that accidental deletions can be reversed without permanent data loss.
 **When** `GET /api/events` is called,
 **Then** the deleted event does not appear in the list (filtered by `deleted_at IS NULL`)
 
-**Given** I navigate to the deleted items view (`/admin/events?deleted=true`),
+**Given** I navigate to the deleted items view (`/app/events?deleted=true`),
 **When** I click "Restore" on a deleted event,
 **Then** `PATCH /api/events/:id/restore` sets `deleted_at = NULL` and the event reappears in the active list; an `event.restored` audit entry is written
 
@@ -307,9 +417,11 @@ So that I can bulk-accept the AI recommendation list or review and act on indivi
 
 **Acceptance Criteria:**
 
+> **Updated 2026-03-28** — Meeting: waitlist status removed; Status column now shows pending/approved/rejected only. Attendance status (attended/no_show) is set at check-in (Epic 7) and shown as a separate column for completed events.
+
 **Given** I am on the Registrasi tab (`/app/events/:id/registrations`),
 **When** the tab loads,
-**Then** it shows a filterable table of registrations with columns: Name, Company, Phone, AI Score, Status (pending/approved/rejected/waitlisted), Flag Badge (if contact has flagCategory `spam` or `not-potential`)
+**Then** it shows a filterable table of registrations with columns: Name, Company, Phone, AI Score, Registration Status (pending/approved/rejected), Attendance Status (attended/no_show — visible for completed/live events only), Flag Badge (if contact has flagCategory `invalid-data` or `duplicate`)
 
 **Given** the table header,
 **When** I click "Terima Semua Rekomendasi AI",
@@ -319,7 +431,7 @@ So that I can bulk-accept the AI recommendation list or review and act on indivi
 **When** I click "Setujui" or "Tolak",
 **Then** `PATCH /api/registrations/:id/status` is called and the row updates optimistically
 
-**Given** a registration where the contact has `flagCategory: 'spam'` or `'not-potential'`,
+**Given** a registration where the contact has `flagCategory: 'invalid-data'` or `'duplicate'`,
 **When** the row renders,
 **Then** a flag badge (red/orange) is shown automatically — no extra API call needed (flag data is part of the registration response)
 
@@ -336,6 +448,7 @@ So that I can bulk-accept the AI recommendation list or review and act on indivi
 ## Story 4.11: Event Pipeline Hub — Konfirmasi Tab
 
 > **Added 2026-03-21** — Sprint Change Proposal v2
+> **Updated 2026-03-28** — Meeting: waitlist stat card and "Promosi ke Approved" action removed (waitlist status retired). Two stat cards remain: Tiket Terkirim and Menunggu Konfirmasi.
 
 As an admin,
 I want the Konfirmasi tab to show double opt-in and ticket delivery status,
@@ -345,7 +458,7 @@ So that I know which approved registrants have confirmed their attendance and re
 
 **Given** I am on the Konfirmasi tab (`/app/events/:id/confirmation`),
 **When** the tab loads,
-**Then** it shows three stat cards: Tiket Terkirim (count with email/WA icon), Menunggu Konfirmasi (pending double opt-in), Daftar Tunggu (waitlisted count)
+**Then** it shows two stat cards: Tiket Terkirim (count with email/WA icon) and Menunggu Konfirmasi (pending double opt-in count)
 
 **Given** the registration list below the stats,
 **When** rendered,
@@ -354,10 +467,6 @@ So that I know which approved registrants have confirmed their attendance and re
 **Given** an unconfirmed registration row,
 **When** I click "Kirim Ulang Tiket",
 **Then** `POST /api/registrations/:id/resend-ticket` is called and a success toast confirms the action
-
-**Given** a waitlisted registration,
-**When** I click "Promosi ke Approved",
-**Then** `PATCH /api/registrations/:id/status` with `{ status: 'approved' }` is called; the registration moves to approved and a ticket is enqueued for delivery
 
 ---
 
@@ -421,5 +530,47 @@ So that the public registration page and blast templates have consistent event b
 **Given** an uploaded image,
 **When** stored on the VPS filesystem,
 **Then** it is placed in `UPLOADS_DIR/banners/{eventId}/` with the original filename sanitized; the stored path is saved to `events.banner_url`
+
+---
+
+## Story 4.14: Vendor Roster & Event Sponsor Attachment
+
+As an admin,
+I want to manage vendors in a central roster and attach them to events as sponsors,
+So that report delivery, sponsor display, and vendor analytics all resolve from the same vendor records.
+
+**Acceptance Criteria:**
+
+**Given** I am on `/app/vendors`,
+**When** the page loads,
+**Then** it shows a paginated vendor table sourced from `GET /api/vendors` with columns: Name, Contact Email, Industry, Linked Events, and Last Updated
+
+**Given** I submit the vendor form,
+**When** `POST /api/vendors` is called with `{ name, contact_email, industry, logo_url?, website?, notes? }`,
+**Then** a new vendor is created and appears in the roster with `linked_event_count: 0`
+
+**Given** I edit an existing vendor,
+**When** `PATCH /api/vendors/:id` is called,
+**Then** the changed fields persist and are reflected anywhere that vendor is referenced
+
+**Given** a vendor has `linked_event_count > 0`,
+**When** `DELETE /api/vendors/:id` is called,
+**Then** HTTP 409 is returned and the vendor is not deleted until event sponsor links are removed
+
+**Given** I am on an event workspace and open sponsor management,
+**When** `GET /api/events/:id/sponsors` is called,
+**Then** the response lists attached vendors ordered by `display_order` with `vendor_name`, `tier`, and `display_order`
+
+**Given** I attach a vendor to an event,
+**When** `POST /api/events/:id/sponsors` is called with `{ vendorId, tier, displayOrder }`,
+**Then** the vendor becomes an event sponsor and can be used for vendor-facing report delivery and sponsor display on the public event page
+
+**Given** I update sponsorship metadata,
+**When** `PATCH /api/events/:id/sponsors/:vendorId` is called,
+**Then** the sponsor `tier` and `display_order` are updated without changing the base vendor record
+
+**Given** I remove a sponsor from an event,
+**When** `DELETE /api/events/:id/sponsors/:vendorId` is called,
+**Then** the vendor is detached from that event while remaining available in the vendor roster
 
 ---

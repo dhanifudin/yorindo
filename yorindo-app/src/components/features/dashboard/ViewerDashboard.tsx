@@ -48,7 +48,7 @@ export function ViewerDashboard() {
   const { data: contactsData, isLoading: contactsLoading } = useTotalContacts()
   const { data: demoData, isLoading: demoLoading } = useContactsDemographics()
 
-  const accessToken = useAuthStore((s) => s.accessToken)
+  const authUser = useAuthStore((s) => s.user)
   const isLoading = userLoading || eventsLoading || contactsLoading
 
   const totalEvents = eventsData?.pagination?.total ?? eventsData?.data?.length ?? 0
@@ -90,7 +90,7 @@ export function ViewerDashboard() {
 
   const maxFunnel = funnelData[0]?.value ?? 1
 
-  const greeting = currentUser?.name ?? accessToken ?? 'Viewer'
+  const greeting = currentUser?.name ?? authUser?.name ?? 'Viewer'
 
   return (
     <div className="space-y-6">

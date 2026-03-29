@@ -6,7 +6,7 @@ import { getRedisOptional } from '../lib/redis.js'
 
 export interface JwtPayload {
   sub: string
-  role: 'super_admin' | 'event_admin' | 'staff' | 'vendor_client' | 'participant'
+  role: 'admin' | 'viewer' | 'staff' | 'participant'
   jti: string
   iat: number
   exp: number
@@ -54,5 +54,45 @@ export async function requireAuth(
     return reply.status(401).send({
       error: { code: 'INVALID_TOKEN', message: 'Invalid or expired token', details: [] },
     })
+  }
+}
+
+export async function requireAdmin(
+  request: FastifyRequest,
+  reply: FastifyReply,
+): Promise<void> {
+  if (!request.user) {
+    return reply.status(401).send({
+      error: { code: 'UNAUTHORIZED', message: 'Authentication required', details: [] },
+    })
+  }
+
+  if (request.user.role !== 'admin') {
+    return reply.status(403).send({
+      error: { code: 'FORBIDDEN', message: 'Admin privileges required', details: [] },
+    })
+  }
+}
+
+export function requireRoles(...roles: JwtPayload['role'][]) {
+  return async function requireRoleSet(
+    request: FastifyRequest,
+    reply: FastifyReply,
+  ): Promise<void> {
+    if (!request.user) {
+      return reply.status(401).send({
+        error: { code: 'UNAUTHORIZED', message: 'Authentication required', details: [] },
+      })
+    }
+
+    if (!roles.includes(request.user.role)) {
+      return reply.status(403).send({
+        error: {
+          code: 'FORBIDDEN',
+          message: `Required role: ${roles.join(' | ')}`,
+          details: [],
+        },
+      })
+    }
   }
 }

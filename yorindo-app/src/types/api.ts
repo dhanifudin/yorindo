@@ -1,7 +1,7 @@
 // FE-owned types — derived from openapi.yaml (Story 1.4).
 // BE adopts these shapes when implementing; do NOT auto-generate from spec.
 
-export type FlagCategory = 'spam' | 'not-potential' | 'invalid-data' | 'duplicate' | null
+export type FlagCategory = 'invalid-data' | 'duplicate' | null
 
 export interface Contact {
   id: string
@@ -65,6 +65,17 @@ export interface User {
   role: 'admin' | 'staff' | 'viewer' | 'participant'
   createdAt: string
   updatedAt: string
+}
+
+export interface UserEvent {
+  userId: string
+  eventId: string
+  grantedAt: string
+}
+
+export interface AuthResponse {
+  accessToken: string
+  user: Pick<User, 'id' | 'role'> & { name?: string; email?: string }
 }
 
 export interface ScanResult {
@@ -205,7 +216,7 @@ export interface AudienceRecommendationsResponse {
   recommendations: AudienceRecommendation[]
   totalMatched: number
   totalExcluded: number
-  excludedReasons: Record<string, number> // e.g. { 'not-potential': 5, 'spam': 3 }
+  excludedReasons: Record<string, number> // e.g. { 'invalid-data': 5, 'duplicate': 3 }
 }
 
 export interface RecommendedEvent {
@@ -260,6 +271,7 @@ export interface ContactsHealth {
   flagged: number
   duplicates: number
   missingEmail: number
+  missingPhone: number
 }
 
 export interface FacetItem {
@@ -324,21 +336,21 @@ export interface EventSponsor {
   event_id: string
   vendor_id: string
   vendor_name: string
-  tier: 'standard' | 'premium' | 'lead_intelligence'
+  tier: 'premium' | 'standard' | 'supporter'
   display_order: number
 }
 
 export interface AttachSponsorBody {
   vendorId: string
-  tier: EventSponsor['tier']
+  tier?: EventSponsor['tier'] | null
   displayOrder?: number
 }
 
 export interface PublicEventSponsor {
   vendor_id: string
   name: string
+  tier: EventSponsor['tier']
   logo_url?: string
   website?: string
-  tier: EventSponsor['tier']
   display_order: number
 }

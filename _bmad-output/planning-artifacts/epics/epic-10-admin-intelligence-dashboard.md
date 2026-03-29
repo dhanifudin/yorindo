@@ -43,6 +43,7 @@ So that I can instantly see participant composition, event-vendor breakdown, and
 **When** it renders,
 **Then** it includes: "Buat Event" → `/app/events`, "Upload Kontak" → `/app/contacts/upload`, "Lihat Laporan" → `/app/events`, **and "Lihat Perusahaan" → `/app/contacts/companies`** (new)
 
+
 **Given** I am a `viewer` role and navigate to `/app/dashboard`,
 **When** the page renders,
 **Then** the Participant Quick Filter panel and Vendor-Event widget are read-only (no navigation to blast or destructive actions); the viewer-specific `ViewerDashboard` component is shown instead
@@ -72,6 +73,7 @@ So that I can identify which organizations have the most engaged participants an
 **Given** I click a company row,
 **When** the row is clicked,
 **Then** the app navigates to `/app/contacts?company={companyName}` — showing all contacts from that company in the standard contacts list
+
 
 **Given** the page is accessed by a `viewer` role,
 **Then** read-only access is permitted (HTTP 200, no edit actions shown)

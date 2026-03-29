@@ -111,8 +111,8 @@ export default function VendorsPage() {
         </Button>
       </div>
 
-      <div className="rounded-lg border border-border bg-card overflow-hidden">
-        <Table>
+      <div className="w-full overflow-hidden rounded-lg border border-border bg-card">
+        <Table className="min-w-[640px] lg:min-w-[760px] xl:min-w-full">
           <TableHeader>
             <TableRow>
               <TableHead className="w-10" />
@@ -134,7 +134,7 @@ export default function VendorsPage() {
             {!isLoading && vendors.length === 0 && (
               <TableRow>
                 <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                  Belum ada vendor. Klik "Tambah Vendor" untuk memulai.
+                  Belum ada vendor. Klik &quot;Tambah Vendor&quot; untuk memulai.
                 </TableCell>
               </TableRow>
             )}

@@ -21,7 +21,7 @@ So that the event is fully set up before I publish it for registrations.
 
 ## Acceptance Criteria (FE Phase 1)
 
-**AC1:** Given `/admin/events` renders,
+**AC1:** Given `/app/events` renders,
 Then a list of events from `GET /api/events` is displayed with status badges (draft/published/active/completed/cancelled)
 
 **AC2:** Given the "New Event" button is clicked,
@@ -42,12 +42,22 @@ Then a score threshold field appears conditionally
 When the event list refreshes,
 Then the new event appears at the top with a "Draft" badge
 
+**AC7 (2026-03-28 — paid/free toggle):** Given the event creation form,
+When it renders,
+Then a "Berbayar" toggle is shown. When off (default): price field is hidden and `is_paid` is saved as `false` with `price: 0`. When on: a price input field appears (numeric, required, minimum 0) and `payment_method` field appears (text, optional placeholder "e.g. Transfer Bank"). Both fields are admin-only — price is NOT displayed on the public event landing page or registration form in the current sprint (payment gateway integration deferred).
+
+**AC8 (2026-03-28 — preview button):** Given the event creation or edit form,
+When the "Preview Formulir" button is clicked,
+Then the `FormPreviewModal` (Story 4-4) opens showing the complete registration form preview with fixed fields and current survey schema. If no survey has been configured yet, only the fixed fields are shown.
+
+> **Code review note (2026-03-28):** Add `is_paid` (bool), `price` (number, default 0), `payment_method` (string, optional) to the RHF+Zod schema. `price` field conditionally rendered when `is_paid === true`. No changes to public-facing pages (`/register/[slug]`). Add "Preview Formulir" button linking to `FormPreviewModal` from Story 4-4 — implement the button now, the modal component will be available when Story 4-4 is done.
+
 ---
 
 ## Tasks / Subtasks
 
 - [x] **Task 1: Create events list page**
-  - [x] Create `src/app/(admin)/events/page.tsx`
+  - [x] Create `src/app/app/events/page.tsx`
   - [x] Fetch `GET /api/events` via React Query hook `useEvents()`
   - [x] Render event cards with: name, date, status badge, capacity, click to navigate
   - [x] Add "Event Baru" button that shows EventCreateForm inline
@@ -68,7 +78,7 @@ Then the new event appears at the top with a "Draft" badge
   - [x] `eventStore.setSelectedEvent(id)` called on click; navigates to detail page
 
 - [x] **Task 5: Event detail page route**
-  - [x] Create `src/app/(admin)/events/[id]/page.tsx`
+  - [x] Create `src/app/app/events/[id]/page.tsx`
   - [x] Fetch single event: `GET /api/events/:id` via `useEvent(id)`
   - [x] Display event details; lifecycle action placeholder for Story 4.2
 
@@ -96,7 +106,7 @@ interface Event {
   id: string
   name: string
   slug: string
-  status: 'draft' | 'published' | 'active' | 'completed' | 'cancelled'
+  status: 'draft' | 'published' | 'active' | 'completed' | 'cancelled' | 'archived'
   eventDate: string
   timezone: string
   venue: string
@@ -105,6 +115,11 @@ interface Event {
   approvalMode: 'auto' | 'manual' | 'hybrid'
   notificationChannel: 'email' | 'whatsapp'
   scanFormat: 'qr' | 'otp'
+  is_paid: boolean         // AC7 (2026-03-28): default false
+  price: number            // AC7 (2026-03-28): default 0
+  payment_method: string | null  // AC7 (2026-03-28)
+  banner_url: string | null      // SCP-2026-03-28-E: Story 4.13
+  poster_url: string | null      // SCP-2026-03-28-E: Story 4.13
   createdAt: string
 }
 ```
@@ -119,8 +134,8 @@ interface EventStore {
 ```
 
 ### File Locations (from architecture)
-- Events list page: `src/app/(admin)/events/page.tsx`
-- Event detail page: `src/app/(admin)/events/[id]/page.tsx`
+- Events list page: `src/app/app/events/page.tsx`
+- Event detail page: `src/app/app/events/[id]/page.tsx`
 - Create form: `src/components/features/events/EventCreateForm.tsx`
 - Hook: `src/hooks/useEvents.ts`
 
@@ -142,8 +157,8 @@ interface EventStore {
 
 1. Created `src/hooks/useEvents.ts` — `useEvents()` (GET /api/events list), `useEvent(id)` (GET /api/events/:id), `useCreateEvent()` (POST + cache invalidation).
 2. Created `src/components/features/events/EventCreateForm.tsx` — RHF + Zod schema using actual api.ts Event fields (name, description, eventDate, timezone, capacity). Used string for capacity field to avoid `z.coerce` resolver type conflicts; manual `parseInt` in submit handler.
-3. Created `src/app/(admin)/events/page.tsx` — client component; event cards with status badges; inline form toggle; `eventStore.setSelectedEvent` + router push on click.
-4. Created `src/app/(admin)/events/[id]/page.tsx` — client component using `use(params)` for Next.js 15 async params; loading/error states; event detail display.
+3. Created `src/app/app/events/page.tsx` — client component; event cards with status badges; inline form toggle; `eventStore.setSelectedEvent` + router push on click.
+4. Created `src/app/app/events/[id]/page.tsx` — client component using `use(params)` for Next.js 15 async params; loading/error states; event detail display.
 5. Created `src/hooks/useEvents.test.ts` — 3 tests: 5 seeded events, all statuses present, POST creates draft.
 
 ### Debug Log
@@ -164,8 +179,8 @@ All 7 tasks complete. 36/36 tests pass (3 new in useEvents.test.ts; 33 pre-exist
 - `src/hooks/useEvents.ts`
 - `src/hooks/useEvents.test.ts`
 - `src/components/features/events/EventCreateForm.tsx`
-- `src/app/(admin)/events/page.tsx`
-- `src/app/(admin)/events/[id]/page.tsx`
+- `src/app/app/events/page.tsx`
+- `src/app/app/events/[id]/page.tsx`
 
 ---
 
@@ -175,3 +190,5 @@ All 7 tasks complete. 36/36 tests pass (3 new in useEvents.test.ts; 33 pre-exist
 |------|--------|--------|
 | 2026-03-20 | Story created (FE Phase 1) | bmad-create-story |
 | 2026-03-20 | All 7 tasks implemented; 36/36 tests pass | bmad-dev-story |
+| 2026-03-28 | AC7 added: paid/free toggle (admin-only, no public display, payment gateway deferred); AC8 added: Preview Formulir button | Sprint Change Proposal 2026-03-28 |
+| 2026-03-28 | Dev Notes: Event interface synced with AC7 payment fields + SCP-2026-03-28-E banner_url/poster_url | bmad-correct-course |

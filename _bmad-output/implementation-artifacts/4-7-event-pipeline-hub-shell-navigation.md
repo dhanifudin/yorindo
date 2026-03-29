@@ -14,7 +14,7 @@ review
 
 This is the foundational FE story for the Event Pipeline Hub (Stories 4.7–4.12). It creates the shell layout that all other Pipeline Hub stories build upon. Stories 4.8–4.12 each implement one tab's content — they cannot start until 4.7 is in review.
 
-The Event Pipeline Hub replaces the existing `/admin/events/:id` page with a purposeful 6-tab workspace. The shell includes: event header (name, status badge, quick-action), 6-tab Radix navigation, and a `<BlockerStrip>` (clickable 1-line status bar below the tab bar). The tab content area is a slot — each tab story fills it.
+The Event Pipeline Hub replaces the existing `/app/events/:id` page with a purposeful 6-tab workspace. The shell includes: event header (name, status badge, quick-action), 6-tab Radix navigation, and a `<BlockerStrip>` (clickable 1-line status bar below the tab bar). The tab content area is a slot — each tab story fills it.
 
 **Key design decision (UX spec):** Tabs are GitHub PR-style concurrent phase facets, not sequential gates. The URL updates on tab change; browser Back/Forward work between tabs. Draft events disable Undangan, Konfirmasi, and Check-in tabs with an accessible tooltip.
 
@@ -67,7 +67,7 @@ Then the tab bar, BlockerStrip, and page header are all `hidden`; only the Check
 ```
 src/
   app/
-    (admin)/
+    app/
       events/
         [id]/
           layout.tsx                ← Hub shell: header + Tabs + BlockerStrip slot + <Outlet>
@@ -226,7 +226,7 @@ If the handler doesn't return all required fields for the hub, extend it. Do NOT
 ## Tasks / Subtasks
 
 - [ ] Task 1: Create App Router route structure for the hub
-  - [ ] Subtask 1.1: Create `app/(admin)/events/[id]/layout.tsx` as hub shell
+  - [ ] Subtask 1.1: Create `app/app/events/[id]/layout.tsx` as hub shell
   - [ ] Subtask 1.2: Create stub `page.tsx` files for all 6 tab routes (blast, registrations, confirmation, checkin, report)
   - [ ] Subtask 1.3: Verify Next.js routing resolves all 6 URLs without 404
 
@@ -272,7 +272,7 @@ If the handler doesn't return all required fields for the hub, extend it. Do NOT
 ### Debug Log
 
 - `const as` tuple type TS issue: `tab.disabledOnDraft` needed `'disabledOnDraft' in tab` guard due to TypeScript narrowing on `as const` tuples
-- Routing: used existing `/app/app/events/[id]/` structure (not `(admin)/` route group as spec said — actual app uses `app/` prefix)
+- Routing: used existing `/app/app/events/[id]/` structure (not `app/` route group as spec said — actual app uses `app/` prefix)
 - Active tab: `registrations` used `.includes()` not `.endsWith()` to handle nested sub-routes
 
 ### Completion Notes

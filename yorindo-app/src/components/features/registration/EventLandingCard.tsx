@@ -3,7 +3,6 @@ import Link from 'next/link'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { SponsorStrip } from '@/components/features/registration/SponsorStrip'
-import { EXPERIMENTAL_ENABLED } from '@/lib/featureFlags'
 
 interface EventLandingCardProps {
   event: Event & { sponsors?: PublicEventSponsor[] }
@@ -51,7 +50,7 @@ export function EventLandingCard({ event }: EventLandingCardProps) {
         <CardContent className="px-6 pb-6 pt-0">
           {isFull ? (
             <Button disabled variant="outline" className="w-full py-4 text-base">
-              {EXPERIMENTAL_ENABLED ? 'Registrasi Penuh — Daftarkan ke Waiting List' : 'Kapasitas Penuh'}
+              Kapasitas Penuh
             </Button>
           ) : (
             <Button asChild size="lg" className="w-full text-base">

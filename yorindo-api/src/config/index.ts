@@ -18,12 +18,11 @@ export const config = {
   jwtSecret: required('JWT_SECRET'),
   jwtRefreshSecret: required('JWT_REFRESH_SECRET'),
 
-  // Feature flags — disabled by default; enable per environment as features mature
-  enableExperimental: optional('ENABLE_EXPERIMENTAL', 'false') === 'true',  // gates participant SSO login (Phase 2)
-
   // Service adapter selection — defaults drive Phase 1 (in-memory / mock)
   repositoryImpl: optional('REPOSITORY_IMPL', 'memory'),   // 'memory' | 'postgres'
-  serviceImpl: optional('SERVICE_IMPL', 'mock'),            // 'mock' | 'real'
+  serviceImpl: optional('SERVICE_IMPL', 'mock'),           // 'mock' | 'real'
+  emailProvider: optional('EMAIL_PROVIDER', 'mock'),       // 'mock' | 'brevo' | 'mailtrap'
+  whatsappProvider: optional('WHATSAPP_PROVIDER', 'mock'), // 'mock' | 'everpro'
 
   // AI provider selection — defaults to mock in Phase 1
   etlAiProvider: optional('ETL_AI_PROVIDER', 'mock'),
@@ -34,7 +33,7 @@ export const config = {
   databaseUrl: optional('DATABASE_URL'),
   redisUrl: optional('REDIS_URL'),
   snapshotDir: optional('SNAPSHOT_DIR', '/data/snapshots'),
-  uploadsDir: optional('UPLOADS_DIR', '/tmp/uploads'),
+  uploadsDir: optional('UPLOADS_DIR', 'uploads'),
 
   // External API keys — Phase 2 only; unused in Phase 1
   openaiApiKey: optional('OPENAI_API_KEY'),
@@ -42,4 +41,7 @@ export const config = {
   brevoApiKey: optional('BREVO_API_KEY'),
   everproApiKey: optional('EVERPRO_API_KEY'),
   brevoSenderEmail: optional('BREVO_SENDER_EMAIL', 'no-reply@yorindo.app'),
+
+  // Error monitoring — optional; Sentry skips init silently when undefined
+  sentryDsn: optional('SENTRY_DSN') || undefined,
 } as const

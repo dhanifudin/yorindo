@@ -21,7 +21,9 @@ So that the FE team can develop type-safely against a mock API with role switchi
 ## Acceptance Criteria
 
 **AC1:** Given `src/types/api.ts` exists,
-Then it exports TypeScript interfaces for: `Contact`, `Event`, `Registration`, `User`, `ScanResult`, `YoriMindResult`, `ApiError`, `PaginatedResponse<T>`, and all mutation body types
+Then it exports TypeScript interfaces for: `Contact`, `Event`, `Registration`, `User`, `ScanResult`, `YoriMindResult`, `ApiError`, `PaginatedResponse<T>`, `WilayahProvince`, `WilayahCity`, `WilayahApiResponse`, `MediaAsset`, `RegistrationOrder`, and all mutation body types
+
+> **Updated 2026-03-28 (SCP-2026-03-28-D):** `Contact` interface gains 4 nullable location fields; 3 wilayah types added for location picker.
 
 **AC2:** Given the app runs in `NODE_ENV=development`,
 When `src/app/layout.tsx` loads,
@@ -57,6 +59,35 @@ Then it returns `null` immediately — no toolbar, no DOM output
   - [x] Export `PaginatedResponse<T>` generic interface
   - [x] Export `Industry` and `JobTitle` lookup interfaces
   - [x] Export all mutation body types (LoginBody, CreateEventBody, UpdateRegistrationStatusBody, ScanVerifyBody, CreateRegistrationBody, CreateUserBody)
+
+- [ ] **Task 7 (2026-03-28): Add location types + update Contact interface (SCP-2026-03-28-D)**
+  - [ ] Add 4 nullable location fields to `Contact` interface:
+    ```typescript
+    province_code: string | null
+    province_name: string | null
+    city_code:     string | null
+    city_name:     string | null
+    ```
+  - [ ] Export `WilayahProvince` type: `{ code: string; name: string }`
+  - [ ] Export `WilayahCity` type: `{ code: string; name: string }`
+  - [ ] Export `WilayahApiResponse` type: `{ data: Array<{ code: string; name: string }>; meta: { administrative_area_level: number; updated_at: string } }`
+  - [ ] Update mock contact fixtures in MSW handlers to include `province_code`, `province_name`, `city_code`, `city_name` (nullable; mix of null and populated values across seeded contacts)
+
+- [ ] **Task 8 (2026-03-28): Event payment fields + RegistrationOrder type (SCP-2026-03-28-E)**
+  - [ ] Add to `Event` interface: `is_paid: boolean`, `price: number`, `payment_method: string | null`, `banner_url: string | null`, `poster_url: string | null`
+  - [ ] Add `RegistrationOrder` interface:
+    ```typescript
+    export interface RegistrationOrder {
+      subtotal: number
+      discount: number
+      total: number
+      currency: 'IDR'
+      payment_method: string | null
+    }
+    ```
+  - [ ] Add `order?: RegistrationOrder` to `CreateRegistrationBody` interface
+  - [ ] Add `MediaAsset` interface: `{ id: string, type: 'banner'|'poster', name: string, url: string, uploadedAt: string }`
+  - [ ] Update MSW seeded event fixtures to include `is_paid: false`, `price: 0`, `payment_method: null`, `banner_url: null`, `poster_url: null` (defaults for all existing seeded events)
 
 - [x] **Task 2: Set up MSW browser worker**
   - [x] Create `src/mocks/handlers/index.ts` exporting empty `handlers` array (handlers populated in Story 1.6)
@@ -129,6 +160,11 @@ export interface Event {
   capacity?: number
   targetCriteria?: Record<string, unknown>
   surveySchema?: Record<string, unknown>
+  is_paid: boolean         // default false
+  price: number            // default 0
+  payment_method: string | null
+  banner_url: string | null
+  poster_url: string | null
   createdAt: string
   updatedAt: string
 }
@@ -227,12 +263,21 @@ export interface ScanVerifyBody {
   token: string
 }
 
+export interface RegistrationOrder {
+  subtotal: number
+  discount: number
+  total: number
+  currency: 'IDR'
+  payment_method: string | null
+}
+
 export interface CreateRegistrationBody {
   eventId: string
   name: string
   email: string
   phone: string
   surveyAnswers?: Record<string, unknown>
+  order?: RegistrationOrder
 }
 
 export interface CreateUserBody {
@@ -434,3 +479,4 @@ Implementation notes:
 |------|--------|--------|
 | 2026-03-19 | Story created | bmad-create-story |
 | 2026-03-19 | All tasks implemented — 13/13 tests pass, build succeeds | bmad-dev-story |
+| 2026-03-28 | Task 7 added: WilayahProvince/City types + Contact location fields (SCP-2026-03-28-D); Task 8 added: Event payment fields + RegistrationOrder type (SCP-2026-03-28-E) | bmad-correct-course |

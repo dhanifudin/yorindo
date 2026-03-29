@@ -15,6 +15,7 @@ async function fetchContacts(params: {
   companySize: string
   flagFilter: string
   missingEmail: boolean
+  missingPhone: boolean
   q: string
 }): Promise<PaginatedResponse<Contact>> {
   const url = new URL('/api/contacts', window.location.origin)
@@ -25,6 +26,7 @@ async function fetchContacts(params: {
   if (params.companySize) url.searchParams.set('companySize', params.companySize)
   if (params.flagFilter) url.searchParams.set('flagFilter', params.flagFilter)
   if (params.missingEmail) url.searchParams.set('missingEmail', 'true')
+  if (params.missingPhone) url.searchParams.set('missingPhone', 'true')
   if (params.q) url.searchParams.set('q', params.q)
 
   const res = await fetch(url.toString())
@@ -34,17 +36,17 @@ async function fetchContacts(params: {
 
 export function useContacts() {
   const searchParams = useSearchParams()
-  const { flagFilter, missingEmail } = useFilterStore()
+  const { industry: storeIndustry, city: storeCity, companySize: storeCompanySize, page: storePage, flagFilter, missingEmail, missingPhone } = useFilterStore()
 
-  const industry = searchParams.get('industry') ?? ''
-  const city = searchParams.get('city') ?? ''
-  const companySize = searchParams.get('companySize') ?? ''
-  const page = parseInt(searchParams.get('page') ?? '1', 10)
+  const industry = storeIndustry || searchParams.get('industry') || ''
+  const city = storeCity || searchParams.get('city') || ''
+  const companySize = storeCompanySize || searchParams.get('companySize') || ''
+  const page = storePage || parseInt(searchParams.get('page') ?? '1', 10)
   const q = searchParams.get('q') ?? ''
 
   return useQuery({
-    queryKey: ['contacts', { page, pageSize: PAGE_SIZE, industry, city, companySize, flagFilter, missingEmail, q }],
-    queryFn: () => fetchContacts({ page, pageSize: PAGE_SIZE, industry, city, companySize, flagFilter, missingEmail, q }),
+    queryKey: ['contacts', { page, pageSize: PAGE_SIZE, industry, city, companySize, flagFilter, missingEmail, missingPhone, q }],
+    queryFn: () => fetchContacts({ page, pageSize: PAGE_SIZE, industry, city, companySize, flagFilter, missingEmail, missingPhone, q }),
   })
 }
 

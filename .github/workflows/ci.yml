@@ -1,15 +1,28 @@
 name: CI
 
 on:
-  # Postponed
+  pull_request:
+    branches: ['**']
   workflow_dispatch:
+
+# Cancel redundant runs — prevents double-fire when a push triggers both
+# the push event and a pull_request event for the same commit.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   lint-typecheck:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        repo: [yorindo-app]
+        include:
+          - repo: yorindo-app
+            lint: true
+            openapi_lint: false
+          - repo: yorindo-api
+            lint: true
+            openapi_lint: true
     steps:
       - uses: actions/checkout@v4
 
@@ -27,7 +40,7 @@ jobs:
       - uses: actions/setup-node@v4
         if: steps.pkg-check.outputs.has_pkg == 'true'
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'npm'
           cache-dependency-path: '${{ matrix.repo }}/package-lock.json'
 
@@ -37,8 +50,13 @@ jobs:
         working-directory: ${{ matrix.repo }}
 
       - name: Lint
-        if: steps.pkg-check.outputs.has_pkg == 'true'
+        if: steps.pkg-check.outputs.has_pkg == 'true' && matrix.lint
         run: npm run lint
+        working-directory: ${{ matrix.repo }}
+
+      - name: OpenAPI lint
+        if: steps.pkg-check.outputs.has_pkg == 'true' && matrix.openapi_lint
+        run: npm run openapi:lint
         working-directory: ${{ matrix.repo }}
 
       - name: Typecheck
@@ -51,7 +69,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        repo: [yorindo-app]
+        repo: [yorindo-app, yorindo-api]
     steps:
       - uses: actions/checkout@v4
 
@@ -69,7 +87,7 @@ jobs:
       - uses: actions/setup-node@v4
         if: steps.pkg-check.outputs.has_pkg == 'true'
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'npm'
           cache-dependency-path: '${{ matrix.repo }}/package-lock.json'
 

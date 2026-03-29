@@ -61,7 +61,7 @@ Then the pending approvals count is passed to the shared `blockerState` query so
 ```
 src/
   app/
-    (admin)/
+    app/
       events/
         [id]/
           page.tsx                     ← Overview tab content (or overview/page.tsx)
@@ -191,7 +191,7 @@ export function getHealth(rate: number, stage: keyof typeof FUNNEL_BENCHMARKS): 
 ## Tasks / Subtasks
 
 - [ ] Task 1: Create Overview tab page file
-  - [ ] Subtask 1.1: `app/(admin)/events/[id]/page.tsx` — renders Overview content (or overview/page.tsx)
+  - [ ] Subtask 1.1: `app/app/events/[id]/page.tsx` — renders Overview content (or overview/page.tsx)
   - [ ] Subtask 1.2: `useQuery` for `GET /api/events/:id/overview` with `staleTime: 60_000`
 
 - [ ] Task 2: Create `lib/benchmarks.ts`

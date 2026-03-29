@@ -1,12 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
 import type { User, Event } from '@/types/api'
+import { fetchUserAssignedEvents } from '@/hooks/useUsers'
 
 interface EventAssignmentDialogProps {
   user: User
@@ -17,24 +19,27 @@ interface EventAssignmentDialogProps {
 export function EventAssignmentDialog({ user, open, onClose }: EventAssignmentDialogProps) {
   const queryClient = useQueryClient()
   const [pending, setPending] = useState<Set<string>>(new Set())
+  const [syncedAssignment, setSyncedAssignment] = useState<typeof assignmentData>(undefined)
+  const [search, setSearch] = useState('')
 
   const { data: eventsData } = useQuery<{ data: Event[] }>({
     queryKey: ['events'],
-    queryFn: () => fetch('/api/events?pageSize=50').then((r) => r.json()),
+    queryFn: () => fetch('/api/events?pageSize=200').then((r) => r.json()),
     enabled: open,
   })
 
-  const { data: assignmentData } = useQuery<{ eventIds: string[] }>({
+  const { data: assignmentData } = useQuery<{ data: Event[] }>({
     queryKey: ['user-events', user.id],
-    queryFn: () => fetch(`/api/users/${user.id}/events`).then((r) => r.json()),
+    queryFn: () => fetchUserAssignedEvents(user.id),
     enabled: open,
   })
 
-  useEffect(() => {
-    if (assignmentData?.eventIds) {
-      setPending(new Set(assignmentData.eventIds))
-    }
-  }, [assignmentData])
+  // Sync pending from server data when assignmentData arrives or changes
+  // (React-approved pattern: setState during render triggers an immediate re-render with new state)
+  if (assignmentData !== syncedAssignment) {
+    setSyncedAssignment(assignmentData)
+    setPending(new Set(assignmentData?.data?.map((event) => event.id) ?? []))
+  }
 
   const assignMutation = useMutation({
     mutationFn: (eventId: string) =>
@@ -63,19 +68,27 @@ export function EventAssignmentDialog({ user, open, onClose }: EventAssignmentDi
   }
 
   const handleSave = async () => {
-    const current = new Set(assignmentData?.eventIds ?? [])
+    const current = new Set((assignmentData?.data ?? []).map((event) => event.id))
     const toAdd = [...pending].filter((id) => !current.has(id))
     const toRemove = [...current].filter((id) => !pending.has(id))
 
-    await Promise.all([
-      ...toAdd.map((id) => assignMutation.mutateAsync(id)),
-      ...toRemove.map((id) => removeMutation.mutateAsync(id)),
-    ])
-    toast.success(`Assignment untuk ${user.name} disimpan`)
-    onClose()
+    try {
+      await Promise.all([
+        ...toAdd.map((id) => assignMutation.mutateAsync(id)),
+        ...toRemove.map((id) => removeMutation.mutateAsync(id)),
+      ])
+      toast.success(`Assignment untuk ${user.name} disimpan`)
+      onClose()
+    } catch {
+      toast.error('Gagal menyimpan assignment. Beberapa perubahan mungkin tidak tersimpan.')
+    }
   }
 
-  const events = eventsData?.data ?? []
+  const allEvents = eventsData?.data ?? []
+  const events = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    return q ? allEvents.filter((e) => e.name.toLowerCase().includes(q)) : allEvents
+  }, [allEvents, search])
 
   const STATUS_LABEL: Record<string, string> = {
     draft: 'Draft',
@@ -87,7 +100,7 @@ export function EventAssignmentDialog({ user, open, onClose }: EventAssignmentDi
   }
 
   return (
-    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+    <Dialog open={open} onOpenChange={(v) => { if (!v) { setPending(new Set()); setSyncedAssignment(undefined); setSearch(''); onClose(); } }}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Assign Event — {user.name}</DialogTitle>
@@ -95,7 +108,13 @@ export function EventAssignmentDialog({ user, open, onClose }: EventAssignmentDi
         <p className="text-sm text-muted-foreground mb-3">
           Centang event yang dapat diakses oleh <strong>{user.role}</strong> ini.
         </p>
-        <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+        <Input
+          placeholder="Cari event..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="mb-2"
+        />
+        <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
           {events.map((event) => {
             const checked = pending.has(event.id)
             return (

@@ -54,6 +54,7 @@ import { MockOtpService } from './services/adapters/mock/OtpService.js'
 import { BrevoEmailService } from './services/adapters/real/BrevoEmailService.js'
 import { EverproWhatsAppService } from './services/adapters/real/EverproWhatsAppService.js'
 import { OpenAiEtlNormalizationService } from './services/adapters/real/OpenAiEtlNormalizationService.js'
+import { BullQueueService } from './services/adapters/real/BullQueueService.js'
 
 // ─── Repository factory ───────────────────────────────────────────────────────
 
@@ -113,7 +114,7 @@ function resolveServices(): {
       whatsAppService: new EverproWhatsAppService(),
       etlNormalizationService: new OpenAiEtlNormalizationService(),
       yoriMindService: new MockYoriMindService(),   // YoriMind real adapter: Story 8.4
-      queueService: new MockQueueService(),          // Real BullMQ via workers, not IQueueService
+      queueService: new BullQueueService(),
       otpService: new MockOtpService(),              // OTP real adapter: Epic 7 Phase 2
     }
   }

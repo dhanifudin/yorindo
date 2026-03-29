@@ -1,9 +1,19 @@
 import { faker } from '@faker-js/faker'
+import { createId } from '@paralleldrive/cuid2'
 import type { IFlaggedRecordsRepository } from '../../interfaces/repositories/IFlaggedRecordsRepository.js'
 import type { PaginationParams } from '../../interfaces/repositories/IContactRepository.js'
 import type { FlaggedRecord, FlaggedRecordStatus, Contact } from '../../types/domain.js'
+import { SEED_USER_IDS, SEED_UPLOAD_IDS } from './_seeds.js'
 
 faker.seed(42)
+
+const FLAG_REASON_SETS = [
+  ['invalid_phone', 'missing_name'],
+  ['duplicate_suspected'],
+  ['invalid_email'],
+  ['invalid_phone'],
+  ['missing_name', 'invalid_email'],
+]
 
 export class InMemoryFlaggedRecordsRepository implements IFlaggedRecordsRepository {
   private records: Map<string, FlaggedRecord> = new Map()
@@ -13,26 +23,34 @@ export class InMemoryFlaggedRecordsRepository implements IFlaggedRecordsReposito
   }
 
   private _seed(): void {
-    const flagReasons = [
-      ['invalid_phone', 'missing_name'],
-      ['duplicate_suspected'],
-      ['invalid_email'],
-    ]
-    for (let i = 0; i < 10; i++) {
-      const id = crypto.randomUUID()
+    const now = Date.now()
+
+    for (let i = 0; i < 20; i++) {
+      const id = createId()
+
+      // 10 pending, 6 resolved, 4 discarded
+      let status: FlaggedRecordStatus
+      if (i < 10) status = 'pending'
+      else if (i < 16) status = 'resolved'
+      else status = 'discarded'
+
+      const isResolved = status === 'resolved' || status === 'discarded'
+
       const record: FlaggedRecord = {
         id,
         rawData: {
           name: faker.person.fullName(),
-          phone: `08${faker.number.int({ min: 10000000, max: 99999999 })}`,
-          email: faker.internet.email(),
+          phone: `+628${faker.number.int({ min: 100000000, max: 999999999 })}`,
+          email: i % 4 === 0 ? '' : faker.internet.email(),
+          company: faker.company.name(),
+          city: ['Jakarta', 'Bandung', 'Surabaya'][i % 3],
         },
-        flags: flagReasons[i % flagReasons.length],
-        status: 'pending',
-        uploadId: crypto.randomUUID(),
-        resolvedBy: null,
-        resolvedAt: null,
-        createdAt: new Date(Date.now() - i * 3600000).toISOString(),
+        flags: FLAG_REASON_SETS[i % FLAG_REASON_SETS.length]!,
+        status,
+        uploadId: i < 10 ? SEED_UPLOAD_IDS[0]! : SEED_UPLOAD_IDS[2]!,
+        resolvedBy: isResolved ? SEED_USER_IDS.admin : null,
+        resolvedAt: isResolved ? new Date(now - (20 - i) * 3600000).toISOString() : null,
+        createdAt: new Date(now - i * 3600000 * 3).toISOString(),
       }
       this.records.set(id, record)
     }
@@ -52,7 +70,7 @@ export class InMemoryFlaggedRecordsRepository implements IFlaggedRecordsReposito
 
   async create(data: Omit<FlaggedRecord, 'id' | 'createdAt'>): Promise<FlaggedRecord> {
     const record: FlaggedRecord = {
-      id: crypto.randomUUID(),
+      id: createId(),
       ...data,
       createdAt: new Date().toISOString(),
     }

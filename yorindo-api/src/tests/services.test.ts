@@ -129,13 +129,13 @@ describe('MockQueueService', () => {
 
   it('getStatus returns queued for known jobId', async () => {
     const jobId = await svc.enqueue('transactional', { type: 'ticket' })
-    const status = await svc.getStatus(jobId)
-    expect(status).toBe('queued')
+    const info = await svc.getStatus(jobId)
+    expect(info.status).toBe('queued')
   })
 
   it('getStatus returns failed for unknown jobId', async () => {
-    const status = await svc.getStatus('not-a-real-job')
-    expect(status).toBe('failed')
+    const info = await svc.getStatus('not-a-real-job')
+    expect(info.status).toBe('failed')
   })
 
   it('reset clears all jobs', async () => {

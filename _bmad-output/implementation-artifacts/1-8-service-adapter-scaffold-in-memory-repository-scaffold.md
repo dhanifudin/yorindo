@@ -16,7 +16,7 @@ This is the Phase 1 BE gate — it must be completed before any BE feature story
 
 The Sprint Change Proposal v2 (concurrent FE+BE mock-first) requires that all BE feature code in Phase 1 uses only in-memory repositories and mock service adapters. This story creates those artifacts. Feature stories import `IContactRepository` from the interface, receive a concrete `InMemoryContactRepository` via `container.ts`, and never know the difference.
 
-The five roles in the system are: `super_admin`, `event_admin`, `staff`, `vendor_client`, `participant`. Interfaces must reflect this. The BullMQ four named queues: `otp` > `emergency-blast` > `transactional` > `marketing`.
+The default internal roles in the system are `admin`, `viewer`, and `staff`. Experimental participant-account features may introduce `participant` separately, but interfaces for the core MVP must reflect the 3-role model. BullMQ uses isolated named queues for `emergency-blast`, `transactional`, `marketing`, and reporting/maintenance jobs.
 
 ## Acceptance Criteria
 
@@ -36,9 +36,27 @@ Then mock implementations exist for all six service interfaces; each implementat
 When `REPOSITORY_IMPL=memory` (default),
 Then all DI bindings resolve to in-memory implementations
 
-**AC6:** Given `src/container.ts` exists,
-When `SERVICE_IMPL=mock` (default),
-Then all DI bindings resolve to mock service adapters
+**AC6:** Given `src/container.ts` initializes,
+When service bindings are resolved,
+Then services are wired via env vars:
+- `EMAIL_PROVIDER=mock|brevo|mailtrap` (default: `mock`)
+- `WHATSAPP_PROVIDER=mock|everpro` (default: `mock`)
+- `AI_PROVIDER=disabled|mock|openai|anthropic` (default: `disabled`) — single toggle for YoriMind, ETL normalization, and SmartFilter
+
+**AC9:** Given `AI_PROVIDER=disabled`,
+When any call to `IYoriMindService.analyze()` is made,
+Then `DisabledYoriMindService.analyze()` returns `null` immediately — no network call, no error thrown
+
+**AC10:** Given `EMAIL_PROVIDER=mailtrap`,
+When `IEmailService.send()` or `sendBatch()` is called,
+Then `MailtrapEmailService` sends via nodemailer SMTP using `MAILTRAP_HOST`, `MAILTRAP_PORT`, `MAILTRAP_USER`, `MAILTRAP_PASS` env vars — validates real delivery in dev without touching production inboxes
+
+**AC11:** Given `src/interfaces/services/IDeduplicationService.ts` is inspected,
+Then `FuzzyDeduplicationService` implements it using deterministic algorithmic matching:
+- Email: exact match (lowercased)
+- Phone: normalized digit match (strip +62 prefix for comparison)
+- Name: Jaro-Winkler similarity ≥ 0.85 combined with same company → probable duplicate
+No env var toggle — `FuzzyDeduplicationService` is always the implementation (pure algorithm, no AI)
 
 **AC7:** Given the scaffold is complete,
 When `npm test` is run,
@@ -76,6 +94,7 @@ yorindo-api/src/
       IYoriMindService.ts
       IQueueService.ts
       IOtpService.ts
+      IDeduplicationService.ts    ← Added by Task 10 (SCP-2026-03-28-C)
   repositories/
     memory/
       ContactRepository.ts        ← InMemoryContactRepository
@@ -95,7 +114,16 @@ yorindo-api/src/
         YoriMindService.ts        ← MockYoriMindService
         QueueService.ts           ← MockQueueService
         OtpService.ts             ← MockOtpService
-      real/                       ← Empty — Phase 2 only
+      real/
+        MailtrapEmailService.ts              ← Mailtrap SMTP (dev real-email testing)
+        RuleBasedEtlNormalizationService.ts  ← fuzzy ETL enrichment (Task 11; city→code in Story 3.3 Task 6)
+      disabled/
+        YoriMindService.ts        ← DisabledYoriMindService (returns null)
+  services/
+    FuzzyDeduplicationService.ts  ← Always-algorithmic dedup (Jaro-Winkler + email/phone match)
+  interfaces/
+    services/
+      IDeduplicationService.ts    ← Interface for dedup
   container.ts                    ← Updated to wire all repositories and services
   types/
     domain.ts                     ← Domain entity types (Contact, Event, Registration, etc.)
@@ -108,7 +136,7 @@ yorindo-api/src/
 3. **No network calls in mock/in-memory** — Mock services must return hardcoded or faker-seeded data only.
 4. **Call recording** — Mock services must record all calls so tests can assert on them (e.g., `getSentEmails()`, `getEnqueuedJobs()`).
 5. **Faker seed** — Use `faker.seed(42)` in all in-memory repositories for deterministic test data.
-6. **UUID primary keys** — In-memory repos must generate UUIDs using `crypto.randomUUID()`.
+6. **CUID2 primary keys** — In-memory repos must generate IDs using `createId()` from `@paralleldrive/cuid2`. Never use `crypto.randomUUID()`.
 
 ### Repository Interface Pattern
 
@@ -127,6 +155,8 @@ export interface ContactFilters {
   city?: string
   companySize?: string
   missingEmail?: boolean
+  province_code?: string   // SCP-2026-03-28-D: location filter
+  city_code?: string       // SCP-2026-03-28-D: location filter
 }
 
 export interface IContactRepository {
@@ -148,6 +178,7 @@ export interface IContactRepository {
 import type { IContactRepository } from '../../interfaces/repositories/IContactRepository.js'
 import type { Contact } from '../../types/domain.js'
 import { faker } from '@faker-js/faker'
+import { createId } from '@paralleldrive/cuid2'
 
 faker.seed(42)
 
@@ -162,7 +193,7 @@ export class InMemoryContactRepository implements IContactRepository {
   private _seed() {
     for (let i = 0; i < 50; i++) {
       const contact: Contact = {
-        id: crypto.randomUUID(),
+        id: createId(),
         name: faker.person.fullName(),
         phone: `+628${faker.number.int({ min: 10000000, max: 99999999 })}`,
         // ...
@@ -191,7 +222,7 @@ export class InMemoryContactRepository implements IContactRepository {
       this.contacts.set(existing.id, updated)
       return updated
     }
-    const contact = { id: crypto.randomUUID(), ...data, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+    const contact = { id: createId(), ...data, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
     this.contacts.set(contact.id, contact)
     return contact
   }
@@ -222,13 +253,14 @@ export interface IEmailService {
 ```typescript
 // src/services/adapters/mock/EmailService.ts
 import type { IEmailService, EmailPayload } from '../../../interfaces/services/IEmailService.js'
+import { createId } from '@paralleldrive/cuid2'
 
 export class MockEmailService implements IEmailService {
   private sentEmails: Array<{ payload: EmailPayload; sentAt: string }> = []
 
   async send(payload: EmailPayload) {
     this.sentEmails.push({ payload, sentAt: new Date().toISOString() })
-    return { messageId: `mock-${crypto.randomUUID()}` }
+    return { messageId: `mock-${createId()}` }  // CUID2 — never crypto.randomUUID()
   }
 
   async sendBatch(payloads: EmailPayload[]) {
@@ -264,7 +296,13 @@ interface IEventRepository {
 interface IRegistrationRepository {
   findByEvent(eventId: string, params: PaginationParams, filters?: RegistrationFilters): Promise<{ data: Registration[]; total: number }>
   findById(id: string): Promise<Registration | null>
+  findByContact(contactId: string): Promise<Registration[]>  // attendance history — all registrations for a contact
   create(data: Omit<Registration, 'id' | 'createdAt'>): Promise<Registration>
+  // Note: Registration.order (RegistrationOrder | undefined) is part of the data shape — SCP-2026-03-28-E
+  // When event.is_paid === false: order = { subtotal: 0, discount: 0, total: 0, currency: 'IDR', payment_method: null }
+  // Registration.source: 'online' | 'onsite_import' | 'etl_import'
+  // Registration.event_date: YYYY-MM-DD | null (from Tanggal Acara; null for online registrations)
+  // Registration.event_name_raw: string | null (from Nama Acara column; null for online registrations)
   updateStatus(id: string, status: Registration['status']): Promise<Registration | null>
   bulkApprove(ids: string[]): Promise<{ approved: number }>
   getConfirmationStats(eventId: string): Promise<ConfirmationStats>
@@ -286,15 +324,18 @@ interface IUserRepository {
 }
 ```
 
-**ISurveyRepository (PostgreSQL JSONB — `events.survey_schema` column):**
+**ISurveyRepository (PostgreSQL JSONB — dual survey per event, SCP-2026-03-28-A):**
 ```typescript
+type SurveyType = 'registration' | 'post-event'
+
 interface ISurveyRepository {
-  findByEventId(eventId: string): Promise<SurveySchema | null>
-  upsert(eventId: string, schema: SurveySchema): Promise<SurveySchema>
+  findByEventId(eventId: string, surveyType: SurveyType): Promise<SurveySchema | null>
+  upsert(eventId: string, surveyType: SurveyType, schema: SurveySchema): Promise<SurveySchema>
   saveResponse(registrationId: string, answers: Record<string, unknown>): Promise<void>
-  getResponsesByEvent(eventId: string): Promise<SurveyResponse[]>
+  getResponsesByEvent(eventId: string, surveyType?: SurveyType): Promise<SurveyResponse[]>
 }
 ```
+Each event has TWO independent survey schemas: `registration` (shown during sign-up) and `post-event` (sent after event). In-memory implementation uses a `Map<string, { registration?: SurveySchema; 'post-event'?: SurveySchema }>` keyed by `eventId`.
 
 **IFlaggedRecordsRepository:**
 ```typescript
@@ -329,36 +370,60 @@ Mock records enqueued jobs: `getEnqueuedJobs(): Array<{ queueName, job, jobId }>
 
 ### container.ts (full wiring)
 
+> ⚠️ **SCP-2026-03-28-C override:** The architecture doc shows an old `SERVICE_IMPL=mock|real` single-toggle pattern — that is superseded. Use per-service provider env vars below. Do NOT reference `SERVICE_IMPL` anywhere in container.ts.
+
 ```typescript
 // src/container.ts
 import type { IContactRepository } from './interfaces/repositories/IContactRepository.js'
-import type { IEventRepository } from './interfaces/repositories/IEventRepository.js'
-// ... all interface imports
+import type { IEmailService } from './interfaces/services/IEmailService.js'
+import type { IWhatsAppService } from './interfaces/services/IWhatsAppService.js'
+import type { IYoriMindService } from './interfaces/services/IYoriMindService.js'
+import type { IEtlNormalizationService } from './interfaces/services/IEtlNormalizationService.js'
+import type { IDeduplicationService } from './interfaces/services/IDeduplicationService.js'
+// ... all interface imports (use static imports — ESM does not support require())
 
-const REPO = process.env.REPOSITORY_IMPL || 'memory'
-const SVC = process.env.SERVICE_IMPL || 'mock'
+const REPO = process.env.REPOSITORY_IMPL ?? 'memory'
 
-function loadRepo<T>(memoryPath: string, postgresPath: string): T {
-  if (REPO === 'memory') {
-    const mod = require(memoryPath)
-    const ClassName = Object.keys(mod).find(k => k.startsWith('InMemory'))!
-    return new mod[ClassName]() as T
-  }
-  if (REPO === 'postgres') {
-    const mod = require(postgresPath)
-    const ClassName = Object.keys(mod).find(k => k.startsWith('Postgres'))!
-    return new mod[ClassName]() as T
-  }
-  throw new Error(`Unknown REPOSITORY_IMPL: ${REPO}`)
-}
+// Repositories — single toggle (memory vs postgres)
+import { InMemoryContactRepository } from './repositories/memory/ContactRepository.js'
+// ... other in-memory imports
+export const contactRepository: IContactRepository =
+  REPO === 'memory' ? new InMemoryContactRepository() : (() => { throw new Error('postgres repos not wired yet') })()
+// ... repeat for all 7 repos
 
-export const contactRepository: IContactRepository = loadRepo(
-  './repositories/memory/ContactRepository.js',
-  './repositories/postgres/ContactRepository.js'
-)
-// ... repeat for all repos
+// Services — non-AI services have own provider; all AI features share AI_PROVIDER
+const EMAIL_PROVIDER    = process.env.EMAIL_PROVIDER    ?? 'mock'     // mock|brevo|mailtrap
+const WHATSAPP_PROVIDER = process.env.WHATSAPP_PROVIDER ?? 'mock'     // mock|everpro
+const AI_PROVIDER       = process.env.AI_PROVIDER       ?? 'disabled' // disabled|mock|openai|anthropic
 
-export const emailService: IEmailService = /* similar pattern for SVC */
+import { MockEmailService }        from './services/adapters/mock/EmailService.js'
+import { MailtrapEmailService }    from './services/adapters/real/MailtrapEmailService.js'
+import { DisabledYoriMindService } from './services/adapters/disabled/YoriMindService.js'
+import { MockYoriMindService }     from './services/adapters/mock/YoriMindService.js'
+import { MockEtlNormalizationService } from './services/adapters/mock/EtlNormalizationService.js'
+import { RuleBasedEtlNormalizationService } from './services/adapters/real/RuleBasedEtlNormalizationService.js'
+import { MockSmartFilterService }  from './services/adapters/mock/SmartFilterService.js'
+import { FuzzyDeduplicationService } from './services/FuzzyDeduplicationService.js'
+
+export const emailService: IEmailService =
+  EMAIL_PROVIDER === 'mailtrap' ? new MailtrapEmailService() : new MockEmailService()
+
+export const yoriMindService: IYoriMindService =
+  AI_PROVIDER === 'mock'     ? new MockYoriMindService()
+  : AI_PROVIDER === 'openai' || AI_PROVIDER === 'anthropic'
+    ? (() => { throw new Error(`AI_PROVIDER=${AI_PROVIDER} not wired yet`) })()
+  : new DisabledYoriMindService()  // disabled (default)
+
+export const etlNormalizationService: IEtlNormalizationService =
+  AI_PROVIDER === 'mock' ? new MockEtlNormalizationService()
+  : AI_PROVIDER === 'openai' || AI_PROVIDER === 'anthropic'
+    ? (() => { throw new Error(`AI_PROVIDER=${AI_PROVIDER} not wired yet`) })()
+  : new RuleBasedEtlNormalizationService()  // disabled → rule-based (no external calls)
+
+export const smartFilterService: ISmartFilterService = new MockSmartFilterService()  // AI_PROVIDER wired in Phase 2
+
+// Dedup — always FuzzyDeduplicationService, no env var toggle
+export const deduplicationService: IDeduplicationService = new FuzzyDeduplicationService()
 ```
 
 ### Anti-Patterns (NEVER DO)
@@ -388,6 +453,14 @@ export const emailService: IEmailService = /* similar pattern for SVC */
 - [x] Task 1: Define domain types in `src/types/domain.ts`
   - [x] Subtask 1.1: Contact, Event, Registration, User, FlaggedRecord, SurveySchema, SurveyResponse
   - [x] Subtask 1.2: All status enums and lookup types
+  - [ ] Subtask 1.3 (SCP-2026-03-28-D): Add 4 nullable location fields to `Contact` type: `province_code: string | null`, `province_name: string | null`, `city_code: string | null`, `city_name: string | null`. Legacy `city: string` field remains — do not remove.
+  - [ ] Subtask 1.3b (2026-03-28): Add `department: string | null` to `Contact` type. ETL upsert policy: **latest wins** — always overwrite with incoming value if non-null.
+  - [ ] Subtask 1.4 (SCP-2026-03-28-E): Add `order?: RegistrationOrder` to `Registration` type where `RegistrationOrder = { subtotal: number, discount: number, total: number, currency: 'IDR', payment_method: string | null }`
+  - [ ] Subtask 1.4b (2026-03-28): Add attendance fields to `Registration` type:
+    - `source: 'online' | 'onsite_import' | 'etl_import'`
+    - `event_date: string | null` — ISO 8601 `YYYY-MM-DD`; from `Tanggal Acara` column
+    - `event_name_raw: string | null` — raw event name from upload; null for online registrations
+    - `attended_at: string | null` — ISO 8601 timestamp; set when `status → 'attended'`
 
 - [x] Task 2: Create all 7 repository interfaces in `src/interfaces/repositories/`
   - [x] Subtask 2.1: IContactRepository (findAll, findById, findByPhone, upsert, update, softDelete, countHealth, findFacets)
@@ -400,7 +473,7 @@ export const emailService: IEmailService = /* similar pattern for SVC */
 
 - [x] Task 3: Create all 6 service interfaces in `src/interfaces/services/`
   - [x] Subtask 3.1: IEmailService (send, sendBatch)
-  - [x] Subtask 3.2: IWhatsAppService (send, sendBatch)
+  - [x] Subtask 3.2: IWhatsAppService (send, sendBatch, sendImage — added SCP-2026-03-28-F: `sendImage(to: string, imageUrl: string, caption?: string): Promise<void>` for WhatsApp QR delivery)
   - [x] Subtask 3.3: IEtlNormalizationService (normalizeBatch — accepts raw rows, returns NormalizedRow[])
   - [x] Subtask 3.4: IYoriMindService (analyze — accepts snapshot JSON, returns YoriMindResult)
   - [x] Subtask 3.5: IQueueService (enqueue, getStatus)
@@ -424,9 +497,34 @@ export const emailService: IEmailService = /* similar pattern for SVC */
   - [x] Subtask 5.6: MockOtpService — records sends, always returns success verify
 
 - [x] Task 6: Update `src/container.ts` with full wiring
-  - [x] Subtask 6.1: Wire all 7 repositories via REPOSITORY_IMPL env var
-  - [x] Subtask 6.2: Wire all 6 services via SERVICE_IMPL env var
+  - [x] Subtask 6.1: Wire all 7 repositories via `REPOSITORY_IMPL` env var
+  - [x] Subtask 6.2: Wire each service via provider env vars (`EMAIL_PROVIDER`, `WHATSAPP_PROVIDER`, `AI_PROVIDER` — single toggle for YoriMind/ETL/SmartFilter)
   - [x] Subtask 6.3: Verify all exports typed to interface, not concrete class
+
+- [ ] Task 8: Add `DisabledYoriMindService` (AC9)
+  - [ ] Subtask 8.1: Create `src/services/adapters/disabled/YoriMindService.ts` — implements `IYoriMindService`; `analyze()` returns `null` immediately
+  - [ ] Subtask 8.2: Wire in `container.ts` when `AI_PROVIDER=disabled`
+
+- [ ] Task 9: Add `MailtrapEmailService` (AC10)
+  - [ ] Subtask 9.1: Create `src/services/adapters/real/MailtrapEmailService.ts` — implements `IEmailService` via nodemailer SMTP
+  - [ ] Subtask 9.2: Reads `MAILTRAP_HOST`, `MAILTRAP_PORT`, `MAILTRAP_USER`, `MAILTRAP_PASS` from config
+  - [ ] Subtask 9.3: Wire in `container.ts` when `EMAIL_PROVIDER=mailtrap`
+
+- [ ] Task 10: Add `IDeduplicationService` + `FuzzyDeduplicationService` (AC11)
+  - [ ] Subtask 10.1: Create `src/interfaces/services/IDeduplicationService.ts` with `findPotentialDuplicates(contact: Contact): Promise<DuplicateCandidate[]>`
+  - [ ] Subtask 10.2: Create `src/services/FuzzyDeduplicationService.ts` — matching logic:
+    - Email: exact match (already lowercased by EtlService pre-normalization step — do NOT re-lowercase here)
+    - Phone: strip leading `+62` or `62` for digit comparison only (phone is already in +62 format in DB — EtlService handles normalization before dedup is called; do NOT add +62 formatting here)
+    - Name + company: Jaro-Winkler similarity ≥ 0.85 AND same `companyName` → probable duplicate
+    - **Important:** `FuzzyDeduplicationService` receives already-pre-normalized data. Never duplicate the EtlService pre-normalization logic here.
+  - [ ] Subtask 10.3: Wire in `container.ts` as `deduplicationService` (no env var — always `FuzzyDeduplicationService`)
+
+- [ ] Task 11: Add `RuleBasedEtlNormalizationService` (fuzzy enrichment provider)
+  - [ ] Subtask 11.1: Create `src/services/adapters/real/RuleBasedEtlNormalizationService.ts` — implements `IEtlNormalizationService`
+  - [ ] Subtask 11.2: Industry slug: keyword map (see Story 3.3 Dev Notes → "RuleBasedEtlNormalizationService — Industry Keyword Map" for full map seeded from contact-etl.xlsx); job title slug: regex classification (e.g. "manager|manajer" → `manager`, "direktur|director" → `director`, "staff|staf" → `staff`)
+  - [ ] Subtask 11.3: Returns `confidence: 1.0` for fully matched fields, `0.6` for unmatched (triggers flagged_record)
+  - [ ] Subtask 11.4: Wire in `container.ts` when `AI_PROVIDER=disabled` (default fallback for ETL)
+  - [ ] Subtask 11.5: **DO NOT implement city→code mapping here** — that logic belongs in Story 3.3 Task 6 (`wilayah-static.json` lookup). This service handles industry + job title normalization only. Story 3.3 extends this class with city mapping post-implementation.
 
 - [x] Task 7: Write unit tests
   - [x] Subtask 7.1: Test all in-memory repository CRUD operations
@@ -496,3 +594,5 @@ export const emailService: IEmailService = /* similar pattern for SVC */
 | Date | Change | Author |
 |------|--------|--------|
 | 2026-03-22 | Story created (BE Foundation — Phase 1 gate) | bmad-context-engine |
+| 2026-03-28 | AC6 replaced with per-service provider env vars; AC9/10/11 added (Disabled/Mailtrap/Dedup); CUID2 replaces crypto.randomUUID(); Tasks 8–11 added (Task 11: RuleBasedEtlNormalizationService) | SCP-2026-03-28-C |
+| 2026-03-28 | domain.ts Contact type + ContactFilters: location fields added (SCP-2026-03-28-D); ISurveyRepository: dual-survey type param; IRegistrationRepository: order field note; container.ts wiring pattern corrected; FuzzyDeduplicationService pre-norm boundary clarified | VS-2026-03-28 |

@@ -2,7 +2,8 @@ import { http, HttpResponse, delay } from 'msw'
 import { faker } from '@faker-js/faker'
 import type { AudienceRecommendationsResponse, AttachSponsorBody, BlastPayload, Event, EventSponsor, PaginatedResponse, RegistrationWithContact } from '@/types/api'
 import { djb2 } from '@/lib/djb2'
-import { usersStore, userEventAssignments } from './users'
+import { usersStore, userEventAssignments, MOCK_USER_IDS } from './users'
+import { makeMockCuid2 } from './id'
 
 const TIMEZONES: Event['timezone'][] = ['Asia/Jakarta', 'Asia/Makassar', 'Asia/Jayapura']
 
@@ -163,7 +164,7 @@ export const eventHandlers = [
     await delay(600)
     const body = await request.json() as Partial<Event>
     const newEvent: Event = {
-      id: faker.string.uuid(),
+      id: makeMockCuid2(),
       slug: faker.helpers.slugify((body.name ?? 'new-event').toLowerCase()),
       status: 'draft',
       description: '',
@@ -189,9 +190,9 @@ export const eventHandlers = [
       .map((s) => ({
         vendor_id: s.vendor_id,
         name: s.vendor_name,
+        tier: s.tier,
         logo_url: undefined,
         website: undefined,
-        tier: s.tier,
         display_order: s.display_order,
       }))
       .sort((a, b) => a.display_order - b.display_order)
@@ -251,11 +252,11 @@ export const eventHandlers = [
       )
     }
     const newSponsor: EventSponsor = {
-      id: faker.string.uuid(),
+      id: makeMockCuid2(),
       event_id: eventId,
       vendor_id: body.vendorId,
       vendor_name: vendor.name,
-      tier: body.tier,
+      tier: body.tier ?? 'standard',
       display_order: body.displayOrder ?? existing.length,
     }
     eventSponsorsStore.set(eventId, [...existing, newSponsor])
@@ -264,7 +265,7 @@ export const eventHandlers = [
 
   http.patch('/api/events/:id/sponsors/:vendorId', async ({ params, request }) => {
     await delay(300)
-    const body = await request.json() as Partial<Pick<EventSponsor, 'tier' | 'display_order'>>
+    const body = await request.json() as Partial<Pick<EventSponsor, 'display_order'>>
     const eventId = params.id as string
     const vendorId = params.vendorId as string
     const sponsors = eventSponsorsStore.get(eventId) ?? []
@@ -340,7 +341,7 @@ export const eventHandlers = [
   http.get('/api/events/:id/participants', async () => {
     await delay(500)
     const participants = Array.from({ length: 50 }, () => ({
-      id: faker.string.uuid(),
+      id: makeMockCuid2(),
       name: faker.person.fullName(),
       phone: `+62${faker.string.numeric(10)}`,
       ticketToken: faker.string.alphanumeric(12).toUpperCase(),
@@ -452,7 +453,7 @@ export const eventHandlers = [
     await delay(400)
     const body = await request.json() as BlastPayload
     const recipientCount = body.contactIds?.length ?? 50
-    const jobId = crypto.randomUUID()
+    const jobId = makeMockCuid2()
     if (body.scheduledAt) {
       return HttpResponse.json({ jobId, status: 'scheduled', scheduledAt: body.scheduledAt, recipientCount }, { status: 202 })
     }
@@ -470,7 +471,7 @@ export const eventHandlers = [
     }
     const cloned: Event = {
       ...source,
-      id: faker.string.uuid(),
+      id: makeMockCuid2(),
       name: `${source.name} (Salinan)`,
       slug: `${source.slug}-copy-${faker.string.alphanumeric(4).toLowerCase()}`,
       status: 'draft',
@@ -513,7 +514,7 @@ export const eventHandlers = [
 
     const excludedReasons: Record<string, number> = {}
     const eligible = contactsPool.filter((contact) => {
-      if (contact.flagCategory === 'not-potential' || contact.flagCategory === 'spam') {
+      if (contact.flagCategory === 'invalid-data' || contact.flagCategory === 'duplicate') {
         const key = contact.flagCategory
         excludedReasons[key] = (excludedReasons[key] ?? 0) + 1
         return false
@@ -578,12 +579,16 @@ export const eventHandlers = [
     const token = auth.replace('Bearer ', '')
     let userId: string
     if (token === 'dev-token') {
-      userId = request.headers.get('X-User-Id') ?? 'dev-admin'
+      userId = request.headers.get('X-User-Id') ?? MOCK_USER_IDS.devAdmin
     } else {
       const roleFromToken = token.replace('mock-token-', '') as 'admin' | 'staff' | 'viewer'
-      userId = usersStore.find((u) => u.role === roleFromToken)?.id ?? 'user-001'
+      userId = usersStore.find((u) => u.role === roleFromToken)?.id ?? MOCK_USER_IDS.admin
     }
-    const devToReal: Record<string, string> = { 'dev-admin': 'user-001', 'dev-staff': 'user-002', 'dev-viewer': 'user-003' }
+    const devToReal: Record<string, string> = {
+      [MOCK_USER_IDS.devAdmin]: MOCK_USER_IDS.admin,
+      [MOCK_USER_IDS.devStaff]: MOCK_USER_IDS.staff,
+      [MOCK_USER_IDS.devViewer]: MOCK_USER_IDS.viewer,
+    }
     const lookupId = devToReal[userId] ?? userId
     const assignedEventIds = Array.from(userEventAssignments.get(lookupId) ?? [])
     return HttpResponse.json(eventsStore.filter((e) => assignedEventIds.includes(e.id)))

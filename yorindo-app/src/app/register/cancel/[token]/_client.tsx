@@ -3,7 +3,6 @@
 import { use, useState } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { Card, CardContent } from '@/components/ui/card'
-import { EXPERIMENTAL_ENABLED } from '@/lib/featureFlags'
 import { Button } from '@/components/ui/button'
 
 interface CancelPageProps {
@@ -86,9 +85,7 @@ export default function CancelPage({ params }: CancelPageProps) {
             <h2 className="text-xl font-bold">Pendaftaran Dibatalkan</h2>
             <p className="text-muted-foreground text-sm">
               Pendaftaran Anda untuk <strong>{ticket.eventName}</strong> telah berhasil dibatalkan.
-              {EXPERIMENTAL_ENABLED
-                ? ' Slot Anda akan diberikan kepada peserta berikutnya di waitlist.'
-                : ' Slot Anda telah dikembalikan ke kapasitas event.'}
+              {' Slot Anda telah dikembalikan ke kapasitas event.'}
             </p>
           </CardContent>
         </Card>

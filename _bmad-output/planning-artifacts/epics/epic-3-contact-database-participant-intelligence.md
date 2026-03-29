@@ -3,7 +3,7 @@
 Admin can build and maintain a clean, qualified participant database by importing Excel/CSV data, reviewing AI-normalized records, resolving duplicate profiles, and searching/filtering contacts with AI-assisted smart industry classification.
 
 > **Phase 1 (FE):** Contacts table (TanStack Table, pagination, filter bar, smart filter input + debounce); upload form + file picker + job status poller; ETL job status page; flagged records review UI (side-by-side diff + approve/discard); duplicate merge UI (field selector); — all wired to MSW contacts/etl handlers
-> **Phase 2 (BE):** `GET /api/contacts`, `POST /api/etl/upload`, BullMQ ETL worker + AI normalization via `IEtlNormalizationService` adapter (provider set by `ETL_AI_PROVIDER` env var) + Zod validation, `GET /api/etl/jobs/:id`, `GET/PATCH /api/contacts/flagged`, `POST /api/contacts/:id/merge`, `POST /api/smart-filter/industry` via `ISmartFilterService` adapter (provider set by `SMART_FILTER_AI_PROVIDER` env var), MongoDB raw_uploads document write, all repositories
+> **Phase 2 (BE):** `GET /api/contacts`, `POST /api/etl/upload`, BullMQ ETL worker + AI normalization via `IEtlNormalizationService` adapter (provider set by `ETL_AI_PROVIDER` env var) + Zod validation, `GET /api/etl/jobs/:id`, `GET/PATCH /api/contacts/flagged`, `POST /api/contacts/:id/merge`, `POST /api/smart-filter/industry` via `ISmartFilterService` adapter (provider set by `SMART_FILTER_AI_PROVIDER` env var), `raw_uploads` persistence, all repositories
 >
 > **Contacts Intelligence Hub Revamp (Stories 3.7–3.12 — FE phase, wired to new MSW handlers):** HealthBar component + `/api/contacts/health` handler; FilterBar facet counts + `ActiveFilterPills` + URL state + `/api/contacts/facets` handler; `ActionToolbar` sticky blast entry; `TriagePanel` inline collapsible with optimistic updates + `/api/contacts/duplicates` handler; `EventBanner` pre-event shortcut + `/api/events/upcoming-uncontacted` handler; Contact event history tab in Sheet + `/api/contacts/:id/history` handler
 
@@ -31,8 +31,8 @@ So that I can find and review specific participant segments efficiently.
 **When** React Query re-fetches,
 **Then** the table updates without a full page reload and shows a skeleton loader during fetch
 
-**Given** a `viewer` user accesses the contacts list,
-**Then** it returns HTTP 403 — viewers cannot access the contact database
+**Given** a `staff` user accesses the contacts list,
+**Then** it returns HTTP 403 — staff cannot access the contact database workspace
 
 ---
 
@@ -46,7 +46,7 @@ So that I can import bulk data into the contact database without manual entry.
 
 **Given** I am authenticated as `admin`,
 **When** `POST /api/etl/upload` is called with a multipart file upload (`.xlsx` or `.csv`),
-**Then** the file is saved to the `uploads_tmp` Docker volume and a BullMQ ETL job is enqueued; the endpoint returns HTTP 202 `{ jobId, status: 'queued' }`
+**Then** the file is saved to the `uploads` Docker volume and a BullMQ ETL job is enqueued; the endpoint returns HTTP 202 `{ jobId, status: 'queued' }`
 
 **Given** a file larger than the configured max size,
 **When** the upload is attempted,
@@ -60,7 +60,7 @@ So that I can import bulk data into the contact database without manual entry.
 **When** `GET /api/etl/jobs/:jobId` is called,
 **Then** it returns the current job status: `queued`, `processing`, `completed`, or `failed`
 
-**Given** the upload form on the FE (`/admin/contacts/upload`),
+**Given** the upload form on the FE (`/app/contacts/upload`),
 **When** a file is selected and submitted,
 **Then** the form shows an upload progress indicator and on success shows the job ID with a link to monitor status
 
@@ -75,7 +75,7 @@ So that raw imported data becomes clean, standardized participant records automa
 **Acceptance Criteria:**
 
 **Given** an ETL job is dequeued by `etl.worker.ts`,
-**When** the file is read from `uploads_tmp`,
+**When** the file is read from `uploads`,
 **Then** `xlsx` parses it into an array of row objects and the temp file is deleted after parsing
 
 **Given** 50 rows are sent to the AI normalization service (`IEtlNormalizationService`) with the standard system prompt,
@@ -100,7 +100,7 @@ So that raw imported data becomes clean, standardized participant records automa
 **Then** `contacts.completeness_score` is computed as the integer percentage of non-null profile fields (`name`, `phone`, `email`, `company`, `industry_id`, `job_title_id`, `city`, `company_size`) and persisted alongside the upsert (FR12)
 
 **Given** the ETL job completes,
-**Then** a `raw_uploads` document is created in MongoDB with `{ filename, uploaded_by, row_count, status: 'completed', flagged_rows }` and a `contact.imported` audit entry is written
+**Then** a `raw_uploads` record is persisted with `{ filename, uploaded_by, row_count, status: 'completed', flagged_rows }` and a `contact.imported` audit entry is written
 
 ---
 
@@ -116,7 +116,7 @@ So that uncertain data is human-reviewed before entering the clean contact datab
 **When** `GET /api/contacts/flagged?page=1&pageSize=50` is called,
 **Then** it returns paginated flagged records with `{ raw_data, flags[], status: 'pending' }`
 
-**Given** a flagged record is displayed in the FE (`/admin/contacts/flagged`),
+**Given** a flagged record is displayed in the FE (`/app/contacts/flagged`),
 **Then** the original raw field values and the AI flags are both shown side by side for comparison
 
 **Given** I correct a flagged record's fields and submit,

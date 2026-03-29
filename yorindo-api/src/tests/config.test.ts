@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 
+vi.mock('dotenv/config', () => ({}))
+
 describe('config validation', () => {
   const savedEnv: Record<string, string | undefined> = {}
 

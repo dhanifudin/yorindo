@@ -1,7 +1,7 @@
 /**
  * Auth Routes Tests — Story 2.1 Phase 2 BE
  *
- * Tests use InMemoryUserRepository (seeded with admin/staff users).
+ * Tests use InMemoryUserRepository (seeded with admin/viewer/staff users).
  * No real Redis or DB needed — REDIS_URL not set → blacklist is no-op.
  */
 
@@ -23,24 +23,42 @@ afterAll(async () => {
 })
 
 describe('POST /api/auth/login', () => {
+  it('returns 200 for all seeded roles with Password123!', async () => {
+    const seededUsers = [
+      ['admin@yorindo.id', 'admin'],
+      ['staff@yorindo.id', 'staff'],
+      ['viewer@yorindo.id', 'viewer'],
+    ] as const
+
+    for (const [email, role] of seededUsers) {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/auth/login',
+        payload: { email, password: 'Password123!' },
+      })
+      expect(res.statusCode).toBe(200)
+      expect(res.json().user.role).toBe(role)
+    }
+  })
+
   it('returns 200 with accessToken for valid admin credentials', async () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/auth/login',
-      payload: { email: 'admin@yorindo.id', password: 'admin1234' },
+      payload: { email: 'admin@yorindo.id', password: 'Password123!' },
     })
     expect(res.statusCode).toBe(200)
     const body = res.json()
     expect(body).toHaveProperty('accessToken')
     expect(typeof body.accessToken).toBe('string')
-    expect(body.user.role).toBe('event_admin')
+    expect(body.user.role).toBe('admin')
   })
 
   it('returns 200 with accessToken for valid staff credentials', async () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/auth/login',
-      payload: { email: 'staff@yorindo.id', password: 'staff1234' },
+      payload: { email: 'staff@yorindo.id', password: 'Password123!' },
     })
     expect(res.statusCode).toBe(200)
     const body = res.json()
@@ -85,7 +103,7 @@ describe('POST /api/auth/logout', () => {
     const loginRes = await app.inject({
       method: 'POST',
       url: '/api/auth/login',
-      payload: { email: 'admin@yorindo.id', password: 'admin1234' },
+      payload: { email: 'admin@yorindo.id', password: 'Password123!' },
     })
     const { accessToken } = loginRes.json()
 
@@ -131,16 +149,16 @@ describe('POST /api/auth/refresh', () => {
     const loginRes = await app.inject({
       method: 'POST',
       url: '/api/auth/login',
-      payload: { email: 'admin@yorindo.id', password: 'admin1234' },
+      payload: { email: 'admin@yorindo.id', password: 'Password123!' },
     })
     const cookies = loginRes.cookies
-    const refreshCookie = cookies.find(c => c.name === 'refreshToken')
+    const refreshCookie = cookies.find(c => c.name === 'refresh_token')
     expect(refreshCookie).toBeDefined()
 
     const refreshRes = await app.inject({
       method: 'POST',
       url: '/api/auth/refresh',
-      cookies: { refreshToken: refreshCookie!.value },
+      cookies: { refresh_token: refreshCookie!.value },
     })
     expect(refreshRes.statusCode).toBe(200)
     expect(refreshRes.json()).toHaveProperty('accessToken')

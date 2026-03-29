@@ -1,8 +1,8 @@
 # Epic 2: Team & Access Management
 
-Super admin can create and manage internal user accounts (admin, staff, viewer); team members can securely log in with JWT and are automatically restricted to their role's permitted capabilities.
+Admin can create and manage internal user accounts (`admin`, `viewer`, `staff`, `participant`); team members can securely log in with JWT and are automatically restricted to their role's permitted capabilities.
 
-> **Phase 1 (FE):** Login page with form + error states (MSW auth handler); user management table + create/edit/deactivate modals; route guard middleware (Next.js middleware.ts); event assignment UI — all wired to MSW
+> **Phase 1 (FE):** Login page with form + error states (MSW auth handler); user management table + create/edit/deactivate modals; client-side `/app` route guard in `app/layout.tsx`; event assignment UI for staff and viewer accounts - all wired to MSW
 > **Phase 2 (BE):** `POST /api/auth/login|refresh|logout`, `GET/POST/PATCH/DELETE /api/users`, `POST/DELETE /api/users/:id/events`, JWT middleware, bcrypt, Redis token blacklist, `requireEventAccess` middleware
 
 ## Story 2.1: Admin Login & JWT Authentication
@@ -19,7 +19,7 @@ So that I can securely access the platform and all subsequent API calls are auth
 
 **Given** an invalid email or wrong password,
 **When** `POST /api/auth/login` is called,
-**Then** it returns HTTP 401 with `{ error: { code: 'INVALID_CREDENTIALS', ... } }` — no information about which field was wrong
+**Then** it returns HTTP 401 with `{ error: { code: 'INVALID_CREDENTIALS', ... } }` - no information about which field was wrong
 
 **Given** a valid access token,
 **When** any authenticated endpoint is called with `Authorization: Bearer {token}`,
@@ -44,7 +44,7 @@ So that I can securely access the platform and all subsequent API calls are auth
 
 ## Story 2.2: User Account Management
 
-As a super admin,
+As an admin,
 I want to create, view, edit, and deactivate internal user accounts with assigned roles,
 So that I can control who has access to the platform and what they can do.
 
@@ -56,7 +56,7 @@ So that I can control who has access to the platform and what they can do.
 
 **Given** I am authenticated as `admin`,
 **When** `GET /api/users` is called,
-**Then** it returns all users with their id, name, email, role, and created_at — passwords never returned
+**Then** it returns all users with their id, name, email, role, and created_at - passwords never returned
 
 **Given** I am authenticated as `admin`,
 **When** `PATCH /api/users/:id` is called with `{ role: 'viewer' }`,
@@ -64,21 +64,21 @@ So that I can control who has access to the platform and what they can do.
 
 **Given** I am authenticated as `admin`,
 **When** `DELETE /api/users/:id` is called,
-**Then** the account is deactivated (soft delete — `deleted_at` set) and a `user.deactivated` audit entry is written
+**Then** the account is deactivated (soft delete - `deleted_at` set) and a `user.deactivated` audit entry is written
 
 **Given** I am authenticated as `staff` or `viewer`,
 **When** `POST /api/users` is called,
 **Then** it returns HTTP 403 with `{ error: { code: 'FORBIDDEN', ... } }`
 
-**Given** a non-admin tries to access `/admin/users` on the FE,
+**Given** a non-admin tries to access `/app/users` on the FE,
 **When** the route guard runs,
-**Then** they are redirected to the dashboard with no flash of admin content
+**Then** they are redirected to their allowed surface (`/app/events` for viewer, `/app/scan` for staff) with no flash of restricted content
 
 ---
 
 ## Story 2.3: Role-Based Route Guards (Frontend)
 
-> **Phase 1 only** — pure FE story. No BE work. Uses `authStore` (set by DevToolbar in Phase 1, set by real JWT in Phase 2).
+> **Phase 1 only** - pure FE story. No BE work. Uses `authStore` (set by DevToolbar in Phase 1, set by real JWT in Phase 2).
 
 As a platform,
 I want frontend routes automatically protected based on the authenticated user's role,
@@ -87,16 +87,16 @@ So that staff cannot access admin pages and viewers cannot access write-action p
 **Acceptance Criteria:**
 
 **Given** a user is not authenticated (no access token in `authStore`),
-**When** any `/admin/*` or `/scan/*` route is accessed,
+**When** any `/app/*` or `/scan/*` route is accessed,
 **Then** they are redirected to `/login` immediately
 
 **Given** a `staff` user is authenticated,
-**When** they navigate to `/admin/contacts` or `/admin/events`,
-**Then** they are redirected to `/scan` (their permitted surface)
+**When** they navigate to `/app/contacts` or `/app/events`,
+**Then** they are redirected to `/app/scan` (their permitted surface)
 
 **Given** a `viewer` user is authenticated,
-**When** they navigate to `/admin/contacts/upload` or any PATCH/POST action page,
-**Then** they are redirected to the read-only analytics pages they are assigned to
+**When** they navigate to `/app/contacts/upload` or any PATCH/POST action page,
+**Then** they are redirected to the read-only event pages they are assigned to, and backend event list/detail reads only return assigned events
 
 **Given** an `admin` user is authenticated,
 **When** they navigate to any route,
@@ -110,9 +110,9 @@ So that staff cannot access admin pages and viewers cannot access write-action p
 
 ## Story 2.4: Event Access Assignment for Staff & Viewer
 
-> **Sprint Planning Note (readiness review):** Phase 2 BE implementation of this story must occur after Epic 4 Story 4.1 is complete — events must exist in the database for assignment to be meaningful. Phase 1 FE is unaffected (MSW provides fake events).
+> **Sprint Planning Note (readiness review):** Phase 2 BE implementation of this story must occur after Epic 4 Story 4.1 is complete - events must exist in the database for assignment to be meaningful. Phase 1 FE is unaffected (MSW provides fake events).
 
-As a super admin,
+As an admin,
 I want to assign staff and viewer accounts to specific events,
 So that staff can only scan check-ins for their assigned events and viewers only see analytics for their assigned events.
 
@@ -128,7 +128,7 @@ So that staff can only scan check-ins for their assigned events and viewers only
 
 **Given** an `admin` user calls any event-scoped endpoint,
 **When** `requireEventAccess` middleware runs,
-**Then** it passes immediately — admin bypasses event scope checks
+**Then** it passes immediately - admin bypasses event scope checks
 
 **Given** I am authenticated as `admin`,
 **When** `DELETE /api/users/:id/events/:eventId` is called,

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { useUsers, useUpdateUserRole, useDeleteUser } from '@/hooks/useUsers'
 import { useAuthStore } from '@/store/authStore'
 import { UserCreateForm } from '@/components/features/users/UserCreateForm'
@@ -9,6 +9,14 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from '@/components/ui/dialog'
 import {
   Table,
   TableBody,
@@ -25,6 +33,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { TablePagination } from '@/components/ui/table-pagination'
+import { toast } from 'sonner'
 import type { User } from '@/types/api'
 
 const PAGE_SIZE = 20
@@ -33,26 +42,59 @@ const ROLE_BADGE: Record<User['role'], string> = {
   admin: 'bg-blue-100 text-blue-700',
   staff: 'bg-green-100 text-green-700',
   viewer: 'bg-muted text-muted-foreground',
-  participant: 'bg-purple-100 text-purple-700',
+  participant: 'bg-amber-100 text-amber-700',
 }
 
 export default function UsersPage() {
   const [showForm, setShowForm] = useState(false)
   const [assignUser, setAssignUser] = useState<User | null>(null)
   const [detailUser, setDetailUser] = useState<User | null>(null)
-  const [usersPage, setUsersPage] = useState(0)
-  const { data: users, isLoading } = useUsers()
-
-  const pagedUsers = useMemo(
-    () => (users ?? []).slice(usersPage * PAGE_SIZE, (usersPage + 1) * PAGE_SIZE),
-    [users, usersPage]
-  )
+  const [usersPage, setUsersPage] = useState(1)
+  const [roleChangeTarget, setRoleChangeTarget] = useState<{ user: User; newRole: User['role'] } | null>(null)
+  const { data: users, isLoading } = useUsers(usersPage, PAGE_SIZE)
+  const pagedUsers = users?.data ?? []
+  const total = users?.pagination.total ?? 0
   const { mutate: updateRole } = useUpdateUserRole()
   const { mutate: deleteUser } = useDeleteUser()
   const currentUser = useAuthStore((s) => s.user)
 
+  const handleRoleChangeConfirm = () => {
+    if (!roleChangeTarget) return
+    updateRole(
+      { id: roleChangeTarget.user.id, role: roleChangeTarget.newRole },
+      {
+        onError: () => toast.error('Gagal mengubah role. Silakan coba lagi.'),
+        onSettled: () => setRoleChangeTarget(null),
+      }
+    )
+  }
+
+  const handleDelete = (user: User, afterDelete?: () => void) => {
+    deleteUser(user.id, {
+      onSuccess: afterDelete,
+      onError: () => toast.error(`Gagal menonaktifkan akun ${user.name}.`),
+    })
+  }
+
   return (
     <div>
+      {/* Role change confirmation dialog */}
+      <Dialog open={!!roleChangeTarget} onOpenChange={(v) => !v && setRoleChangeTarget(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Ubah Role</DialogTitle>
+            <DialogDescription>
+              Ubah role <strong>{roleChangeTarget?.user.name}</strong> menjadi{' '}
+              <strong>{roleChangeTarget?.newRole}</strong>?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRoleChangeTarget(null)}>Batal</Button>
+            <Button onClick={handleRoleChangeConfirm}>Konfirmasi</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Manajemen Akun</h1>
         <Button onClick={() => setShowForm(true)}>+ Akun Baru</Button>
@@ -106,12 +148,7 @@ export default function UsersPage() {
                 size="sm"
                 variant="ghost"
                 className="text-destructive hover:text-destructive"
-                onClick={() => {
-                  if (confirm(`Nonaktifkan akun ${detailUser.name}?`)) {
-                    deleteUser(detailUser.id)
-                    setDetailUser(null)
-                  }
-                }}
+                onClick={() => handleDelete(detailUser, () => setDetailUser(null))}
               >
                 Nonaktifkan
               </Button>
@@ -152,8 +189,8 @@ export default function UsersPage() {
           </div>
 
           {/* Desktop table */}
-          <Card className="hidden md:block">
-            <Table>
+          <Card className="hidden w-full overflow-hidden md:block">
+            <Table className="lg:min-w-[900px] xl:min-w-full">
               <TableHeader>
                 <TableRow>
                   <TableHead>Nama</TableHead>
@@ -175,7 +212,7 @@ export default function UsersPage() {
                           <Select
                             value={user.role}
                             onValueChange={(value) =>
-                              updateRole({ id: user.id, role: value as User['role'] })
+                              setRoleChangeTarget({ user, newRole: value as User['role'] })
                             }
                             disabled={isSelf}
                           >
@@ -186,6 +223,7 @@ export default function UsersPage() {
                               <SelectItem value="admin">Admin</SelectItem>
                               <SelectItem value="staff">Staff</SelectItem>
                               <SelectItem value="viewer">Viewer</SelectItem>
+                              <SelectItem value="participant">Participant</SelectItem>
                             </SelectContent>
                           </Select>
                           <Badge className={ROLE_BADGE[user.role]}>{user.role}</Badge>
@@ -210,11 +248,7 @@ export default function UsersPage() {
                               variant="ghost"
                               size="sm"
                               className="text-destructive hover:text-destructive"
-                              onClick={() => {
-                                if (confirm(`Nonaktifkan akun ${user.name}?`)) {
-                                  deleteUser(user.id)
-                                }
-                              }}
+                              onClick={() => handleDelete(user)}
                             >
                               Nonaktifkan
                             </Button>
@@ -230,11 +264,11 @@ export default function UsersPage() {
             </Table>
           </Card>
           <TablePagination
-            page={usersPage}
+            page={usersPage - 1}
             pageSize={PAGE_SIZE}
-            total={users?.length ?? 0}
-            onPrev={() => setUsersPage((p) => Math.max(0, p - 1))}
-            onNext={() => setUsersPage((p) => p + 1)}
+            total={total}
+            onPrev={() => setUsersPage((p) => Math.max(1, p - 1))}
+            onNext={() => setUsersPage((p) => (p * PAGE_SIZE < total ? p + 1 : p))}
           />
         </>
       )}

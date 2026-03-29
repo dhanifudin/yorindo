@@ -78,7 +78,7 @@ export function ContactSheet({
   const showFlag =
     registration &&
     !registration.flagOverride &&
-    (registration.contactFlagCategory === 'spam' || registration.contactFlagCategory === 'not-potential')
+    (registration.contactFlagCategory === 'invalid-data' || registration.contactFlagCategory === 'duplicate')
 
   return (
     <Sheet open={!!registration} onOpenChange={(v) => !v && onClose()}>

@@ -1,6 +1,7 @@
 import { http, HttpResponse, delay } from 'msw'
 import { faker } from '@faker-js/faker'
 import type { Vendor, CreateVendorBody } from '@/types/api'
+import { makeMockCuid2 } from './id'
 
 export let vendorsStore: Vendor[] = [
   {
@@ -72,7 +73,7 @@ export const vendorHandlers = [
     const body = await request.json() as CreateVendorBody
     const now = new Date().toISOString()
     const newVendor: Vendor = {
-      id: faker.string.uuid(),
+      id: makeMockCuid2(),
       linked_event_count: 0,
       created_at: now,
       updated_at: now,

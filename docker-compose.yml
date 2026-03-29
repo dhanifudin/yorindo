@@ -2,24 +2,29 @@ services:
   nginx:
     image: nginx:alpine
     ports:
-      - "80:80"
-      - "443:443"
+      - "127.0.0.1:${NGINX_PORT:-8080}:80"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/certs:/etc/nginx/certs:ro
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       - api
       - app
     restart: unless-stopped
 
   api:
-    image: ghcr.io/YOUR_ORG/yorindo-api:latest
+    image: dhanifudin/yorindo-api:${IMAGE_TAG:-latest}
     expose:
       - "3000"
     env_file: .env
+    environment:
+      # Phase 1: in-memory repositories — set to 'postgres' when BE is ready
+      REPOSITORY_IMPL: memory
+      SERVICE_IMPL: mock
+      DATABASE_URL: postgresql://yorindo:${POSTGRES_PASSWORD}@postgres:5432/yorindo
+      REDIS_URL: redis://redis:6379
+      UPLOADS_DIR: /app/uploads
+      SENTRY_DSN: ${API_SENTRY_DSN:-}
     volumes:
-      - snapshots_data:/data/snapshots
-      - uploads_tmp:/tmp/uploads
+      - api_uploads:/app/uploads
     depends_on:
       - postgres
       - redis
@@ -31,15 +36,12 @@ services:
         max-file: "5"
 
   app:
-    image: ghcr.io/YOUR_ORG/yorindo-app:latest
+    image: dhanifudin/yorindo-app:${IMAGE_TAG:-latest}
     expose:
       - "3000"
     env_file: .env
     environment:
-      # Experimental features are disabled in production deployments by default.
-      # To enable participant SSO login, set NEXT_PUBLIC_ENABLE_EXPERIMENTAL=true
-      # at image build time (NEXT_PUBLIC_* vars are baked in at build, not runtime).
-      NEXT_PUBLIC_ENABLE_EXPERIMENTAL: ""
+      SENTRY_DSN: ${APP_SENTRY_DSN:-}
     restart: unless-stopped
 
   postgres:
@@ -64,7 +66,6 @@ services:
     restart: unless-stopped
 
 volumes:
+  api_uploads:
   postgres_data:
   redis_data:
-  snapshots_data:
-  uploads_tmp:

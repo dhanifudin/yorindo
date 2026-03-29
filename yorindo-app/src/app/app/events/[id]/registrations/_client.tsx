@@ -302,7 +302,7 @@ export default function RegistrationsPage({ params }: RegistrationsPageProps) {
         const reg = row.original
         const showFlag =
           !reg.flagOverride &&
-          (reg.contactFlagCategory === 'spam' || reg.contactFlagCategory === 'not-potential')
+          (reg.contactFlagCategory === 'invalid-data' || reg.contactFlagCategory === 'duplicate')
         return (
           <div className="flex flex-col gap-0.5">
             <button
@@ -359,7 +359,7 @@ export default function RegistrationsPage({ params }: RegistrationsPageProps) {
         if (!filterValue) return true
         return (
           !row.original.flagOverride &&
-          (row.original.contactFlagCategory === 'spam' || row.original.contactFlagCategory === 'not-potential')
+          (row.original.contactFlagCategory === 'invalid-data' || row.original.contactFlagCategory === 'duplicate')
         )
       },
       cell: () => null,
@@ -544,10 +544,10 @@ export default function RegistrationsPage({ params }: RegistrationsPageProps) {
         onColumnFiltersChange={setColumnFilters}
       />
 
-      <Card>
+      <Card className="w-full overflow-hidden">
         <CardContent className="p-0">
           <div ref={tableContainerRef} className="overflow-auto">
-            <Table>
+            <Table className="lg:min-w-[960px] xl:min-w-full">
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow key={headerGroup.id}>

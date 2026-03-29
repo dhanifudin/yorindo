@@ -1,4 +1,5 @@
-import type { IQueueService, QueueName, EnqueueOptions, JobStatus } from '../../../interfaces/services/IQueueService.js'
+import type { IQueueService, QueueName, EnqueueOptions, JobStatus, JobInfo } from '../../../interfaces/services/IQueueService.js'
+import { createId } from '@paralleldrive/cuid2'
 
 interface EnqueuedJob {
   jobId: string
@@ -12,7 +13,7 @@ export class MockQueueService implements IQueueService {
   private enqueuedJobs: EnqueuedJob[] = []
 
   async enqueue(queueName: QueueName, job: object, _opts?: EnqueueOptions): Promise<string> {
-    const jobId = `mock-job-${crypto.randomUUID()}`
+    const jobId = `mock-job-${createId()}`
     this.enqueuedJobs.push({
       jobId,
       queueName,
@@ -23,9 +24,11 @@ export class MockQueueService implements IQueueService {
     return jobId
   }
 
-  async getStatus(jobId: string): Promise<JobStatus> {
+  async getStatus(jobId: string): Promise<JobInfo> {
     const found = this.enqueuedJobs.find(j => j.jobId === jobId)
-    return found?.status ?? 'failed'
+    return {
+      status: found?.status ?? 'failed',
+    }
   }
 
   getEnqueuedJobs(): EnqueuedJob[] {

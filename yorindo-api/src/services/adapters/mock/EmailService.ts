@@ -1,11 +1,12 @@
 import type { IEmailService, EmailPayload } from '../../../interfaces/services/IEmailService.js'
+import { createId } from '@paralleldrive/cuid2'
 
 export class MockEmailService implements IEmailService {
   private sentEmails: Array<{ payload: EmailPayload; sentAt: string }> = []
 
   async send(payload: EmailPayload): Promise<{ messageId: string }> {
     this.sentEmails.push({ payload, sentAt: new Date().toISOString() })
-    return { messageId: `mock-email-${crypto.randomUUID()}` }
+    return { messageId: `mock-email-${createId()}` }
   }
 
   async sendBatch(payloads: EmailPayload[]): Promise<{ sent: number; failed: number }> {

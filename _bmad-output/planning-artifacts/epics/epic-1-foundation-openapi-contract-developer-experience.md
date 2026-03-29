@@ -61,7 +61,7 @@ So that any team member can initialize the complete database schema from scratch
 **Then** all 4 migration files execute in order (001→002→003→004) with a success log per file and zero errors
 
 **Given** migration 001 runs,
-**Then** tables `contacts`, `events`, `registrations`, `vendors`, `industries`, `job_titles` exist with UUID PKs (`gen_random_uuid()`), correct column types, and FK constraints as per the authoritative schema in architecture.md
+**Then** tables `contacts`, `events`, `registrations`, `vendors`, `industries`, `job_titles` exist with app-generated CUID2 / opaque string PKs, correct column types, and FK constraints as per the authoritative schema in architecture.md
 
 **Given** migration 002 runs,
 **Then** tables `users` (id, email, password_hash, role, name, timestamps) and `user_events` (id, user_id FK, event_id FK, granted_by FK, granted_at, UNIQUE(user_id, event_id)) exist
@@ -86,7 +86,7 @@ So that any team member can initialize the complete database schema from scratch
 > **Sprint Planning Note (Bob):** This story is large — it covers Next.js init, 3 Zustand stores, TanStack dependencies, next-pwa, and vitest. If sprint capacity is tight, it can be split: 1.3a (scaffold + routing + stores) and 1.3b (next-pwa + vitest config). The FE team must assess during sprint planning.
 
 As a FE developer,
-I want the `yorindo-app` repository initialized with Next.js 14 App Router, all required packages, three Zustand stores, next-pwa configuration, and vitest with `@/` alias resolution,
+I want the `yorindo-app` repository initialized with Next.js 16 App Router, all required packages, three Zustand stores, PWA configuration, and vitest with `@/` alias resolution,
 So that the FE team has a fully working local environment with PWA support and testing infrastructure from day one.
 
 **Acceptance Criteria:**
@@ -167,7 +167,7 @@ So that the FE team can develop type-safely against a mock API with role switchi
 **Then** `server.listen({ onUnhandledRequest: 'warn' })` is active before the test, `server.resetHandlers()` runs after each test, `server.close()` runs after all tests
 
 **Given** the app renders in `NODE_ENV=development`,
-**Then** `<DevToolbar />` is visible in the bottom-right corner with three role buttons: `admin | staff | viewer`
+**Then** `<DevToolbar />` is visible in the bottom-right corner with three role buttons: `admin | viewer | staff`
 
 **Given** the `staff` button is clicked,
 **When** `useAuthStore().user` is read,
@@ -268,7 +268,7 @@ So that every merge to main automatically reaches production without manual step
 
 As a BE developer,
 I want all repository interfaces, in-memory implementations, service adapter interfaces, and mock service implementations scaffolded,
-So that all BE feature stories can be implemented in Phase 1 without any dependency on PostgreSQL, MongoDB, Redis, Brevo, Everpro, GPT-4o, or Claude.
+So that all BE feature stories can be implemented in Phase 1 without any dependency on PostgreSQL, Redis, Brevo, Everpro, GPT-4o, Claude, or any optional secondary document store.
 
 **Acceptance Criteria:**
 

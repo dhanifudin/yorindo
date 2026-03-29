@@ -201,7 +201,7 @@ sequenceDiagram
 ```mermaid
 flowchart TD
     A(["Admin uploads Excel / CSV"]) --> B["POST /api/contacts/upload\nmultipart form"]
-    B --> C["API: validate file\nstore in /tmp/uploads"]
+    B --> C["API: validate file\nstore in /app/uploads (Docker) or uploads/ (local)"]
     C --> D[["etl queue\nBullMQ job enqueued"]]
     D --> E["etl.worker picks up job"]
 
@@ -209,7 +209,7 @@ flowchart TD
     F --> G["AI Normalization\nClaude / OpenAI\ncompute completeness_score"]
 
     G --> H{Flag check}
-    H -->|"spam / invalid / duplicate"| I[("flagged_records\nPostgreSQL")]
+    H -->|"low-confidence / invalid / duplicate"| I[("flagged_records\nPostgreSQL")]
     H -->|"clean"| J{Phone exists?}
 
     J -->|"Yes — update"| K["UPDATE contacts\nwhere phone = normalized"]
@@ -455,7 +455,7 @@ Volumes:
   mongo_data     – MongoDB data persistence
   redis_data     – Redis AOF persistence
   snapshots_data – /data/snapshots (API snapshots)
-  uploads_tmp    – /tmp/uploads (ETL file staging)
+  api_uploads    – /app/uploads (Docker ETL file staging) / uploads (local)
 ```
 
 ### Development (`docker-compose.dev.yml`)
@@ -473,19 +473,19 @@ Primary entity for the contact database.
 
 | Column | Type | Notes |
 |--------|------|-------|
-| id | UUID PK | gen_random_uuid() |
+| id | TEXT PK | app-generated CUID2 / opaque ID |
 | name | VARCHAR(200) | Required |
 | phone | VARCHAR(20) UNIQUE | Normalized: +62XXXXXXXXXX — **primary identity key** |
 | email | VARCHAR(200) UNIQUE | Optional |
-| industry_id | UUID FK → industries | |
-| job_title_id | UUID FK → job_titles | |
+| industry_id | TEXT FK → industries | |
+| job_title_id | TEXT FK → job_titles | |
 | city | VARCHAR(100) | |
 | company | VARCHAR(200) | |
 | company_size | VARCHAR(20) | '<50', '50-200', '200-1000', '>1000' |
 | source | VARCHAR(50) | 'excel_upload', 'form', 'manual' |
 | completeness_score | NUMERIC(4,3) | 0.000–1.000, AI-computed in ETL |
 | consent_status | VARCHAR(30) | 'active', 'suppressed', 'legacy_unverified' |
-| flag_category | VARCHAR(50) | 'spam', 'not-potential', null = clean |
+| flag_category | VARCHAR(50) | 'invalid-data', 'duplicate', null = clean |
 | deleted_at | TIMESTAMPTZ | Soft delete |
 
 #### `events`
@@ -493,7 +493,7 @@ Event lifecycle entity.
 
 | Column | Type | Notes |
 |--------|------|-------|
-| id | UUID PK | |
+| id | TEXT PK | |
 | name | VARCHAR(300) | |
 | slug | VARCHAR(150) UNIQUE | URL-safe identifier |
 | date | TIMESTAMPTZ | Event date |
@@ -504,7 +504,7 @@ Event lifecycle entity.
 | notification_channel | VARCHAR(20) | 'email', 'whatsapp' |
 | target_criteria | JSONB | Audience targeting rules |
 | survey_schema_id | TEXT | MongoDB ObjectId reference |
-| vendor_id | UUID FK → vendors | |
+| vendor_id | TEXT FK → vendors | |
 | status | event_status ENUM | draft → published → active → completed/cancelled/archived |
 | deleted_at | TIMESTAMPTZ | Soft delete |
 
@@ -515,9 +515,9 @@ Join between contacts and events.
 
 | Column | Type | Notes |
 |--------|------|-------|
-| id | UUID PK | |
-| contact_id | UUID FK → contacts | CASCADE delete |
-| event_id | UUID FK → events | CASCADE delete |
+| id | TEXT PK | |
+| contact_id | TEXT FK → contacts | CASCADE delete |
+| event_id | TEXT FK → events | CASCADE delete |
 | status | reg_status ENUM | |
 | ticket_token | TEXT | QR code token (generated on approval) |
 | ai_score | NUMERIC(4,3) | AI approval score |
@@ -532,7 +532,7 @@ Staff/admin accounts.
 
 | Column | Type | Notes |
 |--------|------|-------|
-| id | UUID PK | |
+| id | TEXT PK | |
 | email | VARCHAR(200) UNIQUE | |
 | password_hash | VARCHAR(255) | bcrypt |
 | role | VARCHAR(20) | 'super_admin', 'event_admin', 'staff', 'vendor_client', 'participant' |
@@ -788,7 +788,7 @@ Phase 2:
 ### JWT Payload
 
 ```json
-{ "sub": "user-uuid", "role": "admin|staff|viewer|participant", "iat": ..., "exp": ... }
+{ "sub": "user-cuid2-or-opaque-id", "role": "admin|staff|viewer|participant", "iat": ..., "exp": ... }
 ```
 
 ### Role-Based Access

@@ -3,12 +3,14 @@
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { useContacts } from '@/hooks/useContacts'
 import { Button } from '@/components/ui/button'
+import { useFilterStore } from '@/store/filterStore'
 
 export function ContactsPagination() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
   const { data } = useContacts()
+  const setFilter = useFilterStore((s) => s.setFilter)
 
   const page = parseInt(searchParams.get('page') ?? '1', 10)
   const totalPages = data?.pagination.totalPages ?? 1
@@ -17,6 +19,7 @@ export function ContactsPagination() {
   const setPage = (newPage: number) => {
     const params = new URLSearchParams(searchParams.toString())
     params.set('page', String(newPage))
+    setFilter({ page: newPage })
     router.push(`${pathname}?${params.toString()}`)
   }
 

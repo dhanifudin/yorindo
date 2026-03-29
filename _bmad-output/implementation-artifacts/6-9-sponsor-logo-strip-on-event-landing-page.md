@@ -77,7 +77,7 @@ export interface PublicEventSponsor {
   name: string
   logo_url?: string
   website?: string
-  tier: 'standard' | 'premium' | 'lead_intelligence'
+  tier: 'standard' | 'premium' | 'supporter'
   display_order: number
 }
 ```

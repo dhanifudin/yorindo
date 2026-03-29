@@ -1,12 +1,13 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { useAuthStore } from '@/store/authStore'
+import { MOCK_USER_IDS } from '@/mocks/handlers/users'
 
 const MOCK_USERS = {
-  admin:       { id: 'dev-admin',       role: 'admin'       as const },
-  staff:       { id: 'dev-staff',       role: 'staff'       as const },
-  viewer:      { id: 'dev-viewer',      role: 'viewer'      as const },
-  participant: { id: 'dev-participant', role: 'participant' as const, name: 'Budi Peserta', email: 'budi.peserta@gmail.com' },
+  admin:       { id: MOCK_USER_IDS.devAdmin,  role: 'admin'  as const },
+  staff:       { id: MOCK_USER_IDS.devStaff,  role: 'staff'  as const },
+  viewer:      { id: MOCK_USER_IDS.devViewer, role: 'viewer' as const },
+  participant: { id: 'cuid2devparticipant00001', role: 'participant' as const, name: 'Budi Peserta', email: 'budi.peserta@gmail.com' },
 }
 
 const MOCKS_ENABLED =
@@ -23,7 +24,7 @@ function triggerInstallPrompt() {
 }
 
 export function DevToolbar() {
-  const { user, setAccessToken } = useAuthStore()
+  const { user, setAuth } = useAuthStore()
   const [isExpanded, setIsExpanded] = useState(false)
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -69,7 +70,7 @@ export function DevToolbar() {
               ? 'bg-yellow-400 font-bold text-yellow-900'
               : 'bg-white text-gray-700 hover:bg-yellow-50'
           }`}
-          onClick={() => setAccessToken('dev-token', MOCK_USERS[role])}
+          onClick={() => setAuth('dev-token', MOCK_USERS[role])}
         >
           {role}
         </button>

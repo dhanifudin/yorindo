@@ -139,7 +139,7 @@ export default function LandingPage() {
             <span className="section-label mb-4">Tentang Sistem</span>
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mt-4 tracking-tight">
               Apa yang menggerakkan{' '}
-              <span className="gradient-text">Yorindo Events</span>
+              <span className="gradient-text">Yorindo Admin Platform</span>
             </h2>
             <p className="mt-4 text-muted-foreground text-[15px] leading-relaxed">
               Platform internal yang dirancang untuk tim admin — kelola, monitor, dan kendalikan seluruh operasional.

@@ -43,17 +43,15 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
 
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window === 'undefined') return false
+    try { return localStorage.getItem(SIDEBAR_KEY) === 'true' } catch { return false }
+  })
   const [hydrated, setHydrated] = useState(false)
 
-  // Hydrate collapsed state from localStorage (avoids SSR mismatch)
+  // Set hydrated after mount to enable CSS transitions (avoids SSR mismatch flash)
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(SIDEBAR_KEY)
-      if (stored === 'true') setCollapsed(true)
-    } catch {
-      // localStorage may be unavailable — use default
-    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setHydrated(true)
   }, [])
 
@@ -207,7 +205,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           </header>
         )}
 
-        <main className="max-w-7xl mx-auto px-4 md:px-6 py-6 pb-24 md:pb-6">
+        <main className="mx-auto w-full max-w-[1440px] min-w-0 px-4 py-6 pb-24 md:px-6 md:pb-6 xl:px-8">
           {children}
         </main>
       </div>
