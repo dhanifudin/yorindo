@@ -12,7 +12,7 @@ const VIEWER_ALLOWED_PATHS = ['/app', '/app/events']
 
 function isViewerAllowed(pathname: string): boolean {
   if (VIEWER_ALLOWED_PATHS.includes(pathname)) return true
-  if (/^\/app\/events\/[^/]+\/report/.test(pathname)) return true
+  if (/^\/app\/events\/[^/]+\/report$/.test(pathname)) return true
   if (/^\/app\/events\/[^/]+$/.test(pathname)) return true
   return false
 }
@@ -24,35 +24,50 @@ function isParticipantAllowed(pathname: string): boolean {
   return PARTICIPANT_ALLOWED_PATHS.includes(pathname)
 }
 
+const STAFF_BLOCKED_PREFIXES = ['/app/admin']
+
+function isStaffBlocked(pathname: string): boolean {
+  return STAFF_BLOCKED_PREFIXES.some((p) => pathname.startsWith(p))
+}
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const accessToken = useAuthStore((s) => s.accessToken)
   const user = useAuthStore((s) => s.user)
   const router = useRouter()
   const pathname = usePathname()
 
-  useEffect(() => {
-    if (!accessToken) {
-      router.replace('/login')
-      return
-    }
-    if (user?.role === 'viewer' && !isViewerAllowed(pathname)) {
-      router.replace('/app/events')
-    }
-    if (user?.role === 'participant' && !isParticipantAllowed(pathname)) {
-      router.replace('/app')
-    }
-  }, [accessToken, user, router, pathname])
-
-  if (!accessToken) return null
-
-  if (user?.role === 'participant') {
-    return <ParticipantShell>{children}</ParticipantShell>
+useEffect(() => {
+  if (!accessToken) {
+    router.replace('/login')
+    return
   }
 
-  return (
-    <>
-      <AdminShell>{children}</AdminShell>
-      <PWAInstallBanner mode="global" />
-    </>
-  )
+  if (user?.role === 'viewer' && !isViewerAllowed(pathname)) {
+    router.replace('/app/events')
+    return
+  }
+
+  if (user?.role === 'participant' && !isParticipantAllowed(pathname)) {
+    router.replace('/app')
+    return
+  }
+
+  if (user?.role === 'staff' && isStaffBlocked(pathname)) {
+    router.replace('/app/scan')
+    return
+  }
+}, [accessToken, user, router, pathname])
+
+if (!accessToken || !user) return null
+
+if (user.role === 'participant') {
+  return <ParticipantShell>{children}</ParticipantShell>
+}
+
+return (
+  <>
+    <AdminShell>{children}</AdminShell>
+    <PWAInstallBanner mode="global" />
+  </>
+)
 }
