@@ -116,6 +116,29 @@ function toSortBy(sortBy?: string): string | undefined {
 }
 
 /**
+ * Mengubah hasil facet repository ke shape slug/label/count yang dipakai FE.
+ */
+function toFacetsDto(facets: Awaited<ReturnType<typeof contactRepository.findFacets>>) {
+  return {
+    industry: facets.industries.map((item) => ({
+      slug: toIndustrySlug(item.id),
+      label: item.name,
+      count: item.count,
+    })),
+    city: facets.cities.map((item) => ({
+      slug: item.city.toLowerCase(),
+      label: item.city,
+      count: item.count,
+    })),
+    companySize: facets.companySizes.map((item) => ({
+      slug: toApiCompanySize(item.size as Contact['companySize']),
+      label: toApiCompanySize(item.size as Contact['companySize']).replace(/^./, (value) => value.toUpperCase()),
+      count: item.count,
+    })),
+  }
+}
+
+/**
  * Membentuk DTO kontak agar kontrak respons lebih cocok dengan kebutuhan FE.
  */
 function toContactDto(contact: Contact) {
@@ -161,6 +184,12 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
       missingPhone: health.missingPhone,
     }
     validateOpenApiResponse({ path: '/contacts/health', method: 'get', status: 200, body: responseBody })
+    return reply.status(200).send(responseBody)
+  })
+
+  fastify.get('/api/contacts/facets', async (_request, reply) => {
+    const responseBody = toFacetsDto(await contactRepository.findFacets())
+    validateOpenApiResponse({ path: '/contacts/facets', method: 'get', status: 200, body: responseBody })
     return reply.status(200).send(responseBody)
   })
 
