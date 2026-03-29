@@ -153,39 +153,41 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [clearAuth, router, setAuth])
 
+  useEffect(() => {
+    if (!accessToken) {
+      router.replace('/login')
+      return
+    }
 
-useEffect(() => {
-  if (!accessToken) {
-    router.replace('/login')
-    return
+    if (user?.role === 'viewer' && !isViewerAllowed(pathname)) {
+      router.replace('/app/events')
+      return
+    }
+
+    if (user?.role === 'participant' && !isParticipantAllowed(pathname)) {
+      router.replace('/app')
+      return
+    }
+
+    if (user?.role === 'staff' && isStaffBlocked(pathname)) {
+      router.replace('/app/scan')
+      return
+    }
+  }, [accessToken, user, router, pathname])
+
+  if (!accessToken || !user) return null
+
+  // ✅ Only change: block rendering if user is not authorized for this route
+  if (!isAuthorized) return null
+
+  if (user.role === 'participant') {
+    return <ParticipantShell>{children}</ParticipantShell>
   }
 
-  if (user?.role === 'viewer' && !isViewerAllowed(pathname)) {
-    router.replace('/app/events')
-    return
-  }
-
-  if (user?.role === 'participant' && !isParticipantAllowed(pathname)) {
-    router.replace('/app')
-    return
-  }
-
-  if (user?.role === 'staff' && isStaffBlocked(pathname)) {
-    router.replace('/app/scan')
-    return
-  }
-}, [accessToken, user, router, pathname])
-
-if (!accessToken || !user) return null
-
-if (user.role === 'participant') {
-  return <ParticipantShell>{children}</ParticipantShell>
-}
-
-return (
-  <>
-    <AdminShell>{children}</AdminShell>
-    <PWAInstallBanner mode="global" />
-  </>
-)
+  return (
+    <>
+      <AdminShell>{children}</AdminShell>
+      <PWAInstallBanner mode="global" />
+    </>
+  )
 }
