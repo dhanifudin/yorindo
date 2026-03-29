@@ -36,6 +36,7 @@ export default function LoginPage() {
       console.error(err)
       toast.error('Login peserta gagal. Silakan coba lagi.')
     }
+  }
 
   return (
     <>
