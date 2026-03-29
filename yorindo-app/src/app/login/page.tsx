@@ -31,17 +31,11 @@ export default function LoginPage() {
       if (!res.ok) throw new Error('Login gagal')
       const data = await res.json()
 
-      setAccessToken(data.accessToken, data.user)
+           setAuth(data.accessToken, data.user, data.eventKeys ?? {})
     } catch (err) {
       console.error(err)
-      toast.error('Login gagal')
-   }
-=======
-      setAuth(data.accessToken, data.user, data.eventKeys ?? {})
-    } catch {
       toast.error('Login peserta gagal. Silakan coba lagi.')
     }
-  }
 
   return (
     <>
