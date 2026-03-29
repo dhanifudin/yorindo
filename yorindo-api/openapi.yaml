@@ -1959,6 +1959,12 @@ paths:
       parameters:
         - $ref: '#/components/parameters/PageParam'
         - $ref: '#/components/parameters/PageSizeParam'
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [pending, resolved, discarded, all]
       responses:
         '200':
           description: Paginated flagged records
@@ -1979,7 +1985,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
 
-  /contacts/flagged-records/{id}:
+  /contacts/flagged/{id}:
     post:
       summary: Approve or reject a flagged record (admin only)
       operationId: resolveFlaggedRecord
@@ -2002,7 +2008,10 @@ paths:
               properties:
                 action:
                   type: string
-                  enum: [approve, reject]
+                  enum: [approve, discard]
+                resolved_data:
+                  type: object
+                  additionalProperties: true
       responses:
         '200':
           description: Record resolved
@@ -2030,6 +2039,41 @@ paths:
                 $ref: '#/components/schemas/ApiError'
         '404':
           description: Flagged record not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /contacts/duplicates/{id}:
+    delete:
+      summary: Mark a duplicate pair as not duplicate
+      operationId: dismissDuplicatePair
+      tags: [Contacts]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Duplicate pair dismissed
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Duplicate pair not found
           content:
             application/json:
               schema:

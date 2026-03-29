@@ -193,4 +193,99 @@ describe('Duplicate contacts routes', () => {
     expect(res.statusCode).toBe(404)
     expect(res.json().error.code).toBe('NOT_FOUND')
   })
+
+  it('dismisses a duplicate pair as not duplicate', async () => {
+    const beforeRes = await app.inject({
+      method: 'GET',
+      url: '/api/contacts/duplicates?page=1&pageSize=10',
+    })
+    const beforeBody = beforeRes.json()
+    const pair = beforeBody.data[0]
+
+    const dismissRes = await app.inject({
+      method: 'DELETE',
+      url: `/api/contacts/duplicates/${pair.id}`,
+    })
+
+    expect(dismissRes.statusCode).toBe(204)
+
+    const afterRes = await app.inject({
+      method: 'GET',
+      url: '/api/contacts/duplicates?page=1&pageSize=10',
+    })
+    const afterBody = afterRes.json()
+    expect(afterBody.pagination.total).toBe(beforeBody.pagination.total - 1)
+  })
+})
+
+describe('Flagged contacts routes', () => {
+  it('returns pending flagged records with pagination', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/contacts/flagged?status=pending&page=1&pageSize=5',
+    })
+
+    expect(res.statusCode).toBe(200)
+    const body = res.json()
+    expect(body.data).toHaveLength(5)
+    expect(body.pagination.total).toBe(10)
+    expect(body.data[0]).toHaveProperty('rawData')
+    expect(body.data[0]).toHaveProperty('flags')
+    expect(body.data[0].status).toBe('pending')
+  })
+
+  it('approves a flagged record', async () => {
+    const listRes = await app.inject({
+      method: 'GET',
+      url: '/api/contacts/flagged?status=pending&page=1&pageSize=1',
+    })
+    const record = listRes.json().data[0]
+
+    const resolveRes = await app.inject({
+      method: 'POST',
+      url: `/api/contacts/flagged/${record.id}`,
+      payload: {
+        action: 'approve',
+        resolved_data: {
+          ...record.rawData,
+          city: 'Jakarta',
+        },
+      },
+    })
+
+    expect(resolveRes.statusCode).toBe(200)
+    expect(resolveRes.json().status).toBe('resolved')
+  })
+
+  it('discards a flagged record', async () => {
+    const listRes = await app.inject({
+      method: 'GET',
+      url: '/api/contacts/flagged?status=pending&page=1&pageSize=1',
+    })
+    const record = listRes.json().data[0]
+
+    const discardRes = await app.inject({
+      method: 'POST',
+      url: `/api/contacts/flagged/${record.id}`,
+      payload: {
+        action: 'discard',
+      },
+    })
+
+    expect(discardRes.statusCode).toBe(200)
+    expect(discardRes.json().status).toBe('discarded')
+  })
+
+  it('returns 404 for unknown flagged record id', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/contacts/flagged/not-a-real-flagged-id',
+      payload: {
+        action: 'approve',
+      },
+    })
+
+    expect(res.statusCode).toBe(404)
+    expect(res.json().error.code).toBe('NOT_FOUND')
+  })
 })
