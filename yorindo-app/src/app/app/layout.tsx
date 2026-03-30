@@ -173,7 +173,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       router.replace('/app/scan')
       return
     }
-  }, [accessToken, user, router, pathname])
+}, [accessToken, user, router, pathname, isAuthorized])
 
   if (!accessToken || !user) return null
 
