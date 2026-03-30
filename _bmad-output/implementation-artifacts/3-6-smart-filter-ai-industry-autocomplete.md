@@ -15,7 +15,7 @@ So that I don't need to know exact industry taxonomy values to filter contacts a
 
 > **Phase 1 FE scope:** AI-assisted industry input with 500ms debounce, optimistic matched-slug application, and silent fallback to the standard dropdown. Wired to MSW smart-filter handlers.
 >
-> **Phase 2 BE scope:** `POST /api/smart-filter/industry` backed by `ISmartFilterService`, with provider selection controlled by `SMART_FILTER_AI_PROVIDER`.
+> **Phase 2 BE scope:** `GET /api/contacts/industry-suggestions` backed by `ISmartFilterService`, with provider selection controlled by `SMART_FILTER_AI_PROVIDER`.
 
 ---
 
@@ -23,7 +23,7 @@ So that I don't need to know exact industry taxonomy values to filter contacts a
 
 **AC1:** Given I type `rumah sakit` in the industry filter input,
 When 500ms elapses,
-Then `POST /api/smart-filter/industry` is called with a free-form query payload and no request is sent before the debounce window completes.
+Then `GET /api/contacts/industry-suggestions?q=rumah+sakit` is called and no request is sent before the debounce window completes.
 
 **AC2:** Given the AI smart filter service returns a match with confidence `>= 0.6`,
 When the response is received,
@@ -56,7 +56,7 @@ Then the handler returns deterministic canonical slug suggestions and fallback s
   - [x] Subtask 2.3: Avoid noisy toasts/errors for expected smart-filter fallback cases
 
 - [x] **Task 3: Add Phase 1 MSW coverage**
-  - [x] Subtask 3.1: Add MSW handler for `POST /api/smart-filter/industry`
+  - [x] Subtask 3.1: Add MSW handler for `GET /api/contacts/industry-suggestions`
   - [x] Subtask 3.2: Return deterministic high-confidence and fallback responses for test terms
   - [x] Subtask 3.3: Cover failed lookup behavior in handler tests where relevant
 
@@ -64,7 +64,7 @@ Then the handler returns deterministic canonical slug suggestions and fallback s
   - [ ] Subtask 4.1: Add `ISmartFilterService` interface if not already present
   - [ ] Subtask 4.2: Add `MockSmartFilterService` adapter
   - [ ] Subtask 4.3: Register smart filter service resolution in `container.ts` using `SMART_FILTER_AI_PROVIDER`
-  - [ ] Subtask 4.4: Implement `POST /api/smart-filter/industry` in the API
+  - [ ] Subtask 4.4: Implement `GET /api/contacts/industry-suggestions` in the API
 
 - [x] **Task 5: Test the behavior**
   - [x] Subtask 5.1: Verify debounce behavior

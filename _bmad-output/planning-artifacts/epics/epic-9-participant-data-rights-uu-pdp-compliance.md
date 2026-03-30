@@ -1,9 +1,10 @@
 # Epic 9: Participant Data Rights & UU PDP Compliance
 
-Participants can exercise their UU PDP data rights — requesting a copy of their stored data, requesting erasure with full anonymization and permanent suppression, and understanding the clear distinction between registration cancellation and data erasure.
+Participants can exercise their UU PDP data rights through the currently implemented erasure/anonymization flow, while the broader data-request/export flow remains a follow-up target.
 
-> **Phase 1 (FE):** Data request form (phone + email input, confirmation screen, "your request has been submitted" state); erasure request form with two-step confirmation ("I understand this permanently removes my identity"); erasure vs. cancellation explanation page (clear UX copy in Indonesian) — all wired to MSW with stub 202 responses
-> **Phase 2 (BE):** `POST /api/participants/data-request` (lookup + export job), `POST /api/participants/erasure-request` (queue anonymization job), anonymization service (per-table rules from Story 9.2 ACs), permanent suppression enforcement, audit trail writes (NFR-S16)
+> **Current implementation note (2026-03-30):** The current runtime has stronger alignment on erasure/anonymization than on full participant data export. Treat Story 9.2 as the closest active implementation reference.
+> **Phase 1 (FE):** Data-rights request forms and explanatory UX can be represented in FE/MSW.
+> **Phase 2 (BE):** `POST /api/participants/erasure-request` is part of the current runtime contract; `POST /api/participants/data-request` remains a target-state follow-up.
 
 ## Story 9.1: Participant Data Request (Copy of Stored Data)
 
@@ -79,4 +80,3 @@ So that historical event data remains structurally intact while fully respecting
 **Given** a suppressed contact's email or phone appears in any blast recipient query,
 **When** the blast worker processes,
 **Then** zero messages are sent to that contact — suppression is enforced at the worker level, not just the query level
-

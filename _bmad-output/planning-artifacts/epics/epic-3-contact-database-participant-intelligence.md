@@ -3,7 +3,7 @@
 Admin can build and maintain a clean, qualified participant database by importing Excel/CSV data, reviewing AI-normalized records, resolving duplicate profiles, and searching/filtering contacts with AI-assisted smart industry classification.
 
 > **Phase 1 (FE):** Contacts table (TanStack Table, pagination, filter bar, smart filter input + debounce); upload form + file picker + job status poller; ETL job status page; flagged records review UI (side-by-side diff + approve/discard); duplicate merge UI (field selector); — all wired to MSW contacts/etl handlers
-> **Phase 2 (BE):** `GET /api/contacts`, `POST /api/etl/upload`, BullMQ ETL worker + AI normalization via `IEtlNormalizationService` adapter (provider set by `ETL_AI_PROVIDER` env var) + Zod validation, `GET /api/etl/jobs/:id`, `GET/PATCH /api/contacts/flagged`, `POST /api/contacts/:id/merge`, `POST /api/smart-filter/industry` via `ISmartFilterService` adapter (provider set by `SMART_FILTER_AI_PROVIDER` env var), `raw_uploads` persistence, all repositories
+> **Phase 2 (BE):** `GET /api/contacts`, `POST /api/etl/upload`, BullMQ ETL worker + AI normalization via `IEtlNormalizationService` adapter (provider set by `ETL_AI_PROVIDER` env var) + Zod validation, `GET /api/etl/jobs/:id`, `GET/PATCH /api/contacts/flagged`, `POST /api/contacts/:id/merge`, `GET /api/contacts/industry-suggestions` via `ISmartFilterService` adapter (provider set by `SMART_FILTER_AI_PROVIDER` env var), `raw_uploads` persistence, all repositories
 >
 > **Contacts Intelligence Hub Revamp (Stories 3.7–3.12 — FE phase, wired to new MSW handlers):** HealthBar component + `/api/contacts/health` handler; FilterBar facet counts + `ActiveFilterPills` + URL state + `/api/contacts/facets` handler; `ActionToolbar` sticky blast entry; `TriagePanel` inline collapsible with optimistic updates + `/api/contacts/duplicates` handler; `EventBanner` pre-event shortcut + `/api/events/upcoming-uncontacted` handler; Contact event history tab in Sheet + `/api/contacts/:id/history` handler
 
@@ -169,7 +169,7 @@ So that I don't need to know exact industry taxonomy values to filter contacts a
 
 **Given** I type "rumah sakit" in the industry filter input,
 **When** 500ms elapses (debounce),
-**Then** `POST /api/smart-filter/industry` is called with `{ query: 'rumah sakit' }`
+**Then** `GET /api/contacts/industry-suggestions?q=rumah+sakit` is called
 
 **Given** the AI smart filter service (`ISmartFilterService`) returns a match with confidence ≥ 0.6,
 **When** the response is received,
@@ -188,26 +188,22 @@ So that I don't need to know exact industry taxonomy values to filter contacts a
 ## Story 3.7: HealthBar — Database Quality Pulse
 
 As an admin,
-I want to see a persistent health bar at the top of the contacts page showing flagged count, duplicate count, and contacts-missing-email count,
+I want to see a persistent health bar at the top of the contacts page showing duplicate count, contacts-missing-email count, and contacts-missing-phone count,
 So that I immediately know what data quality tasks need attention when I arrive on the page.
 
 **Acceptance Criteria:**
 
 **Given** I am authenticated as `admin`,
 **When** the `/app/contacts` page loads,
-**Then** the `HealthBar` component renders above the filter bar with three stat columns: flagged records count, duplicate pairs count, and contacts-missing-email count — each rendered as a `Button` with descriptive `aria-label`
+**Then** the `HealthBar` component renders above the filter bar with three stat columns: duplicate pairs count, contacts-missing-email count, and contacts-missing-phone count — each rendered as a `Button` with descriptive `aria-label`
 
 **Given** the health data is loading,
 **When** the page first renders,
 **Then** `Skeleton` placeholders replace each stat value until `GET /api/contacts/health` resolves
 
-**Given** the flagged count is > 0,
+**Given** any visible health count is > 0,
 **When** the HealthBar renders,
-**Then** the flagged stat value uses `text-destructive`; when count = 0 it uses `text-muted-foreground` and the label shows "Semua bersih ✓"
-
-**Given** I click the "flagged" stat in the HealthBar,
-**When** the TriagePanel is collapsed,
-**Then** the TriagePanel opens in "flagged" mode (see Story 3.10)
+**Then** the stat value uses `text-destructive`; when count = 0 it uses `text-muted-foreground` and shows a success helper label
 
 **Given** I click the "duplicates" stat in the HealthBar,
 **When** the TriagePanel is collapsed,
@@ -217,9 +213,13 @@ So that I immediately know what data quality tasks need attention when I arrive 
 **When** the stat is clicked,
 **Then** a `missingEmail=true` query param is added to the URL and the contact table re-fetches with that filter applied
 
+**Given** I click the "missing phone" stat in the HealthBar,
+**When** the stat is clicked,
+**Then** a `missingPhone=true` query param is added to the URL and the contact table re-fetches with that filter applied
+
 **Given** `GET /api/contacts/health` is called,
 **When** the MSW handler responds,
-**Then** it returns `{ flagged: 34, duplicates: 12, missingEmail: 58 }` with HTTP 200
+**Then** it returns `{ flagged, duplicates, missingEmail, missingPhone }` with HTTP 200
 
 **Given** the HealthBar container element,
 **Then** it has `role="status"` and `aria-live="polite"` so screen readers announce count changes without interrupting the user
@@ -325,26 +325,6 @@ So that I can triage data quality issues within my current workflow context and 
 
 **Acceptance Criteria:**
 
-**Given** I click the "flagged" stat in the HealthBar,
-**When** the `TriagePanel` is collapsed,
-**Then** it expands using shadcn `Collapsible` + `CollapsibleContent` with `motion-safe:data-[state=open]:animate-collapsible-down` animation; focus moves to the first interactive element within the panel
-
-**Given** the TriagePanel is open in "flagged" mode,
-**When** it renders,
-**Then** it shows a compact flagged records table (fetching from `GET /api/contacts/flagged?status=pending&pageSize=20`) with "Setujui" and "Buang" action buttons per row; reuses the data-fetching and mutation logic from `/app/contacts/flagged`
-
-**Given** I click "Setujui" on a flagged record in the TriagePanel,
-**When** the mutation fires,
-**Then** an optimistic update immediately decrements the flagged count in the HealthBar (e.g., 34 → 33); if the API call succeeds the Sonner toast reads "Catatan disetujui · 33 tersisa"; if the API call fails the count rolls back and toast reads "Perubahan dibatalkan — terjadi kesalahan"
-
-**Given** I click "Buang" on a flagged record in the TriagePanel,
-**When** the mutation fires,
-**Then** the same optimistic decrement and rollback behavior applies as for "Setujui"
-
-**Given** the last pending flagged record is resolved,
-**When** the flagged count reaches 0,
-**Then** the TriagePanel collapses automatically; focus returns to the HealthBar flagged stat; the stat label updates to "Semua bersih ✓"; a Sonner toast reads "Semua catatan bermasalah diselesaikan"
-
 **Given** I click the "duplicates" stat in the HealthBar,
 **When** the TriagePanel opens in "duplicates" mode,
 **Then** it fetches `GET /api/contacts/duplicates` and shows duplicate pairs with a "Lihat Perbedaan" button per pair; clicking opens a `Sheet` with a side-by-side field diff and "Gabung" / "Bukan Duplikat" actions; optimistic count decrement applies on either action
@@ -353,13 +333,9 @@ So that I can triage data quality issues within my current workflow context and 
 **When** the MSW handler responds,
 **Then** it returns `{ data: [{ id, contact1: Contact, contact2: Contact }], pagination: { total } }` with HTTP 200; deterministically seeded from the contacts pool
 
-**Given** one TriagePanel mode is already open and I click a different HealthBar stat,
-**When** the new stat is clicked,
-**Then** the panel switches to the new mode without close/reopen animation — the `Collapsible` stays open and content swaps
-
 **Given** I click the collapse toggle button in the TriagePanel header,
 **When** the button is clicked,
-**Then** the panel collapses and focus returns to the HealthBar stat that originally triggered it
+**Then** the panel collapses and focus returns to the HealthBar duplicates stat that originally triggered it
 
 ---
 
