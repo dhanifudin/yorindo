@@ -141,6 +141,7 @@ development_status:
   5-3-blast-scheduling-delivery-via-brevo-everpro: review  # QR code generation added: buildVariables() resolves {{qr_code}}; IWhatsAppService.sendImage() added (SCP-2026-03-28-F)
   5-4-emergency-blast: review
   5-5-suppression-list-consent-enforcement: review
+  be-5-1-notification-message-template-management: review
   epic-5-retrospective: optional
 
   # ─────────────────────────────────────────────

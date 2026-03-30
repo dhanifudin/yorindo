@@ -1705,6 +1705,89 @@ components:
 
 paths:
   # ─────────────────────────────────────────────────────────────────────────────
+  # TEMPLATES
+  # ─────────────────────────────────────────────────────────────────────────────
+  /templates:
+    get:
+      summary: Get all templates
+      operationId: getTemplates
+      tags: [Blast]
+      responses:
+        '200':
+          description: List of templates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Template'
+    post:
+      summary: Create template
+      operationId: createTemplate
+      tags: [Blast]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, type, channel, body]
+              properties:
+                name: { type: string }
+                type: { type: string }
+                channel: { type: string }
+                body: { type: string }
+      responses:
+        '201':
+          description: Template created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+  /templates/{id}:
+    patch:
+      summary: Update template
+      operationId: updateTemplate
+      tags: [Blast]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                type: { type: string }
+                channel: { type: string }
+                body: { type: string }
+      responses:
+        '200':
+          description: Template updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+    delete:
+      summary: Delete template
+      operationId: deleteTemplate
+      tags: [Blast]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Template deleted
+
+  # ─────────────────────────────────────────────────────────────────────────────
   # HEALTH
   # ─────────────────────────────────────────────────────────────────────────────
   /health:
