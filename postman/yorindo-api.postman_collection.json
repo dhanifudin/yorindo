@@ -17,6 +17,666 @@
   },
   "item": [
     {
+      "name": "Automated Tests",
+      "item": [
+        {
+          "name": "Positive Cases",
+          "item": [
+            {
+              "name": "OpenAPI docs JSON is available",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/docs/json",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "docs",
+                    "json"
+                  ]
+                },
+                "description": "Verifies Fastify serves the OpenAPI JSON for direct manual testing."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('docs json is available', function () { pm.response.to.have.status(200); });",
+                      "var body = pm.response.json();",
+                      "pm.test('openapi version exists', function () { pm.expect(body.openapi).to.eql('3.0.3'); });",
+                      "pm.test('paths are exposed', function () { pm.expect(Object.keys(body.paths || {}).length).to.be.above(0); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Swagger UI HTML is available",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/docs",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "docs"
+                  ]
+                },
+                "description": "Verifies Fastify serves interactive API docs for manual testing."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('swagger ui is available', function () { pm.response.to.have.status(200); });",
+                      "pm.test('swagger ui returns html', function () { pm.expect(pm.response.headers.get('content-type')).to.include('text/html'); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Login positive and store auth state",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{loginEmail}}\",\n  \"password\": \"{{loginPassword}}\"\n}"
+                },
+                "auth": {
+                  "type": "noauth"
+                },
+                "description": "Logs in and stores accessToken + refreshCookie for subsequent automated checks."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('login succeeds', function () { pm.response.to.have.status(200); });",
+                      "var data = pm.response.json();",
+                      "pm.environment.set('accessToken', data.accessToken || '');",
+                      "if (data.user && data.user.id) pm.environment.set('userId', data.user.id);",
+                      "var setCookie = pm.response.headers.get('Set-Cookie');",
+                      "if (setCookie) pm.environment.set('refreshCookie', setCookie.split(';')[0]);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Authenticated users list succeeds",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/users?page=1&pageSize=5",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "5"
+                    }
+                  ]
+                },
+                "description": "Confirms a protected route works after login."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('users list succeeds', function () { pm.response.to.have.status(200); });",
+                      "var body = pm.response.json();",
+                      "pm.test('users payload has data array', function () { pm.expect(Array.isArray(body.data)).to.eql(true); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Contacts list succeeds",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/contacts?page=1&pageSize=5",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "contacts"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "5"
+                    }
+                  ]
+                },
+                "description": "Positive contacts smoke test."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('contacts list succeeds', function () { pm.response.to.have.status(200); });",
+                      "var body = pm.response.json();",
+                      "pm.test('contacts has data array', function () { pm.expect(Array.isArray(body.data)).to.eql(true); });",
+                      "pm.test('contacts has pagination', function () { pm.expect(body.pagination.total).to.be.a('number'); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Registrations list succeeds",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/registrations?page=1&pageSize=5",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "registrations"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "5"
+                    }
+                  ]
+                },
+                "description": "Positive registrations smoke test."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('registrations list succeeds', function () { pm.response.to.have.status(200); });",
+                      "var body = pm.response.json();",
+                      "pm.test('registrations has data array', function () { pm.expect(Array.isArray(body.data)).to.eql(true); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Vendors list succeeds",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/vendors?page=1&pageSize=5",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "vendors"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "5"
+                    }
+                  ]
+                },
+                "description": "Positive vendors smoke test."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('vendors list succeeds', function () { pm.response.to.have.status(200); });",
+                      "var body = pm.response.json();",
+                      "pm.test('vendors has data array', function () { pm.expect(Array.isArray(body.data)).to.eql(true); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Create registration succeeds",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/registrations",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "registrations"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"eventId\": \"{{registrationEventId}}\",\n  \"name\": \"Postman Positive Tester\",\n  \"email\": \"{{positiveRegistrationEmail}}\",\n  \"phone\": \"+6281234500001\"\n}"
+                },
+                "auth": {
+                  "type": "noauth"
+                },
+                "description": "Positive public registration creation test."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('registration create succeeds', function () { pm.response.to.have.status(201); });",
+                      "var body = pm.response.json();",
+                      "pm.test('registration has id', function () { pm.expect(body.id).to.be.a('string'); });",
+                      "if (body.id) pm.environment.set('registrationId', body.id);"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Negative Cases",
+          "item": [
+            {
+              "name": "Prepare admin auth for negative cases",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{loginEmail}}\",\n  \"password\": \"{{loginPassword}}\"\n}"
+                },
+                "auth": {
+                  "type": "noauth"
+                },
+                "description": "Obtains a valid admin token for negative authorization and validation cases."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('setup login succeeds', function () { pm.response.to.have.status(200); });",
+                      "var data = pm.response.json();",
+                      "pm.environment.set('accessToken', data.accessToken || '');",
+                      "var setCookie = pm.response.headers.get('Set-Cookie');",
+                      "if (setCookie) pm.environment.set('refreshCookie', setCookie.split(';')[0]);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Invalid login is rejected",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{loginEmail}}\",\n  \"password\": \"{{invalidLoginPassword}}\"\n}"
+                },
+                "auth": {
+                  "type": "noauth"
+                },
+                "description": "Negative auth case: invalid credentials should return 401."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('invalid login returns 401', function () { pm.response.to.have.status(401); });",
+                      "var body = pm.response.json();",
+                      "pm.test('invalid login error code matches', function () { pm.expect(body.error.code).to.eql('INVALID_CREDENTIALS'); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Unauthorized users list is rejected",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/users?page=1&pageSize=5",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "5"
+                    }
+                  ]
+                },
+                "auth": {
+                  "type": "noauth"
+                },
+                "description": "Negative auth case: protected route without bearer token should return 401."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('unauthorized request returns 401', function () { pm.response.to.have.status(401); });",
+                      "var body = pm.response.json();",
+                      "pm.test('unauthorized error shape is returned', function () { pm.expect(body.error.code).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Invalid scan token is rejected",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/scan/verify",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "scan",
+                    "verify"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"token\": \"{{invalidScanToken}}\"\n}"
+                },
+                "description": "Negative scan case: invalid ticket token should return 401 INVALID_TICKET."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('invalid scan returns 401', function () { pm.response.to.have.status(401); });",
+                      "var body = pm.response.json();",
+                      "pm.test('invalid scan error code matches', function () { pm.expect(body.error.code).to.eql('INVALID_TICKET'); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Assigning an event to admin is forbidden",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/users/{{adminUserId}}/events",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users",
+                    "{{adminUserId}}",
+                    "events"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"eventId\": \"{{assignableEventId}}\"\n}"
+                },
+                "description": "Negative authorization case: only staff and viewer can receive event assignments."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('admin assignment is forbidden', function () { pm.response.to.have.status(403); });",
+                      "var body = pm.response.json();",
+                      "pm.test('forbidden error code matches', function () { pm.expect(body.error.code).to.eql('FORBIDDEN'); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Invalid registration payload is rejected",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/registrations",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "registrations"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"eventId\": \"{{registrationEventId}}\",\n  \"name\": \"\",\n  \"email\": \"not-an-email\",\n  \"phone\": \"123\"\n}"
+                },
+                "auth": {
+                  "type": "noauth"
+                },
+                "description": "Negative validation case for public registration."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('invalid registration returns 400', function () { pm.response.to.have.status(400); });",
+                      "var body = pm.response.json();",
+                      "pm.test('validation error code matches', function () { pm.expect(body.error.code).to.eql('VALIDATION_ERROR'); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Invalid event id returns not found",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/events/{{invalidEventId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "events",
+                    "{{invalidEventId}}"
+                  ]
+                },
+                "description": "Negative lookup case for event detail."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('invalid event id returns 404', function () { pm.response.to.have.status(404); });",
+                      "var body = pm.response.json();",
+                      "pm.test('not found error shape exists', function () { pm.expect(body.error.code).to.be.a('string'); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Contacts import without file is rejected",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/contacts/import",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "contacts",
+                    "import"
+                  ]
+                },
+                "body": {
+                  "mode": "formdata",
+                  "formdata": []
+                },
+                "description": "Negative ETL validation case with missing file."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('contacts import without file is rejected', function () { pm.expect([400, 415]).to.include(pm.response.code); });"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "Auth",
       "item": [
         {

@@ -14,11 +14,11 @@ review
 
 This is a Phase 2 BE story — it implements real external service delivery (Brevo for email, Everpro for WhatsApp) via BullMQ worker. It requires Stories 1.1 (Fastify scaffold), 1.2 (DB schema), 1.8 (service interfaces), 5.1 (templates), and 5.2 (blast config form + BullMQ job enqueue).
 
-Story 5.2 already enqueues the blast job into BullMQ with `POST /api/blast`. This story implements the BullMQ `blast.worker.ts` that actually processes those jobs: calls Brevo REST API for email channel, calls Everpro API for WhatsApp channel, handles retries, and logs audit entries.
+The current runtime enqueues the blast job through `POST /api/events/:id/blast`. This story tracks the worker-side delivery behavior and the remaining delivery-contract follow-up work.
 
 **Key architecture constraint:** Blast worker calls Brevo/Everpro through `IEmailService` and `IWhatsAppService` adapters (not directly). In Phase 1, `MockEmailService` and `MockWhatsAppService` were used. This story creates the real `BrevoEmailService` and `EverproWhatsAppService` adapters.
 
-**Four BullMQ queues:** `otp` > `emergency-blast` > `transactional` > `marketing`. Blast jobs go into `marketing` queue (lowest priority). Emergency blast (Story 5.4) goes into `emergency-blast`. Priorities are enforced by BullMQ queue priority configuration.
+**BullMQ queues:** runtime uses named queues with blast jobs flowing through the current queue/service setup; detailed final queue-priority semantics remain implementation follow-up work.
 
 ## Acceptance Criteria
 
@@ -86,7 +86,7 @@ src/
 3. **DI via container.ts** — `blast.worker.ts` imports `emailService`, `whatsappService`, `suppressionRepository`, `blastRepository` from `container.ts`.
 4. **Audit trail** — Write audit entries for `blast.initiated`, `blast.delivery-failed`, `blast.high-failure-rate` via `IAuditRepository`.
 
-### BullMQ Queue Priority
+### BullMQ Queue Priority (target-state follow-up)
 
 ```typescript
 // src/lib/queue.ts — update with priority
@@ -182,7 +182,7 @@ export class BrevoEmailService implements IEmailService {
 ### Blast Job Data Shape
 
 ```typescript
-// Job enqueued by POST /api/blast (Story 5.2)
+// Job enqueued by POST /api/events/:id/blast (Story 5.2)
 interface BlastJobData {
   eventId: string
   channel: 'email' | 'whatsapp'

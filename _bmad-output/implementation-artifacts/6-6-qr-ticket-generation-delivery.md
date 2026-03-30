@@ -14,23 +14,24 @@ As an approved participant,
 I want to receive a QR code ticket and view it on a dedicated page,
 So that I have a scannable ticket to present at event check-in.
 
-> **Updated 2026-03-28** — QR payload changed from plain HS256 JWT to AES-256-GCM encrypted string. The QR code value is an opaque encrypted payload — only an authorized staff device with the event's `eventKey` can decrypt it. The participant ticket page simply displays the encrypted payload as a QR code; no client-side decryption on the participant side.
+> **Current implementation note (2026-03-30):** The active FE/MSW/runtime still uses the simpler current ticket-token flow. The encrypted `qrPayload` model remains a target-state follow-up.
 
 ---
 
 ## Acceptance Criteria
 
-**AC1:** `GET /api/tickets/:token` returns ticket display data:
+**AC1:** `GET /api/tickets/:token` returns ticket display data in the current runtime flow.
 ```ts
 {
-  qrPayload: string        // AES-256-GCM encrypted string (base64url), used as QR value
+  qrPayload?: string       // target-state encrypted QR payload
+  token?: string           // current runtime ticket token
   participantName: string
   eventName: string
   eventDate: string        // ISO date
   venue: string
 }
 ```
-MSW mock returns a fixed opaque string as `qrPayload` (e.g., `'MOCK_ENCRYPTED_QR_event-001_reg-001'`).
+Current FE/runtime may still resolve through `token`/`ticketToken` rather than the target encrypted payload.
 
 **AC2:** Large QR code displayed using `react-qr-code`:
 ```tsx
@@ -73,7 +74,7 @@ The participant does not need to decode the QR — they only need to show it.
 ## Dev Notes
 
 ### QR Value
-The QR code value is the raw `qrPayload` string — an AES-256-GCM encrypted blob. It is opaque to the participant's device. `react-qr-code` encodes it as-is into the QR matrix.
+The target-state QR value is `qrPayload`, but the current implementation still uses the simpler ticket-token model in active code.
 
 ### MSW Mock Shape
 ```typescript

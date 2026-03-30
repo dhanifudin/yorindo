@@ -1,9 +1,10 @@
 # Epic 10: Admin Intelligence Dashboard
 
-Admin gets a personalized intelligence command center at `/app/dashboard` — showing live participant composition (filterable by event, job title, industry/manufacture sector, and location), events-by-vendor/sponsor breakdown, company-level contact aggregation, and contextual quick-filter entry points — replacing the current basic stat-card overview at `/app`.
+Admin gets a personalized intelligence command center at `/app/dashboard`, with the current runtime already providing the dashboard route and role-personalized entry experience while richer intelligence widgets continue to evolve.
 
-> **Phase 1 (FE):** New `/app/dashboard` route with enhanced stat cards, participant quick-filter panel, vendor-event breakdown widget, recent events table (with vendor column), quick actions; company intelligence view at `/app/contacts/companies`; MSW handlers for `GET /api/dashboard/stats` and `GET /api/contacts/companies`; `/app` redirects to `/app/dashboard`
-> **Phase 2 (BE):** `GET /api/dashboard/stats` (aggregate vendor-event counts + totalCompanies), `GET /api/contacts/companies` (contacts grouped by company with stats)
+> **Current implementation note (2026-03-30):** Role-personalized dashboard behavior exists in the current FE runtime, but not every target admin-intelligence widget and company drilldown contract is fully realized yet.
+> **Phase 1 (FE):** Current FE includes the role-based dashboard entry flow and related dashboard components.
+> **Phase 2 (BE):** `GET /api/dashboard/stats` and `GET /api/contacts/companies` remain the intended backend targets for full admin-intelligence parity.
 
 ---
 

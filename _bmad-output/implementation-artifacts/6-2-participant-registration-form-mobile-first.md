@@ -1,17 +1,17 @@
 # Story 6.2: Participant Registration Form (Mobile-First)
 
 ## Story
-As a participant, I want to complete a registration form on mobile with phone pre-fill and multi-step flow.
+As a participant, I want to complete the current mobile registration form flow and submit my registration successfully.
 
 ## Acceptance Criteria
 - [x] /register/[eventSlug]/form — multi-step form (contact info → survey → confirm)
-- [x] Fixed field order: `email`, `name`, `phone`, `company_email`, `company_name`, `company_location` (LocationPicker), `position`, `industry_type`
-- [ ] ~~Phone pre-fill via GET /api/contacts/lookup?phone=~~ **REMOVED 2026-03-28** — no client-side lookup; backend flags duplicate contacts (manual path only) for admin review via Story 3-5
+- [x] Current FE registration flow is implemented and submits via `POST /api/registrations`
+- [ ] Full later fixed-field/order + checkout spec remains a follow-up and is not yet the active implementation
 - [x] POST /api/registrations on submit
 - [x] Consent checkbox captured
 - [x] Google Calendar deep link on success
-- [ ] **SSO path (2026-03-28):** When SSO completes and `contactProfile` is returned (Story 6-8 AC12), pre-fill ALL fixed fields. `phone` always remains editable. All other pre-filled fields shown with "✓ Terisi dari profil" badge (locked read-only).
-- [ ] **AC8 (2026-03-28 — SCP-2026-03-28-E):** Registration flow is 4 steps: contact info (1) → survey (2) → checkout (3) → confirmed (4). The checkout step (step 3) displays:
+- [ ] **Later-spec follow-up:** SSO profile prefill and 4-step checkout flow remain future alignment work.
+- [ ] **Later-spec follow-up:** Registration flow target is 4 steps: contact info (1) → survey (2) → checkout (3) → confirmed (4). The current implementation is still simpler.
   - Event banner image at top (if `banner_url` set; fallback: gradient placeholder with event name initials)
   - Event name, date, venue summary
   - Participant summary: name, email, phone
@@ -33,7 +33,7 @@ As a participant, I want to complete a registration form on mobile with phone pr
 
 ---
 
-## Tasks (Open ACs)
+## Tasks (Open Later-Spec ACs)
 
 - [ ] **Task A: SSO pre-fill path**
   - [ ] Import `contactProfile` shape from Story 6-8 AC12 — `POST /api/auth/google` returns `{ accessToken, user, contactProfile? }` where `contactProfile` contains all fixed field values

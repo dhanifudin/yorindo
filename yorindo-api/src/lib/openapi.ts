@@ -2,10 +2,10 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { parse } from 'yaml'
 
-type OpenApiDocument = {
-  openapi?: string
+export type OpenApiDocument = {
+  openapi: string
   info?: Record<string, unknown>
-  paths?: Record<string, unknown>
+  paths: Record<string, unknown>
 }
 
 const REQUIRED_PATHS = [
@@ -25,7 +25,7 @@ export function loadOpenApiDocument(): OpenApiDocument {
 
   const filePath = path.resolve(process.cwd(), 'openapi.yaml')
   const raw = readFileSync(filePath, 'utf8')
-  const document = parse(raw) as OpenApiDocument
+  const document = parse(raw) as Partial<OpenApiDocument>
 
   if (!document?.openapi || !document?.paths) {
     throw new Error('Invalid OpenAPI document: missing `openapi` version or `paths`')
@@ -36,6 +36,6 @@ export function loadOpenApiDocument(): OpenApiDocument {
     throw new Error(`OpenAPI contract is missing required foundation paths: ${missing.join(', ')}`)
   }
 
-  cachedDocument = document
-  return document
+  cachedDocument = document as OpenApiDocument
+  return cachedDocument
 }

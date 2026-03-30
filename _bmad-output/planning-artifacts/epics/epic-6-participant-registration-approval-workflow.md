@@ -1,11 +1,11 @@
 # Epic 6: Participant Registration & Approval Workflow
 
-Participants can discover events and complete registration via mobile-first forms (SSO or manual); admins can manage the full approval-to-ticket pipeline with automated notifications and calendar link delivery.
+Participants can discover events and complete registration via mobile-first forms; admins can manage the approval-to-ticket pipeline with the current runtime status model and ticket delivery flow.
 
-> **Updated 2026-03-28** — Meeting: participant status simplified into two independent dimensions — **registration status** (`provisional` → `pending` → `approved` / `rejected`) and **attendance status** (`attended` / `no_show`, set at check-in). Waitlist status removed. Cancellation status removed — Story 6.7 (self-cancellation) retired.
+> **Current implementation note (2026-03-30):** The runtime still uses a legacy single-status model in active code: `pending`, `confirmed`, `approved`, `rejected`, `waitlisted`, `attended`, `cancelled`. The story details below are aligned to the currently implemented behavior to avoid implementation drift.
 
-> **Phase 1 (FE):** Public event landing page (`/register/[eventSlug]`); registration form (SSO login or manual, dynamic survey fields, consent checkbox, Google Calendar link on success); double opt-in confirmation page; approval queue table (TanStack Table, approve/reject actions, score display); ticket display page (QR code via `react-qr-code`) — all wired to MSW registrations handler
-> **Phase 2 (BE):** `GET /api/events/:slug/public`, `POST /api/registrations` (for manual-path registrations: flags potential duplicate contacts for admin review via Story 3-5 merge workflow; SSO registrations skip duplicate detection; no auto-merge), `GET /api/auth/sso/callback`, approval scoring service, `PATCH /api/registrations/:id/status`, double opt-in delivery + expiry cron, `qrcode` ticket JWT generation, notification dispatch, bot detection (NFR-S7), all registration repositories. `GET /api/contacts/lookup` removed — no client-side pre-fill.
+> **Phase 1 (FE):** Public event landing page (`/register/[eventSlug]`); registration form (manual-first, current 3-step flow); confirmation page; approval queue table; ticket display page (`react-qr-code`) — all wired to MSW registrations handlers.
+> **Phase 2 (BE):** `POST /api/registrations`, `GET /api/registrations`, `GET /api/registrations/:id`, `POST /api/registrations/:id/status`, `POST /api/registrations/:id/cancel`, `PUT /api/registrations/bulk-approve`, ticket token generation on approval, notification integration follow-up, all registration repositories.
 
 ## Story 6.1: Public Event Landing Page
 
@@ -35,39 +35,29 @@ So that I can make an informed decision about whether to register.
 
 ## Story 6.2: Participant Registration Form (Mobile-First)
 
-> **Updated 2026-03-28** — Meeting: participant can now choose between SSO login (auto-fills profile data) or manual form fill. SSO is offered as an option, not forced — manual path remains fully functional.
-> **Updated 2026-03-28 (field order + no lookup):** Fixed field order changed to email-first. Phone lookup removed — duplicate contact merging is handled by the backend at registration time.
+> **Current implementation note (2026-03-30):** The active FE still uses the current simplified registration form and does not yet implement the full later SSO/profile-prefill specification.
 
 As a participant,
-I want to complete a registration form on my phone, either by logging in via SSO for auto-filled data or by filling it manually,
-So that I can register quickly regardless of whether I have an SSO account.
+I want to complete a registration form on my phone using the current multi-step registration flow,
+So that I can register quickly with the fields currently supported by the implementation.
 
 **Acceptance Criteria:**
 
-**Given** the registration form renders (step 0 — contact info),
+**Given** the registration form renders,
 **When** the page loads,
-**Then** a "Lanjutkan dengan Google" button is shown above the manual form fields; the manual form is the default path — the SSO button is optional, not required
+**Then** the current FE shows the implemented contact-info-first flow and does not require SSO to proceed
 
-**Given** I click "Lanjutkan dengan Google",
-**When** the OAuth flow completes (Phase 1: mock Google auth dialog; Phase 2: real Google OAuth),
-**Then** the system looks up the participant's contact record by verified email (`contacts.google_sub` linked or email match); if a contact profile exists, ALL fixed fields are pre-filled and shown with a "✓ Terisi dari profil" badge (locked read-only); `phone` is pre-filled but always remains editable; if no contact exists, only `name` and `email` are pre-filled and participant completes remaining fields manually
-
-**Given** I do not click the SSO button,
-**When** the form renders,
-**Then** it displays these fixed fields in this order, all required unless noted:
-`email`, `name`, `phone`, `company_email`, `company_name`, `company_location`, `position` (jabatan), `industry_type`
-
-> **Note (2026-03-28):** AC aligned with Story 6-8 implementation (already in review). Story 6-8 implements the SSO button pattern correctly — the "Lanjutkan dengan Google" button pre-fills name+email only; phone always manual. Story 6-8 is the authoritative implementation reference.
-
-> **Note (field order 2026-03-28):** No phone-based contact lookup on the FE. The FE submits all fixed fields as-is. For **manual registrations only**: the backend detects potential duplicate contacts at registration time and flags them for admin review — merging is manual, performed by admin via Story 3-5 (Duplicate Profile Detection & Merge). SSO registrations skip duplicate detection entirely (identity verified via Google OAuth).
+**Given** the current registration form renders,
+**When** the participant progresses through it,
+**Then** the implemented FE uses the current simplified multi-step flow and submits through `POST /api/registrations`
 
 **Given** the registration form is submitted,
 **When** `POST /api/registrations` is called (unprotected, rate-limited 10/IP/hour),
 **Then** the registration is created with `status: 'pending'` and HTTP 201 is returned within 3 seconds normal load / 5 seconds burst (NFR-P11)
 
-**Given** the same participant + event combination already exists,
-**When** `POST /api/registrations` is called again,
-**Then** it returns HTTP 200 with the existing registration status and a message "Your registration is already pending" — no duplicate created (FR62)
+**Given** the same participant submits again,
+**When** `POST /api/registrations` is called,
+**Then** the current implementation still creates/returns the current runtime registration flow and duplicate-handling remains a follow-up concern
 
 **Given** the event has a custom survey schema,
 **When** the form renders,
@@ -116,7 +106,7 @@ So that my slot is only reserved after I explicitly confirm my intent.
 
 ## Story 6.4: Registration Approval Queue & Admin Review
 
-> **Updated 2026-03-28** — Meeting: waitlist status removed. Approval actions simplified to approve / reject only. Attendance status (`attended` / `no_show`) is a separate dimension set at check-in (Epic 7) — not managed here.
+> **Current implementation note (2026-03-30):** The active FE/BE still include `waitlisted`, `confirmed`, and `cancelled` in the runtime registration model. This story is aligned to the current implemented queue behavior.
 
 As an admin,
 I want to review pending registrations, see their AI-scored qualification, and approve or reject them,
@@ -129,26 +119,26 @@ So that I control who attends the event based on qualification criteria.
 **Then** a paginated list of pending registrations is returned with contact details and rule-based score + confidence indicators (FR27)
 
 **Given** I approve a registration,
-**When** `PATCH /api/registrations/:id/status` is called with `{ status: 'approved' }`,
-**Then** the registration status updates, a QR ticket JWT is generated and stored in `ticket_token`, a blast job is enqueued to notify the participant, a `registration.approved` audit entry is written, and if approving this registration fills the event quota the registration form is automatically closed (see Story 6.1)
+**When** `PUT` or `POST /api/registrations/:id/status` is called with `{ status: 'approved' }`,
+**Then** the registration status updates and a ticket token is generated in the current runtime model
 
 **Given** I reject a registration,
-**When** `PATCH /api/registrations/:id/status` is called with `{ status: 'rejected' }`,
-**Then** the registration status updates and a rejection notification blast job is enqueued; a `registration.rejected` audit entry is written
+**When** `PUT` or `POST /api/registrations/:id/status` is called with `{ status: 'rejected' }`,
+**Then** the registration status updates in the current runtime model
 
 **Given** I manually requeue a rejected registration,
-**When** `PATCH /api/registrations/:id/status` is called with `{ status: 'pending' }` from `rejected`,
-**Then** the registration re-enters the approval queue and a `registration.requeued` audit entry is written (FR63)
+**When** `PUT` or `POST /api/registrations/:id/status` is called with `{ status: 'pending' }` from `rejected`,
+**Then** the registration re-enters the approval queue in the current runtime model
 
 **Given** the registrations table in the FE,
 **When** it renders,
-**Then** TanStack Table v8 server-side mode shows data with status filter tabs (pending / approved / rejected) and approve/reject action buttons per row; there is no waitlist action or tab
+**Then** TanStack Table v8 server-side mode shows the currently implemented status actions and filters, including the legacy waitlist/cancel paths still present in code
 
 ---
 
-## ~~Story 6.5: Waitlist Management & Auto-Promotion~~ *(Retired 2026-03-28)*
+## Story 6.5: Waitlist Management & Auto-Promotion *(Legacy runtime path)*
 
-> **Retired 2026-03-28** — Meeting: waitlist status removed from the participant status model. Registration is automatically closed when the quota is reached (Story 6.1 / Story 6.4). No waitlist, no auto-promotion logic. This story is intentionally kept for history — do not implement.
+> **Current implementation note (2026-03-30):** Waitlist handling still exists in the active FE/MSW/runtime model. Keep this story as the implementation reference until the codebase is migrated off waitlist behavior.
 
 
 ---
@@ -162,8 +152,8 @@ So that I have a scannable ticket to present at event check-in.
 **Acceptance Criteria:**
 
 **Given** a registration transitions to `status: 'approved'`,
-**When** `TicketService.generateToken()` is called,
-**Then** a HS256 JWT ticket is generated with `{ sub: registrationId, eventId, type: 'ticket', exp: eventDate+1day }` and stored in `registrations.ticket_token`
+**When** the current runtime ticket flow runs,
+**Then** a ticket token is generated and stored in `registrations.ticket_token`
 
 **Given** the blast worker processes the ticket delivery job,
 **When** the channel is `email`,
@@ -173,14 +163,14 @@ So that I have a scannable ticket to present at event check-in.
 **When** the channel is `whatsapp`,
 **Then** Everpro sends a WhatsApp message with the QR code image attachment
 
-**Given** the QR ticket JWT,
-**When** it is decoded by the scan service,
-**Then** `payload.type === 'ticket'` is verified and the `registrationId` matches an approved registration
+**Given** the ticket token,
+**When** it is loaded by the participant ticket page or scan service,
+**Then** it resolves through the current runtime ticket flow used by the implementation
 
 ---
 
-## ~~Story 6.7: Participant Self-Cancellation~~ *(Retired 2026-03-28)*
+## Story 6.7: Participant Self-Cancellation *(Legacy runtime path)*
 
-> **Retired 2026-03-28** — Meeting: cancellation status removed from the participant status model. No self-cancellation flow. This story is intentionally kept for history — do not implement.
+> **Current implementation note (2026-03-30):** Self-cancellation still exists in the active FE/MSW/runtime model. Keep this story as the implementation reference until the codebase is migrated off cancellation behavior.
 
 ---
