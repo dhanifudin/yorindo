@@ -1,0 +1,12 @@
+{
+  "provinces": [
+    { "code": "31", "name": "DKI Jakarta" },
+    { "code": "35", "name": "Jawa Timur" },
+    { "code": "32", "name": "Jawa Barat" }
+  ],
+  "regencies": [
+    { "code": "31.71", "name": "Kota Jakarta Pusat", "province_code": "31" },
+    { "code": "35.78", "name": "Kota Surabaya", "province_code": "35" },
+    { "code": "32.14", "name": "Kabupaten Purwakarta", "province_code": "32" }
+  ]
+}

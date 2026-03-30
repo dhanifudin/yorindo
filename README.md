@@ -1,147 +1,148 @@
-# Yorindo
+# Yorindo App
 
-Event management platform — admin portal, participant registration, QR check-in, and analytics.
+Frontend for the **Yorindo** event-management platform — Next.js App Router with MSW mock API.
 
-## Repository Structure
+## Tech Stack
 
-```
-yorindo/
-├── yorindo-api/           # Fastify REST API (TypeScript)
-├── yorindo-app/           # Next.js frontend (TypeScript)
-├── docker-compose.yml     # Production deployment
-├── docker-compose.dev.yml # Local development
-└── .env.example           # Root env template (production / Docker)
-```
-
----
-
-## Local Development
-
-### Prerequisites
-
-- **Docker** + **Docker Compose**
-
-No database or Node.js installation required — everything runs inside containers.
-
-### 1. Set up env files
-
-```bash
-cp yorindo-api/.env.example yorindo-api/.env
-cp yorindo-app/.env.example yorindo-app/.env.local
-```
-
-Edit `yorindo-api/.env` and set the two required JWT secrets:
-
-```env
-JWT_SECRET=any_string_at_least_32_chars
-JWT_REFRESH_SECRET=a_different_string_at_least_32_chars
-```
-
-Everything else uses safe defaults for local development.
-
-### 2. Start
-
-```bash
-docker compose -f docker-compose.dev.yml up
-```
-
-| Service | URL |
-|---------|-----|
-| App (Next.js) | http://localhost:5173 |
-| API (Fastify) | http://localhost:3000 |
-| Redis | localhost:6379 |
-
-Both services hot-reload on file changes. The app uses MSW mock handlers by default so the API is optional for frontend development.
-
-**First start** installs npm dependencies inside the containers — this takes a minute. Subsequent starts are fast.
-
-### Useful commands
-
-```bash
-# Run in background
-docker compose -f docker-compose.dev.yml up -d
-
-# View logs
-docker compose -f docker-compose.dev.yml logs -f
-
-# Rebuild after adding/removing npm packages
-docker compose -f docker-compose.dev.yml up --build
-
-# Stop
-docker compose -f docker-compose.dev.yml down
-```
-
-### Running tests
-
-```bash
-# API
-docker compose -f docker-compose.dev.yml exec api npm test
-
-# App
-docker compose -f docker-compose.dev.yml exec app npm test
-```
+| Layer | Library |
+|---|---|
+| Framework | Next.js 16 (App Router, Turbopack) |
+| Styling | Tailwind CSS + shadcn/ui |
+| State | Zustand |
+| Data fetching | TanStack React Query v5 |
+| Tables | TanStack Table v8 |
+| Forms | React Hook Form v7 + Zod |
+| Charts | Recharts v3 |
+| Survey builder | react-jsonschema-form (RJSF) v6 |
+| API mocking | MSW v2 |
+| PWA | @serwist/next |
+| IndexedDB | idb v8 |
+| Tests | Vitest + Testing Library |
 
 ---
 
-## Without Docker
+## Local Development (Frontend Only — MSW Mocks)
 
-If you prefer to run services directly:
-
-**API** — requires Node.js 24+
-
-```bash
-cd yorindo-api
-cp .env.example .env   # edit JWT secrets
-npm install
-npm run dev            # http://localhost:3000
-```
-
-**App** — requires Node.js 24+
+No backend required. All API calls are intercepted by MSW.
 
 ```bash
 cd yorindo-app
-cp .env.example .env.local
 npm install
-npm run dev            # http://localhost:5173
+npm run dev
 ```
 
----
+Open [http://localhost:5173](http://localhost:5173). You will be redirected to `/login`.
 
-## Key Environment Variables
+### Test Credentials
 
-### `yorindo-api/.env`
-
-| Variable | Default | Description |
-|---|---|---|
-| `JWT_SECRET` | — | Access token signing key (**required**, ≥32 chars) |
-| `JWT_REFRESH_SECRET` | — | Refresh token signing key (**required**, ≥32 chars) |
-| `PORT` | `3000` | API server port |
-| `BASE_URL` | `http://localhost:3000` | Public URL for QR code links |
-| `REPOSITORY_IMPL` | `memory` | `memory` (Phase 1) \| `postgres` (Phase 2) |
-| `EMAIL_PROVIDER` | `mock` | `mock` \| `brevo` \| `mailtrap` |
-| `WHATSAPP_PROVIDER` | `mock` | `mock` \| `everpro` |
-| `AI_PROVIDER` | `disabled` | `disabled` \| `mock` \| `openai` \| `anthropic` |
-| `SENTRY_DSN` | — | Sentry DSN for server error monitoring (optional) |
-
-### `yorindo-app/.env.local`
-
-| Variable | Default | Description |
-|---|---|---|
-| `NEXT_PUBLIC_ENABLE_MOCKS` | `true` | Enable MSW browser mocks (local dev only) |
-| `NEXT_PUBLIC_BASE_PATH` | — | Subdirectory base path (e.g. `/yorindo`) |
-| `NEXT_PUBLIC_SENTRY_DSN` | — | Sentry DSN for browser error monitoring (optional) |
-| `SENTRY_DSN` | — | Sentry DSN for server/edge runtimes (optional) |
+| Role | Email | Password | Redirects to |
+|---|---|---|---|
+| **Admin** | `admin@yorindo.app` | `password123` | `/app` — full access |
+| **Staff** | `budi@yorindo.app` | `password123` | `/app/scan` — check-in only |
+| **Viewer** | `sari@yorindo.app` | `password123` | `/app` — read-only |
+| **Participant** | `user@example.com` | `password123` | `/app/dashboard` — self-service |
 
 ---
 
-## Production Deployment
+## Local Development (Full Stack — Docker Compose)
 
-Production runs via Docker Compose using pre-built images from CI/CD.
+Runs the frontend, backend, Postgres, and Redis together. The API uses in-memory repositories by default (no migrations needed).
+
+### Prerequisites
+
+- Docker Desktop or Docker Engine + Compose plugin
+- Node.js 20+ (for local FE development outside Docker)
+
+### Steps
 
 ```bash
-cp .env.example .env
-# Edit .env — set JWT secrets, POSTGRES_PASSWORD, and Sentry DSNs
-docker compose up -d
+# 1. Clone and move to monorepo root
+cd yorindo
+
+# 2. Copy env file and fill in JWT secrets (minimum required for Phase 1)
+cp yorindo-api/.env.example yorindo-api/.env
+# Edit yorindo-api/.env — change JWT_SECRET and JWT_REFRESH_SECRET
+
+# 3. Start all services with hot reload
+docker compose -f docker-compose.dev.yml up
 ```
 
-See `.env.example` for all available variables. The app image bakes `NEXT_PUBLIC_SENTRY_DSN` at build time from the `APP_SENTRY_DSN` GitHub secret.
+Services started:
+
+| Service | URL |
+|---|---|
+| Next.js app | http://localhost:5173 |
+| Fastify API | http://localhost:3000 |
+
+> **Tip:** `docker-compose.dev.yml` mounts source directories for hot reload on both FE and BE. Node modules and `.next` cache are preserved in named volumes — the host `node_modules` is never used inside the container.
+
+### Switching to a Real Database (Phase 2)
+
+When the BE is ready for real Postgres, update `yorindo-api/.env`:
+
+```env
+REPOSITORY_IMPL=postgres    # was: memory
+SERVICE_IMPL=real           # was: mock
+DATABASE_URL=postgresql://yorindo:yourpassword@postgres:5432/yorindo
+REDIS_URL=redis://redis:6379
+POSTGRES_PASSWORD=yourpassword
+```
+
+Then run migrations:
+
+```bash
+docker compose exec api npm run migrate
+```
+
+---
+
+## Running Tests
+
+```bash
+npm test              # run all tests once
+npm run test:watch    # watch mode
+npm run test:coverage # coverage report
+```
+
+---
+
+## Project Structure
+
+```
+src/
+  app/
+    app/              # Role-guarded admin shell (admin, staff, viewer)
+      contacts/
+      events/[id]/
+      scan/
+      dashboard/
+    register/[eventSlug]/   # Public event landing + registration form
+    data-rights/            # UU PDP data request / erasure pages
+    login/
+  components/
+    features/         # Feature-specific components (per domain)
+    layout/           # AdminShell, ParticipantShell
+    ui/               # shadcn/ui primitives
+  mocks/
+    handlers/         # MSW request handlers (auth, contacts, events, …)
+  store/              # Zustand stores (authStore, …)
+  lib/
+    offline/          # IndexedDB helpers for offline scan queue
+  types/
+    api.ts            # Shared TypeScript types matching OpenAPI contract
+```
+
+---
+
+## Role Permissions
+
+| Area | Admin | Staff | Viewer | Participant |
+|---|---|---|---|---|
+| Dashboard `/app` | ✅ | ❌ | ✅ | ✅ (own) |
+| Contacts `/app/contacts` | ✅ | ❌ | ❌ | ❌ |
+| Events `/app/events` | ✅ | ❌ | ✅ | ❌ |
+| Templates `/app/templates` | ✅ | ❌ | ❌ | ❌ |
+| Users `/app/users` | ✅ | ❌ | ❌ | ❌ |
+| Check-in `/app/scan` | ❌ | ✅ | ❌ | ❌ |
+| Public registration `/register/:slug` | 🌐 | 🌐 | 🌐 | 🌐 |
+| Data rights `/data-rights/*` | 🌐 | 🌐 | 🌐 | 🌐 |

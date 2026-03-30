@@ -1,0 +1,277 @@
+'use client'
+
+import { useState } from 'react'
+import { useUsers, useUpdateUserRole, useDeleteUser } from '@/hooks/useUsers'
+import { useAuthStore } from '@/store/authStore'
+import { UserCreateForm } from '@/components/features/users/UserCreateForm'
+import { EventAssignmentDialog } from '@/components/features/users/EventAssignmentDialog'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent } from '@/components/ui/card'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from '@/components/ui/dialog'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { TablePagination } from '@/components/ui/table-pagination'
+import { toast } from 'sonner'
+import type { User } from '@/types/api'
+
+const PAGE_SIZE = 20
+
+const ROLE_BADGE: Record<User['role'], string> = {
+  admin: 'bg-blue-100 text-blue-700',
+  staff: 'bg-green-100 text-green-700',
+  viewer: 'bg-muted text-muted-foreground',
+  participant: 'bg-amber-100 text-amber-700',
+}
+
+export default function UsersPage() {
+  const [showForm, setShowForm] = useState(false)
+  const [assignUser, setAssignUser] = useState<User | null>(null)
+  const [detailUser, setDetailUser] = useState<User | null>(null)
+  const [usersPage, setUsersPage] = useState(1)
+  const [roleChangeTarget, setRoleChangeTarget] = useState<{ user: User; newRole: User['role'] } | null>(null)
+  const { data: users, isLoading } = useUsers(usersPage, PAGE_SIZE)
+  const pagedUsers = users?.data ?? []
+  const total = users?.pagination.total ?? 0
+  const { mutate: updateRole } = useUpdateUserRole()
+  const { mutate: deleteUser } = useDeleteUser()
+  const currentUser = useAuthStore((s) => s.user)
+
+  const handleRoleChangeConfirm = () => {
+    if (!roleChangeTarget) return
+    updateRole(
+      { id: roleChangeTarget.user.id, role: roleChangeTarget.newRole },
+      {
+        onError: () => toast.error('Gagal mengubah role. Silakan coba lagi.'),
+        onSettled: () => setRoleChangeTarget(null),
+      }
+    )
+  }
+
+  const handleDelete = (user: User, afterDelete?: () => void) => {
+    deleteUser(user.id, {
+      onSuccess: afterDelete,
+      onError: () => toast.error(`Gagal menonaktifkan akun ${user.name}.`),
+    })
+  }
+
+  return (
+    <div>
+      {/* Role change confirmation dialog */}
+      <Dialog open={!!roleChangeTarget} onOpenChange={(v) => !v && setRoleChangeTarget(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Ubah Role</DialogTitle>
+            <DialogDescription>
+              Ubah role <strong>{roleChangeTarget?.user.name}</strong> menjadi{' '}
+              <strong>{roleChangeTarget?.newRole}</strong>?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRoleChangeTarget(null)}>Batal</Button>
+            <Button onClick={handleRoleChangeConfirm}>Konfirmasi</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold">Manajemen Akun</h1>
+        <Button onClick={() => setShowForm(true)}>+ Akun Baru</Button>
+      </div>
+
+      {showForm && (
+        <Card className="mb-6">
+          <CardContent className="pt-6">
+            <h2 className="text-lg font-semibold mb-4">Buat Akun Baru</h2>
+            <UserCreateForm
+              onSuccess={() => setShowForm(false)}
+              onCancel={() => setShowForm(false)}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {assignUser && (
+        <EventAssignmentDialog
+          user={assignUser}
+          open={!!assignUser}
+          onClose={() => setAssignUser(null)}
+        />
+      )}
+
+      {/* User detail sheet (mobile) */}
+      <Sheet open={!!detailUser} onOpenChange={(v) => !v && setDetailUser(null)}>
+        <SheetContent side="bottom" className="flex flex-col max-h-[60vh] overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>{detailUser?.name}</SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 px-4 space-y-3 overflow-y-auto text-sm">
+            <div><span className="text-muted-foreground">Email: </span>{detailUser?.email}</div>
+            <div>
+              <span className="text-muted-foreground">Role: </span>
+              {detailUser && <Badge className={ROLE_BADGE[detailUser.role]}>{detailUser.role}</Badge>}
+            </div>
+            <div>
+              <span className="text-muted-foreground">Dibuat: </span>
+              {detailUser && new Date(detailUser.createdAt).toLocaleDateString('id-ID')}
+            </div>
+          </div>
+          {detailUser && currentUser?.id !== detailUser.id && (
+            <SheetFooter className="flex-row flex-wrap">
+              {(detailUser.role === 'staff' || detailUser.role === 'viewer') && (
+                <Button size="sm" variant="outline" onClick={() => { setAssignUser(detailUser); setDetailUser(null) }}>
+                  Assign Event
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-destructive hover:text-destructive"
+                onClick={() => handleDelete(detailUser, () => setDetailUser(null))}
+              >
+                Nonaktifkan
+              </Button>
+            </SheetFooter>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      {isLoading ? (
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-16 bg-muted rounded-lg animate-pulse" />
+          ))}
+        </div>
+      ) : (
+        <>
+          {/* Mobile cards */}
+          <div className="md:hidden space-y-2">
+            {pagedUsers.map((user) => {
+              const isSelf = user.id === currentUser?.id
+              return (
+                <div
+                  key={user.id}
+                  className="rounded-lg border border-border bg-card p-3 cursor-pointer active:bg-muted/50"
+                  onClick={() => setDetailUser(user)}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-sm">{user.name}</span>
+                    <Badge className={ROLE_BADGE[user.role]}>{user.role}</Badge>
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {user.email}
+                    {isSelf && <span className="ml-2 text-primary">(Anda)</span>}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Desktop table */}
+          <Card className="hidden w-full overflow-hidden md:block">
+            <Table className="lg:min-w-[900px] xl:min-w-full">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nama</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Dibuat</TableHead>
+                  <TableHead>Aksi</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pagedUsers.map((user) => {
+                  const isSelf = user.id === currentUser?.id
+                  return (
+                    <TableRow key={user.id} className="cursor-pointer" onClick={() => setDetailUser(user)}>
+                      <TableCell className="font-medium" onClick={(e) => e.stopPropagation()}>{user.name}</TableCell>
+                      <TableCell className="text-muted-foreground" onClick={(e) => e.stopPropagation()}>{user.email}</TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center gap-2">
+                          <Select
+                            value={user.role}
+                            onValueChange={(value) =>
+                              setRoleChangeTarget({ user, newRole: value as User['role'] })
+                            }
+                            disabled={isSelf}
+                          >
+                            <SelectTrigger className="h-7 w-28 text-xs" disabled={isSelf}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="admin">Admin</SelectItem>
+                              <SelectItem value="staff">Staff</SelectItem>
+                              <SelectItem value="viewer">Viewer</SelectItem>
+                              <SelectItem value="participant">Participant</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Badge className={ROLE_BADGE[user.role]}>{user.role}</Badge>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground" onClick={(e) => e.stopPropagation()}>
+                        {new Date(user.createdAt).toLocaleDateString('id-ID')}
+                      </TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center gap-2">
+                          {(user.role === 'staff' || user.role === 'viewer') && !isSelf && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setAssignUser(user)}
+                            >
+                              Assign Event
+                            </Button>
+                          )}
+                          {!isSelf ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => handleDelete(user)}
+                            >
+                              Nonaktifkan
+                            </Button>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">Akun Anda</span>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          </Card>
+          <TablePagination
+            page={usersPage - 1}
+            pageSize={PAGE_SIZE}
+            total={total}
+            onPrev={() => setUsersPage((p) => Math.max(1, p - 1))}
+            onNext={() => setUsersPage((p) => (p * PAGE_SIZE < total ? p + 1 : p))}
+          />
+        </>
+      )}
+    </div>
+  )
+}
