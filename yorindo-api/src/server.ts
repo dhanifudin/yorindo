@@ -5,6 +5,8 @@ import helmet from '@fastify/helmet'
 import rateLimit from '@fastify/rate-limit'
 import cookie from '@fastify/cookie'
 import multipart from '@fastify/multipart'
+import swagger from '@fastify/swagger'
+import swaggerUi from '@fastify/swagger-ui'
 import { healthRoutes } from './routes/health.js'
 import { participantRoutes } from './routes/participants.routes.js'
 import { authRoutes } from './routes/auth.routes.js'
@@ -21,6 +23,10 @@ function normalizeFastifyPath(url: string): string {
   return url
     .replace(/^\/api/, '')
     .replace(/:([A-Za-z0-9_]+)/g, '{$1}')
+}
+
+function isInternalDocsRoute(url: string): boolean {
+  return url === '/api/openapi.json' || url.startsWith('/api/docs')
 }
 
 export async function buildServer() {
@@ -63,13 +69,28 @@ export async function buildServer() {
       fileSize: 10 * 1024 * 1024, // 10MB
     },
   })
+  await fastify.register(swagger, {
+    mode: 'static',
+    specification: {
+      document: openapi as any,
+    },
+  })
+  await fastify.register(swaggerUi, {
+    routePrefix: '/api/docs',
+    uiConfig: {
+      docExpansion: 'list',
+      deepLinking: false,
+    },
+    staticCSP: true,
+    transformSpecificationClone: true,
+  })
 
   fastify.addHook('onRoute', (routeOptions) => {
     const methods = Array.isArray(routeOptions.method) ? routeOptions.method : [routeOptions.method]
     for (const method of methods) {
       const upper = typeof method === 'string' ? method.toUpperCase() : ''
       if (!['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(upper)) continue
-      if (routeOptions.url === '/api/openapi.json') continue
+      if (isInternalDocsRoute(routeOptions.url)) continue
       registeredRoutes.add(`${upper} ${normalizeFastifyPath(routeOptions.url)}`)
     }
   })

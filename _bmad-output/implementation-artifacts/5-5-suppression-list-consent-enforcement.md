@@ -1,11 +1,11 @@
 # Story 5.5: Suppression List & Consent Enforcement
 
 ## Story
-As an admin, I want to view the suppression list, search by email/phone, and manually add/remove contacts.
+As an admin, I want to view the suppression list, search by email/phone, and manage the current suppression-list flow used by the implementation.
 
 ## Acceptance Criteria
 - [x] /app/suppression shows paginated suppression list with search
-- [x] Manually add to suppression (POST /api/contacts/suppression)
-- [x] Remove from suppression (DELETE /api/contacts/suppression/:id)
+- [x] FE/MSW suppression add/remove flow exists for manual management
+- [ ] Full backend suppression/unsubscribe contract remains follow-up work
 
 ## Status: review

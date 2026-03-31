@@ -16,8 +16,8 @@ info:
 servers:
   - url: http://localhost:3000/api
     description: Local development (via Docker Compose)
-  - url: https://api.yorindo.id/api
-    description: Production
+  - url: https://demo.dhanifudin.com/api
+    description: Demo / deployed environment
 
 components:
   securitySchemes:

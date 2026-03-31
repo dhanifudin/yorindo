@@ -8,6 +8,12 @@ These artifacts are generated from `yorindo-api/openapi.yaml` and are intended t
 - `postman/yorindo-local.postman_environment.json`
 - `postman/yorindo-demo.postman_environment.json`
 
+Fastify now exposes direct OpenAPI integration routes for manual implementation testing:
+
+- `GET /api/openapi.json` — raw parsed OpenAPI document
+- `GET /api/docs` — Swagger UI served by Fastify
+- `GET /api/docs/json` — OpenAPI JSON served through the Fastify docs integration
+
 ## Environments
 
 ### Local
@@ -30,6 +36,7 @@ The environments already include commonly reused values:
 - Core IDs: `eventId`, `contactId`, `registrationId`, `userId`, `vendorId`, `templateId`
 - Other IDs: `vendorReportToken`, `jobId`, `duplicateGroupId`
 - Query helpers: `page`, `pageSize`, `sortBy`, `sortDir`, `format`
+- Automation helpers: `invalidLoginPassword`, `invalidScanToken`, `adminUserId`, `assignableEventId`
 
 Default seeded credentials:
 
@@ -87,6 +94,8 @@ Use the Postman Collection Runner to run:
 
 - the full collection for smoke testing
 - a single folder like `Auth`, `Events`, `Vendors`, `Reports`, or `Registrations`
+- `Automated Tests / Positive Cases`
+- `Automated Tests / Negative Cases`
 
 Recommended smoke subset for every deployment:
 
@@ -96,6 +105,13 @@ Recommended smoke subset for every deployment:
 4. `Vendors / List vendors with pagination (admin/viewer)`
 5. `Reports / Get post-event attendance report (admin/viewer)`
 6. `Auth / Logout and invalidate tokens`
+
+Recommended direct OpenAPI smoke subset:
+
+1. `Automated Tests / Positive Cases / OpenAPI docs JSON is available`
+2. `Automated Tests / Positive Cases / Swagger UI HTML is available`
+3. `Automated Tests / Positive Cases / Login positive and store auth state`
+4. `Automated Tests / Positive Cases / Authenticated users list succeeds`
 
 ## Running With Newman
 
@@ -133,6 +149,18 @@ newman run "postman/yorindo-api.postman_collection.json" -e "postman/yorindo-dem
 newman run "postman/yorindo-api.postman_collection.json" -e "postman/yorindo-demo.postman_environment.json" --folder "Vendors"
 ```
 
+### Run Automated Positive Cases
+
+```bash
+newman run "postman/yorindo-api.postman_collection.json" -e "postman/yorindo-local.postman_environment.json" --folder "Automated Tests" --folder "Positive Cases"
+```
+
+### Run Automated Negative Cases
+
+```bash
+newman run "postman/yorindo-api.postman_collection.json" -e "postman/yorindo-local.postman_environment.json" --folder "Automated Tests" --folder "Negative Cases"
+```
+
 ### Export Newman Results
 
 ```bash
@@ -148,6 +176,23 @@ newman run "postman/yorindo-api.postman_collection.json" -e "postman/yorindo-dem
 ## E2E Testing Recommendations
 
 Use Postman/Newman mainly for API workflow verification. Good team scenarios include:
+
+### OpenAPI Integration Smoke
+
+- verify `GET /api/docs`
+- verify `GET /api/docs/json`
+- verify Fastify serves the current OpenAPI contract directly
+
+### Automated Positive Cases
+
+- OpenAPI docs JSON is available
+- Swagger UI HTML is available
+- login succeeds and stores auth state
+- authenticated users list succeeds
+- contacts list succeeds
+- registrations list succeeds
+- vendors list succeeds
+- public registration creation succeeds
 
 ### Auth Smoke
 
@@ -174,6 +219,16 @@ Use Postman/Newman mainly for API workflow verification. Good team scenarios inc
 - open vendor report by token
 - accept DPA
 
+### Negative Cases
+
+- invalid login returns `401 INVALID_CREDENTIALS`
+- protected route without bearer auth returns `401`
+- invalid scan token returns `401 INVALID_TICKET`
+- assigning an event to an admin returns `403 FORBIDDEN`
+- invalid registration payload returns `400 VALIDATION_ERROR`
+- invalid event detail returns `404`
+- contacts import without file is rejected
+
 ### Contacts / Registration Flow
 
 - list contacts
@@ -185,6 +240,7 @@ Use Postman/Newman mainly for API workflow verification. Good team scenarios inc
 
 - `local` currently requires the API to be running; otherwise health check fails.
 - `demo` is reachable at `https://demo.dhanifudin.com/api/health`.
+- Swagger UI manual testing is available at `{{baseUrl}}/docs`.
 - The login flow stores the real cookie value returned by the API into `refreshCookie`.
 - Some requests need valid IDs already present in the target environment. If a seeded ID does not exist in a specific deployment, update the environment variable before running that request.
 - The collection is generated from OpenAPI, so when the API spec changes, regenerate these artifacts to keep Postman/Newman in sync.

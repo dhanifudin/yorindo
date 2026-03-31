@@ -16,6 +16,7 @@ I want to see a personal dashboard showing my event registrations and QR tickets
 So that I can track my upcoming events and access my tickets without contacting the organizer.
 
 > **Depends on:** Story 11.3 (role-based dashboard routing at `src/app/app/page.tsx`), Story 6.8 (participant `authStore` shape with `name` + `email`, MSW participant token).
+> **Current implementation note (2026-03-30):** The active runtime still includes legacy `waitlisted` and `cancelled` statuses and an implemented cancellation path. This artifact should reflect current runtime behavior unless/until Epic 6 status cleanup is completed in code.
 > **Sprint Change Proposal:** 2026-03-25, CP-6.
 
 ---
@@ -26,15 +27,13 @@ So that I can track my upcoming events and access my tickets without contacting 
 
 **AC2:** Greeting: *"Hai, {name}!"* where `name` comes from `authStore.user.name` — no extra API call. If `name` is undefined/empty, fall back to `authStore.user.email`.
 
-**AC3:** **Upcoming Events tab** ("Mendatang") — fetches `GET /api/participants/me/registrations` and displays registrations with `status: 'approved' | 'pending'` where `eventDate >= today`. Sorted by `eventDate` ascending. Columns per row: Event Name, Date (formatted Indonesian), Venue, Status badge (color-coded), "Lihat Tiket" button (only for `approved`).
+**AC3:** **Upcoming Events tab** ("Mendatang") — fetches `GET /api/participants/me/registrations` and displays registrations with the statuses currently used by the runtime (`approved`, `pending`, `waitlisted`, and current cancellation handling where present) where relevant to the participant dashboard experience.
 
-> **Updated 2026-03-28** — `waitlisted` status removed. "Batalkan" button removed — Story 6-7 (self-cancellation) retired; no participant cancellation flow.
+**AC4:** **My Tickets tab** ("Tiket Saya") — same endpoint; filters to the current approved-ticket flow. Each entry renders as a card with the current runtime ticket display behavior.
 
-**AC4:** **My Tickets tab** ("Tiket Saya") — same endpoint; filters to `status: 'approved'` only. Each entry renders as a card: event name, date, venue, status badge, and an inline QR code rendered with `react-qr-code` using `ticketToken` as the value.
+**AC5:** Cancellation flow remains part of the current runtime implementation and should be documented as such until the codebase is migrated off the legacy cancellation path.
 
-~~**AC5:** Cancellation flow~~ — **Removed 2026-03-28**. Story 6-7 (self-cancellation) retired; participant cancellation is no longer part of the status model. Remove any "Batalkan" button and `POST /api/registrations/:id/cancel` call from this component.
-
-**AC6:** MSW handler `GET /api/participants/me/registrations` added to `src/mocks/handlers/registrations.ts`. Returns an array of 3–4 mock registration objects spanning statuses `approved` and `pending`. Each mock object shape:
+**AC6:** MSW handler `GET /api/participants/me/registrations` exists in `src/mocks/handlers/registrations.ts`. It returns participant registration objects spanning the statuses currently used in the runtime.
 ```ts
 {
   id: string
@@ -42,7 +41,7 @@ So that I can track my upcoming events and access my tickets without contacting 
   eventName: string
   eventDate: string   // ISO date, eventDate >= today for "Mendatang" items
   venue: string
-  status: 'approved' | 'pending'
+  status: 'approved' | 'pending' | 'waitlisted' | 'cancelled'
   ticketToken: string // only meaningful when status === 'approved'
 }
 ```
@@ -86,7 +85,7 @@ MSW handler: `GET /api/participants/me/profile` (new) returns the mock contact o
 ## Tasks / Subtasks
 
 - [x] **Task 1 — MSW handlers (AC: 6)**
-  - [x] Add `GET /api/participants/me/registrations` to `src/mocks/handlers/registrations.ts` returning 3–4 mock registrations with statuses `approved`/`pending` and `eventDate >= today` — **update: remove `waitlisted` entries; Story 6-7 cancel stub no longer needed**
+  - [x] `GET /api/participants/me/registrations` exists and reflects the current participant-registration runtime states
   - [x] Verify handlers are exported from `src/mocks/handlers/index.ts`
 
 - [x] **Task 2 — ParticipantShell layout (AC: 9)**
@@ -107,7 +106,7 @@ MSW handler: `GET /api/participants/me/profile` (new) returns the mock contact o
   - [x] `useQuery` with key `['participant', 'registrations']` → `GET /api/participants/me/registrations` (AC7)
   - [x] Skeleton state: placeholder rows matching tab content shape (AC8)
   - [x] Two shadcn Tabs: "Mendatang" and "Tiket Saya" (AC3, AC4)
-  - [x] Mendatang tab: filter `approved`/`pending` with `eventDate >= today`, sorted asc (AC3) — **update: remove `waitlisted` filter; remove "Batalkan" button**
+- [x] Mendatang tab reflects the current participant-registration runtime behavior and active statuses
   - [x] Tiket Saya tab: filter approved only, render inline QR with `react-qr-code` `<QRCode value={ticketToken} size={160} />` (AC4)
   - [x] Status badge: color-coded (approved=default/green, pending=secondary/yellow)
   - [x] Empty states per tab (AC8)
