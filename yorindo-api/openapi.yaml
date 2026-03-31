@@ -1712,6 +1712,8 @@ paths:
       summary: Get all templates
       operationId: getTemplates
       tags: [Blast]
+      security:
+        - BearerAuth: []
       responses:
         '200':
           description: List of templates
@@ -1725,6 +1727,8 @@ paths:
       summary: Create template
       operationId: createTemplate
       tags: [Blast]
+      security:
+        - BearerAuth: []
       requestBody:
         required: true
         content:
@@ -1749,6 +1753,8 @@ paths:
       summary: Update template
       operationId: updateTemplate
       tags: [Blast]
+      security:
+        - BearerAuth: []
       parameters:
         - name: id
           in: path
@@ -1777,6 +1783,8 @@ paths:
       summary: Delete template
       operationId: deleteTemplate
       tags: [Blast]
+      security:
+        - BearerAuth: []
       parameters:
         - name: id
           in: path
