@@ -42,7 +42,7 @@ story_location: _bmad-output/implementation-artifacts
 # - 6-8-social-og-meta-tags-event-pages.md (not tracked in current Epic 6)
 # - tech-spec-emergency-blast-waitlist-admin-cancel.md (references retired waitlist/cancel features)
 # - tech-spec-ai-graded-registration-review-archived-2026-03-22.md (archived)
-# - tech-spec-contacts-bulk-selection-flag-blast-archived-2026-03-22.md (archived)
+# - tech-spec-contacts-bulk-selection-flag-blast-archived-2026-03-22.md (superseded by Stories 3.9 + 3.13)
 
 development_status:
 
@@ -97,6 +97,7 @@ development_status:
   3-10-triagepanel-inline-flagged-and-duplicate-records: review
   3-11-eventbanner-pre-event-blast-shortcut: review
   3-12-contact-event-history-tab-in-sheet: review
+  3-13-inline-blast-modal-contact-page-blast-composer: ready-for-dev
   epic-3-retrospective: optional
 
   # ─────────────────────────────────────────────
