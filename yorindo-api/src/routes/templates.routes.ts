@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { InMemoryTemplateRepository } from '../repositories/memory/TemplateRepository.js'
 import { InMemoryAuditLogRepository } from '../repositories/memory/AuditLogRepository.js'
 import { requireAuth, requireAdmin } from '../middleware/auth.js'
+import { Template } from '../types/domain.js'
 
 export const templateRepo = new InMemoryTemplateRepository()
 export const auditRepo = new InMemoryAuditLogRepository()
@@ -51,7 +52,7 @@ export const templatesRoutes: FastifyPluginAsync = async (fastify) => {
     const { id } = request.params as { id: string }
     const body = updateSchema.parse(request.body)
 
-    const updated = await templateRepo.update(id, body)
+    const updated = await templateRepo.update(id, body as Partial<Template>)
     if (!updated) {
       return reply.status(404).send({
         error: { code: 'NOT_FOUND', message: 'Template not found', details: [] }
