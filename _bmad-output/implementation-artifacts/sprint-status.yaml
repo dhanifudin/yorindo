@@ -115,6 +115,7 @@ development_status:
   4-1-event-creation-with-full-configuration: review       # AC updated 2026-03-28: paid/free toggle (admin-only) + preview button
   4-2-event-lifecycle-management-state-machine: review
   4-3-event-clone: review
+  be-4-3-event-clone: review
   4-4-survey-template-builder: ready-for-dev               # REOPENED 2026-03-28: dual survey + GForms parity + response dashboard
   4-5-event-capacity-target-criteria-with-audience-preview: review  # AC update needed: multi-criteria + AI recommendation
   4-6-soft-delete-recovery-for-events-and-records: review
