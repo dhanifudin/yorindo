@@ -59,6 +59,13 @@ export async function etlRoutes(fastify: FastifyInstance): Promise<void> {
 
       // Enqueue job to 'etl'
       const payload = request.user as JwtPayload
+      request.log.info({
+        filename: data.filename,
+        storedFilePath: targetPath,
+        uploadedBy: payload.sub,
+        eventId,
+        uploadSource,
+      }, 'ETL upload accepted')
       const jobId = await queueService.enqueue('etl', {
         filePath: targetPath,
         originalFilename: data.filename,
@@ -66,6 +73,11 @@ export async function etlRoutes(fastify: FastifyInstance): Promise<void> {
         eventId,
         uploadSource
       })
+      request.log.info({
+        filename: data.filename,
+        jobId,
+        uploadedBy: payload.sub,
+      }, 'ETL job enqueued')
 
       const responseBody = {
         jobId,
@@ -81,6 +93,7 @@ export async function etlRoutes(fastify: FastifyInstance): Promise<void> {
     handler: async (request: FastifyRequest<{ Params: { jobId: string } }>, reply: FastifyReply) => {
       const { jobId } = request.params
       const jobInfo = await queueService.getStatus(jobId)
+      request.log.info({ jobId, jobInfo }, 'ETL job status requested')
 
       if (!jobInfo || (jobInfo.status === 'failed' && !jobInfo.progress)) {
         return reply.status(404).send({

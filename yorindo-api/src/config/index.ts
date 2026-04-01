@@ -25,7 +25,7 @@ export const config = {
   whatsappProvider: optional('WHATSAPP_PROVIDER', 'mock'), // 'mock' | 'everpro'
 
   // AI provider selection — defaults to mock in Phase 1
-  etlAiProvider: optional('ETL_AI_PROVIDER', 'mock'),
+  etlAiProvider: optional('ETL_AI_PROVIDER', 'disabled'),
   yorimindAiProvider: optional('YORIMIND_AI_PROVIDER', 'mock'),
   smartFilterAiProvider: optional('SMART_FILTER_AI_PROVIDER', 'mock'),
 
