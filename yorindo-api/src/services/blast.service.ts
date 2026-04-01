@@ -10,6 +10,7 @@ export interface BlastJobData {
   templateId: string
   templateBody: string
   templateName: string
+  customMessage?: string
   filters?: {
     industry?: string
     city?: string

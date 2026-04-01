@@ -56,7 +56,8 @@ const EventRegistrationsQuerySchema = z.object({
 })
 
 const BlastBodySchema = z.object({
-  templateId: z.string().trim().min(1),
+  templateId: z.string().trim().optional(),
+  customMessage: z.string().trim().optional(),
   channel: z.enum(['email', 'whatsapp']),
   filters: z.object({
     industry: z.string().trim().optional(),
@@ -71,6 +72,13 @@ const BlastBodySchema = z.object({
       code: z.ZodIssueCode.custom,
       path: ['contactIds'],
       message: 'filters and contactIds are mutually exclusive',
+    })
+  }
+  if (!value.templateId && !value.customMessage) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['customMessage'],
+      message: 'Either templateId or customMessage must be provided',
     })
   }
 })
@@ -592,10 +600,16 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     if (body.data.filters?.companySize) contactFilters.companySize = body.data.filters.companySize
 
     const recipientCount = body.data.contactIds?.length ?? (await contactRepository.findAll({ page: 1, pageSize: 500 }, contactFilters)).total
+    let templateName = 'Custom Message'
+    let templateBody = body.data.customMessage || 'Mocked template body for ' + (body.data.templateId ?? 'unknown')
+
     const queueName = body.data.channel === 'whatsapp' ? 'marketing' : 'transactional'
     const jobId = await queueService.enqueue(queueName, {
       eventId: event.id,
-      templateId: body.data.templateId,
+      templateId: body.data.templateId ?? 'custom',
+      templateName,
+      templateBody,
+      customMessage: body.data.customMessage,
       channel: body.data.channel,
       filters: body.data.filters,
       contactIds: body.data.contactIds,
