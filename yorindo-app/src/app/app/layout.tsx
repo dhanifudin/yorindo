@@ -169,7 +169,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       return
     }
 
-    if (user?.role === 'staff' && isStaffBlocked(pathname)) {
+    if (user?.role === 'staff' && !isStaffAllowed(pathname)) {
       router.replace('/app/scan')
       return
     }
