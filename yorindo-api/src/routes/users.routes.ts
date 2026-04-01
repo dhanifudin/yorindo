@@ -28,6 +28,8 @@ const UserEventParams = z.object({ id: z.string().min(1), eventId: z.string().mi
 const AssignEventBody = z.object({ eventId: z.string().min(1) })
 
 export const usersRoutes: FastifyPluginAsync = async (fastify) => {
+  const adminOnly = { preHandler: [requireAuth, requireAdmin] }
+
   fastify.get('/api/users/me/assigned-events', { preHandler: requireAuth }, async (request, reply) => {
     const payload = request.user as JwtPayload
     if (payload.role === 'admin') {
@@ -82,12 +84,8 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(200).send(responseBody)
   })
 
-  // Apply roles logic to the users feature routes
-  fastify.addHook('preHandler', requireAuth)
-  fastify.addHook('preHandler', requireAdmin)
-
   // ─── POST /api/users ──────────────────────────────────────────────────────
-  fastify.post('/api/users', async (request, reply) => {
+  fastify.post('/api/users', adminOnly, async (request, reply) => {
     const result = CreateUserBody.safeParse(request.body)
     if (!result.success) {
       return reply.status(400).send({
@@ -137,7 +135,7 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
   })
 
   // ─── GET /api/users ───────────────────────────────────────────────────────
-  fastify.get('/api/users', async (request, reply) => {
+  fastify.get('/api/users', adminOnly, async (request, reply) => {
     const query = PaginationQuery.safeParse(request.query)
     if (!query.success) {
       return reply.status(400).send({
@@ -160,7 +158,7 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
   })
 
   // ─── PATCH /api/users/:id ─────────────────────────────────────────────────
-  fastify.patch('/api/users/:id', async (request, reply) => {
+  fastify.patch('/api/users/:id', adminOnly, async (request, reply) => {
     const paramsResult = UserIdParams.safeParse(request.params)
     if (!paramsResult.success) {
       return reply.status(400).send({
@@ -218,7 +216,7 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
   })
 
   // ─── DELETE /api/users/:id ────────────────────────────────────────────────
-  fastify.delete('/api/users/:id', async (request, reply) => {
+  fastify.delete('/api/users/:id', adminOnly, async (request, reply) => {
     const paramsResult = UserIdParams.safeParse(request.params)
     if (!paramsResult.success) {
       return reply.status(400).send({
@@ -261,7 +259,7 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(204).send()
   })
 
-  fastify.get('/api/users/:id/events', async (request, reply) => {
+  fastify.get('/api/users/:id/events', adminOnly, async (request, reply) => {
     const params = UserIdParams.safeParse(request.params)
     if (!params.success) {
       return reply.status(400).send({
@@ -300,7 +298,7 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(200).send(responseBody)
   })
 
-  fastify.post('/api/users/:id/events', async (request, reply) => {
+  fastify.post('/api/users/:id/events', adminOnly, async (request, reply) => {
     const params = UserIdParams.safeParse(request.params)
     const body = AssignEventBody.safeParse(request.body)
     if (!params.success || !body.success) {
@@ -360,7 +358,7 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(201).send(responseBody)
   })
 
-  fastify.delete('/api/users/:id/events/:eventId', async (request, reply) => {
+  fastify.delete('/api/users/:id/events/:eventId', adminOnly, async (request, reply) => {
     const params = UserEventParams.safeParse(request.params)
     if (!params.success) {
       return reply.status(400).send({
