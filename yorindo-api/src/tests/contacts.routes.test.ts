@@ -103,6 +103,61 @@ describe('GET /api/contacts', () => {
     expect(body.data.every((contact: { companySize: string }) => contact.companySize === 'medium')).toBe(true)
   })
 
+  it('filters contacts by city using case-insensitive partial matches', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/contacts?page=1&pageSize=20&city=jak',
+    })
+
+    expect(res.statusCode).toBe(200)
+    const body = res.json()
+    expect(body.pagination.total).toBeGreaterThan(0)
+    expect(body.data.every((contact: { city: string }) => contact.city.toLowerCase().includes('jak'))).toBe(true)
+  })
+
+  it('filters contacts by flagged state', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/contacts?page=1&pageSize=20&flagFilter=flagged',
+    })
+
+    expect(res.statusCode).toBe(200)
+    const body = res.json()
+    expect(body.pagination.total).toBeGreaterThan(0)
+    expect(body.data.every((contact: { flagCategory: string | null }) => contact.flagCategory !== null)).toBe(true)
+  })
+
+  it('filters contacts with missing email only', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/contacts?page=1&pageSize=20&missingEmail=true',
+    })
+
+    expect(res.statusCode).toBe(200)
+    const body = res.json()
+    expect(body.pagination.total).toBe(15)
+    expect(body.data.every((contact: { email: string | null }) => contact.email === null)).toBe(true)
+  })
+
+  it('searches contacts by free-text query', async () => {
+    const seed = await app.inject({
+      method: 'GET',
+      url: '/api/contacts?page=1&pageSize=1',
+    })
+    const contact = seed.json().data[0]
+    const query = String(contact.name).split(' ')[0]
+
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/contacts?page=1&pageSize=20&q=${encodeURIComponent(query)}`,
+    })
+
+    expect(res.statusCode).toBe(200)
+    const body = res.json()
+    expect(body.pagination.total).toBeGreaterThan(0)
+    expect(body.data.some((item: { id: string }) => item.id === contact.id)).toBe(true)
+  })
+
   it('sorts contacts by name ascending', async () => {
     const res = await app.inject({
       method: 'GET',

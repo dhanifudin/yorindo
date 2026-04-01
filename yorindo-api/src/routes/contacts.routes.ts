@@ -25,6 +25,10 @@ const ContactsQuerySchema = z.object({
   industry: z.string().trim().optional(),
   city: z.string().trim().optional(),
   companySize: z.string().trim().optional(),
+  flagFilter: z.enum(['flagged', 'unflagged']).optional(),
+  missingEmail: z.coerce.boolean().optional(),
+  missingPhone: z.coerce.boolean().optional(),
+  q: z.string().trim().optional(),
   sortBy: z.string().trim().optional(),
   sortDir: z.enum(['asc', 'desc']).optional(),
 })
@@ -113,6 +117,13 @@ function toSortBy(sortBy?: string): string | undefined {
   if (sortBy === 'industry') return 'industryId'
   if (sortBy === 'created_at') return 'createdAt'
   return sortBy
+}
+
+// Mengubah filter flag FE ke filter repository yang setara.
+function toFlagFilter(flagFilter?: 'flagged' | 'unflagged') {
+  if (!flagFilter) return {}
+  if (flagFilter === 'flagged') return { flagCategory: 'ANY' }
+  return { flagCategory: 'NONE' }
 }
 
 /**
@@ -220,15 +231,24 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
       industry?: string
       city?: string
       companySize?: string
+      missingEmail?: boolean
+      missingPhone?: boolean
+      flagCategory?: string
+      search?: string
     }
 
     const sortBy = toSortBy(query.sortBy)
     const companySize = toDomainCompanySize(query.companySize)
+    const flagFilter = toFlagFilter(query.flagFilter)
     if (sortBy) paginationParams.sortBy = sortBy
     if (query.sortDir) paginationParams.sortDir = query.sortDir
     if (query.industry) filters.industry = query.industry
     if (query.city) filters.city = query.city
     if (companySize) filters.companySize = companySize
+    if (query.missingEmail) filters.missingEmail = true
+    if (query.missingPhone) filters.missingPhone = true
+    if (query.q) filters.search = query.q
+    if (flagFilter.flagCategory) filters.flagCategory = flagFilter.flagCategory
 
     const { data, total } = await contactRepository.findAll(
       paginationParams,

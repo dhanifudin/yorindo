@@ -1845,6 +1845,27 @@ paths:
             type: string
             enum: [micro, small, medium, large, enterprise]
           description: Filter by company size
+        - name: flagFilter
+          in: query
+          schema:
+            type: string
+            enum: [flagged, unflagged]
+          description: Filter contacts by whether they are flagged
+        - name: missingEmail
+          in: query
+          schema:
+            type: boolean
+          description: Show only contacts without email
+        - name: missingPhone
+          in: query
+          schema:
+            type: boolean
+          description: Show only contacts without phone
+        - name: q
+          in: query
+          schema:
+            type: string
+          description: Free-text search across name, phone, email, and company
       responses:
         '200':
           description: Paginated contacts list
