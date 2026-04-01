@@ -95,8 +95,8 @@ jobs:
 
             test -s /var/www/yorindo-api/.deploy.env
             chmod 600 /var/www/yorindo-api/.deploy.env
-            if ! grep -Rqs "127.0.0.1:3000" /etc/nginx/sites-enabled /etc/nginx/conf.d 2>/dev/null; then
-              echo "VPS nginx is not configured to proxy port 3000. Configure the VPS nginx virtual host for api.dhanifudin.com before deploying."
+            if ! grep -Rqs "127.0.0.1:6666" /etc/nginx/sites-enabled /etc/nginx/conf.d 2>/dev/null; then
+              echo "VPS nginx is not configured to proxy port 6666. Configure the VPS nginx virtual host for api.dhanifudin.com before deploying."
               exit 1
             fi
             if [ -f /var/www/yorindo-api/.env ]; then
