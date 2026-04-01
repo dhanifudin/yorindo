@@ -1,8 +1,8 @@
 import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
-import { auditLogRepository, contactRepository, flaggedRecordsRepository } from '../container.js'
+import { auditLogRepository, contactRepository, eventRepository, flaggedRecordsRepository, registrationRepository } from '../container.js'
 import { requireAdmin, requireAuth, type JwtPayload } from '../middleware/auth.js'
-import type { CompanySize, Contact, DuplicatePair, FlaggedRecord, FlaggedRecordStatus } from '../types/domain.js'
+import type { CompanySize, Contact, DuplicatePair, FlaggedRecord, FlaggedRecordStatus, RegistrationStatus } from '../types/domain.js'
 import { INDONESIAN_INDUSTRIES, INDONESIAN_JOB_TITLES } from '../repositories/memory/_seeds.js'
 import { validateOpenApiRequest, validateOpenApiResponse } from '../lib/openapi-contract.js'
 
@@ -223,6 +223,21 @@ function toDuplicatePairDto(pair: DuplicatePair) {
   }
 }
 
+/**
+ * Membentuk item riwayat event dari pasangan registration dan event yang cocok.
+ */
+function toContactHistoryEntry(
+  registration: { eventId: string; status: RegistrationStatus },
+  event: { id: string; name: string; date: string },
+) {
+  return {
+    eventId: event.id,
+    eventName: event.name,
+    eventDate: event.date,
+    status: registration.status,
+  }
+}
+
 function getSuggestedData(record: FlaggedRecord): Record<string, unknown> {
   const rawData = record.rawData ?? {}
   const normalized = typeof rawData === 'object' && rawData !== null && typeof rawData['normalized'] === 'object' && rawData['normalized'] !== null
@@ -282,6 +297,8 @@ function computeApprovalCompleteness(input: {
 }
 
 export const contactRoutes: FastifyPluginAsync = async (fastify) => {
+  const adminOnly = { preHandler: [requireAuth, requireAdmin] }
+
   fastify.get('/api/contacts/health', async (_request, reply) => {
     const health = await contactRepository.countHealth()
 
@@ -430,6 +447,51 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
       },
     }
     validateOpenApiResponse({ path: '/contacts/duplicates', method: 'get', status: 200, body: responseBody })
+    return reply.status(200).send(responseBody)
+  })
+
+  fastify.get('/api/contacts/:id/history', adminOnly, async (request, reply) => {
+    const paramsResult = MergeParamsSchema.safeParse(request.params)
+    if (!paramsResult.success) {
+      return reply.status(400).send({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Invalid contact id',
+          details: paramsResult.error.issues,
+        },
+      })
+    }
+
+    validateOpenApiRequest({ path: '/contacts/{id}/history', method: 'get', params: paramsResult.data })
+
+    const contact = await contactRepository.findById(paramsResult.data.id)
+    if (!contact) {
+      return reply.status(404).send({
+        error: {
+          code: 'NOT_FOUND',
+          message: 'Contact not found',
+          details: [],
+        },
+      })
+    }
+
+    const registrations = await registrationRepository.findAll(
+      { page: 1, pageSize: 500 },
+      { contactId: contact.id },
+    )
+
+    const historyEntries = (
+      await Promise.all(registrations.data.map(async (registration) => {
+        const event = await eventRepository.findById(registration.eventId)
+        if (!event) return null
+        return toContactHistoryEntry(registration, event)
+      }))
+    )
+      .filter((item): item is NonNullable<typeof item> => item !== null)
+      .sort((a, b) => new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime())
+
+    const responseBody = { registrations: historyEntries }
+    validateOpenApiResponse({ path: '/contacts/{id}/history', method: 'get', status: 200, body: responseBody })
     return reply.status(200).send(responseBody)
   })
 

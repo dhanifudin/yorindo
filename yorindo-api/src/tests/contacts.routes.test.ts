@@ -3,7 +3,7 @@ import type { FastifyInstance } from 'fastify'
 import jwt from 'jsonwebtoken'
 import { buildServer } from '../server.js'
 import { config } from '../config/index.js'
-import { SEED_USER_IDS } from '../repositories/memory/_seeds.js'
+import { SEED_CONTACT_IDS, SEED_USER_IDS } from '../repositories/memory/_seeds.js'
 import type { JwtPayload } from '../middleware/auth.js'
 
 let app: FastifyInstance
@@ -173,6 +173,59 @@ describe('GET /api/contacts/industry-suggestions', () => {
     expect(body.suggestions).toEqual([])
     expect(body.matchedSlug).toBeNull()
     expect(body.fallback).toBe(false)
+  })
+})
+
+describe('GET /api/contacts/:id/history', () => {
+  it('returns contact event history for admins sorted by most recent event date', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/contacts/${SEED_CONTACT_IDS[0]}/history`,
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
+    })
+
+    expect(res.statusCode).toBe(200)
+    const body = res.json()
+    expect(body.registrations.length).toBeGreaterThan(0)
+    expect(body.registrations[0]).toMatchObject({
+      eventId: expect.any(String),
+      eventName: expect.any(String),
+      eventDate: expect.any(String),
+      status: expect.any(String),
+    })
+
+    const eventDates = body.registrations.map((item: { eventDate: string }) => item.eventDate)
+    expect(eventDates).toEqual([...eventDates].sort((a, b) => new Date(b).getTime() - new Date(a).getTime()))
+  })
+
+  it('rejects unauthenticated access to contact history', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/contacts/${SEED_CONTACT_IDS[0]}/history`,
+    })
+
+    expect(res.statusCode).toBe(401)
+  })
+
+  it('rejects non-admin access to contact history', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/contacts/${SEED_CONTACT_IDS[0]}/history`,
+      headers: { authorization: `Bearer ${getAuthToken('staff')}` },
+    })
+
+    expect(res.statusCode).toBe(403)
+  })
+
+  it('returns 404 for unknown contact history requests', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/contacts/not-a-real-contact-id/history',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
+    })
+
+    expect(res.statusCode).toBe(404)
+    expect(res.json().error.code).toBe('NOT_FOUND')
   })
 })
 

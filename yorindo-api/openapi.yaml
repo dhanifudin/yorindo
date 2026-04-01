@@ -1386,7 +1386,7 @@ components:
           format: date-time
         status:
           type: string
-          enum: [approved, attended, cancelled, pending, rejected]
+          enum: [pending, confirmed, approved, rejected, waitlisted, attended, cancelled]
           example: attended
 
     ContactHistoryResponse:
@@ -2107,6 +2107,45 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RecommendedEventsResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Contact not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /contacts/{id}/history:
+    get:
+      summary: Get event registration history for a contact (admin only)
+      operationId: getContactHistory
+      tags: [Contacts]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Event registration history for this contact
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactHistoryResponse'
         '401':
           description: Unauthorized
           content:
