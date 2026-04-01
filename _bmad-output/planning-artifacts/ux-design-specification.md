@@ -742,9 +742,11 @@ Six new components required — none exist in the current codebase.
 #### `ActionToolbar`
 **Purpose:** Contextual blast/export actions — visible only when meaningful.
 **Anatomy:** Sticky bottom bar (`sticky bottom-0 z-10`). Left: select-all checkbox + count. Right: "Export CSV" + "Blast Segmen · N kontak →".
-**States:** `hidden` (no filters, no selection) · `filter-active` (segment blast with live count) · `rows-selected` (row-specific actions) · `blasting` (spinner, disabled)
-**Interaction:** "Blast Segmen" → navigate to `/app/blasts/new?segment=teknologi,jakarta&count=18`
+**States:** `hidden` (no filters, no selection) · `filter-active` (segment blast with live count) · `rows-selected` (row-specific actions + bulk flag buttons) · `blasting` (spinner, disabled)
+**Interaction:** "Blast Segmen" or "Blast N kontak →" → opens inline `BlastModal` `Dialog` on the contacts page. Does NOT navigate to `/app/blasts/new`. Two modes: segment (filter-active) and selection (rows-selected); selection takes priority when both are active.
 **Accessibility:** `role="toolbar"` with `aria-label="Aksi segmen"`. `aria-hidden` when not visible.
+
+> **Updated 2026-03-31:** Blast entry point opens an inline `BlastModal` (`Dialog`) — no page navigation. The full-page blast composer at `/app/blasts/new` is only accessible from the Events pipeline (Story 4.9 Undangan tab). See Story 3.13 for `BlastModal` spec.
 
 ### Component Implementation Roadmap
 

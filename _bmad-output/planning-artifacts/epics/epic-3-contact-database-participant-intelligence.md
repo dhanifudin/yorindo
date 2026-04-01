@@ -310,10 +310,68 @@ So that I can blast the current filtered segment to the blast composer in one cl
 
 **Given** I click "Blast Segmen · N kontak →",
 **When** the button is clicked,
-**Then** the app navigates to `/app/blasts/new?segment=teknologi,jakarta&count=18` with all active instant filter slugs comma-separated in the `segment` param and the live count in `count`
+**Then** an inline `BlastModal` `Dialog` opens pre-filled with the segment source (active filter params) and recipient count; the app does NOT navigate to `/app/blasts/new`
 
 **Given** the `ActionToolbar` root element,
 **Then** it has `role="toolbar"` and `aria-label="Aksi segmen"`
+
+**Given** one or more table rows are selected via checkbox,
+**When** the `ActionToolbar` renders,
+**Then** it shows "N kontak terpilih di halaman ini", bulk flag buttons ("Tandai Spam", "Tidak Potensial", "Hapus Tanda"), and a primary "Blast N kontak →" `Button`
+
+**Given** I click "Blast N kontak →" (row-selection mode),
+**When** the button is clicked,
+**Then** the same `BlastModal` opens pre-filled with `selectedIds` and recipient count = N
+
+**Given** I click "× Batalkan" in the ActionToolbar,
+**When** the button is clicked,
+**Then** all row selections are cleared and the ActionToolbar collapses (if no filters are active)
+
+**Given** both filters AND row selections are active,
+**When** the `ActionToolbar` renders,
+**Then** row-selection takes priority: the toolbar shows selection count and "Blast N kontak →" (not "Blast Segmen")
+
+---
+
+## Story 3.13: Inline Blast Modal — Contact-Page Blast Composer
+
+As an admin,
+I want a blast form to appear as a modal directly on the contacts page when I click Blast,
+So that I can configure and send an event blast without leaving the contacts workspace.
+
+**Acceptance Criteria:**
+
+**Given** I click "Blast Segmen · N kontak →" or "Blast N kontak →" in the ActionToolbar,
+**When** the modal opens,
+**Then** a shadcn `Dialog` renders with title "Kirim Blast" and the following fields:
+- Event selector: `Select` populated from `GET /api/events` (active events only), required
+- Channel: `RadioGroup` with options "WhatsApp" and "Email", required
+- Message type: `Tabs` with "Template" and "Pesan Kustom"
+- Template tab: `Select` populated from `GET /api/templates`, filtered by channel
+- Custom message tab: `Textarea` (min 10 chars), with `{{name}}` `{{event_title}}` variable hints
+- Recipient summary: read-only badge showing "N kontak" (from segment count or selectedIds.length)
+- "Kirim Blast" primary `Button` (disabled until event + channel + message are filled)
+- "Batal" ghost `Button` closes the modal without sending
+
+**Given** the form is submitted with valid fields,
+**When** `POST /api/events/:eventId/blast` is called via MSW,
+**Then** a Sonner toast shows "Blast dijadwalkan untuk N kontak" and the modal closes; the `ActionToolbar` clears selection/filters state after success
+
+**Given** the MSW handler for `POST /api/events/:eventId/blast`,
+**When** called,
+**Then** it returns `{ jobId: 'mock-job-001', status: 'queued' }` with HTTP 202; uses existing blast handler pattern from Story 5.2 MSW handlers
+
+**Given** the event selector is loading,
+**When** `GET /api/events` is in-flight,
+**Then** the Select shows a disabled state; form cannot be submitted
+
+**Given** I switch between "Template" and "Pesan Kustom" tabs,
+**When** I switch tabs,
+**Then** the previously entered content in each tab is preserved (controlled state, not remounted)
+
+**Given** the modal is open and I press Escape or click outside,
+**When** the Dialog onOpenChange fires,
+**Then** the modal closes and no blast is sent; form state is reset
 
 ---
 
