@@ -56,7 +56,7 @@ export class BlastService {
     const event = await this.eventRepository.findById(job.eventId)
     const eventVars = {
       event_title: event?.name ?? job.eventId,
-      date: event?.date ?? '',
+      date: event?.startDate ?? '',
       venue: event?.city ?? '',
     }
 
