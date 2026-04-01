@@ -69,6 +69,8 @@ export interface TargetCriteria {
   cities?: string[]
   companySizes?: string[]
   jobTitles?: string[]
+  behavior?: ('most_active' | 'low_attendance' | 'never_attended')[]
+  lastAttendedBefore?: string
 }
 
 export interface Event {
