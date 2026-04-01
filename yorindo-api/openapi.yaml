@@ -315,6 +315,10 @@ components:
           type: integer
           minimum: 1
           example: 200
+        registeredCount:
+          type: integer
+          minimum: 0
+          example: 142
         targetCriteria:
           type: object
           additionalProperties: true
