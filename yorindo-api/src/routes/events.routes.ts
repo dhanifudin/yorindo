@@ -10,6 +10,7 @@ import {
   userRepository,
   yoriMindService,
 } from '../container.js'
+import { findTemplateById } from '../data/templates.js'
 import { requireAdmin, requireAuth, requireRoles, type JwtPayload } from '../middleware/auth.js'
 import type { Event, Registration } from '../types/domain.js'
 import { validateOpenApiRequest, validateOpenApiResponse } from '../lib/openapi-contract.js'
@@ -586,21 +587,27 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     if (!event) return
     validateOpenApiRequest({ path: '/events/{id}/blast', method: 'post', params: params.data, body: body.data })
     const payload = request.user as JwtPayload
+    const template = findTemplateById(body.data.templateId)
+    if (!template) {
+      return reply.status(404).send({
+        error: { code: 'NOT_FOUND', message: 'Template not found', details: [] },
+      })
+    }
     const contactFilters: { industry?: string; city?: string; companySize?: string } = {}
     if (body.data.filters?.industry) contactFilters.industry = body.data.filters.industry
     if (body.data.filters?.city) contactFilters.city = body.data.filters.city
     if (body.data.filters?.companySize) contactFilters.companySize = body.data.filters.companySize
 
     const recipientCount = body.data.contactIds?.length ?? (await contactRepository.findAll({ page: 1, pageSize: 500 }, contactFilters)).total
-    const queueName = body.data.channel === 'whatsapp' ? 'marketing' : 'transactional'
-    const jobId = await queueService.enqueue(queueName, {
+    const jobId = await queueService.enqueue('marketing', {
       eventId: event.id,
       templateId: body.data.templateId,
       channel: body.data.channel,
       filters: body.data.filters,
       contactIds: body.data.contactIds,
       scheduledAt: body.data.scheduledAt,
-      requestedBy: payload.sub,
+      enqueuedBy: payload.sub,
+      templateName: template.name,
     }, body.data.scheduledAt ? { delay: Math.max(new Date(body.data.scheduledAt).getTime() - Date.now(), 0) } : undefined)
 
     await auditLogRepository.create({

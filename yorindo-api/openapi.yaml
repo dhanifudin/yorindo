@@ -2432,6 +2432,32 @@ paths:
                 $ref: '#/components/schemas/ApiError'
 
   # ─────────────────────────────────────────────────────────────────────────────
+  # TEMPLATES
+  # ─────────────────────────────────────────────────────────────────────────────
+  /templates:
+    get:
+      summary: List message templates
+      operationId: listTemplates
+      tags: [Templates]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of available templates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Template'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  # ─────────────────────────────────────────────────────────────────────────────
   # EVENTS
   # ─────────────────────────────────────────────────────────────────────────────
   /events:

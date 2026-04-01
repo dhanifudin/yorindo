@@ -16,6 +16,7 @@ import { usersRoutes } from './routes/users.routes.js'
 import { eventsRoutes } from './routes/events.routes.js'
 import { registrationsRoutes } from './routes/registrations.routes.js'
 import { scanRoutes } from './routes/scan.routes.js'
+import { templatesRoutes } from './routes/templates.routes.js'
 import { authPlugin } from './middleware/auth.js'
 import { loadOpenApiDocument } from './lib/openapi.js'
 
@@ -123,6 +124,7 @@ export async function buildServer() {
   await fastify.register(etlRoutes)
   await fastify.register(usersRoutes)
   await fastify.register(eventsRoutes)
+  await fastify.register(templatesRoutes)
   await fastify.register(registrationsRoutes)
   await fastify.register(scanRoutes)
 
