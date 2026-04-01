@@ -235,7 +235,7 @@ components:
 
     FlaggedRecord:
       type: object
-      required: [id, rawData, suggestedData, reason, createdAt]
+      required: [id, rawData, suggestedData, reason, status, createdAt]
       properties:
         id:
           type: string
@@ -250,6 +250,23 @@ components:
         reason:
           type: string
           description: Why this record was flagged
+        status:
+          type: string
+          enum: [pending, resolved, discarded]
+        flags:
+          type: array
+          items:
+            type: string
+        uploadId:
+          type: string
+          nullable: true
+        resolvedBy:
+          type: string
+          nullable: true
+        resolvedAt:
+          type: string
+          format: date-time
+          nullable: true
         createdAt:
           type: string
           format: date-time
@@ -1959,6 +1976,11 @@ paths:
       parameters:
         - $ref: '#/components/parameters/PageParam'
         - $ref: '#/components/parameters/PageSizeParam'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, resolved, discarded]
       responses:
         '200':
           description: Paginated flagged records
@@ -1979,8 +2001,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
 
-  /contacts/flagged-records/{id}:
-    post:
+  /contacts/flagged/{id}:
+    patch:
       summary: Approve or reject a flagged record (admin only)
       operationId: resolveFlaggedRecord
       tags: [Contacts]
@@ -2002,7 +2024,37 @@ paths:
               properties:
                 action:
                   type: string
-                  enum: [approve, reject]
+                  enum: [approve, discard]
+                data:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    phone:
+                      type: string
+                    email:
+                      type: string
+                      format: email
+                      nullable: true
+                    city:
+                      type: string
+                      nullable: true
+                    company:
+                      type: string
+                      nullable: true
+                    department:
+                      type: string
+                      nullable: true
+                    industryId:
+                      type: string
+                      nullable: true
+                    jobTitleId:
+                      type: string
+                      nullable: true
+                    companySize:
+                      type: string
+                      nullable: true
+                      enum: [small, medium, large, enterprise, null]
       responses:
         '200':
           description: Record resolved
