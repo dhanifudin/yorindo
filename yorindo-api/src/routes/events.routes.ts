@@ -9,6 +9,8 @@ import {
   surveyRepository,
   userRepository,
   yoriMindService,
+  vendorRepository,
+  eventSponsorRepository,
 } from '../container.js'
 import { requireAdmin, requireAuth, requireRoles, type JwtPayload } from '../middleware/auth.js'
 import type { Event, Registration } from '../types/domain.js'
@@ -83,6 +85,22 @@ const SurveySchemaBody = z.object({
 const AudienceRecommendationQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(50).default(20),
   minScore: z.coerce.number().int().min(0).max(100).default(0),
+})
+
+const EventSponsorVendorIdParamsSchema = z.object({
+  id: z.string().trim().min(1),
+  vendorId: z.string().trim().min(1),
+})
+
+const CreateEventSponsorBodySchema = z.object({
+  vendor_id: z.string().trim().min(1),
+  tier: z.enum(['premium', 'standard', 'supporter']),
+  display_order: z.number().int().min(1),
+})
+
+const UpdateEventSponsorBodySchema = z.object({
+  tier: z.enum(['premium', 'standard', 'supporter']).optional(),
+  display_order: z.number().int().min(1).optional(),
 })
 
 function replyValidationError(reply: FastifyReply, details: unknown, message: string) {
@@ -624,5 +642,133 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     }
     validateOpenApiResponse({ path: '/events/{id}/blast', method: 'post', status: 202, body: responseBody })
     return reply.status(202).send(responseBody)
+  })
+
+  fastify.get('/api/events/:id/sponsors', { preHandler: [requireAuth, requireRoles('admin', 'viewer')] }, async (request, reply) => {
+    const params = EventIdParamsSchema.safeParse(request.params)
+    if (!params.success) return replyValidationError(reply, params.error.issues, 'Invalid event id')
+    const event = await requireEventOr404(reply, params.data.id)
+    if (!event) return
+    const allowed = await requireEventAccessOr403(reply, request.user as JwtPayload | undefined, event.id)
+    if (!allowed) return
+
+    validateOpenApiRequest({ path: '/events/{id}/sponsors', method: 'get', params: params.data })
+
+    const sponsors = await eventSponsorRepository.findByEvent(event.id)
+    const responseBody = sponsors.map((s) => ({
+      id: s.id,
+      event_id: s.eventId,
+      vendor_id: s.vendorId,
+      // Vendor name was supposed to be in DB, however, we can fetch it live!
+      // But standard says vendor_name is returned
+      // The repository returns EventSponsor, which doesn't have vendor_name in domain?
+      // Wait, domain DOES NOT have vendor_name! We map it live.
+      tier: s.tier,
+      display_order: s.displayOrder,
+      created_at: s.createdAt,
+    }))
+    
+    // enhance with vendor_name
+    for (const sponsor of responseBody) {
+      const vendor = await vendorRepository.findById(sponsor.vendor_id)
+      ;(sponsor as any).vendor_name = vendor?.name ?? 'Unknown Vendor'
+    }
+
+    validateOpenApiResponse({ path: '/events/{id}/sponsors', method: 'get', status: 200, body: responseBody })
+    return reply.status(200).send(responseBody)
+  })
+
+  fastify.post('/api/events/:id/sponsors', { preHandler: [requireAuth, requireRoles('admin')] }, async (request, reply) => {
+    const params = EventIdParamsSchema.safeParse(request.params)
+    const body = CreateEventSponsorBodySchema.safeParse(request.body)
+    if (!params.success || !body.success) {
+      return replyValidationError(reply, [...(params.success ? [] : params.error.issues), ...(body.success ? [] : body.error.issues)], 'Invalid payload')
+    }
+
+    const event = await requireEventOr404(reply, params.data.id)
+    if (!event) return
+
+    validateOpenApiRequest({ path: '/events/{id}/sponsors', method: 'post', params: params.data, body: body.data })
+
+    // Check if sponsor already exists
+    const existing = await eventSponsorRepository.findByEvent(event.id)
+    if (existing.some((s) => s.vendorId === body.data.vendor_id)) {
+      return reply.status(409).send({ error: { code: 'CONFLICT', message: 'Vendor already attached to this event', details: [] } })
+    }
+
+    const sponsor = await eventSponsorRepository.create({
+      eventId: event.id,
+      vendorId: body.data.vendor_id,
+      tier: body.data.tier,
+      displayOrder: body.data.display_order,
+    })
+
+    const vendor = await vendorRepository.findById(sponsor.vendorId)
+
+    const responseBody = {
+      id: sponsor.id,
+      event_id: sponsor.eventId,
+      vendor_id: sponsor.vendorId,
+      vendor_name: vendor?.name ?? 'Unknown Vendor',
+      tier: sponsor.tier,
+      display_order: sponsor.displayOrder,
+      created_at: sponsor.createdAt,
+    }
+
+    validateOpenApiResponse({ path: '/events/{id}/sponsors', method: 'post', status: 201, body: responseBody })
+    return reply.status(201).send(responseBody)
+  })
+
+  fastify.patch('/api/events/:id/sponsors/:vendorId', { preHandler: [requireAuth, requireRoles('admin')] }, async (request, reply) => {
+    const params = EventSponsorVendorIdParamsSchema.safeParse(request.params)
+    const body = UpdateEventSponsorBodySchema.safeParse(request.body)
+    if (!params.success || !body.success) {
+      return replyValidationError(reply, [...(params.success ? [] : params.error.issues), ...(body.success ? [] : body.error.issues)], 'Invalid payload')
+    }
+
+    const event = await requireEventOr404(reply, params.data.id)
+    if (!event) return
+
+    validateOpenApiRequest({ path: '/events/{id}/sponsors/{vendorId}', method: 'patch', params: params.data, body: body.data })
+
+    const updates: any = {}
+    if (body.data.tier) updates.tier = body.data.tier
+    if (body.data.display_order) updates.displayOrder = body.data.display_order
+
+    const updated = await eventSponsorRepository.update(event.id, params.data.vendorId, updates)
+    if (!updated) {
+      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Sponsor not found on this event', details: [] } })
+    }
+
+    const vendor = await vendorRepository.findById(updated.vendorId)
+    const responseBody = {
+      id: updated.id,
+      event_id: updated.eventId,
+      vendor_id: updated.vendorId,
+      vendor_name: vendor?.name ?? 'Unknown Vendor',
+      tier: updated.tier,
+      display_order: updated.displayOrder,
+      created_at: updated.createdAt,
+    }
+
+    validateOpenApiResponse({ path: '/events/{id}/sponsors/{vendorId}', method: 'patch', status: 200, body: responseBody })
+    return reply.status(200).send(responseBody)
+  })
+
+  fastify.delete('/api/events/:id/sponsors/:vendorId', { preHandler: [requireAuth, requireRoles('admin')] }, async (request, reply) => {
+    const params = EventSponsorVendorIdParamsSchema.safeParse(request.params)
+    if (!params.success) return replyValidationError(reply, params.error.issues, 'Invalid payload')
+
+    const event = await requireEventOr404(reply, params.data.id)
+    if (!event) return
+
+    validateOpenApiRequest({ path: '/events/{id}/sponsors/{vendorId}', method: 'delete', params: params.data })
+
+    const deleted = await eventSponsorRepository.delete(event.id, params.data.vendorId)
+    if (!deleted) {
+      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Sponsor not found on this event', details: [] } })
+    }
+
+    return reply.status(204).send()
   })
 }
