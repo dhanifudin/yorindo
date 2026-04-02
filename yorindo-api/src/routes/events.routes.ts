@@ -914,7 +914,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     let templateName = 'Custom Message'
     let templateBody = body.data.customMessage || 'Mocked template body for ' + (body.data.templateId ?? 'unknown')
 
-    const queueName = body.data.channel === 'whatsapp' ? 'marketing' : 'transactional'
+    const queueName = 'marketing'
     const jobId = await queueService.enqueue(queueName, {
       eventId: event.id,
       templateId: body.data.templateId ?? 'custom',

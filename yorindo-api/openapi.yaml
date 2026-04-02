@@ -1166,7 +1166,7 @@ components:
           example: Undangan Event
         type:
           type: string
-          enum: [invitation, confirmation, rejection, cancellation]
+          enum: [invitation, confirmation, rejection, ticket_delivery]
           example: invitation
         channel:
           type: string
