@@ -322,7 +322,10 @@ async function updateEventHandler(request: FastifyRequest, reply: FastifyReply) 
   const updateData: Partial<Event> = {}
   if (body.data.name !== undefined) updateData.name = body.data.name
   if (body.data.description !== undefined) updateData.description = body.data.description
-  if (body.data.eventDate !== undefined) updateData.date = body.data.eventDate
+  if (body.data.eventDate !== undefined) {
+    updateData.startDate = body.data.eventDate
+    updateData.endDate = body.data.eventDate
+  }
   if (body.data.timezone !== undefined) updateData.timezone = body.data.timezone
   if (body.data.capacity !== undefined) updateData.capacity = body.data.capacity
   if (body.data.targetCriteria !== undefined) updateData.targetCriteria = body.data.targetCriteria as Event['targetCriteria']
@@ -595,6 +598,50 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     })
 
     return reply.status(200).send(toEventDto((updated ?? existing) as Event, undefined, registrations.total))
+  })
+
+  fastify.patch('/api/events/:id', { preHandler: [requireAuth, requireAdmin] }, async (request, reply) => {
+    const params = EventIdParamsSchema.safeParse(request.params)
+    const body = EventUpdateBodySchema.safeParse(request.body)
+    if (!params.success || !body.success) {
+      return replyValidationError(reply, [
+        ...(params.success ? [] : params.error.issues),
+        ...(body.success ? [] : body.error.issues),
+      ], 'Invalid update payload')
+    }
+    const existing = await requireEventOr404(reply, params.data.id)
+    if (!existing) return
+
+    const updateData: Partial<Event> = {}
+    if (body.data.status !== undefined) {
+      if (body.data.status !== existing.status && !isValidEventStatusTransition(existing.status, body.data.status)) {
+        return replyInvalidTransition(reply, existing.status, body.data.status)
+      }
+      updateData.status = body.data.status
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return reply.status(200).send(toEventDto(existing, undefined, 0))
+    }
+
+    const updated = await eventRepository.update(existing.id, updateData)
+    const result = updated ?? existing
+
+    if (body.data.status !== undefined && body.data.status !== existing.status) {
+      const actor = request.user as JwtPayload
+      await auditLogRepository.create({
+        action: 'event.status_change',
+        actorId: actor.sub,
+        actorRole: actor.role,
+        eventId: result.id,
+        targetId: result.id,
+        targetType: 'event',
+        metadata: { from: existing.status, to: body.data.status },
+      })
+    }
+
+    const registrations = await registrationRepository.findByEvent(existing.id, { page: 1, pageSize: 1 })
+    return reply.status(200).send(toEventDto(result, undefined, registrations.total))
   })
 
   fastify.delete('/api/events/:id', { preHandler: [requireAuth, requireAdmin] }, async (request, reply) => {
