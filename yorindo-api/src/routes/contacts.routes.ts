@@ -1,8 +1,8 @@
 import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
-import { auditLogRepository, contactRepository, eventRepository, flaggedRecordsRepository, registrationRepository } from '../container.js'
+import { auditLogRepository, contactRepository, eventRepository, flaggedRecordsRepository, registrationRepository, suppressionRepository } from '../container.js'
 import { requireAdmin, requireAuth, type JwtPayload } from '../middleware/auth.js'
-import type { CompanySize, Contact, DuplicatePair, FlaggedRecord, FlaggedRecordStatus, RegistrationStatus } from '../types/domain.js'
+import type { CompanySize, Contact, DuplicatePair, FlaggedRecord, FlaggedRecordStatus, RegistrationStatus, SuppressionRecord } from '../types/domain.js'
 import { INDONESIAN_INDUSTRIES, INDONESIAN_JOB_TITLES } from '../repositories/memory/_seeds.js'
 import { validateOpenApiRequest, validateOpenApiResponse } from '../lib/openapi-contract.js'
 
@@ -460,14 +460,14 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
     validateOpenApiRequest({ path: '/contacts/suppression', method: 'get', query })
 
     const suppressionResult = await suppressionRepository.findAll({ page: 1, pageSize: 1000 })
-    const dto = await Promise.all(suppressionResult.data.map((record) => toSuppressionDto(record)))
+    const dto = await Promise.all(suppressionResult.data.map(async (record: SuppressionRecord) => toSuppressionDto(record)))
     const filtered = query.q
       ? dto.filter((entry) => {
-          const needle = query.q!.toLowerCase()
-          return entry.name.toLowerCase().includes(needle)
-            || entry.email.toLowerCase().includes(needle)
-            || entry.phone.toLowerCase().includes(needle)
-        })
+        const needle = query.q!.toLowerCase()
+        return entry.name.toLowerCase().includes(needle)
+          || entry.email.toLowerCase().includes(needle)
+          || entry.phone.toLowerCase().includes(needle)
+      })
       : dto
 
     const total = filtered.length
@@ -568,7 +568,7 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
 
     validateOpenApiRequest({ path: '/contacts/suppression/{id}', method: 'delete', params: result.data })
     const suppressionResult = await suppressionRepository.findAll({ page: 1, pageSize: 1000 })
-    const existing = suppressionResult.data.find((record) => record.id === result.data.id)
+    const existing = suppressionResult.data.find((record: SuppressionRecord) => record.id === result.data.id)
     if (!existing) {
       return reply.status(404).send({
         error: { code: 'NOT_FOUND', message: 'Suppression entry not found', details: [] },
