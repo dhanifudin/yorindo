@@ -1589,7 +1589,7 @@ components:
 
     StandaloneBlastBody:
       type: object
-      required: [eventId, channel, templateId]
+      required: [eventId, channel]
       description: >
         Send a blast for a specific event. Provide either `filters` for manual audience selection
         or `contactIds` for an AI-curated list — these are mutually exclusive.
@@ -1602,6 +1602,10 @@ components:
           enum: [email, whatsapp]
         templateId:
           type: string
+          description: Template ID to use for the blast (mutually exclusive with customMessage).
+        customMessage:
+          type: string
+          description: Custom text message for the blast (mutually exclusive with templateId).
         filters:
           type: object
           description: Manual audience filter criteria (mutually exclusive with contactIds)
