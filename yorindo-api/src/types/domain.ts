@@ -81,13 +81,18 @@ export interface TargetCriteria {
   cities?: string[]
   companySizes?: string[]
   jobTitles?: string[]
+  behavior?: ('most_active' | 'low_attendance' | 'never_attended')[]
+  lastAttendedBefore?: string
 }
 
 export interface Event {
   id: EntityId
   name: string
   slug: string
-  date: ISODateString
+  startDate: ISODateString
+  startTime: string
+  endDate: ISODateString
+  endTime: string
   timezone: string
   city: string | null
   venue: string | null
@@ -101,6 +106,9 @@ export interface Event {
   surveySchemaId: string | null     // document-style survey schema id
   vendorId: EntityId | null
   status: EventStatus
+  isPaid: boolean
+  price: number | null
+  paymentMethod: string | null
   deletedAt: ISODateString | null
   createdAt: ISODateString
   updatedAt: ISODateString
@@ -275,4 +283,19 @@ export interface AuditLog {
   targetType: string | null
   metadata: Record<string, unknown> | null
   createdAt: ISODateString
+}
+
+// ─── Template ────────────────────────────────────────────────────────────────
+
+export type TemplateType = 'invitation' | 'confirmation' | 'rejection' | 'ticket_delivery'
+export type TemplateChannel = 'email' | 'whatsapp'
+
+export interface Template {
+  id: EntityId
+  name: string
+  type: TemplateType
+  channel: TemplateChannel
+  body: string
+  createdAt: ISODateString
+  updatedAt: ISODateString
 }

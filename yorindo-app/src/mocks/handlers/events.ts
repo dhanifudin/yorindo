@@ -33,6 +33,9 @@ export let eventsStore: Event[] = [
     industryTags: ['teknologi'],
     eventType: 'conference',
     topicTags: ['cloud', 'ai'],
+    is_paid: false,
+    price: 0,
+    payment_method: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
@@ -50,6 +53,9 @@ export let eventsStore: Event[] = [
     industryTags: ['kesehatan'],
     eventType: 'seminar',
     topicTags: ['medtech', 'diagnostics'],
+    is_paid: false,
+    price: 0,
+    payment_method: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
@@ -67,6 +73,9 @@ export let eventsStore: Event[] = [
     industryTags: ['kesehatan'],
     eventType: 'conference',
     topicTags: ['medtech', 'digitalisasi'],
+    is_paid: false,
+    price: 0,
+    payment_method: null,
     createdAt: new Date(Date.now() - 30 * 86400000).toISOString(),
     updatedAt: new Date().toISOString(),
   },
@@ -83,6 +92,9 @@ export let eventsStore: Event[] = [
     industryTags: ['retail'],
     eventType: 'networking',
     topicTags: ['ecommerce'],
+    is_paid: false,
+    price: 0,
+    payment_method: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
@@ -99,6 +111,9 @@ export let eventsStore: Event[] = [
     industryTags: ['properti'],
     eventType: 'conference',
     topicTags: ['realestate', 'investasi'],
+    is_paid: false,
+    price: 0,
+    payment_method: null,
     createdAt: new Date(Date.now() - 60 * 86400000).toISOString(),
     updatedAt: new Date().toISOString(),
   },
@@ -116,6 +131,9 @@ export let eventsStore: Event[] = [
     industryTags: ['keuangan', 'teknologi'],
     eventType: 'networking',
     topicTags: ['fintech', 'banking', 'investasi'],
+    is_paid: false,
+    price: 0,
+    payment_method: null,
     createdAt: new Date(Date.now() - 45 * 86400000).toISOString(),
     updatedAt: new Date().toISOString(),
   },
@@ -168,7 +186,9 @@ export const eventHandlers = [
       slug: faker.helpers.slugify((body.name ?? 'new-event').toLowerCase()),
       status: 'draft',
       description: '',
-      timezone: faker.helpers.arrayElement(TIMEZONES),
+      is_paid: false,
+      price: 0,
+      payment_method: null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       ...body,
@@ -301,6 +321,71 @@ export const eventHandlers = [
       )
     }
     return HttpResponse.json(event)
+  }),
+
+  http.patch('/api/events/:id', async ({ params, request }) => {
+    await delay(500)
+    const body = await request.json() as Partial<Event>
+    const id = params.id as string
+    const idx = eventsStore.findIndex((e) => e.id === id)
+    if (idx === -1) {
+      return HttpResponse.json(
+        { error: { code: 'NOT_FOUND', message: 'Event tidak ditemukan', details: [] } },
+        { status: 404 }
+      )
+    }
+
+    const currentEvent = eventsStore[idx]
+    
+    // Status transition guards (Story 4.2)
+    if (body.status && body.status !== currentEvent.status) {
+      const from = currentEvent.status
+      const to = body.status
+      const isValid = (
+        (from === 'draft' && (to === 'published' || to === 'cancelled')) ||
+        (from === 'published' && (to === 'active' || to === 'cancelled')) ||
+        (from === 'active' && (to === 'completed' || to === 'cancelled')) ||
+        (from === 'completed' && to === 'archived') ||
+        (from === 'cancelled' && to === 'archived')
+      )
+
+      if (!isValid) {
+        return HttpResponse.json(
+          { 
+            error: { 
+              code: 'INVALID_TRANSITION', 
+              message: `Transisi status tidak valid dari "${from}" ke "${to}"`, 
+              details: [] 
+            } 
+          },
+          { status: 422 }
+        )
+      }
+
+      // Additional guard for 'completed'
+      if (to === 'completed') {
+        const eventDate = new Date(currentEvent.eventDate)
+        if (eventDate > new Date()) {
+          return HttpResponse.json(
+            { 
+              error: { 
+                code: 'PREMATURE_COMPLETION', 
+                message: 'Event hanya dapat diselesaikan setelah tanggal event berlalu', 
+                details: [] 
+              } 
+            },
+            { status: 422 }
+          )
+        }
+      }
+    }
+
+    eventsStore[idx] = { 
+      ...currentEvent, 
+      ...body, 
+      updatedAt: new Date().toISOString() 
+    }
+    return HttpResponse.json(eventsStore[idx])
   }),
 
   http.put('/api/events/:id', async ({ params, request }) => {
@@ -491,6 +576,7 @@ export const eventHandlers = [
         { status: 404 }
       )
     }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { deletedAt: _del, ...restored } = deletedEventsStore[deletedIdx]
     deletedEventsStore = deletedEventsStore.filter((e) => e.id !== params.id)
     eventsStore.push({ ...restored, updatedAt: new Date().toISOString() })

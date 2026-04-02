@@ -16,6 +16,12 @@ export interface ContactFilters {
   flagCategory?: string
   consentStatus?: string
   search?: string
+  industries?: string[]
+  cities?: string[]
+  companySizes?: string[]
+  jobTitles?: string[]
+  behavior?: string[]
+  lastAttendedBefore?: string
 }
 
 export interface IContactRepository {
@@ -23,6 +29,7 @@ export interface IContactRepository {
   findById(id: EntityId): Promise<Contact | null>
   findByPhone(phone: string): Promise<Contact | null>
   findDuplicates(params: PaginationParams): Promise<{ data: DuplicatePair[]; total: number }>
+  dismissDuplicate(id: EntityId): Promise<boolean>
   mergeDuplicate(primaryId: EntityId, fieldSelections?: Record<string, DuplicateFieldChoice>): Promise<Contact | null>
   upsert(data: Omit<Contact, 'id' | 'createdAt' | 'updatedAt'>): Promise<Contact>
   update(id: EntityId, data: Partial<Contact>): Promise<Contact | null>
