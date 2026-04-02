@@ -78,11 +78,21 @@ export class InMemoryFlaggedRecordsRepository implements IFlaggedRecordsReposito
     return record
   }
 
-  async resolve(id: string, _resolvedData: Partial<Contact>, resolvedById: string): Promise<void> {
+  async resolve(id: string, resolvedData: Partial<Contact>, resolvedById: string): Promise<void> {
     const existing = this.records.get(id)
     if (existing) {
+      const rawData = {
+        ...existing.rawData,
+        normalized: {
+          ...(typeof existing.rawData['normalized'] === 'object' && existing.rawData['normalized'] !== null
+            ? existing.rawData['normalized'] as Record<string, unknown>
+            : {}),
+          ...resolvedData,
+        },
+      }
       this.records.set(id, {
         ...existing,
+        rawData,
         status: 'resolved',
         resolvedBy: resolvedById,
         resolvedAt: new Date().toISOString(),

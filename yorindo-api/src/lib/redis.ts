@@ -9,6 +9,9 @@ import { config } from '../config/index.js'
 let _redis: Redis | undefined
 
 export function getRedis(): Redis {
+  if (config.nodeEnv === 'test') {
+    throw new Error('Redis is disabled in test environment')
+  }
   if (!config.redisUrl) {
     throw new Error('REDIS_URL is required for real queue/redis operations')
   }
@@ -29,6 +32,6 @@ export function getRedis(): Redis {
  * or null for Phase 1 / test environments without Redis.
  */
 export function getRedisOptional(): Redis | null {
-  if (!config.redisUrl) return null
+  if (config.nodeEnv === 'test' || !config.redisUrl) return null
   return getRedis()
 }

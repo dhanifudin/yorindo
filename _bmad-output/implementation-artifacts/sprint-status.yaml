@@ -1,5 +1,5 @@
 generated: 2026-03-19
-last_updated: 2026-03-28 (SCP-2026-03-28-A/B/C/D/E/F applied + AI_PROVIDER simplification + Epic 1 code review patches: cookie maxAge fix; CD tag trigger+DockerHub revert; scan 422 for invalid ticket; hard delete UserRepository; flagFilter URL sync; missingPhone filter fix; safePage pagination guard; audit log non-blocking; OpenAPI schema corrections + Epic 2 story 2-1 review patches: render-phase router fix; participant JwtPayload role; authStore eventKeys+setAuth; MSW login eventKeys+name+any-password; LoginForm→setAuth; refresh mock contract fix)
+last_updated: 2026-04-02 (implemented Story 3.14 contact API JWT enforcement)
 project: yorindo
 project_key: NOKEY
 tracking_system: file-system
@@ -86,7 +86,7 @@ development_status:
   epic-3: in-progress
   3-1-contact-list-with-server-side-pagination-filtering: review  # AC3/6 updated + AC7 added; Task 8: LocationPicker + wilayah-static.json (SCP-2026-03-28-D)
   3-2-excelcsv-upload-etl-job-trigger: review
-  be-3-2-excelcsv-upload-etl-job-trigger: ready-for-dev
+  be-3-2-excelcsv-upload-etl-job-trigger: review
   3-3-etl-processing-ai-normalization-database-upsert: review  # Pre-normalization step added; AI_PROVIDER single toggle (disabled|mock|openai|anthropic); FuzzyDeduplicationService post-upsert (SCP-2026-03-28-C); Task 6 added: city→code mapping via wilayah-static.json (SCP-2026-03-28-D)
   3-4-flagged-records-review-resolution: review
   3-5-duplicate-profile-detection-merge: review
@@ -98,6 +98,7 @@ development_status:
   3-11-eventbanner-pre-event-blast-shortcut: review
   3-12-contact-event-history-tab-in-sheet: review
   3-13-inline-blast-modal-contact-page-blast-composer: ready-for-dev
+  3-14-contact-api-jwt-enforcement: review
   epic-3-retrospective: optional
 
   # ─────────────────────────────────────────────

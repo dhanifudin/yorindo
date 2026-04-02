@@ -1,6 +1,7 @@
 import * as Sentry from '@sentry/node'
 import { config } from './config/index.js'
 import { buildServer } from './server.js'
+import { startEtlWorker } from './workers/etl.worker.js'
 import { startBlastWorker } from './workers/blast.worker.js'
 
 if (config.sentryDsn) {
@@ -9,15 +10,21 @@ if (config.sentryDsn) {
 
 async function start(): Promise<void> {
   const fastify = await buildServer()
+  let workerStarted = false
   let blastWorker: ReturnType<typeof startBlastWorker> | null = null
 
   try {
+    if (config.redisUrl && config.nodeEnv !== 'test') {
+      startEtlWorker()
+      workerStarted = true
+    }
     if (config.serviceImpl === 'real' && config.redisUrl) {
       blastWorker = startBlastWorker()
       fastify.log.info('Blast worker started')
     }
     await fastify.listen({ port: config.port, host: '0.0.0.0' })
     fastify.log.info(`Server listening on port ${config.port}`)
+    if (workerStarted) fastify.log.info('ETL worker started')
   } catch (err) {
     await blastWorker?.close().catch(() => undefined)
     Sentry.captureException(err)

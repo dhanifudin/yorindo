@@ -15,7 +15,7 @@ import type { IEtlNormalizationService, RawContactRow, NormalizedRow } from '../
 const SYSTEM_PROMPT = `You are a data normalization assistant for an Indonesian B2B events platform.
 Given raw participant data rows, normalize each row into structured format.
 Return ONLY valid JSON array matching the schema exactly.
-For each row output: { "name": string, "phone": string (format: +62XXXXXXXXXX), "email": string|null, "industrySlug": string|null, "jobTitleSlug": string|null, "city": string|null, "company": string|null, "companySize": "<50"|"50-200"|"200-1000"|">1000"|null, "confidence": number (0.0-1.0), "flags": string[] }
+For each row output: { "name": string, "phone": string (format: +62XXXXXXXXXX), "email": string|null, "industrySlug": string|null, "jobTitleSlug": string|null, "city": string|null, "company": string|null, "department": string|null, "companySize": "<50"|"50-200"|"200-1000"|">1000"|null, "confidence": number (0.0-1.0), "flags": string[], "provinceCode": string|null, "provinceName": string|null, "cityCode": string|null, "cityName": string|null, "eventDate": string|null, "eventNameRaw": string|null }
 Indonesian phone numbers: strip spaces/dashes, add +62 prefix, remove leading 0.
 Low confidence (< 0.7) if: phone invalid, name missing, duplicate suspected.`
 
