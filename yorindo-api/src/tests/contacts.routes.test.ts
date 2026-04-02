@@ -165,6 +165,7 @@ describe('GET /api/contacts', () => {
     const res = await app.inject({
       method: 'GET',
       url: '/api/contacts?page=1&pageSize=20&city=jak',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
     })
 
     expect(res.statusCode).toBe(200)
@@ -177,6 +178,7 @@ describe('GET /api/contacts', () => {
     const res = await app.inject({
       method: 'GET',
       url: '/api/contacts?page=1&pageSize=20&flagFilter=flagged',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
     })
 
     expect(res.statusCode).toBe(200)
@@ -189,6 +191,7 @@ describe('GET /api/contacts', () => {
     const res = await app.inject({
       method: 'GET',
       url: '/api/contacts?page=1&pageSize=20&missingEmail=true',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
     })
 
     expect(res.statusCode).toBe(200)
@@ -201,6 +204,7 @@ describe('GET /api/contacts', () => {
     const seed = await app.inject({
       method: 'GET',
       url: '/api/contacts?page=1&pageSize=1',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
     })
     const contact = seed.json().data[0]
     const query = String(contact.name).split(' ')[0]
@@ -208,6 +212,7 @@ describe('GET /api/contacts', () => {
     const res = await app.inject({
       method: 'GET',
       url: `/api/contacts?page=1&pageSize=20&q=${encodeURIComponent(query)}`,
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
     })
 
     expect(res.statusCode).toBe(200)
