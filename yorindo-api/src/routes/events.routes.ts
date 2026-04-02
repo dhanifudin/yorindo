@@ -949,14 +949,14 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     validateOpenApiRequest({ path: '/events/{id}/audience-preview', method: 'post', params: params.data, body: request.body })
 
     // Delegate filtering to the repository (handles slug→ID conversion, excludes deleted)
-    const filters = {
-      industries: body.data.industries,
-      cities: body.data.cities,
-      companySizes: body.data.companySizes,
-      jobTitles: body.data.jobTitles,
+    const filters: import('../interfaces/repositories/IContactRepository.js').ContactFilters = {
       consentStatus: 'active',       // Exclude suppressed contacts
-      flagCategory: 'NONE' as const, // Exclude flagged contacts
+      flagCategory: 'NONE',          // Exclude flagged contacts
     }
+    if (body.data.industries?.length) filters.industries = body.data.industries
+    if (body.data.cities?.length) filters.cities = body.data.cities
+    if (body.data.companySizes?.length) filters.companySizes = body.data.companySizes
+    if (body.data.jobTitles?.length) filters.jobTitles = body.data.jobTitles
 
     // Fetch all matching contacts (use large pageSize, rely on total for accurate count)
     const contacts = await contactRepository.findAll({ page: 1, pageSize: 10000 }, filters)
