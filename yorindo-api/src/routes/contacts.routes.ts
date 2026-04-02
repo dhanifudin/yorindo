@@ -46,7 +46,7 @@ const DuplicatesQuerySchema = z.object({
 const FlaggedQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
-  status: z.enum(['pending', 'resolved', 'discarded']).optional(),
+  status: z.enum(['pending', 'resolved', 'discarded', 'all']).optional(),
 })
 
 const MergeParamsSchema = z.object({
@@ -56,7 +56,6 @@ const MergeParamsSchema = z.object({
 const FlaggedParamsSchema = z.object({
   id: z.string().trim().min(1),
 })
-
 const MergeBodySchema = z.object({
   mergeIntoId: z.string().trim().optional(),
   fieldSelections: z.record(z.enum(['primary', 'duplicate'])).optional(),
@@ -291,7 +290,6 @@ function computeApprovalCompleteness(input: {
   const filled = fields.filter((field) => field !== null && field !== undefined && field !== '').length
   return Math.round((filled / fields.length) * 1000) / 1000
 }
-
 export const contactRoutes: FastifyPluginAsync = async (fastify) => {
   const adminOnly = { preHandler: [requireAuth, requireAdmin] }
 
@@ -455,6 +453,33 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(200).send(responseBody)
   })
 
+  fastify.delete('/api/contacts/duplicates/:id', adminOnly, async (request, reply) => {
+    const paramsResult = FlaggedParamsSchema.safeParse(request.params)
+    if (!paramsResult.success) {
+      return reply.status(400).send({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Invalid duplicate id',
+          details: paramsResult.error.issues,
+        },
+      })
+    }
+    validateOpenApiRequest({ path: '/contacts/duplicates/{id}', method: 'delete', params: paramsResult.data })
+
+    const dismissed = await contactRepository.dismissDuplicate(paramsResult.data.id)
+    if (!dismissed) {
+      return reply.status(404).send({
+        error: {
+          code: 'NOT_FOUND',
+          message: 'Duplicate pair not found',
+          details: [],
+        },
+      })
+    }
+
+    return reply.status(204).send()
+  })
+
   fastify.post('/api/contacts/:id/merge', adminOnly, async (request, reply) => {
     const paramsResult = MergeParamsSchema.safeParse(request.params)
     const bodyResult = MergeBodySchema.safeParse(request.body)
@@ -493,7 +518,7 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(200).send(responseBody)
   })
 
-  fastify.get('/api/contacts/flagged', { preHandler: [requireAuth, requireAdmin] }, async (request, reply) => {
+  fastify.get('/api/contacts/flagged', adminOnly, async (request, reply) => {
     const result = FlaggedQuerySchema.safeParse(request.query)
     if (!result.success) {
       return reply.status(400).send({
@@ -509,7 +534,7 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
     const query = result.data
     const { data, total } = await flaggedRecordsRepository.findAll(
       { page: query.page, pageSize: query.pageSize },
-      query.status as FlaggedRecordStatus | undefined,
+      query.status === 'all' ? undefined : query.status as FlaggedRecordStatus | undefined,
     )
 
     const responseBody = {
@@ -525,7 +550,7 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(200).send(responseBody)
   })
 
-  fastify.patch('/api/contacts/flagged/:id', { preHandler: [requireAuth, requireAdmin] }, async (request, reply) => {
+  fastify.patch('/api/contacts/flagged/:id', adminOnly, async (request, reply) => {
     const paramsResult = FlaggedParamsSchema.safeParse(request.params)
     const bodyResult = FlaggedResolutionBodySchema.safeParse(request.body)
 

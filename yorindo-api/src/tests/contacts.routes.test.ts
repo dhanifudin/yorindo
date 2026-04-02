@@ -165,6 +165,7 @@ describe('GET /api/contacts', () => {
     const res = await app.inject({
       method: 'GET',
       url: '/api/contacts?page=1&pageSize=20&city=jak',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
     })
 
     expect(res.statusCode).toBe(200)
@@ -177,6 +178,7 @@ describe('GET /api/contacts', () => {
     const res = await app.inject({
       method: 'GET',
       url: '/api/contacts?page=1&pageSize=20&flagFilter=flagged',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
     })
 
     expect(res.statusCode).toBe(200)
@@ -189,6 +191,7 @@ describe('GET /api/contacts', () => {
     const res = await app.inject({
       method: 'GET',
       url: '/api/contacts?page=1&pageSize=20&missingEmail=true',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
     })
 
     expect(res.statusCode).toBe(200)
@@ -201,6 +204,7 @@ describe('GET /api/contacts', () => {
     const seed = await app.inject({
       method: 'GET',
       url: '/api/contacts?page=1&pageSize=1',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
     })
     const contact = seed.json().data[0]
     const query = String(contact.name).split(' ')[0]
@@ -208,6 +212,7 @@ describe('GET /api/contacts', () => {
     const res = await app.inject({
       method: 'GET',
       url: `/api/contacts?page=1&pageSize=20&q=${encodeURIComponent(query)}`,
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
     })
 
     expect(res.statusCode).toBe(200)
@@ -465,5 +470,31 @@ describe('Flagged records routes', () => {
 
     expect(res.statusCode).toBe(404)
     expect(res.json().error.code).toBe('NOT_FOUND')
+  })
+
+  it('dismisses a duplicate pair as not duplicate', async () => {
+    const beforeRes = await app.inject({
+      method: 'GET',
+      url: '/api/contacts/duplicates?page=1&pageSize=10',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
+    })
+    const beforeBody = beforeRes.json()
+    const pair = beforeBody.data[0]
+
+    const dismissRes = await app.inject({
+      method: 'DELETE',
+      url: `/api/contacts/duplicates/${pair.id}`,
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
+    })
+
+    expect(dismissRes.statusCode).toBe(204)
+
+    const afterRes = await app.inject({
+      method: 'GET',
+      url: '/api/contacts/duplicates?page=1&pageSize=10',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
+    })
+    const afterBody = afterRes.json()
+    expect(afterBody.pagination.total).toBe(beforeBody.pagination.total - 1)
   })
 })

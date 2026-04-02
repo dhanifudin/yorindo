@@ -239,6 +239,20 @@ export class InMemoryContactRepository implements IContactRepository {
   }
 
   /**
+   * Menandai pasangan duplikat sebagai bukan duplikat tanpa menghapus record kontaknya.
+   */
+  async dismissDuplicate(id: string): Promise<boolean> {
+    const pair = this.duplicatePairs.get(id)
+    if (!pair || pair.resolvedAt) return false
+
+    this.duplicatePairs.set(id, {
+      ...pair,
+      resolvedAt: new Date().toISOString(),
+    })
+    return true
+  }
+
+  /**
    * Menggabungkan data duplikat ke record utama lalu menonaktifkan record duplikat.
    */
   async mergeDuplicate(

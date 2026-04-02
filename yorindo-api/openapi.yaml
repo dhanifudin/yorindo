@@ -2002,7 +2002,7 @@ paths:
           in: query
           schema:
             type: string
-            enum: [pending, resolved, discarded]
+            enum: [pending, resolved, discarded, all]
       responses:
         '200':
           description: Paginated flagged records
@@ -2104,6 +2104,41 @@ paths:
                 $ref: '#/components/schemas/ApiError'
         '404':
           description: Flagged record not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /contacts/duplicates/{id}:
+    delete:
+      summary: Mark a duplicate pair as not duplicate
+      operationId: dismissDuplicatePair
+      tags: [Contacts]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Duplicate pair dismissed
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Duplicate pair not found
           content:
             application/json:
               schema:
