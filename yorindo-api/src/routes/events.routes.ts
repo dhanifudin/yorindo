@@ -151,7 +151,7 @@ function replyValidationError(reply: FastifyReply, details: unknown, message: st
   })
 }
 
-function toEventDto(event: Event, surveySchema?: unknown) {
+function toEventDto(event: Event, surveySchema?: unknown, registeredCount: number = 0) {
   return {
     id: event.id,
     name: event.name,
@@ -165,6 +165,7 @@ function toEventDto(event: Event, surveySchema?: unknown) {
     endTime: event.endTime,
     timezone: event.timezone,
     capacity: event.capacity ?? undefined,
+    registeredCount,
     targetCriteria: event.targetCriteria ?? {},
     surveySchema: surveySchema ?? {},
     venue: event.venue ?? '',
@@ -310,7 +311,8 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
 
     const data = await Promise.all(result.data.map(async (event) => {
       const surveySchema = await surveyRepository.findByEventId(event.id)
-      return toEventDto(event, surveySchema?.fields ?? {})
+      const registrations = await registrationRepository.findByEvent(event.id, { page: 1, pageSize: 1 })
+      return toEventDto(event, surveySchema?.fields ?? {}, registrations.total)
     }))
 
     const responseBody = {
@@ -401,7 +403,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       status: 'draft',
       deletedAt: null,
     })
-    
+    const registrations = await registrationRepository.findByEvent(event.id, { page: 1, pageSize: 1 })
     const token = request.user as JwtPayload
     await auditLogRepository.create({
       action: 'event.created',
@@ -413,7 +415,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       metadata: { slug: event.slug },
     })
 
-    const responseBody = toEventDto(event)
+    const responseBody = toEventDto(event, undefined, registrations.total)
     validateOpenApiResponse({ path: '/events', method: 'post', status: 201, body: responseBody })
     return reply.status(201).send(responseBody)
   })
@@ -427,7 +429,8 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     if (!allowed) return
     const surveySchema = await surveyRepository.findByEventId(event.id)
     validateOpenApiRequest({ path: '/events/{id}', method: 'get', params: parsed.data })
-    const responseBody = toEventDto(event, surveySchema?.fields ?? {})
+    const registrations = await registrationRepository.findByEvent(event.id, { page: 1, pageSize: 1 })
+    const responseBody = toEventDto(event, surveySchema?.fields ?? {}, registrations.total)
     validateOpenApiResponse({ path: '/events/{id}', method: 'get', status: 200, body: responseBody })
     return reply.status(200).send(responseBody)
   })
@@ -467,6 +470,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     if (body.data.targetCriteria !== undefined) updateData.targetCriteria = body.data.targetCriteria as Event['targetCriteria']
 
     const updated = await eventRepository.update(existing.id, updateData)
+    const registrations = await registrationRepository.findByEvent(existing.id, { page: 1, pageSize: 1 })
     
     const token = request.user as JwtPayload
     await auditLogRepository.create({
@@ -479,7 +483,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       metadata: { fieldsUpdated: Object.keys(updateData) },
     })
 
-    return reply.status(200).send(toEventDto(updated ?? existing))
+    return reply.status(200).send(toEventDto((updated ?? existing) as Event, undefined, registrations.total))
   })
 
   fastify.delete('/api/events/:id', { preHandler: [requireAuth, requireAdmin] }, async (request, reply) => {

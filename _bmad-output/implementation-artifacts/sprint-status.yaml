@@ -123,6 +123,7 @@ development_status:
   4-5-event-capacity-target-criteria-with-audience-preview: review  # AC update needed: multi-criteria + AI recommendation
   4-6-soft-delete-recovery-for-events-and-records: review
   4-7-event-pipeline-hub-shell-navigation: review
+  be-4-7-event-pipeline-hub-shell-navigation: review
   4-8-event-pipeline-hub-overview-tab: review
   4-9-event-pipeline-hub-undangan-tab-blast: review
   4-10-event-pipeline-hub-registrasi-tab-approval-queue: review     # AC update needed: status columns
