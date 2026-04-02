@@ -1,19 +1,25 @@
-/**
- * ETL BullMQ Worker (Phase 2)
- *
- * This worker processes ETL jobs from the 'etl' BullMQ queue.
- * Requires Redis (REDIS_URL env var) — Phase 2 only.
- *
- * In Phase 1, the EtlService is used directly via API route handlers or tests.
- * This worker is only started when the worker process is explicitly launched.
- */
-
 import { Worker, type ConnectionOptions } from 'bullmq'
+import {
+  auditLogRepository,
+  contactRepository,
+  deduplicationService,
+  etlNormalizationService,
+  flaggedRecordsRepository,
+  rawUploadRepository,
+  registrationRepository,
+} from '../container.js'
 import { getRedis } from '../lib/redis.js'
-import { contactRepository, flaggedRecordsRepository, rawUploadRepository, auditLogRepository, etlNormalizationService } from '../container.js'
 import { EtlService } from '../services/etl.service.js'
 
-const etlService = new EtlService(contactRepository, flaggedRecordsRepository, rawUploadRepository, auditLogRepository, etlNormalizationService)
+const etlService = new EtlService(
+  contactRepository,
+  flaggedRecordsRepository,
+  rawUploadRepository,
+  auditLogRepository,
+  registrationRepository,
+  etlNormalizationService,
+  deduplicationService,
+)
 
 export function startEtlWorker(): Worker {
   const redis = getRedis()
@@ -21,12 +27,37 @@ export function startEtlWorker(): Worker {
   const worker = new Worker(
     'etl',
     async (job) => {
-      const { filePath, uploadedBy } = job.data as { filePath: string; uploadedBy: string }
-      return await etlService.processFile(filePath, uploadedBy)
+      const data = job.data as {
+        filePath: string
+        uploadedBy: string
+        eventId?: string | null
+        uploadSource?: 'etl_import' | 'onsite_import'
+        originalFilename?: string | null
+      }
+
+      const options = {} as {
+        eventId?: string | null
+        uploadSource?: 'etl_import' | 'onsite_import'
+        originalFilename?: string | null
+      }
+
+      if (data.eventId !== undefined) options.eventId = data.eventId
+      if (data.uploadSource !== undefined) options.uploadSource = data.uploadSource
+      if (data.originalFilename !== undefined) options.originalFilename = data.originalFilename
+
+      console.info('[ETL] Worker picked up job', {
+        jobId: job.id,
+        filePath: data.filePath,
+        uploadedBy: data.uploadedBy,
+        eventId: data.eventId ?? null,
+        uploadSource: data.uploadSource ?? 'etl_import',
+        originalFilename: data.originalFilename ?? null,
+      })
+      return etlService.processFile(data.filePath, data.uploadedBy, options)
     },
     {
       connection: redis as unknown as ConnectionOptions,
-      concurrency: 1, // One ETL job at a time to avoid AI provider rate limits
+      concurrency: 1,
     },
   )
 
@@ -35,7 +66,10 @@ export function startEtlWorker(): Worker {
   })
 
   worker.on('failed', (job, err) => {
-    console.error(`ETL job ${job?.id} failed:`, err.message)
+    console.error(`ETL job ${job?.id} failed:`, {
+      message: err.message,
+      stack: err.stack,
+    })
   })
 
   return worker

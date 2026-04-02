@@ -1,5 +1,4 @@
 import { http, HttpResponse, delay } from 'msw'
-import { faker } from '@faker-js/faker'
 import type { Event, PaginatedResponse, User } from '@/types/api'
 import { makeMockCuid2 } from './id'
 import { eventsStore } from './events'
@@ -52,6 +51,7 @@ export const usersStore: StoredUser[] = [
 ]
 
 function toApiUser(user: StoredUser): User {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { deletedAt: _deletedAt, ...apiUser } = user
   return apiUser
 }
