@@ -51,6 +51,42 @@ describe('Users API', () => {
     })
   })
 
+  describe('GET /api/users/me/assigned-events', () => {
+    it('returns only assigned events for staff', async () => {
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/api/users/me/assigned-events',
+        headers: { Authorization: `Bearer ${getAuthToken('staff')}` },
+      })
+
+      expect(response.statusCode).toBe(200)
+      const body = response.json()
+      expect(body.data).toHaveLength(6)
+      expect(body.data.map((event: { id: string }) => event.id)).toEqual([
+        SEED_EVENT_IDS[2],
+        SEED_EVENT_IDS[3],
+        SEED_EVENT_IDS[4],
+        SEED_EVENT_IDS[5],
+        SEED_EVENT_IDS[6],
+        SEED_EVENT_IDS[7],
+      ])
+    })
+
+    it('returns all events for admin', async () => {
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/api/users/me/assigned-events',
+        headers: { Authorization: `Bearer ${getAuthToken('admin')}` },
+      })
+
+      expect(response.statusCode).toBe(200)
+      const body = response.json()
+      expect(body.data).toHaveLength(12)
+      expect(body.data[0]).toHaveProperty('eventDate')
+      expect(body.data[0]).toHaveProperty('timezone')
+    })
+  })
+
   describe('POST /api/users', () => {
     it('creates a new user and an audit log', async () => {
       const response = await fastify.inject({
