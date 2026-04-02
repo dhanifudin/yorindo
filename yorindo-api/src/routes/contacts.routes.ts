@@ -26,6 +26,10 @@ const ContactsQuerySchema = z.object({
   industry: z.string().trim().optional(),
   city: z.string().trim().optional(),
   companySize: z.string().trim().optional(),
+  flagFilter: z.enum(['flagged', 'unflagged']).optional(),
+  missingEmail: z.coerce.boolean().optional(),
+  missingPhone: z.coerce.boolean().optional(),
+  q: z.string().trim().optional(),
   sortBy: z.string().trim().optional(),
   sortDir: z.enum(['asc', 'desc']).optional(),
 })
@@ -165,6 +169,13 @@ function toSortBy(sortBy?: string): string | undefined {
   return sortBy
 }
 
+// Mengubah filter flag FE ke filter repository yang setara.
+function toFlagFilter(flagFilter?: 'flagged' | 'unflagged') {
+  if (!flagFilter) return {}
+  if (flagFilter === 'flagged') return { flagCategory: 'ANY' }
+  return { flagCategory: 'NONE' }
+}
+
 /**
  * Mengubah hasil facet repository ke shape slug/label/count yang dipakai FE.
  */
@@ -282,7 +293,9 @@ function computeApprovalCompleteness(input: {
 }
 
 export const contactRoutes: FastifyPluginAsync = async (fastify) => {
-  fastify.get('/api/contacts/health', async (_request, reply) => {
+  const adminOnly = { preHandler: [requireAuth, requireAdmin] }
+
+  fastify.get('/api/contacts/health', adminOnly, async (_request, reply) => {
     const health = await contactRepository.countHealth()
 
     const responseBody = {
@@ -295,13 +308,13 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(200).send(responseBody)
   })
 
-  fastify.get('/api/contacts/facets', async (_request, reply) => {
+  fastify.get('/api/contacts/facets', adminOnly, async (_request, reply) => {
     const responseBody = toFacetsDto(await contactRepository.findFacets())
     validateOpenApiResponse({ path: '/contacts/facets', method: 'get', status: 200, body: responseBody })
     return reply.status(200).send(responseBody)
   })
 
-  fastify.get('/api/contacts', async (request, reply) => {
+  fastify.get('/api/contacts', adminOnly, async (request, reply) => {
     const result = ContactsQuerySchema.safeParse(request.query)
     if (!result.success) {
       return reply.status(400).send({
@@ -328,15 +341,24 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
       industry?: string
       city?: string
       companySize?: string
+      missingEmail?: boolean
+      missingPhone?: boolean
+      flagCategory?: string
+      search?: string
     }
 
     const sortBy = toSortBy(query.sortBy)
     const companySize = toDomainCompanySize(query.companySize)
+    const flagFilter = toFlagFilter(query.flagFilter)
     if (sortBy) paginationParams.sortBy = sortBy
     if (query.sortDir) paginationParams.sortDir = query.sortDir
     if (query.industry) filters.industry = query.industry
     if (query.city) filters.city = query.city
     if (companySize) filters.companySize = companySize
+    if (query.missingEmail) filters.missingEmail = true
+    if (query.missingPhone) filters.missingPhone = true
+    if (query.q) filters.search = query.q
+    if (flagFilter.flagCategory) filters.flagCategory = flagFilter.flagCategory
 
     const { data, total } = await contactRepository.findAll(
       paginationParams,
@@ -356,7 +378,7 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(200).send(responseBody)
   })
 
-  fastify.get('/api/contacts/industry-suggestions', async (request, reply) => {
+  fastify.get('/api/contacts/industry-suggestions', adminOnly, async (request, reply) => {
     const result = IndustrySuggestionsQuerySchema.safeParse(request.query)
     if (!result.success) {
       return reply.status(400).send({
@@ -401,7 +423,7 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(200).send(responseBody)
   })
 
-  fastify.get('/api/contacts/duplicates', async (request, reply) => {
+  fastify.get('/api/contacts/duplicates', adminOnly, async (request, reply) => {
     const result = DuplicatesQuerySchema.safeParse(request.query)
     if (!result.success) {
       return reply.status(400).send({
@@ -433,7 +455,7 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(200).send(responseBody)
   })
 
-  fastify.post('/api/contacts/:id/merge', async (request, reply) => {
+  fastify.post('/api/contacts/:id/merge', adminOnly, async (request, reply) => {
     const paramsResult = MergeParamsSchema.safeParse(request.params)
     const bodyResult = MergeBodySchema.safeParse(request.body)
 
