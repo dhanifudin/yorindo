@@ -77,7 +77,13 @@ const schema = z.object({
   venue: z.string().optional(),
   eventType: z.string().optional(),
   topicTagsRaw: z.string().optional(),
-})
+  is_paid: z.boolean().optional(),
+  price: z.string().optional(),
+  payment_method: z.string().optional(),
+}).refine(
+  (data) => !data.is_paid || (data.price !== undefined && data.price !== '' && Number(data.price) >= 0),
+  { message: "Harga wajib diisi dan minimal 0", path: ["price"] }
+)
 
 type FormValues = z.infer<typeof schema>
 
@@ -450,6 +456,7 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -463,8 +470,17 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
       venue: event?.venue ?? '',
       eventType: event?.eventType ?? '',
       topicTagsRaw: event?.topicTags?.join(', ') ?? '',
+      is_paid: event?.is_paid ?? false,
+      price: event?.price != null ? String(event.price) : '',
+      payment_method: event?.payment_method ?? '',
     },
   })
+
+  const isPaidWatched = watch('is_paid')
+
+  const invitationTemplates = useMemo(() => templates.filter((t) => t.type === 'invitation'), [templates])
+  const confirmationTemplates = useMemo(() => templates.filter((t) => t.type === 'confirmation'), [templates])
+  const rejectionTemplates = useMemo(() => templates.filter((t) => t.type === 'rejection'), [templates])
 
   const allVendors = vendorsData?.data ?? []
   const selectedVendors = allVendors.filter((v) => selectedVendorIds.includes(v.id))
@@ -569,6 +585,9 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
       ...(blastTemplateId && { blastTemplateId }),
       ...(confirmationTemplateId && { confirmationTemplateId }),
       ...(rejectionTemplateId && { rejectionTemplateId }),
+      is_paid: !!values.is_paid,
+      price: values.is_paid && values.price ? parseInt(values.price, 10) : 0,
+      payment_method: values.is_paid && values.payment_method ? values.payment_method : null,
     }
 
     if (isEdit) {
@@ -704,7 +723,51 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
         </select>
       </div>
 
-      {/* Industri */}
+      {/* Payment Configuration (AC7) */}
+      <fieldset className="space-y-3 border border-border rounded-lg p-4">
+        <legend className="text-sm font-medium text-foreground px-1">Konfigurasi Berbayar (Admin Only)</legend>
+        <div className="flex items-center space-x-2">
+          <input
+            id="is_paid"
+            type="checkbox"
+            {...register('is_paid')}
+            className="h-4 w-4 rounded border-primary text-primary focus:ring-primary"
+          />
+          <Label htmlFor="is_paid" className="cursor-pointer">
+            Event Berbayar
+          </Label>
+        </div>
+        
+        {isPaidWatched && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+            <div>
+              <Label htmlFor="price">
+                Harga <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="price"
+                type="number"
+                min={0}
+                {...register('price')}
+                placeholder="Contoh: 150000"
+                aria-invalid={!!errors.price}
+              />
+              {errors.price && <p className="mt-1 text-xs text-destructive">{errors.price.message}</p>}
+            </div>
+            <div>
+              <Label htmlFor="payment_method">Metode Pembayaran</Label>
+              <Input
+                id="payment_method"
+                type="text"
+                {...register('payment_method')}
+                placeholder="e.g. Transfer Bank"
+              />
+            </div>
+          </div>
+        )}
+      </fieldset>
+
+      {/* Industry Tags */}
       <div>
         <Label>Industri</Label>
         <div className="mt-1.5 flex flex-wrap gap-2">
@@ -1013,6 +1076,14 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
             'Buat Event'
           )}
         </Button>
+        <div className="flex gap-3">
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Tutup
+          </Button>
+          <Button type="submit" disabled={isPending}>
+            {isPending ? 'Menyimpan...' : isEdit ? 'Simpan Perubahan' : 'Buat Event'}
+          </Button>
+        </div>
       </div>
     </form>
   )

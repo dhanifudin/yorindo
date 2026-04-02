@@ -10,11 +10,16 @@ export interface BlastJobData {
   templateId: string
   templateBody: string
   templateName: string
+  customMessage?: string
   filters?: {
-    industry?: string
-    city?: string
-    jobTitle?: string
+    industries?: string[]
+    cities?: string[]
+    companySizes?: string[]
+    jobTitles?: string[]
+    behavior?: string[]
+    lastAttendedBefore?: string
   }
+  contactIds?: string[]
   scheduledAt?: string
   enqueuedBy: string
 }
@@ -56,15 +61,19 @@ export class BlastService {
     const event = await this.eventRepository.findById(job.eventId)
     const eventVars = {
       event_title: event?.name ?? job.eventId,
-      date: event?.date ?? '',
+      date: event?.startDate ?? '',
       venue: event?.city ?? '',
     }
 
-    // Load contacts (simplified: get all contacts in Phase 1 — real impl would filter by targetCriteria)
-    const { data: contacts } = await this.contactRepository.findAll({
+    // Load contacts based on job filters or direct contactIds
+    let contacts = (await this.contactRepository.findAll({
       page: 1,
       pageSize: 500,
-    })
+    }, job.filters)).data
+
+    if (job.contactIds && job.contactIds.length > 0) {
+      contacts = contacts.filter(c => job.contactIds!.includes(c.id))
+    }
 
     let suppressedCount = 0
     let sentCount = 0
