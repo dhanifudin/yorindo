@@ -11,6 +11,7 @@ import { userHandlers } from './users'
 import { etlHandlers } from './etl'
 import { blastHandlers } from './blast'
 import { vendorHandlers } from './vendors'
+import { uploadHandlers } from './uploads'
 
 export const handlers = [
   ...blastHandlers,  // before eventHandlers — /api/blast/* must not be caught by event wildcard
@@ -26,4 +27,5 @@ export const handlers = [
   ...userHandlers,
   ...etlHandlers,
   ...vendorHandlers,
+  ...uploadHandlers,
 ]

@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useCallback } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Check, ChevronsUpDown, X } from 'lucide-react'
+import { Check, ChevronsUpDown, X, Upload, ImageIcon, Loader2 } from 'lucide-react'
 import { useCreateEvent, useUpdateEvent } from '@/hooks/useEvents'
 import { useTemplates } from '@/hooks/useTemplates'
 import { useVendors } from '@/hooks/useVendors'
@@ -24,6 +24,7 @@ import {
   CommandList,
 } from '@/components/ui/command'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 import type { Event } from '@/types/api'
 
 const INDUSTRIES = [
@@ -57,16 +58,216 @@ const schema = z.object({
   venue: z.string().optional(),
   eventType: z.string().optional(),
   topicTagsRaw: z.string().optional(),
-})
+  is_paid: z.boolean().optional(),
+  price: z.string().optional(),
+  payment_method: z.string().optional(),
+}).refine(
+  (data) => !data.is_paid || (data.price !== undefined && data.price !== '' && Number(data.price) >= 0),
+  { message: "Harga wajib diisi dan minimal 0", path: ["price"] }
+)
 
 type FormValues = z.infer<typeof schema>
 
+
 interface EventCreateFormProps {
-  event?: Event  // if provided → edit mode (PUT); if absent → create mode (POST)
+  event?: Event
   onSuccess: () => void
   onCancel: () => void
 }
 
+// ─── Banner Upload Component ──────────────────────────────────────────────────
+interface BannerUploadProps {
+  value: string
+  onChange: (url: string) => void
+}
+
+function BannerUpload({ value, onChange }: BannerUploadProps) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
+  const [urlMode, setUrlMode] = useState(!!(value && value.startsWith('http')))
+  const [urlInput, setUrlInput] = useState(value.startsWith('http') ? value : '')
+
+  const handleFile = useCallback(async (file: File) => {
+    // Validasi tipe
+    if (!file.type.startsWith('image/')) {
+      toast.error('File harus berupa gambar (JPG, PNG, WebP, dll)')
+      return
+    }
+    // Validasi ukuran maks 5MB
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Ukuran gambar maksimal 5MB')
+      return
+    }
+
+    setIsUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const res = await fetch('/api/uploads/image', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err?.error?.message ?? 'Upload gagal')
+      }
+
+      const data = await res.json()
+      // API harus return { url: "https://..." }
+      onChange(data.url)
+      toast.success('Gambar berhasil diupload')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Upload gagal')
+    } finally {
+      setIsUploading(false)
+    }
+  }, [onChange])
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+    const file = e.dataTransfer.files[0]
+    if (file) handleFile(file)
+  }, [handleFile])
+
+  const handleUrlApply = () => {
+    const trimmed = urlInput.trim()
+    if (!trimmed) return
+    try {
+      new URL(trimmed)
+      onChange(trimmed)
+    } catch {
+      toast.error('URL tidak valid')
+    }
+  }
+
+  const clearBanner = () => {
+    onChange('')
+    setUrlInput('')
+    if (inputRef.current) inputRef.current.value = ''
+  }
+
+  // Sudah ada gambar — tampilkan preview
+  if (value) {
+    return (
+      <div className="space-y-2">
+        <div className="relative rounded-lg overflow-hidden border border-border bg-muted">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={value}
+            alt="Banner preview"
+            className="w-full h-40 object-cover"
+            onError={(e) => {
+              ;(e.target as HTMLImageElement).style.display = 'none'
+            }}
+          />
+          <button
+            type="button"
+            onClick={clearBanner}
+            className="absolute top-2 right-2 rounded-full bg-black/60 hover:bg-black/80 text-white p-1 transition-colors"
+            aria-label="Hapus banner"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+        <p className="text-xs text-muted-foreground truncate">{value}</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-3">
+      {/* Mode toggle */}
+      <div className="flex gap-3 text-xs">
+        <button
+          type="button"
+          onClick={() => setUrlMode(false)}
+          className={`font-medium ${!urlMode ? 'text-primary underline underline-offset-2' : 'text-muted-foreground hover:text-foreground'}`}
+        >
+          Upload File
+        </button>
+        <button
+          type="button"
+          onClick={() => setUrlMode(true)}
+          className={`font-medium ${urlMode ? 'text-primary underline underline-offset-2' : 'text-muted-foreground hover:text-foreground'}`}
+        >
+          Pakai URL
+        </button>
+      </div>
+
+      {urlMode ? (
+        // ── Mode URL ────────────────────────────────────────────────────────
+        <div className="flex gap-2">
+          <Input
+            type="url"
+            placeholder="https://example.com/banner.jpg"
+            value={urlInput}
+            onChange={(e) => setUrlInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleUrlApply())}
+            className="flex-1"
+          />
+          <Button type="button" variant="outline" size="sm" onClick={handleUrlApply}>
+            Terapkan
+          </Button>
+        </div>
+      ) : (
+        // ── Mode Upload File ─────────────────────────────────────────────────
+        <div
+          onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
+          onDragLeave={() => setIsDragging(false)}
+          onDrop={handleDrop}
+          onClick={() => !isUploading && inputRef.current?.click()}
+          className={cn(
+            'relative flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-4 py-8 text-center cursor-pointer transition-colors',
+            isDragging
+              ? 'border-primary bg-primary/5'
+              : 'border-border hover:border-primary/50 hover:bg-muted/40',
+            isUploading && 'pointer-events-none opacity-70'
+          )}
+        >
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0]
+              if (file) handleFile(file)
+            }}
+          />
+
+          {isUploading ? (
+            <>
+              <Loader2 className="w-8 h-8 text-muted-foreground animate-spin" />
+              <p className="text-sm text-muted-foreground">Mengupload...</p>
+            </>
+          ) : (
+            <>
+              {isDragging ? (
+                <ImageIcon className="w-8 h-8 text-primary" />
+              ) : (
+                <Upload className="w-8 h-8 text-muted-foreground" />
+              )}
+              <div>
+                <p className="text-sm font-medium">
+                  {isDragging ? 'Lepas untuk upload' : 'Drag & drop atau klik untuk pilih'}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  JPG, PNG, WebP — maks 5MB
+                </p>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Main Form ────────────────────────────────────────────────────────────────
 export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormProps) {
   const isEdit = !!event
   const { mutate: createEvent, isPending: isCreating, isError: isCreateError } = useCreateEvent()
@@ -79,7 +280,6 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
   const { data: vendorsData, isLoading: isLoadingVendors } = useVendors()
   const { data: existingSponsors } = useEventSponsors(event?.id ?? '')
 
-  // Local state
   const [bannerUrl, setBannerUrl] = useState(event?.bannerUrl ?? '')
   const [blastTemplateId, setBlastTemplateId] = useState('')
   const [confirmationTemplateId, setConfirmationTemplateId] = useState('')
@@ -88,7 +288,6 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
   const [selectedVendorIds, setSelectedVendorIds] = useState<string[]>([])
   const [vendorPopoverOpen, setVendorPopoverOpen] = useState(false)
 
-  // Pre-populate vendor selection in edit mode once sponsors load (update-state-while-rendering)
   const sponsorKey = isEdit && existingSponsors ? existingSponsors.map((s) => s.vendor_id).sort().join() : null
   const [loadedSponsorKey, setLoadedSponsorKey] = useState<string | null>(null)
   if (sponsorKey !== null && sponsorKey !== loadedSponsorKey) {
@@ -99,6 +298,7 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -112,8 +312,13 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
       venue: event?.venue ?? '',
       eventType: event?.eventType ?? '',
       topicTagsRaw: event?.topicTags?.join(', ') ?? '',
+      is_paid: event?.is_paid ?? false,
+      price: event?.price != null ? String(event.price) : '',
+      payment_method: event?.payment_method ?? '',
     },
   })
+
+  const isPaidWatched = watch('is_paid')
 
   const invitationTemplates = useMemo(() => templates.filter((t) => t.type === 'invitation'), [templates])
   const confirmationTemplates = useMemo(() => templates.filter((t) => t.type === 'confirmation'), [templates])
@@ -137,7 +342,6 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
   const syncVendors = async (eventId: string) => {
     const originalIds = new Set((existingSponsors ?? []).map((s) => s.vendor_id))
     const nextIds = new Set(selectedVendorIds)
-
     const toAdd = selectedVendorIds.filter((id) => !originalIds.has(id))
     const toRemove = [...originalIds].filter((id) => !nextIds.has(id))
 
@@ -176,6 +380,9 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
       ...(blastTemplateId && { blastTemplateId }),
       ...(confirmationTemplateId && { confirmationTemplateId }),
       ...(rejectionTemplateId && { rejectionTemplateId }),
+      is_paid: !!values.is_paid,
+      price: values.is_paid && values.price ? parseInt(values.price, 10) : 0,
+      payment_method: values.is_paid && values.payment_method ? values.payment_method : null,
     }
 
     if (isEdit) {
@@ -297,6 +504,50 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
         </select>
       </div>
 
+      {/* Payment Configuration (AC7) */}
+      <fieldset className="space-y-3 border border-border rounded-lg p-4">
+        <legend className="text-sm font-medium text-foreground px-1">Konfigurasi Berbayar (Admin Only)</legend>
+        <div className="flex items-center space-x-2">
+          <input
+            id="is_paid"
+            type="checkbox"
+            {...register('is_paid')}
+            className="h-4 w-4 rounded border-primary text-primary focus:ring-primary"
+          />
+          <Label htmlFor="is_paid" className="cursor-pointer">
+            Event Berbayar
+          </Label>
+        </div>
+        
+        {isPaidWatched && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+            <div>
+              <Label htmlFor="price">
+                Harga <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="price"
+                type="number"
+                min={0}
+                {...register('price')}
+                placeholder="Contoh: 150000"
+                aria-invalid={!!errors.price}
+              />
+              {errors.price && <p className="mt-1 text-xs text-destructive">{errors.price.message}</p>}
+            </div>
+            <div>
+              <Label htmlFor="payment_method">Metode Pembayaran</Label>
+              <Input
+                id="payment_method"
+                type="text"
+                {...register('payment_method')}
+                placeholder="e.g. Transfer Bank"
+              />
+            </div>
+          </div>
+        )}
+      </fieldset>
+
       {/* Industry Tags */}
       <div>
         <Label>Industri</Label>
@@ -394,7 +645,6 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
             </PopoverContent>
           </Popover>
 
-          {/* Selected vendor chips */}
           {selectedVendors.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {selectedVendors.map((vendor) => (
@@ -416,27 +666,12 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
         </div>
       </div>
 
-      {/* Banner URL */}
+      {/* ── Banner / Image Upload (BARU) ───────────────────────────────── */}
       <div>
-        <Label htmlFor="bannerUrl">Banner URL (Opsional)</Label>
-        <Input
-          id="bannerUrl"
-          type="url"
-          value={bannerUrl}
-          onChange={(e) => setBannerUrl(e.target.value)}
-          placeholder="https://example.com/banner.jpg"
-        />
-        {bannerUrl && (
-          <div className="mt-2 rounded-md overflow-hidden border border-border">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={bannerUrl}
-              alt="Banner preview"
-              className="w-full h-32 object-cover"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-            />
-          </div>
-        )}
+        <Label>Banner Event (Opsional)</Label>
+        <div className="mt-1.5">
+          <BannerUpload value={bannerUrl} onChange={setBannerUrl} />
+        </div>
       </div>
 
       {/* Templates */}
@@ -495,13 +730,22 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
         </p>
       )}
 
-      <div className="flex justify-end gap-3 pt-2">
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Tutup
+      <div className="flex justify-between items-center pt-2">
+        <Button 
+          type="button" 
+          variant="secondary" 
+          onClick={() => alert('FormPreviewModal will be opened here (Requires Story 4-4)')}
+        >
+          Preview Formulir
         </Button>
-        <Button type="submit" disabled={isPending}>
-          {isPending ? 'Menyimpan...' : isEdit ? 'Simpan Perubahan' : 'Buat Event'}
-        </Button>
+        <div className="flex gap-3">
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Tutup
+          </Button>
+          <Button type="submit" disabled={isPending}>
+            {isPending ? 'Menyimpan...' : isEdit ? 'Simpan Perubahan' : 'Buat Event'}
+          </Button>
+        </div>
       </div>
     </form>
   )

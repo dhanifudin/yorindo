@@ -1,5 +1,5 @@
 generated: 2026-03-19
-last_updated: 2026-03-28 (SCP-2026-03-28-A/B/C/D/E/F applied + AI_PROVIDER simplification + Epic 1 code review patches: cookie maxAge fix; CD tag trigger+DockerHub revert; scan 422 for invalid ticket; hard delete UserRepository; flagFilter URL sync; missingPhone filter fix; safePage pagination guard; audit log non-blocking; OpenAPI schema corrections + Epic 2 story 2-1 review patches: render-phase router fix; participant JwtPayload role; authStore eventKeys+setAuth; MSW login eventKeys+name+any-password; LoginForm→setAuth; refresh mock contract fix)
+last_updated: 2026-04-02 (implemented Story 3.14 contact API JWT enforcement)
 project: yorindo
 project_key: NOKEY
 tracking_system: file-system
@@ -98,6 +98,8 @@ development_status:
   3-11-eventbanner-pre-event-blast-shortcut: review
   3-12-contact-event-history-tab-in-sheet: review
   3-13-inline-blast-modal-contact-page-blast-composer: ready-for-dev
+  be-3-13-inline-blast-modal: review
+  3-14-contact-api-jwt-enforcement: review
   epic-3-retrospective: optional
 
   # ─────────────────────────────────────────────
@@ -113,8 +115,10 @@ development_status:
   # ─────────────────────────────────────────────
   epic-4: in-progress
   4-1-event-creation-with-full-configuration: review       # AC updated 2026-03-28: paid/free toggle (admin-only) + preview button
+  be-4-1-event-creation-with-full-configuration: done
   4-2-event-lifecycle-management-state-machine: review
   4-3-event-clone: review
+  be-4-3-event-clone: review
   4-4-survey-template-builder: ready-for-dev               # REOPENED 2026-03-28: dual survey + GForms parity + response dashboard
   4-5-event-capacity-target-criteria-with-audience-preview: review  # AC update needed: multi-criteria + AI recommendation
   4-6-soft-delete-recovery-for-events-and-records: review
@@ -140,9 +144,11 @@ development_status:
   epic-5: in-progress
   5-1-notification-message-template-management: review  # AC6+AC7 added: TipTap channel-split editor; WhatsApp format serializer; QR Code block; ticket_delivery type; Tasks 7-9 open (SCP-2026-03-28-F)
   5-2-segmented-blast-configuration-audience-targeting: review  # AC update needed: AI recommendation mode; AC5 added: LocationPicker province/city targeting (SCP-2026-03-28-D)
+  be-5-2-audience-targeting: review
   5-3-blast-scheduling-delivery-via-brevo-everpro: review  # QR code generation added: buildVariables() resolves {{qr_code}}; IWhatsAppService.sendImage() added (SCP-2026-03-28-F)
   5-4-emergency-blast: review
   5-5-suppression-list-consent-enforcement: review
+  be-5-1-notification-message-template-management: review
   epic-5-retrospective: optional
 
   # ─────────────────────────────────────────────
