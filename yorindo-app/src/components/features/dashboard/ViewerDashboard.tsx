@@ -55,8 +55,6 @@ export function ViewerDashboard() {
   const activeEvents = eventsData?.data?.filter((e) => e.status === 'active').length ?? 0
   const completedEvents = eventsData?.data?.filter((e) => e.status === 'completed').length ?? 0
   const totalContacts = contactsData?.pagination?.total ?? 0
-  const pendingRegistrations = 42
-
   const recentEvents = [...(eventsData?.data ?? [])]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 5)

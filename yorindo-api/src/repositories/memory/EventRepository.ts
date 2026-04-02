@@ -162,9 +162,13 @@ export class InMemoryEventRepository implements IEventRepository {
   }
 
   async getUpcomingUncontacted(): Promise<UpcomingUncontactedResult | null> {
-    const upcoming = Array.from(this.events.values()).find(
-      e => e.status === 'published' && new Date(e.date) > new Date()
-    )
+    const upcoming = Array.from(this.events.values())
+      .filter((event) => {
+        if (!['published', 'active'].includes(event.status)) return false
+        const daysTill = Math.floor((new Date(event.date).getTime() - Date.now()) / 86400000)
+        return daysTill >= 0 && daysTill <= 14
+      })
+      .sort((left, right) => new Date(left.date).getTime() - new Date(right.date).getTime())[0]
     if (!upcoming) return null
     const daysTill = Math.floor((new Date(upcoming.date).getTime() - Date.now()) / 86400000)
     return { eventId: upcoming.id, eventName: upcoming.name, daysTillEvent: daysTill, uncontactedCount: 42 }

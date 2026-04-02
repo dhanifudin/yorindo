@@ -1,5 +1,3 @@
-import { Skeleton } from '@/components/ui/skeleton'
-
 export function LaporanPlaceholderChart() {
   return (
     <div className="space-y-3 p-4">
