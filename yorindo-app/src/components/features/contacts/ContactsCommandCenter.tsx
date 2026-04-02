@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, startTransition } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useContacts } from '@/hooks/useContacts'
 import { Button } from '@/components/ui/button'
@@ -51,7 +51,7 @@ export function ContactsCommandCenter() {
 
   // Reset selection saat ganti halaman
   useEffect(() => {
-    handleClearSelection()
+    startTransition(() => { handleClearSelection() })
   }, [searchParams.get('page'), handleClearSelection])
 
   useEffect(() => {
