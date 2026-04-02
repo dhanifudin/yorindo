@@ -5,8 +5,6 @@ import { djb2 } from '@/lib/djb2'
 import { usersStore, userEventAssignments, MOCK_USER_IDS } from './users'
 import { makeMockCuid2 } from './id'
 
-const TIMEZONES: Event['timezone'][] = ['Asia/Jakarta', 'Asia/Makassar', 'Asia/Jayapura']
-
 // In-memory mutable store — mutations persist within session
 let deletedEventsStore: (Event & { deletedAt: string })[] = []
 

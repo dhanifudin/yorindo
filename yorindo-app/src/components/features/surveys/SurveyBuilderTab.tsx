@@ -1,35 +1,34 @@
-import React, { useState, useEffect } from 'react'
-import { 
-  DndContext, 
+import React, { useState, useEffect, useRef } from 'react'
+import {
+  DndContext,
   closestCenter,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
-  DragEndEvent
+  DragEndEvent,
 } from '@dnd-kit/core'
 import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
-  useSortable
+  useSortable,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { SurveyField, SurveyFieldType } from '@/types/surveys'
+import type { SurveyField, SurveyFieldType } from '@/types/surveys'
 import { useSurveySchema, useSaveSurveySchema } from '@/hooks/useSurveys'
 import { buildSurveySchema, schemaToFields } from './surveySchemaBuilder'
 import { SurveyFieldEditor } from './SurveyFieldEditor'
 import { Button } from '@/components/ui/button'
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@/components/ui/select'
 import { Plus, Save, Eye, Loader2, AlertCircle } from 'lucide-react'
-import { toast } from 'sonner'
 import { makeMockCuid2 } from '@/mocks/handlers/id'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
@@ -63,14 +62,7 @@ interface SortableFieldProps {
 }
 
 function SortableField({ field, onChange, onRemove }: SortableFieldProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging
-  } = useSortable({ id: field.id })
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: field.id })
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -91,18 +83,29 @@ function SortableField({ field, onChange, onRemove }: SortableFieldProps) {
   )
 }
 
-export function SurveyBuilderTab({ 
-  eventId, 
-  type, 
-  postSurveyEnabled, 
+export function SurveyBuilderTab({
+  eventId,
+  type,
+  postSurveyEnabled,
   onTogglePostSurvey,
-  onPreview 
+  onPreview,
 }: SurveyBuilderTabProps) {
   const [fields, setFields] = useState<SurveyField[]>([])
   const [selectedType, setSelectedType] = useState<SurveyFieldType>('text')
-  
+
   const { data: schema, isLoading, isError } = useSurveySchema(eventId, type)
   const saveMutation = useSaveSurveySchema(eventId)
+
+  // Use a ref to track if initial data was loaded, preventing infinite effect loops
+  const initialized = useRef(false)
+
+  useEffect(() => {
+    if (schema && !initialized.current) {
+      initialized.current = true
+      const loadedFields = schemaToFields(schema.schema, schema.uiSchema)
+      setFields(loadedFields)
+    }
+  }, [schema])
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -111,24 +114,18 @@ export function SurveyBuilderTab({
     })
   )
 
-  useEffect(() => {
-    if (schema) {
-      setFields(schemaToFields(schema.schema, schema.uiSchema))
-    }
-  }, [schema])
-
   const handleAddField = () => {
     const newField: SurveyField = {
       id: makeMockCuid2(),
       type: selectedType,
-      label: `Pertanyaan Baru`,
+      label: 'Pertanyaan Baru',
       required: false,
     }
 
     if (['radio', 'select', 'checkboxes'].includes(selectedType)) {
       newField.options = [{ label: 'Opsi 1', value: 'Opsi 1' }]
     }
-    
+
     if (selectedType === 'range') {
       newField.minimum = 1
       newField.maximum = 5
@@ -139,17 +136,19 @@ export function SurveyBuilderTab({
       newField.columns = ['Kolom 1', 'Kolom 2']
     }
 
-    setFields([...fields, newField])
+    setFields((prev) => [...prev, newField])
   }
 
   const handleUpdateField = (index: number, updated: SurveyField) => {
-    const nextFields = [...fields]
-    nextFields[index] = updated
-    setFields(nextFields)
+    setFields((prev) => {
+      const next = [...prev]
+      next[index] = updated
+      return next
+    })
   }
 
   const handleRemoveField = (index: number) => {
-    setFields(fields.filter((_, i) => i !== index))
+    setFields((prev) => prev.filter((_, i) => i !== index))
   }
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -164,23 +163,25 @@ export function SurveyBuilderTab({
   }
 
   const handleSave = () => {
-    const { schema, uiSchema } = buildSurveySchema(fields)
-    saveMutation.mutate({ type, schema, uiSchema })
+    const { schema: s, uiSchema: u } = buildSurveySchema(fields)
+    saveMutation.mutate({ type, schema: s, uiSchema: u })
   }
 
-  if (isLoading) return (
-    <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-3">
-      <Loader2 className="animate-spin" size={32} />
-      <p className="text-sm">Memuat desain survei...</p>
-    </div>
-  )
+  if (isLoading)
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-3">
+        <Loader2 className="animate-spin" size={32} />
+        <p className="text-sm">Memuat desain survei...</p>
+      </div>
+    )
 
-  if (isError) return (
-    <div className="flex flex-col items-center justify-center py-20 text-destructive gap-3">
-      <AlertCircle size={32} />
-      <p className="text-sm text-center">Gagal memuat desain survei.<br/>Silakan coba lagi nanti.</p>
-    </div>
-  )
+  if (isError)
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-destructive gap-3">
+        <AlertCircle size={32} />
+        <p className="text-sm text-center">Gagal memuat desain survei.<br />Silakan coba lagi nanti.</p>
+      </div>
+    )
 
   const isDisabled = type === 'post-event' && !postSurveyEnabled
 
@@ -192,8 +193,8 @@ export function SurveyBuilderTab({
             <Label className="text-base font-semibold text-violet-900">Aktifkan Survei Post-Event</Label>
             <p className="text-xs text-violet-600/80">Kirimkan survei kepuasan kepada peserta setelah event berakhir.</p>
           </div>
-          <Switch 
-            checked={postSurveyEnabled} 
+          <Switch
+            checked={postSurveyEnabled}
             onCheckedChange={onTogglePostSurvey}
             className="data-[state=checked]:bg-violet-600"
           />
@@ -203,24 +204,19 @@ export function SurveyBuilderTab({
       <div className={`space-y-6 ${isDisabled ? 'opacity-50 pointer-events-none' : ''}`}>
         <div className="flex flex-wrap items-center justify-between gap-4 sticky top-0 bg-background/95 backdrop-blur z-20 py-3 border-b border-violet-100 px-1">
           <div className="flex items-center gap-2">
-            <Select 
-              value={selectedType} 
-              onValueChange={(val) => setSelectedType(val as SurveyFieldType)}
-            >
+            <Select value={selectedType} onValueChange={(val) => setSelectedType(val as SurveyFieldType)}>
               <SelectTrigger className="w-[180px] h-9 border-violet-200">
                 <SelectValue placeholder="Pilih tipe" />
               </SelectTrigger>
               <SelectContent>
                 {FIELD_TYPES.map((t) => (
-                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                  <SelectItem key={t.value} value={t.value}>
+                    {t.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <Button 
-              size="sm" 
-              onClick={handleAddField}
-              className="bg-violet-600 hover:bg-violet-700"
-            >
+            <Button size="sm" onClick={handleAddField} className="bg-violet-600 hover:bg-violet-700">
               <Plus size={16} className="mr-1" /> Tambah Pertanyaan
             </Button>
           </div>
@@ -229,9 +225,9 @@ export function SurveyBuilderTab({
             <Button variant="outline" size="sm" onClick={() => onPreview(fields)}>
               <Eye size={16} className="mr-1" /> Preview
             </Button>
-            <Button 
-              size="sm" 
-              onClick={handleSave} 
+            <Button
+              size="sm"
+              onClick={handleSave}
               disabled={saveMutation.isPending}
               className="bg-violet-600 hover:bg-violet-700"
             >
@@ -247,23 +243,18 @@ export function SurveyBuilderTab({
 
         {fields.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed border-violet-100 rounded-2xl bg-violet-50/20">
-            <p className="text-sm text-muted-foreground">Belum ada pertanyaan. Tambahkan pertanyaan pertama Anda di atas.</p>
+            <p className="text-sm text-muted-foreground">
+              Belum ada pertanyaan. Tambahkan pertanyaan pertama Anda di atas.
+            </p>
           </div>
         ) : (
-          <DndContext 
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
-          >
-            <SortableContext 
-              items={fields.map(f => f.id)}
-              strategy={verticalListSortingStrategy}
-            >
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={fields.map((f) => f.id)} strategy={verticalListSortingStrategy}>
               <div className="space-y-4 pb-20">
                 {fields.map((field, index) => (
-                  <SortableField 
+                  <SortableField
                     key={field.id}
-                    field={field} 
+                    field={field}
                     onChange={(updated) => handleUpdateField(index, updated)}
                     onRemove={() => handleRemoveField(index)}
                   />

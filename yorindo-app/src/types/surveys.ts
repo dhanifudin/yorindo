@@ -1,4 +1,5 @@
-import { SurveySchema } from './api'
+import type { SurveySchema } from './api'
+export type { SurveySchema }
 
 export type SurveyFieldType =
   | 'text'

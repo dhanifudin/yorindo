@@ -79,8 +79,9 @@ export const surveysHandlers = [
   http.get('/api/events/:id/survey/responses', async ({ params, request }) => {
     await delay(500)
     const url = new URL(request.url)
-    const type = url.searchParams.get('type') ?? 'registration'
-    const eventId = params.id as string
+    const _type = url.searchParams.get('type') ?? 'registration'
+    void _type // used as query context — aggregate data is static in mock
+    void (params.id as string) // eventId — static mock, no per-event filtering
 
     // Mock aggregate data
     const aggregates = [

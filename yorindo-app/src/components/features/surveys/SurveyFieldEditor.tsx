@@ -1,6 +1,6 @@
 import React from 'react'
-import { SurveyField, SurveyFieldType, SurveyFieldOption } from '@/types/surveys'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import type { SurveyField, SurveyFieldType } from '@/types/surveys'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
@@ -12,7 +12,7 @@ interface SurveyFieldEditorProps {
   field: SurveyField
   onChange: (updated: SurveyField) => void
   onRemove: () => void
-  dragHandleProps?: any
+  dragHandleProps?: React.HTMLAttributes<HTMLElement>
 }
 
 const FIELD_TYPE_LABELS: Record<SurveyFieldType, string> = {
@@ -89,7 +89,7 @@ export function SurveyFieldEditor({ field, onChange, onRemove, dragHandleProps }
                 <Switch
                   id={`required-${field.id}`}
                   checked={field.required}
-                  onCheckedChange={(checked) => updateField({ required: checked })}
+                  onCheckedChange={(checked: boolean) => updateField({ required: checked })}
                 />
                 <Label htmlFor={`required-${field.id}`} className="text-xs cursor-pointer">Wajib diisi</Label>
               </>
@@ -164,7 +164,7 @@ export function SurveyFieldEditor({ field, onChange, onRemove, dragHandleProps }
                 value={field.rows?.join('\n') || ''}
                 onChange={(e) => updateField({ rows: e.target.value.split('\n').filter(Boolean) })}
                 className="h-24 text-sm"
-                placeholder="Baris 1&#10;Baris 2"
+                placeholder={'Baris 1\nBaris 2'}
               />
             </div>
             <div className="space-y-2">
@@ -173,7 +173,7 @@ export function SurveyFieldEditor({ field, onChange, onRemove, dragHandleProps }
                 value={field.columns?.join('\n') || ''}
                 onChange={(e) => updateField({ columns: e.target.value.split('\n').filter(Boolean) })}
                 className="h-24 text-sm"
-                placeholder="Kolom 1&#10;Kolom 2"
+                placeholder={'Kolom 1\nKolom 2'}
               />
             </div>
           </div>

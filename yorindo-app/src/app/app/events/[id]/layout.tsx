@@ -45,12 +45,14 @@ interface HubLayoutProps {
 // ─── Tab config ───────────────────────────────────────────────────────────────
 
 const TABS: { label: string; key: string; href: string; visibleOn: Event['status'][] }[] = [
-  { label: 'Overview',   key: 'overview',      href: '',               visibleOn: ['draft', 'published', 'active', 'completed', 'cancelled', 'archived'] },
-  { label: 'Undangan',   key: 'blast',         href: '/blast',         visibleOn: ['published', 'active'] },
-  { label: 'Registrasi', key: 'registrations', href: '/registrations', visibleOn: ['draft', 'published', 'active', 'completed', 'cancelled', 'archived'] },
-  { label: 'Konfirmasi', key: 'confirmation',  href: '/confirmation',  visibleOn: ['published', 'active'] },
-  { label: 'Check-in',   key: 'checkin',       href: '/checkin',       visibleOn: ['active'] },
-  { label: 'Laporan',    key: 'report',        href: '/report',        visibleOn: ['completed', 'archived'] },
+  { label: 'Overview',          key: 'overview',          href: '',                   visibleOn: ['draft', 'published', 'active', 'completed', 'cancelled', 'archived'] },
+  { label: 'Undangan',          key: 'blast',             href: '/blast',             visibleOn: ['published', 'active'] },
+  { label: 'Registrasi',        key: 'registrations',     href: '/registrations',     visibleOn: ['draft', 'published', 'active', 'completed', 'cancelled', 'archived'] },
+  { label: 'Konfirmasi',        key: 'confirmation',      href: '/confirmation',      visibleOn: ['published', 'active'] },
+  { label: 'Check-in',          key: 'checkin',           href: '/checkin',           visibleOn: ['active'] },
+  { label: 'Survey Builder',    key: 'builder',           href: '/builder',           visibleOn: ['draft', 'published', 'active', 'completed', 'cancelled', 'archived'] },
+  { label: 'Respons Survei',    key: 'survey-responses',  href: '/survey-responses',  visibleOn: ['published', 'active', 'completed', 'archived'] },
+  { label: 'Laporan',           key: 'report',            href: '/report',            visibleOn: ['completed', 'archived'] },
 ]
 
 // ─── Status badge colors ──────────────────────────────────────────────────────
@@ -119,6 +121,8 @@ function getActiveTab(pathname: string): string {
   if (pathname.includes('/registrations')) return 'registrations'
   if (pathname.endsWith('/confirmation')) return 'confirmation'
   if (pathname.endsWith('/checkin')) return 'checkin'
+  if (pathname.endsWith('/builder')) return 'builder'
+  if (pathname.endsWith('/survey-responses')) return 'survey-responses'
   if (pathname.endsWith('/report')) return 'report'
   return 'overview'
 }

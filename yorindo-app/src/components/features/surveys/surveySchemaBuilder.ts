@@ -1,8 +1,11 @@
-import { SurveyField, SurveySchema } from '@/types/surveys'
+import { SurveyField, SurveyFieldType, SurveySchema } from '@/types/surveys'
+
+// Typed representation of a JSON Schema property
+type JsonSchemaProperty = Record<string, unknown>
 
 export function buildSurveySchema(fields: SurveyField[]): SurveySchema {
-  const properties: Record<string, any> = {}
-  const uiSchema: Record<string, any> = {}
+  const properties: Record<string, JsonSchemaProperty> = {}
+  const uiSchema: Record<string, unknown> = {}
   const required: string[] = []
   const order: string[] = []
 
@@ -129,14 +132,17 @@ export function buildSurveySchema(fields: SurveyField[]): SurveySchema {
 }
 
 // Convert schema back to SurveyField[] for the builder
-// (Optional but helpful for editing existing surveys)
-export function schemaToFields(schema: any, uiSchema: any): SurveyField[] {
+export function schemaToFields(
+  schema: Record<string, unknown>,
+  uiSchema: Record<string, unknown>
+): SurveyField[] {
   const fields: SurveyField[] = []
-  const order = uiSchema?.['ui:order'] || Object.keys(schema?.properties || {})
+  const props = (schema?.properties as Record<string, Record<string, unknown>>) ?? {}
+  const order = (uiSchema?.['ui:order'] as string[]) || Object.keys(props)
 
-  order.forEach((key: string) => {
-    const prop = schema.properties[key]
-    const uiProp = uiSchema[key]
+  order.forEach((key) => {
+    const prop = props[key]
+    const uiProp = (uiSchema[key] as Record<string, unknown>) ?? {}
     if (!prop) return
 
     let type: SurveyFieldType = 'text'
@@ -151,34 +157,38 @@ export function schemaToFields(schema: any, uiSchema: any): SurveyField[] {
     else if (uiProp?.['ui:widget'] === 'SectionWidget') type = 'section'
     else if (prop.enum) type = 'select'
 
+    const required = Array.isArray(schema.required) && (schema.required as string[]).includes(key)
+
     const field: SurveyField = {
       id: key,
       type,
-      label: prop.title || '',
-      required: schema.required?.includes(key),
+      label: (prop.title as string) || '',
+      required,
     }
 
     if (type === 'radio' || type === 'select' || type === 'checkboxes') {
-      const enums = prop.enum || prop.items?.enum || []
-      const enumNames = prop.enumNames || prop.items?.enumNames || enums
-      field.options = enums.map((val: string, i: number) => ({
+      const items = prop.items as Record<string, unknown> | undefined
+      const enums = (prop.enum || items?.enum || []) as string[]
+      const enumNames = (prop.enumNames || items?.enumNames || enums) as string[]
+      field.options = enums.map((val, i) => ({
         label: enumNames[i],
         value: val,
       }))
     }
 
     if (type === 'range') {
-      field.minimum = prop.minimum
-      field.maximum = prop.maximum
+      field.minimum = prop.minimum as number
+      field.maximum = prop.maximum as number
     }
 
     if (type === 'grid_radio' || type === 'grid_checkbox') {
-      field.rows = prop.properties.rows.default
-      field.columns = prop.properties.columns.default
+      const gridProps = prop.properties as Record<string, Record<string, unknown>>
+      field.rows = gridProps?.rows?.default as string[]
+      field.columns = gridProps?.columns?.default as string[]
     }
 
     if (type === 'section') {
-      field.description = prop.description
+      field.description = prop.description as string
     }
 
     fields.push(field)
