@@ -73,7 +73,10 @@ export class BlastService {
 
     for (const contact of contacts) {
       // Suppression check
-      const isSuppressed = await this.suppressionRepository.isSuppressed(contact.phone)
+      const isSuppressed = await this.suppressionRepository.isSuppressed({
+        phone: contact.phone,
+        email: contact.email,
+      })
       if (isSuppressed) {
         suppressedCount++
         continue

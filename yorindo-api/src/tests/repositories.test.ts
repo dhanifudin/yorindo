@@ -330,6 +330,16 @@ describe('InMemorySuppressionRepository', () => {
     expect(result).toBe(true)
   })
 
+  it('tracks suppressed emails and can remove entries', async () => {
+    const record = await repo.suppress('manual-email', 'manually_added', {
+      email: 'blocked@example.com',
+    })
+
+    expect(await repo.isSuppressed({ email: 'blocked@example.com' })).toBe(true)
+    expect(await repo.remove(record.id)).toBe(true)
+    expect(await repo.isSuppressed({ email: 'blocked@example.com' })).toBe(false)
+  })
+
   it('recognizes seeded suppressed contact phones', async () => {
     const contactRepo = new InMemoryContactRepository()
     const contact = await contactRepo.findById(SEED_CONTACT_IDS[115]!)

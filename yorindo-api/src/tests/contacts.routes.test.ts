@@ -165,6 +165,7 @@ describe('GET /api/contacts', () => {
     const res = await app.inject({
       method: 'GET',
       url: '/api/contacts?page=1&pageSize=20&city=jak',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
     })
 
     expect(res.statusCode).toBe(200)
@@ -177,6 +178,7 @@ describe('GET /api/contacts', () => {
     const res = await app.inject({
       method: 'GET',
       url: '/api/contacts?page=1&pageSize=20&flagFilter=flagged',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
     })
 
     expect(res.statusCode).toBe(200)
@@ -189,6 +191,7 @@ describe('GET /api/contacts', () => {
     const res = await app.inject({
       method: 'GET',
       url: '/api/contacts?page=1&pageSize=20&missingEmail=true',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
     })
 
     expect(res.statusCode).toBe(200)
@@ -201,6 +204,7 @@ describe('GET /api/contacts', () => {
     const seed = await app.inject({
       method: 'GET',
       url: '/api/contacts?page=1&pageSize=1',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
     })
     const contact = seed.json().data[0]
     const query = String(contact.name).split(' ')[0]
@@ -208,6 +212,7 @@ describe('GET /api/contacts', () => {
     const res = await app.inject({
       method: 'GET',
       url: `/api/contacts?page=1&pageSize=20&q=${encodeURIComponent(query)}`,
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
     })
 
     expect(res.statusCode).toBe(200)
@@ -282,6 +287,83 @@ describe('GET /api/contacts/industry-suggestions', () => {
     expect(body.suggestions).toEqual([])
     expect(body.matchedSlug).toBeNull()
     expect(body.fallback).toBe(false)
+  })
+})
+
+describe('Suppression routes', () => {
+  it('lists suppression entries with pagination', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/contacts/suppression?page=1&pageSize=20',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
+    })
+
+    expect(res.statusCode).toBe(200)
+    const body = res.json()
+    expect(body.data.length).toBeGreaterThan(0)
+    expect(body.data[0]).toMatchObject({
+      id: expect.any(String),
+      name: expect.any(String),
+      email: expect.any(String),
+      phone: expect.any(String),
+      suppressedAt: expect.any(String),
+      reason: expect.any(String),
+    })
+  })
+
+  it('adds and searches a manual suppression entry', async () => {
+    const createRes = await app.inject({
+      method: 'POST',
+      url: '/api/contacts/suppression',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
+      payload: {
+        email: 'blocked@example.com',
+        phone: '+6281999999999',
+        reason: 'manually_added',
+      },
+    })
+
+    expect(createRes.statusCode).toBe(201)
+    const created = createRes.json()
+    expect(created.email).toBe('blocked@example.com')
+    expect(created.phone).toBe('+6281999999999')
+
+    const searchRes = await app.inject({
+      method: 'GET',
+      url: '/api/contacts/suppression?q=blocked@example.com&pageSize=20',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
+    })
+
+    expect(searchRes.statusCode).toBe(200)
+    expect(searchRes.json().data.some((entry: { id: string }) => entry.id === created.id)).toBe(true)
+  })
+
+  it('removes a suppression entry', async () => {
+    const createRes = await app.inject({
+      method: 'POST',
+      url: '/api/contacts/suppression',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
+      payload: {
+        email: 'remove-me@example.com',
+        reason: 'manually_added',
+      },
+    })
+
+    const created = createRes.json()
+    const deleteRes = await app.inject({
+      method: 'DELETE',
+      url: `/api/contacts/suppression/${created.id}`,
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
+    })
+
+    expect(deleteRes.statusCode).toBe(204)
+
+    const searchRes = await app.inject({
+      method: 'GET',
+      url: '/api/contacts/suppression?q=remove-me@example.com&pageSize=20',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
+    })
+    expect(searchRes.json().data).toHaveLength(0)
   })
 })
 
