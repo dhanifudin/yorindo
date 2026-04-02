@@ -6,13 +6,6 @@ import { notFound } from 'next/navigation'
 import { EventLandingCard } from '@/components/features/registration/EventLandingCard'
 import type { Event } from '@/types/api'
 
-const EVENT_SLUGS = [
-  'seminar-erp-jakarta',
-  'workshop-ai-untuk-bisnis',
-  'forum-kesehatan-digital-surabaya',
-  'konferensi-manufaktur-2025',
-  'summit-properti-bali',
-]
 
 interface LandingPageProps {
   params: Promise<{ eventSlug: string }>

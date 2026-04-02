@@ -315,6 +315,10 @@ components:
           type: integer
           minimum: 1
           example: 200
+        registeredCount:
+          type: integer
+          minimum: 0
+          example: 142
         targetCriteria:
           type: object
           additionalProperties: true
@@ -1386,7 +1390,7 @@ components:
           format: date-time
         status:
           type: string
-          enum: [approved, attended, cancelled, pending, rejected]
+          enum: [pending, confirmed, approved, rejected, waitlisted, attended, cancelled]
           example: attended
 
     ContactHistoryResponse:
@@ -1589,7 +1593,7 @@ components:
 
     StandaloneBlastBody:
       type: object
-      required: [eventId, channel, templateId]
+      required: [eventId, channel]
       description: >
         Send a blast for a specific event. Provide either `filters` for manual audience selection
         or `contactIds` for an AI-curated list — these are mutually exclusive.
@@ -1602,6 +1606,10 @@ components:
           enum: [email, whatsapp]
         templateId:
           type: string
+          description: Template ID to use for the blast (mutually exclusive with customMessage).
+        customMessage:
+          type: string
+          description: Custom text message for the blast (mutually exclusive with templateId).
         filters:
           type: object
           description: Manual audience filter criteria (mutually exclusive with contactIds)
@@ -1722,6 +1730,97 @@ components:
           example: data-rights-request-001
 
 paths:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # TEMPLATES
+  # ─────────────────────────────────────────────────────────────────────────────
+  /templates:
+    get:
+      summary: Get all templates
+      operationId: getTemplates
+      tags: [Blast]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of templates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Template'
+    post:
+      summary: Create template
+      operationId: createTemplate
+      tags: [Blast]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, type, channel, body]
+              properties:
+                name: { type: string }
+                type: { type: string }
+                channel: { type: string }
+                body: { type: string }
+      responses:
+        '201':
+          description: Template created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+  /templates/{id}:
+    patch:
+      summary: Update template
+      operationId: updateTemplate
+      tags: [Blast]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                type: { type: string }
+                channel: { type: string }
+                body: { type: string }
+      responses:
+        '200':
+          description: Template updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+    delete:
+      summary: Delete template
+      operationId: deleteTemplate
+      tags: [Blast]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Template deleted
+
   # ─────────────────────────────────────────────────────────────────────────────
   # HEALTH
   # ─────────────────────────────────────────────────────────────────────────────
@@ -2002,7 +2101,7 @@ paths:
           in: query
           schema:
             type: string
-            enum: [pending, resolved, discarded]
+            enum: [pending, resolved, discarded, all]
       responses:
         '200':
           description: Paginated flagged records
@@ -2109,6 +2208,41 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
 
+  /contacts/duplicates/{id}:
+    delete:
+      summary: Mark a duplicate pair as not duplicate
+      operationId: dismissDuplicatePair
+      tags: [Contacts]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Duplicate pair dismissed
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Duplicate pair not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
   /contacts/{id}/recommended-events:
     get:
       summary: Get AI-recommended events for a contact (admin only)
@@ -2148,6 +2282,26 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
 
+  /contacts/{id}/history:
+    get:
+      summary: Get event registration history for a contact (admin only)
+      operationId: getContactHistory
+      tags: [Contacts]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Event registration history for this contact
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactHistoryResponse'
   /events/upcoming-uncontacted:
     get:
       summary: Get the next event within 14 days with uncontacted audience
@@ -2164,6 +2318,18 @@ paths:
                 $ref: '#/components/schemas/UpcomingUncontactedResponse'
         '401':
           description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Contact not found
           content:
             application/json:
               schema:
@@ -2555,6 +2721,47 @@ paths:
   # ─────────────────────────────────────────────────────────────────────────────
   # EVENTS
   # ─────────────────────────────────────────────────────────────────────────────
+  /events/check-slug:
+    get:
+      summary: Check if a slug is available
+      operationId: checkEventSlug
+      tags: [Events]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: slug
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: excludeId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Slug availability
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [available]
+                properties:
+                  available:
+                    type: boolean
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
   /events:
     get:
       summary: List events
@@ -2619,6 +2826,97 @@ paths:
                 $ref: '#/components/schemas/ApiError'
         '403':
           description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /events/{id}/audience-preview:
+    post:
+      summary: Preview target audience size based on criteria (admin only)
+      operationId: previewAudience
+      tags: [Events]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Audience preview counts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  matchCount:
+                    type: integer
+                  breakdown:
+                    type: object
+                    additionalProperties: true
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /events/{id}/clone:
+    post:
+      summary: Clone an existing event (admin only)
+      operationId: cloneEvent
+      tags: [Events]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          description: Event successfully cloned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Event not found
           content:
             application/json:
               schema:

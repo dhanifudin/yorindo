@@ -11,10 +11,16 @@ export interface BlastJobData {
   eventId: string
   channel: 'email' | 'whatsapp'
   templateId: string
+  templateBody: string
+  templateName: string
+  customMessage?: string
   filters?: {
-    industry?: string
-    city?: string
-    companySize?: string
+    industries?: string[]
+    cities?: string[]
+    companySizes?: string[]
+    jobTitles?: string[]
+    behavior?: string[]
+    lastAttendedBefore?: string
   }
   contactIds?: string[]
   scheduledAt?: string
@@ -159,11 +165,20 @@ export class BlastService {
     const event = await this.eventRepository.findById(job.eventId)
     const eventVars = {
       event_title: event?.name ?? job.eventId,
-      date: event?.date ?? '',
-      venue: event?.venue ?? event?.city ?? '',
+      date: event?.startDate ?? '',
+      venue: event?.city ?? '',
     }
 
-    const contacts = await this.resolveRecipients(job)
+    // Load contacts based on job filters or direct contactIds
+    let contacts = (await this.contactRepository.findAll({
+      page: 1,
+      pageSize: 500,
+    }, job.filters)).data
+
+    if (job.contactIds && job.contactIds.length > 0) {
+      contacts = contacts.filter(c => job.contactIds!.includes(c.id))
+    }
+
     let suppressedCount = 0
     let sentCount = 0
     let failedCount = 0

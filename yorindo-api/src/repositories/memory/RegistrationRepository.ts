@@ -84,6 +84,7 @@ export class InMemoryRegistrationRepository implements IRegistrationRepository {
   async findAll(params: PaginationParams, filters?: RegistrationFilters): Promise<{ data: Registration[]; total: number }> {
     let data = Array.from(this.registrations.values())
 
+    if (filters?.contactId) data = data.filter(r => r.contactId === filters.contactId)
     if (filters?.eventId) data = data.filter(r => r.eventId === filters.eventId)
     if (filters?.status) data = data.filter(r => r.status === filters.status)
     if (filters?.flagged) data = data.filter(r => r.flagOverride)
