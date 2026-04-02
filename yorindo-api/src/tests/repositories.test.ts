@@ -241,6 +241,16 @@ describe('InMemoryRegistrationRepository', () => {
     expect(found?.status).toBe('pending')
   })
 
+  it('findAll filters registrations by contactId', async () => {
+    const result = await repo.findAll(
+      { page: 1, pageSize: 100 },
+      { contactId: SEED_CONTACT_IDS[0] },
+    )
+
+    expect(result.total).toBeGreaterThan(0)
+    expect(result.data.every((registration) => registration.contactId === SEED_CONTACT_IDS[0])).toBe(true)
+  })
+
   it('updateStatus changes status', async () => {
     const reg = await repo.create({
       contactId: createId(),

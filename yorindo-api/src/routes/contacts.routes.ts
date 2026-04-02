@@ -1,8 +1,8 @@
 import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
-import { auditLogRepository, contactRepository, flaggedRecordsRepository } from '../container.js'
+import { auditLogRepository, contactRepository, eventRepository, flaggedRecordsRepository, registrationRepository } from '../container.js'
 import { requireAdmin, requireAuth, type JwtPayload } from '../middleware/auth.js'
-import type { CompanySize, Contact, DuplicatePair, FlaggedRecord, FlaggedRecordStatus } from '../types/domain.js'
+import type { CompanySize, Contact, DuplicatePair, FlaggedRecord, FlaggedRecordStatus, RegistrationStatus } from '../types/domain.js'
 import { INDONESIAN_INDUSTRIES, INDONESIAN_JOB_TITLES } from '../repositories/memory/_seeds.js'
 import { validateOpenApiRequest, validateOpenApiResponse } from '../lib/openapi-contract.js'
 
@@ -233,6 +233,21 @@ function toDuplicatePairDto(pair: DuplicatePair) {
   }
 }
 
+/**
+ * Membentuk item riwayat event dari pasangan registration dan event yang cocok.
+ */
+function toContactHistoryEntry(
+  registration: { eventId: string; status: RegistrationStatus },
+  event: { id: string; name: string; date: string },
+) {
+  return {
+    eventId: event.id,
+    eventName: event.name,
+    eventDate: event.date,
+    status: registration.status,
+  }
+}
+
 function getSuggestedData(record: FlaggedRecord): Record<string, unknown> {
   const rawData = record.rawData ?? {}
   const normalized = typeof rawData === 'object' && rawData !== null && typeof rawData['normalized'] === 'object' && rawData['normalized'] !== null
@@ -453,6 +468,53 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(200).send(responseBody)
   })
 
+  fastify.get('/api/contacts/:id/history', adminOnly, async (request, reply) => {
+    const paramsResult = MergeParamsSchema.safeParse(request.params)
+    if (!paramsResult.success) {
+      return reply.status(400).send({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Invalid contact id',
+          details: paramsResult.error.issues,
+        },
+      })
+    }
+
+    validateOpenApiRequest({ path: '/contacts/{id}/history', method: 'get', params: paramsResult.data })
+
+    const contact = await contactRepository.findById(paramsResult.data.id)
+    if (!contact) {
+      return reply.status(404).send({
+        error: {
+          code: 'NOT_FOUND',
+          message: 'Contact not found',
+          details: [],
+        },
+      })
+    }
+
+    const { data: rawRegistrations } = await registrationRepository.findAll(
+      { page: 1, pageSize: 50 },
+      { contactId: contact.id }
+    )
+    const registrationsWithEvents = await Promise.all(
+      rawRegistrations.map(async (reg) => {
+        const event = await eventRepository.findById(reg.eventId)
+        if (!event) return null
+        return toContactHistoryEntry(
+          { eventId: reg.eventId, status: reg.status as RegistrationStatus },
+          { id: event.id, name: event.name, date: event.startDate ?? event.createdAt }
+        )
+      })
+    )
+
+    const registrations = registrationsWithEvents.filter((item): item is NonNullable<typeof item> => item !== null)
+
+    const responseBody = { registrations }
+    validateOpenApiResponse({ path: '/contacts/{id}/history', method: 'get', status: 200, body: responseBody })
+    return reply.status(200).send(responseBody)
+  })
+
   fastify.delete('/api/contacts/duplicates/:id', adminOnly, async (request, reply) => {
     const paramsResult = FlaggedParamsSchema.safeParse(request.params)
     if (!paramsResult.success) {
@@ -464,6 +526,7 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
         },
       })
     }
+
     validateOpenApiRequest({ path: '/contacts/duplicates/{id}', method: 'delete', params: paramsResult.data })
 
     const dismissed = await contactRepository.dismissDuplicate(paramsResult.data.id)
