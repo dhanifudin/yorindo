@@ -32,12 +32,6 @@ function isParticipantAllowed(pathname: string): boolean {
   return PARTICIPANT_ALLOWED_PATHS.includes(pathname)
 }
 
-const STAFF_BLOCKED_PREFIXES = ['/app/admin']
-
-function isStaffBlocked(pathname: string): boolean {
-  return STAFF_BLOCKED_PREFIXES.some((p) => pathname.startsWith(p))
-}
-
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const accessToken = useAuthStore((s) => s.accessToken)
   const user = useAuthStore((s) => s.user)
