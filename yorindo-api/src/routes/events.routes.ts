@@ -256,7 +256,7 @@ function fieldsToSurveyContract(fields: Array<{ key: string; label: string; type
 
     properties[field.key] = property
     if (field.required) {
-      ;(schema.required as string[]).push(field.key)
+      ; (schema.required as string[]).push(field.key)
     }
   }
 
@@ -371,20 +371,20 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     const event = upcoming ? await eventRepository.findById(upcoming.eventId) : null
     const responseBody = upcoming && event
       ? {
-          event: {
-            id: event.id,
-            name: event.name,
-            eventDate: event.startDate,
-            industryTags: toIndustryTags(event),
-          },
-          daysUntil: upcoming.daysTillEvent,
-          uncontactedCount: upcoming.uncontactedCount,
-        }
+        event: {
+          id: event.id,
+          name: event.name,
+          eventDate: event.startDate,
+          industryTags: toIndustryTags(event),
+        },
+        daysUntil: upcoming.daysTillEvent,
+        uncontactedCount: upcoming.uncontactedCount,
+      }
       : {
-          event: null,
-          daysUntil: 0,
-          uncontactedCount: 0,
-        }
+        event: null,
+        daysUntil: 0,
+        uncontactedCount: 0,
+      }
 
     validateOpenApiResponse({ path: '/events/upcoming-uncontacted', method: 'get', status: 200, body: responseBody })
     return reply.status(200).send(responseBody)
@@ -499,7 +499,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
 
     const updated = await eventRepository.update(existing.id, updateData)
     const registrations = await registrationRepository.findByEvent(existing.id, { page: 1, pageSize: 1 })
-    
+
     const token = request.user as JwtPayload
     await auditLogRepository.create({
       action: 'event.updated',
@@ -817,7 +817,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     const event = await requireEventOr404(reply, params.data.id)
     if (!event) return
     validateOpenApiRequest({ path: '/events/{id}/audience-preview', method: 'post', params: params.data, body: request.body })
-    
+
     // Simulate complex criteria filtering
     // In a real app we would pass these to contactRepository.countMatches or similar
     const contacts = await contactRepository.findAll({ page: 1, pageSize: 1000 })
@@ -926,7 +926,6 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       contactIds: body.data.contactIds,
       scheduledAt: body.data.scheduledAt,
       enqueuedBy: payload.sub,
-      templateName: template.name,
     }, body.data.scheduledAt ? { delay: Math.max(new Date(body.data.scheduledAt).getTime() - Date.now(), 0) } : undefined)
 
     await auditLogRepository.create({
@@ -975,11 +974,11 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       display_order: s.displayOrder,
       created_at: s.createdAt,
     }))
-    
+
     // enhance with vendor_name
     for (const sponsor of responseBody) {
       const vendor = await vendorRepository.findById(sponsor.vendor_id)
-      ;(sponsor as any).vendor_name = vendor?.name ?? 'Unknown Vendor'
+        ; (sponsor as any).vendor_name = vendor?.name ?? 'Unknown Vendor'
     }
 
     validateOpenApiResponse({ path: '/events/{id}/sponsors', method: 'get', status: 200, body: responseBody })

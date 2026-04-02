@@ -67,7 +67,7 @@ export class BlastService {
     private readonly eventRepository: IEventRepository,
     private readonly auditLogRepository: IAuditLogRepository,
     private readonly sleep: (ms: number) => Promise<void> = wait,
-  ) {}
+  ) { }
 
   private async resolveRecipients(job: BlastJobData): Promise<Contact[]> {
     if (job.contactIds?.length) {
@@ -76,9 +76,9 @@ export class BlastService {
     }
 
     const filters: { industry?: string; city?: string; companySize?: string } = {}
-    if (job.filters?.industry) filters.industry = job.filters.industry
-    if (job.filters?.city) filters.city = job.filters.city
-    if (job.filters?.companySize) filters.companySize = job.filters.companySize
+    if (job.filters?.industries?.[0]) filters.industry = job.filters.industries[0]
+    if (job.filters?.cities?.[0]) filters.city = job.filters.cities[0]
+    if (job.filters?.companySizes?.[0]) filters.companySize = job.filters.companySizes[0]
 
     const { data } = await this.contactRepository.findAll(
       { page: 1, pageSize: 1000 },
