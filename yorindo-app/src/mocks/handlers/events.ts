@@ -10,7 +10,9 @@ const TIMEZONES: Event['timezone'][] = ['Asia/Jakarta', 'Asia/Makassar', 'Asia/J
 // In-memory mutable store — mutations persist within session
 let deletedEventsStore: (Event & { deletedAt: string })[] = []
 
-// ─── Event Sponsors In-Memory Store ──────────────────────────────────────────
+// ─── Event Surveys In-Memory Store ───────────────────────────────────────────
+export const eventSurveysStore = new Map<string, { schema: unknown; uiSchema: unknown }>()
+
 export const eventSponsorsStore = new Map<string, EventSponsor[]>([
   ['event-001', [
     { id: 'es-001-1', event_id: 'event-001', vendor_id: 'vendor-001', vendor_name: 'Alibaba Cloud', tier: 'premium', display_order: 0 },
@@ -502,8 +504,12 @@ export const eventHandlers = [
     return HttpResponse.json({ total: 180, attended: 142, pending: 38 })
   }),
 
-  http.get('/api/events/:id/survey', async () => {
+  http.get('/api/events/:id/survey', async ({ params }) => {
     await delay(300)
+    const stored = eventSurveysStore.get(params.id as string)
+    if (stored) return HttpResponse.json(stored)
+    
+    // Default fallback
     return HttpResponse.json({
       schema: {
         type: 'object',
@@ -531,7 +537,8 @@ export const eventHandlers = [
       )
     }
     const body = await request.json() as { schema: unknown; uiSchema: unknown }
-    return HttpResponse.json({ ...body })
+    eventSurveysStore.set(params.id as string, body)
+    return HttpResponse.json(body)
   }),
 
   http.post('/api/events/:id/blast', async ({ request }) => {
@@ -547,16 +554,18 @@ export const eventHandlers = [
 
   http.post('/api/events/:id/clone', async ({ params }) => {
     await delay(700)
-    const source = eventsStore.find((e) => e.id === params.id)
+    const sourceId = params.id as string
+    const source = eventsStore.find((e) => e.id === sourceId)
     if (!source) {
       return HttpResponse.json(
         { error: { code: 'NOT_FOUND', message: 'Event not found', details: [] } },
         { status: 404 }
       )
     }
+    const newId = makeMockCuid2()
     const cloned: Event = {
       ...source,
-      id: makeMockCuid2(),
+      id: newId,
       name: `${source.name} (Salinan)`,
       slug: `${source.slug}-copy-${faker.string.alphanumeric(4).toLowerCase()}`,
       status: 'draft',
@@ -564,6 +573,23 @@ export const eventHandlers = [
       updatedAt: new Date().toISOString(),
     }
     eventsStore.push(cloned)
+
+    // Deep clone: Sponsors
+    const sponsors = eventSponsorsStore.get(sourceId)
+    if (sponsors) {
+      eventSponsorsStore.set(newId, sponsors.map(s => ({ 
+        ...s, 
+        id: makeMockCuid2(), 
+        event_id: newId 
+      })))
+    }
+
+    // Deep clone: Survey
+    const survey = eventSurveysStore.get(sourceId)
+    if (survey) {
+      eventSurveysStore.set(newId, { ...survey })
+    }
+
     return HttpResponse.json(cloned, { status: 201 })
   }),
 

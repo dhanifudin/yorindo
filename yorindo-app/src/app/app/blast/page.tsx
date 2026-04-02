@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -27,6 +28,10 @@ interface Template {
 const INDUSTRIES = ['teknologi', 'kesehatan', 'manufaktur', 'keuangan', 'pendidikan', 'retail', 'properti']
 
 export default function BlastPage() {
+  const searchParams = useSearchParams()
+  const qEventId = searchParams.get('eventId')
+  const qSegment = searchParams.get('segment')
+
   const [prefilledAudience, setPrefilledAudience] = useState<BlastPrefilledAudience | null>(() => {
     if (typeof window === 'undefined') return null
     const raw = sessionStorage.getItem('blast:prefilledAudience')
@@ -39,10 +44,15 @@ export default function BlastPage() {
       return null
     }
   })
-  const [selectedEvent, setSelectedEvent] = useState(() => prefilledAudience?.eventId ?? '')
+
+  const [selectedEvent, setSelectedEvent] = useState(() => prefilledAudience?.eventId ?? qEventId ?? '')
   const [templateId, setTemplateId] = useState('')
   const [channel, setChannel] = useState('whatsapp')
-  const [filters, setFilters] = useState({ industry: '', city: '', companySize: '' })
+  const [filters, setFilters] = useState({ 
+    industry: qSegment || '', 
+    city: '', 
+    companySize: '' 
+  })
   const [previewCount, setPreviewCount] = useState<number | null>(null)
   const [scheduleEnabled, setScheduleEnabled] = useState(false)
   const [scheduledAtLocal, setScheduledAtLocal] = useState('')
