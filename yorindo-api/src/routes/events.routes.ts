@@ -104,9 +104,12 @@ const BlastBodySchema = z.object({
   templateId: z.string().trim().min(1),
   channel: z.enum(['email', 'whatsapp']),
   filters: z.object({
-    industry: z.string().trim().optional(),
-    city: z.string().trim().optional(),
-    companySize: z.string().trim().optional(),
+    industries: z.array(z.string()).optional(),
+    cities: z.array(z.string()).optional(),
+    companySizes: z.array(z.string()).optional(),
+    jobTitles: z.array(z.string()).optional(),
+    behavior: z.array(z.enum(['most_active', 'low_attendance', 'never_attended'])).optional(),
+    lastAttendedBefore: z.string().optional(),
   }).optional(),
   contactIds: z.array(z.string().trim().min(1)).optional(),
   scheduledAt: z.string().datetime().optional(),
@@ -817,10 +820,13 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     if (!event) return
     validateOpenApiRequest({ path: '/events/{id}/blast', method: 'post', params: params.data, body: body.data })
     const payload = request.user as JwtPayload
-    const contactFilters: { industry?: string; city?: string; companySize?: string } = {}
-    if (body.data.filters?.industry) contactFilters.industry = body.data.filters.industry
-    if (body.data.filters?.city) contactFilters.city = body.data.filters.city
-    if (body.data.filters?.companySize) contactFilters.companySize = body.data.filters.companySize
+    const contactFilters: { industries?: string[]; cities?: string[]; companySizes?: string[]; jobTitles?: string[]; behavior?: string[]; lastAttendedBefore?: string } = {}
+    if (body.data.filters?.industries) contactFilters.industries = body.data.filters.industries
+    if (body.data.filters?.cities) contactFilters.cities = body.data.filters.cities
+    if (body.data.filters?.companySizes) contactFilters.companySizes = body.data.filters.companySizes
+    if (body.data.filters?.jobTitles) contactFilters.jobTitles = body.data.filters.jobTitles
+    if (body.data.filters?.behavior) contactFilters.behavior = body.data.filters.behavior
+    if (body.data.filters?.lastAttendedBefore) contactFilters.lastAttendedBefore = body.data.filters.lastAttendedBefore
 
     const recipientCount = body.data.contactIds?.length ?? (await contactRepository.findAll({ page: 1, pageSize: 500 }, contactFilters)).total
     const queueName = body.data.channel === 'whatsapp' ? 'marketing' : 'transactional'
