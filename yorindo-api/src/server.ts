@@ -125,10 +125,10 @@ export async function buildServer() {
   await fastify.register(etlRoutes)
   await fastify.register(usersRoutes)
   await fastify.register(eventsRoutes)
+  await fastify.register(templatesRoutes)
   await fastify.register(registrationsRoutes)
   await fastify.register(scanRoutes)
   await fastify.register(vendorsRoutes)
-  await fastify.register(templatesRoutes)
 
   fastify.get('/api/openapi.json', async (_request, reply) => {
     return reply.status(200).send(openapi)

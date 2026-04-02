@@ -29,7 +29,9 @@ export interface Event {
   capacity?: number
   bannerUrl?: string // Event banner image URL (Story 4.7)
   targetCriteria?: Record<string, unknown>
-  surveySchema?: Record<string, unknown>
+  registrationSurveySchema?: SurveySchema | null
+  postSurveySchema?: SurveySchema | null
+  postSurveyEnabled?: boolean
   venue?: string            // e.g. 'Jakarta Convention Center'
   industryTags?: string[]   // e.g. ['teknologi', 'keuangan']
   eventType?: 'conference' | 'workshop' | 'networking' | 'seminar' | 'webinar'
@@ -123,6 +125,11 @@ export interface PaginatedResponse<T> {
 }
 
 // EventReport type — contract between Story 4.12 (stub) and Epic 8 (full implementation)
+export interface SurveySchema {
+  schema: Record<string, unknown>
+  uiSchema: Record<string, unknown>
+}
+
 export interface EventReport {
   eventId: string
   funnelMetrics: {

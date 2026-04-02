@@ -5,13 +5,10 @@ import { djb2 } from '@/lib/djb2'
 import { usersStore, userEventAssignments, MOCK_USER_IDS } from './users'
 import { makeMockCuid2 } from './id'
 
-const TIMEZONES: Event['timezone'][] = ['Asia/Jakarta', 'Asia/Makassar', 'Asia/Jayapura']
-
 // In-memory mutable store — mutations persist within session
 let deletedEventsStore: (Event & { deletedAt: string })[] = []
 
-// ─── Event Surveys In-Memory Store ───────────────────────────────────────────
-export const eventSurveysStore = new Map<string, { schema: unknown; uiSchema: unknown }>()
+// ─── Event In-Memory Store ───────────────────────────────────────────────────
 
 export const eventSponsorsStore = new Map<string, EventSponsor[]>([
   ['event-001', [
@@ -504,42 +501,6 @@ export const eventHandlers = [
     return HttpResponse.json({ total: 180, attended: 142, pending: 38 })
   }),
 
-  http.get('/api/events/:id/survey', async ({ params }) => {
-    await delay(300)
-    const stored = eventSurveysStore.get(params.id as string)
-    if (stored) return HttpResponse.json(stored)
-    
-    // Default fallback
-    return HttpResponse.json({
-      schema: {
-        type: 'object',
-        properties: {
-          jabatan: { type: 'string', title: 'Apa jabatan Anda?' },
-          industri: {
-            type: 'string',
-            title: 'Industri perusahaan Anda?',
-            enum: ['Teknologi', 'Kesehatan', 'Manufaktur'],
-          },
-        },
-        required: ['jabatan', 'industri'],
-      },
-      uiSchema: {},
-    })
-  }),
-
-  http.put('/api/events/:id/survey', async ({ request, params }) => {
-    await delay(400)
-    const event = eventsStore.find((e) => e.id === params.id)
-    if (!event) {
-      return HttpResponse.json(
-        { error: { code: 'NOT_FOUND', message: 'Event not found', details: [] } },
-        { status: 404 }
-      )
-    }
-    const body = await request.json() as { schema: unknown; uiSchema: unknown }
-    eventSurveysStore.set(params.id as string, body)
-    return HttpResponse.json(body)
-  }),
 
   http.post('/api/events/:id/blast', async ({ request }) => {
     await delay(400)
@@ -585,9 +546,11 @@ export const eventHandlers = [
     }
 
     // Deep clone: Survey
-    const survey = eventSurveysStore.get(sourceId)
-    if (survey) {
-      eventSurveysStore.set(newId, { ...survey })
+    if (source.registrationSurveySchema) {
+      cloned.registrationSurveySchema = JSON.parse(JSON.stringify(source.registrationSurveySchema))
+    }
+    if (source.postSurveySchema) {
+      cloned.postSurveySchema = JSON.parse(JSON.stringify(source.postSurveySchema))
     }
 
     return HttpResponse.json(cloned, { status: 201 })
