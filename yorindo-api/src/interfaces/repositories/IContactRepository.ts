@@ -16,6 +16,12 @@ export interface ContactFilters {
   flagCategory?: string
   consentStatus?: string
   search?: string
+  industries?: string[]
+  cities?: string[]
+  companySizes?: string[]
+  jobTitles?: string[]
+  behavior?: string[]
+  lastAttendedBefore?: string
 }
 
 export interface IContactRepository {

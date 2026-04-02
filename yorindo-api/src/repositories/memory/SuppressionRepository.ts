@@ -15,14 +15,15 @@ const SUPPRESSED_PHONES = [
 
 const SUPPRESSION_REASONS = [
   'unsubscribed',
-  'hard_bounce',
-  'user_request',
-  'spam_complaint',
-  'admin_manual',
+  'unsubscribed',
+  'erasure_request',
+  'unsubscribed',
+  'manually_added',
 ] as const
 
 export class InMemorySuppressionRepository implements ISuppressionRepository {
   private suppressedPhones: Set<string> = new Set()
+  private suppressedEmails: Set<string> = new Set()
   private records: Map<string, SuppressionRecord> = new Map()
 
   constructor() {
@@ -35,6 +36,8 @@ export class InMemorySuppressionRepository implements ISuppressionRepository {
         id: createId(),
         contactId: SEED_CONTACT_IDS[115 + i]!,
         phone: SUPPRESSED_PHONES[i]!,
+        email: null,
+        name: null,
         reason: SUPPRESSION_REASONS[i]!,
         createdAt: new Date(Date.now() - (5 - i) * 7 * 86400000).toISOString(),
       }
@@ -43,20 +46,53 @@ export class InMemorySuppressionRepository implements ISuppressionRepository {
     }
   }
 
-  async isSuppressed(phone: string): Promise<boolean> {
-    return this.suppressedPhones.has(phone)
+  async isSuppressed(input: string | { phone?: string | null; email?: string | null }): Promise<boolean> {
+    if (typeof input === 'string') {
+      return this.suppressedPhones.has(input) || this.suppressedEmails.has(input.toLowerCase())
+    }
+
+    const phone = input.phone?.trim()
+    const email = input.email?.trim().toLowerCase()
+    return (phone ? this.suppressedPhones.has(phone) : false) || (email ? this.suppressedEmails.has(email) : false)
   }
 
-  async suppress(contactId: string, reason: string): Promise<void> {
+  async suppress(
+    contactId: string,
+    reason: string,
+    options?: { phone?: string | null; email?: string | null; name?: string | null },
+  ): Promise<SuppressionRecord> {
+    const phone = options?.phone?.trim() ?? contactId
+    const email = options?.email?.trim().toLowerCase() ?? null
+    const existing = Array.from(this.records.values()).find((record) =>
+      record.phone === phone || (email !== null && record.email === email),
+    )
+
+    if (existing) {
+      return existing
+    }
+
     const record: SuppressionRecord = {
       id: createId(),
       contactId,
-      phone: contactId, // caller is expected to pass phone; in-memory stores what's given
+      phone,
+      email,
+      name: options?.name?.trim() ?? null,
       reason,
       createdAt: new Date().toISOString(),
     }
     this.records.set(record.id, record)
-    this.suppressedPhones.add(contactId)
+    if (phone) this.suppressedPhones.add(phone)
+    if (email) this.suppressedEmails.add(email)
+    return record
+  }
+
+  async remove(id: string): Promise<boolean> {
+    const existing = this.records.get(id)
+    if (!existing) return false
+    this.records.delete(id)
+    if (existing.phone) this.suppressedPhones.delete(existing.phone)
+    if (existing.email) this.suppressedEmails.delete(existing.email)
+    return true
   }
 
   async findAll(params: PaginationParams): Promise<{ data: SuppressionRecord[]; total: number }> {

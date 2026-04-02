@@ -338,7 +338,7 @@ export function ContactsFilterBar() {
       <Button variant="outline" onClick={handleReset}>
         Reset Filter
       </Button>
-
+      
       {/* Save Segment popover */}
       {hasActiveFilters && (
         <Popover>
