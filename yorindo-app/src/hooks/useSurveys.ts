@@ -1,0 +1,56 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
+import type { SurveySchema, SurveyResponsesApiResponse } from '@/types/surveys'
+
+// Load a survey schema by type
+export function useSurveySchema(eventId: string | undefined, type: 'registration' | 'post-event') {
+  return useQuery({
+    queryKey: ['surveys', eventId, type],
+    queryFn: async () => {
+      const res = await fetch(`/api/events/${eventId}/survey/${type}`)
+      if (!res.ok) throw new Error('Gagal memuat skema survei')
+      return res.json() as Promise<SurveySchema>
+    },
+    enabled: !!eventId,
+    staleTime: 2 * 60 * 1000,
+  })
+}
+
+// Save a survey schema
+export function useSaveSurveySchema(eventId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ type, schema, uiSchema }: { type: 'registration' | 'post-event'; schema: unknown; uiSchema: unknown }) => {
+      const res = await fetch(`/api/events/${eventId}/survey/${type}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ schema, uiSchema }),
+      })
+      if (!res.ok) throw new Error('Gagal menyimpan survei')
+      return res.json()
+    },
+    onSuccess: (_, { type }) => {
+      queryClient.invalidateQueries({ queryKey: ['surveys', eventId, type] })
+      queryClient.invalidateQueries({ queryKey: ['events', eventId] })
+      toast.success('Survei berhasil disimpan')
+    },
+  })
+}
+
+// Load survey responses
+export function useSurveyResponses(
+  eventId: string | undefined,
+  type: 'registration' | 'post-event',
+  search?: string
+) {
+  return useQuery({
+    queryKey: ['survey-responses', eventId, { type, search }],
+    queryFn: async () => {
+      const res = await fetch(`/api/events/${eventId}/survey/responses?type=${type}${search ? `&search=${encodeURIComponent(search)}` : ''}`)
+      if (!res.ok) throw new Error('Gagal memuat respons survei')
+      return res.json() as Promise<SurveyResponsesApiResponse>
+    },
+    enabled: !!eventId,
+    staleTime: 60 * 1000,
+  })
+}
