@@ -508,9 +508,9 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
       })
     )
 
-    const data = registrationsWithEvents.filter((item): item is NonNullable<typeof item> => item !== null)
+    const registrations = registrationsWithEvents.filter((item): item is NonNullable<typeof item> => item !== null)
 
-    const responseBody = { data }
+    const responseBody = { registrations }
     validateOpenApiResponse({ path: '/contacts/{id}/history', method: 'get', status: 200, body: responseBody })
     return reply.status(200).send(responseBody)
   })
