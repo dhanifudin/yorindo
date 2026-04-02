@@ -282,7 +282,9 @@ function computeApprovalCompleteness(input: {
 }
 
 export const contactRoutes: FastifyPluginAsync = async (fastify) => {
-  fastify.get('/api/contacts/health', async (_request, reply) => {
+  const adminOnly = { preHandler: [requireAuth, requireAdmin] }
+
+  fastify.get('/api/contacts/health', adminOnly, async (_request, reply) => {
     const health = await contactRepository.countHealth()
 
     const responseBody = {
@@ -295,13 +297,13 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(200).send(responseBody)
   })
 
-  fastify.get('/api/contacts/facets', async (_request, reply) => {
+  fastify.get('/api/contacts/facets', adminOnly, async (_request, reply) => {
     const responseBody = toFacetsDto(await contactRepository.findFacets())
     validateOpenApiResponse({ path: '/contacts/facets', method: 'get', status: 200, body: responseBody })
     return reply.status(200).send(responseBody)
   })
 
-  fastify.get('/api/contacts', async (request, reply) => {
+  fastify.get('/api/contacts', adminOnly, async (request, reply) => {
     const result = ContactsQuerySchema.safeParse(request.query)
     if (!result.success) {
       return reply.status(400).send({
@@ -356,7 +358,7 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(200).send(responseBody)
   })
 
-  fastify.get('/api/contacts/industry-suggestions', async (request, reply) => {
+  fastify.get('/api/contacts/industry-suggestions', adminOnly, async (request, reply) => {
     const result = IndustrySuggestionsQuerySchema.safeParse(request.query)
     if (!result.success) {
       return reply.status(400).send({
@@ -401,7 +403,7 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(200).send(responseBody)
   })
 
-  fastify.get('/api/contacts/duplicates', async (request, reply) => {
+  fastify.get('/api/contacts/duplicates', adminOnly, async (request, reply) => {
     const result = DuplicatesQuerySchema.safeParse(request.query)
     if (!result.success) {
       return reply.status(400).send({
@@ -433,7 +435,7 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(200).send(responseBody)
   })
 
-  fastify.post('/api/contacts/:id/merge', async (request, reply) => {
+  fastify.post('/api/contacts/:id/merge', adminOnly, async (request, reply) => {
     const paramsResult = MergeParamsSchema.safeParse(request.params)
     const bodyResult = MergeBodySchema.safeParse(request.body)
 
