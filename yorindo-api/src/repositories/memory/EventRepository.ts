@@ -171,10 +171,10 @@ export class InMemoryEventRepository implements IEventRepository {
     const upcoming = Array.from(this.events.values())
       .filter((event) => {
         if (!['published', 'active'].includes(event.status)) return false
-        const daysTill = Math.floor((new Date(event.date).getTime() - Date.now()) / 86400000)
+        const daysTill = Math.floor((new Date(event.startDate).getTime() - Date.now()) / 86400000)
         return daysTill >= 0 && daysTill <= 14
       })
-      .sort((left, right) => new Date(left.date).getTime() - new Date(right.date).getTime())[0]
+      .sort((left, right) => new Date(left.startDate).getTime() - new Date(right.startDate).getTime())[0]
     if (!upcoming) return null
     const daysTill = Math.floor((new Date(upcoming.startDate).getTime() - Date.now()) / 86400000)
     return { eventId: upcoming.id, eventName: upcoming.name, daysTillEvent: daysTill, uncontactedCount: 42 }

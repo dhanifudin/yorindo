@@ -322,6 +322,8 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     const existing = await eventRepository.findBySlug(parsed.data.slug)
     const isAvailable = !existing || (parsed.data.excludeId && existing.id === parsed.data.excludeId)
     return reply.status(200).send({ available: !!isAvailable })
+  })
+
   fastify.get('/api/events/upcoming-uncontacted', { preHandler: requireAuth }, async (_request, reply) => {
     const upcoming = await eventRepository.getUpcomingUncontacted()
 
@@ -331,7 +333,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
           event: {
             id: event.id,
             name: event.name,
-            eventDate: event.date,
+            eventDate: event.startDate,
             industryTags: toIndustryTags(event),
           },
           daysUntil: upcoming.daysTillEvent,
@@ -493,7 +495,10 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     const clonedEvent = await eventRepository.create({
       name: clonedEventName,
       slug: clonedEventSlug,
-      date: event.date,
+      startDate: event.startDate,
+      endDate: event.endDate,
+      startTime: event.startTime,
+      endTime: event.endTime,
       timezone: event.timezone,
       city: event.city,
       venue: event.venue,
@@ -507,6 +512,9 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       surveySchemaId: null, // we will recreate survey below
       vendorId: event.vendorId,
       status: 'draft',
+      isPaid: event.isPaid,
+      price: event.price,
+      paymentMethod: event.paymentMethod,
       deletedAt: null,
     })
 
