@@ -1,5 +1,5 @@
 generated: 2026-03-19
-last_updated: 2026-04-02 (implemented Story 3.14 contact API JWT enforcement)
+last_updated: 2026-04-02 (code review + fixes for be-4-5-audience-preview)
 project: yorindo
 project_key: NOKEY
 tracking_system: file-system
@@ -121,7 +121,7 @@ development_status:
   be-4-3-event-clone: review
   4-4-survey-template-builder: ready-for-dev               # REOPENED 2026-03-28: dual survey + GForms parity + response dashboard
   4-5-event-capacity-target-criteria-with-audience-preview: review  # AC update needed: multi-criteria + AI recommendation
-  be-4-5-audience-preview: review
+  be-4-5-audience-preview: done
   4-6-soft-delete-recovery-for-events-and-records: review
   4-7-event-pipeline-hub-shell-navigation: review
   be-4-7-event-pipeline-hub-shell-navigation: review

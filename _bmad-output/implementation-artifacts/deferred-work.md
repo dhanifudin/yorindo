@@ -24,3 +24,8 @@
 - **`auth.routes.ts` inline catch bypasses `setErrorHandler`**: Login and refresh handlers catch errors internally and call `reply.status(500).send()` directly — these 500s never reach `setErrorHandler` and are invisible to Sentry. Pre-existing pattern.
 - **No Fastify request-context integration**: `Sentry.captureException` is called without Fastify's Sentry integration (`setupFastifyErrorHandler`) — captured errors lack HTTP request URL, method, and headers. Consider `@sentry/node` Fastify integration when richer error context is needed.
 - **No release tagging**: `Sentry.init` has no `release` field — Sentry cannot correlate errors to deployments or use source maps. Add when a versioning/release pipeline is established.
+
+## Deferred from: code review of be-4-5-audience-preview (2026-04-02)
+
+- **Endpoint accessible on soft-deleted events**: `requireEventOr404` may return soft-deleted events depending on repository implementation. If `findById` doesn't filter `deletedAt`, deleted events can still be previewed. Pre-existing repository-level concern.
+- **No rate limiting or cost guard on audience-preview**: The endpoint fetches up to 1000 contacts per call with no debounce, cache, or rate limit. Pre-existing pattern across all endpoints — address when implementing production performance hardening.
