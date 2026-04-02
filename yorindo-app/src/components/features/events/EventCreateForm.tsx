@@ -91,11 +91,11 @@ export function EventCreateForm({
   useEffect(() => {
     if (!existingSponsors) return
 
-    const key = existingSponsors.map((s: any) => s.vendor_id).sort().join()
+    const key = existingSponsors.map((s: { vendor_id: string }) => s.vendor_id).sort().join()
 
     if (key && key !== loadedRef.current) {
       loadedRef.current = key
-      setSelectedVendorIds(existingSponsors.map((s: any) => s.vendor_id))
+      setSelectedVendorIds(existingSponsors.map((s: { vendor_id: string }) => s.vendor_id))
     }
   }, [existingSponsors])
 
