@@ -98,7 +98,7 @@ const EventUpdateBodySchema = z.object({
 
 const EventRegistrationsQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+  pageSize: z.coerce.number().int().min(1).max(500).default(20),
   status: z.enum(['pending', 'confirmed', 'approved', 'rejected', 'waitlisted', 'attended', 'cancelled']).optional(),
 })
 
@@ -272,6 +272,16 @@ function toRegistrationWithContactDto(registration: Registration, contact: Await
     aiScore: Math.max(0, Math.min(99, Math.round((registration.aiScore ?? 0) * 100))),
     flagOverride: registration.flagOverride,
   }
+}
+
+function toConfirmationChannel(event: Event, contact: Awaited<ReturnType<typeof contactRepository.findById>>): 'email' | 'whatsapp' {
+  if (event.notificationChannel === 'email' && contact?.email) return 'email'
+  return 'whatsapp'
+}
+
+function toConfirmationStatus(registration: Registration): 'confirmed' | 'pending' {
+  if (registration.status === 'confirmed' || registration.status === 'attended') return 'confirmed'
+  return 'pending'
 }
 
 /**
@@ -729,6 +739,48 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       pending: Math.max(registrations.total - attended, 0),
     }
     validateOpenApiResponse({ path: '/events/{id}/attendance-stats', method: 'get', status: 200, body: responseBody })
+    return reply.status(200).send(responseBody)
+  })
+
+  fastify.get('/api/events/:id/confirmation', { preHandler: [requireAuth, requireRoles('admin', 'staff')] }, async (request, reply) => {
+    const params = EventIdParamsSchema.safeParse(request.params)
+    if (!params.success) return replyValidationError(reply, params.error.issues, 'Invalid event id')
+    const event = await requireEventOr404(reply, params.data.id)
+    if (!event) return
+    const allowed = await requireEventAccessOr403(reply, request.user as JwtPayload | undefined, event.id)
+    if (!allowed) return
+    validateOpenApiRequest({ path: '/events/{id}/confirmation', method: 'get', params: params.data })
+
+    const result = await registrationRepository.findByEvent(event.id, { page: 1, pageSize: 500 })
+    const relevantRegistrations = result.data.filter((registration) => (
+      registration.status === 'approved'
+      || registration.status === 'confirmed'
+      || registration.status === 'attended'
+    ))
+
+    const registrations = await Promise.all(relevantRegistrations.map(async (registration) => {
+      const contact = await contactRepository.findById(registration.contactId)
+      const confirmationStatus = toConfirmationStatus(registration)
+      return {
+        id: registration.id,
+        contact: {
+          name: contact?.name ?? 'Unknown Contact',
+          company: contact?.company ?? '-',
+        },
+        channel: toConfirmationChannel(event, contact),
+        ticketSentAt: registration.ticketToken ? (registration.approvedAt ?? registration.createdAt) : null,
+        confirmationStatus,
+      }
+    }))
+
+    const responseBody = {
+      stats: {
+        ticketSent: registrations.filter((registration) => registration.ticketSentAt !== null).length,
+        pendingConfirmation: registrations.filter((registration) => registration.confirmationStatus === 'pending').length,
+      },
+      registrations,
+    }
+    validateOpenApiResponse({ path: '/events/{id}/confirmation', method: 'get', status: 200, body: responseBody })
     return reply.status(200).send(responseBody)
   })
 

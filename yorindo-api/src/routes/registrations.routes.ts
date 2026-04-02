@@ -1,10 +1,13 @@
 import type { FastifyPluginAsync, FastifyReply } from 'fastify'
 import { z } from 'zod'
 import {
+  auditLogRepository,
   contactRepository,
+  emailService,
   eventRepository,
   registrationRepository,
   surveyRepository,
+  whatsAppService,
 } from '../container.js'
 import { requireAdmin, requireAuth, requireRoles } from '../middleware/auth.js'
 import type { Contact, Registration } from '../types/domain.js'
@@ -16,7 +19,7 @@ const RegistrationIdParamsSchema = z.object({
 
 const RegistrationListQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+  pageSize: z.coerce.number().int().min(1).max(500).default(20),
   sortBy: z.string().trim().optional(),
   sortDir: z.enum(['asc', 'desc']).optional(),
   status: z.enum(['pending', 'confirmed', 'approved', 'rejected', 'waitlisted', 'attended', 'cancelled']).optional(),
@@ -37,6 +40,13 @@ const UpdateRegistrationStatusBodySchema = z.object({
 
 const BulkApproveBodySchema = z.object({
   ids: z.array(z.string().trim().min(1)).min(1),
+})
+
+const ResendTicketResponseSchema = z.object({
+  accepted: z.literal(true),
+  registrationId: z.string().trim().min(1),
+  channel: z.enum(['email', 'whatsapp']),
+  resentAt: z.string().datetime(),
 })
 
 function validationError(reply: FastifyReply, details: unknown, message: string) {
@@ -73,6 +83,27 @@ function toRegistrationWithContactDto(registration: Registration, contact: Conta
 async function getSurveyAnswers(registration: Registration) {
   const responses = await surveyRepository.getResponsesByEvent(registration.eventId)
   return responses.find((response) => response.registrationId === registration.id)?.answers ?? {}
+}
+
+async function handleStatusUpdate(request: any, reply: FastifyReply, method: 'post' | 'put' | 'patch') {
+  const params = RegistrationIdParamsSchema.safeParse(request.params)
+  const body = UpdateRegistrationStatusBodySchema.safeParse(request.body)
+  if (!params.success || !body.success) {
+    return validationError(reply, [
+      ...(params.success ? [] : params.error.issues),
+      ...(body.success ? [] : body.error.issues),
+    ], 'Invalid registration status update payload')
+  }
+  validateOpenApiRequest({ path: '/registrations/{id}/status', method, params: params.data, body: body.data })
+  const updated = await registrationRepository.updateStatus(params.data.id, body.data.status)
+  if (!updated) {
+    return reply.status(404).send({
+      error: { code: 'NOT_FOUND', message: 'Registration not found', details: [] },
+    })
+  }
+  const responseBody = toRegistrationDto(updated, await getSurveyAnswers(updated))
+  validateOpenApiResponse({ path: '/registrations/{id}/status', method, status: 200, body: responseBody })
+  return reply.status(200).send(responseBody)
 }
 
 export const registrationsRoutes: FastifyPluginAsync = async (fastify) => {
@@ -184,26 +215,9 @@ export const registrationsRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(200).send(responseBody)
   })
 
-  fastify.post('/api/registrations/:id/status', { preHandler: [requireAuth, requireAdmin] }, async (request, reply) => {
-    const params = RegistrationIdParamsSchema.safeParse(request.params)
-    const body = UpdateRegistrationStatusBodySchema.safeParse(request.body)
-    if (!params.success || !body.success) {
-      return validationError(reply, [
-        ...(params.success ? [] : params.error.issues),
-        ...(body.success ? [] : body.error.issues),
-      ], 'Invalid registration status update payload')
-    }
-    validateOpenApiRequest({ path: '/registrations/{id}/status', method: 'post', params: params.success ? params.data : undefined, body: body.success ? body.data : undefined })
-    const updated = await registrationRepository.updateStatus(params.data.id, body.data.status)
-    if (!updated) {
-      return reply.status(404).send({
-        error: { code: 'NOT_FOUND', message: 'Registration not found', details: [] },
-      })
-    }
-    const responseBody = toRegistrationDto(updated, await getSurveyAnswers(updated))
-    validateOpenApiResponse({ path: '/registrations/{id}/status', method: 'post', status: 200, body: responseBody })
-    return reply.status(200).send(responseBody)
-  })
+  fastify.post('/api/registrations/:id/status', { preHandler: [requireAuth, requireAdmin] }, async (request, reply) => handleStatusUpdate(request, reply, 'post'))
+  fastify.put('/api/registrations/:id/status', { preHandler: [requireAuth, requireAdmin] }, async (request, reply) => handleStatusUpdate(request, reply, 'put'))
+  fastify.patch('/api/registrations/:id/status', { preHandler: [requireAuth, requireAdmin] }, async (request, reply) => handleStatusUpdate(request, reply, 'patch'))
 
   fastify.post('/api/registrations/:id/cancel', { preHandler: requireAuth }, async (request, reply) => {
     const params = RegistrationIdParamsSchema.safeParse(request.params)
@@ -234,6 +248,89 @@ export const registrationsRoutes: FastifyPluginAsync = async (fastify) => {
     const responseBody = toRegistrationWithContactDto(updated, contact)
     validateOpenApiResponse({ path: '/registrations/{id}/clear-flag', method: 'post', status: 200, body: responseBody })
     return reply.status(200).send(responseBody)
+  })
+
+  fastify.post('/api/registrations/:id/resend-ticket', { preHandler: [requireAuth, requireAdmin] }, async (request, reply) => {
+    const params = RegistrationIdParamsSchema.safeParse(request.params)
+    if (!params.success) return validationError(reply, params.error.issues, 'Invalid registration id')
+    validateOpenApiRequest({ path: '/registrations/{id}/resend-ticket', method: 'post', params: params.data })
+
+    const registration = await registrationRepository.findById(params.data.id)
+    if (!registration) {
+      return reply.status(404).send({
+        error: { code: 'NOT_FOUND', message: 'Registration not found', details: [] },
+      })
+    }
+    if (registration.status !== 'approved') {
+      return reply.status(409).send({
+        error: {
+          code: 'INVALID_REGISTRATION_STATUS',
+          message: 'Ticket resend is only available for approved registrations awaiting confirmation',
+          details: [{ status: registration.status }],
+        },
+      })
+    }
+
+    const contact = await contactRepository.findById(registration.contactId)
+    if (!contact) {
+      return reply.status(404).send({
+        error: { code: 'NOT_FOUND', message: 'Contact not found', details: [] },
+      })
+    }
+
+    const event = await eventRepository.findById(registration.eventId)
+    if (!event) {
+      return reply.status(404).send({
+        error: { code: 'NOT_FOUND', message: 'Event not found', details: [] },
+      })
+    }
+
+    const channel = event.notificationChannel === 'email' && contact.email ? 'email' : 'whatsapp'
+    const resentAt = new Date().toISOString()
+
+    if (channel === 'email') {
+      await emailService.send({
+        to: contact.email ?? '',
+        subject: `Tiket untuk ${event.name}`,
+        body: `Tiket Anda untuk ${event.name} telah dikirim ulang.`,
+        templateId: 'ticket-resend',
+        variables: {
+          name: contact.name,
+          eventName: event.name,
+          ticketToken: registration.ticketToken ?? '',
+        },
+      })
+    } else {
+      await whatsAppService.send({
+        to: contact.phone,
+        templateName: 'ticket_resend',
+        body: `Tiket untuk ${event.name} telah dikirim ulang kepada ${contact.name}.`,
+        variables: {
+          name: contact.name,
+          eventName: event.name,
+          ticketToken: registration.ticketToken ?? '',
+        },
+      })
+    }
+
+    await auditLogRepository.create({
+      action: 'registration.ticket_resent',
+      actorId: request.user?.sub ?? null,
+      actorRole: request.user?.role ?? 'admin',
+      eventId: event.id,
+      targetId: registration.id,
+      targetType: 'registration',
+      metadata: { channel, ticketToken: registration.ticketToken },
+    })
+
+    const responseBody = ResendTicketResponseSchema.parse({
+      accepted: true,
+      registrationId: registration.id,
+      channel,
+      resentAt,
+    })
+    validateOpenApiResponse({ path: '/registrations/{id}/resend-ticket', method: 'post', status: 202, body: responseBody })
+    return reply.status(202).send(responseBody)
   })
 
   fastify.put('/api/registrations/bulk-approve', { preHandler: [requireAuth, requireRoles('admin', 'staff')] }, async (request, reply) => {
