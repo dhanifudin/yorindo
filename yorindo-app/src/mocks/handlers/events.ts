@@ -303,6 +303,71 @@ export const eventHandlers = [
     return HttpResponse.json(event)
   }),
 
+  http.patch('/api/events/:id', async ({ params, request }) => {
+    await delay(500)
+    const body = await request.json() as Partial<Event>
+    const id = params.id as string
+    const idx = eventsStore.findIndex((e) => e.id === id)
+    if (idx === -1) {
+      return HttpResponse.json(
+        { error: { code: 'NOT_FOUND', message: 'Event tidak ditemukan', details: [] } },
+        { status: 404 }
+      )
+    }
+
+    const currentEvent = eventsStore[idx]
+    
+    // Status transition guards (Story 4.2)
+    if (body.status && body.status !== currentEvent.status) {
+      const from = currentEvent.status
+      const to = body.status
+      const isValid = (
+        (from === 'draft' && (to === 'published' || to === 'cancelled')) ||
+        (from === 'published' && (to === 'active' || to === 'cancelled')) ||
+        (from === 'active' && (to === 'completed' || to === 'cancelled')) ||
+        (from === 'completed' && to === 'archived') ||
+        (from === 'cancelled' && to === 'archived')
+      )
+
+      if (!isValid) {
+        return HttpResponse.json(
+          { 
+            error: { 
+              code: 'INVALID_TRANSITION', 
+              message: `Transisi status tidak valid dari "${from}" ke "${to}"`, 
+              details: [] 
+            } 
+          },
+          { status: 422 }
+        )
+      }
+
+      // Additional guard for 'completed'
+      if (to === 'completed') {
+        const eventDate = new Date(currentEvent.eventDate)
+        if (eventDate > new Date()) {
+          return HttpResponse.json(
+            { 
+              error: { 
+                code: 'PREMATURE_COMPLETION', 
+                message: 'Event hanya dapat diselesaikan setelah tanggal event berlalu', 
+                details: [] 
+              } 
+            },
+            { status: 422 }
+          )
+        }
+      }
+    }
+
+    eventsStore[idx] = { 
+      ...currentEvent, 
+      ...body, 
+      updatedAt: new Date().toISOString() 
+    }
+    return HttpResponse.json(eventsStore[idx])
+  }),
+
   http.put('/api/events/:id', async ({ params, request }) => {
     await delay(600)
     const body = await request.json() as Partial<Event>
