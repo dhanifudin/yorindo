@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { RJSFSchema, UiSchema } from '@rjsf/utils'
 
@@ -113,38 +113,36 @@ export function SurveyBuilder({ eventId }: SurveyBuilderProps) {
   const queryClient = useQueryClient()
 
   const [isExpanded, setIsExpanded] = useState(false)
-  const [showPreview, setShowPreview] = useState(false)
-  const [fields, setFields] = useState<FieldDescriptor[]>([])
-  const [newOptionText, setNewOptionText] = useState<Record<string, string>>({})
+const [showPreview, setShowPreview] = useState(false)
+const [localFields, setLocalFields] = useState<FieldDescriptor[] | null>(null)
+const [newOptionText, setNewOptionText] = useState<Record<string, string>>({})
+const [loadedSurveyId, setLoadedSurveyId] = useState<string | null>(null)
 
-  const lastSyncedData = useRef<string>('')
+const { data: surveyData, isLoading } = useQuery({
+  queryKey: ['survey', eventId],
+  queryFn: () => fetch(`/api/events/${eventId}/survey`).then((r) => r.json()),
+  enabled: isExpanded,
+})
 
-  const { data: surveyData, isLoading } = useQuery({
-    queryKey: ['survey', eventId],
-    queryFn: () => fetch(`/api/events/${eventId}/survey`).then((r) => r.json()),
-    enabled: isExpanded,
+// Derive server fields without useEffect — no lint violation
+const serverFields = useMemo(
+  () => (surveyData?.schema ? jsonSchemaToFields(surveyData.schema, surveyData.uiSchema ?? {}) : []),
+  [surveyData],
+)
+
+// Reset local edits when fresh server data arrives (render-time state update — safe pattern)
+if (surveyData && loadedSurveyId !== eventId) {
+  setLocalFields(null)
+  setLoadedSurveyId(eventId)
+}
+
+const fields = localFields ?? serverFields
+const setFields = (updater: FieldDescriptor[] | ((prev: FieldDescriptor[]) => FieldDescriptor[])) => {
+  setLocalFields((prev) => {
+    const current = prev ?? serverFields
+    return typeof updater === 'function' ? updater(current) : updater
   })
-
-  // Safe sync from server data → local state (fixed cascading renders)
-  useEffect(() => {
-    if (!surveyData?.schema) return
-
-    const currentDataString = JSON.stringify({
-      schema: surveyData.schema,
-      uiSchema: surveyData.uiSchema ?? {},
-    })
-
-    // Hanya update jika data benar-benar berbeda
-    if (currentDataString !== lastSyncedData.current) {
-      const convertedFields = jsonSchemaToFields(
-        surveyData.schema,
-        surveyData.uiSchema ?? {}
-      )
-
-      setFields(convertedFields)
-      lastSyncedData.current = currentDataString
-    }
-  }, [surveyData])
+}
 
   const validateFields = (): boolean => {
     for (const f of fields) {
@@ -247,7 +245,7 @@ export function SurveyBuilder({ eventId }: SurveyBuilderProps) {
           {isLoading ? (
             <div className="h-32 rounded-2xl bg-muted animate-pulse" />
           ) : showPreview ? (
-            // Beautiful Preview (tetap sama seperti sebelumnya)
+            // ── BEAUTIFUL PREVIEW SECTION ──
             <Card className="border border-border shadow-sm overflow-hidden">
               <CardHeader className="bg-muted/50 border-b pb-6">
                 <div className="flex items-center gap-3">
@@ -276,6 +274,7 @@ export function SurveyBuilder({ eventId }: SurveyBuilderProps) {
                   <div className="space-y-12">
                     {fields.map((field, index) => (
                       <div key={field.key} className="space-y-5">
+                        {/* Question */}
                         <div className="flex gap-5">
                           <div className="font-semibold text-3xl text-primary/70 mt-1 w-10 flex-shrink-0">
                             {index + 1}
@@ -283,11 +282,14 @@ export function SurveyBuilder({ eventId }: SurveyBuilderProps) {
                           <div className="flex-1">
                             <h3 className="text-xl font-medium leading-tight">
                               {field.title}
-                              {field.required && <span className="text-destructive ml-1.5 text-xl">*</span>}
+                              {field.required && (
+                                <span className="text-destructive ml-1.5 text-xl">*</span>
+                              )}
                             </h3>
                           </div>
                         </div>
 
+                        {/* Answer Input */}
                         <div className="pl-14">
                           {field.type === 'text' && (
                             <Input
@@ -327,6 +329,7 @@ export function SurveyBuilder({ eventId }: SurveyBuilderProps) {
                       </div>
                     ))}
 
+                    {/* Submit Area */}
                     <div className="pt-8 border-t flex justify-center">
                       <Button
                         size="lg"
@@ -341,7 +344,7 @@ export function SurveyBuilder({ eventId }: SurveyBuilderProps) {
               </CardContent>
             </Card>
           ) : (
-            // Builder Section (tetap sama)
+            // ── BUILDER SECTION ──
             <>
               {fields.length === 0 && (
                 <div className="border border-dashed rounded-2xl p-12 text-center">
@@ -358,6 +361,7 @@ export function SurveyBuilder({ eventId }: SurveyBuilderProps) {
                   <Card key={field.key} className="overflow-hidden">
                     <CardContent className="p-6">
                       <div className="flex gap-4">
+                        {/* Order Controls */}
                         <div className="flex flex-col gap-1 pt-1">
                           <Button
                             type="button"
@@ -381,6 +385,7 @@ export function SurveyBuilder({ eventId }: SurveyBuilderProps) {
                           </Button>
                         </div>
 
+                        {/* Main Content */}
                         <div className="flex-1 space-y-5">
                           <div className="flex items-center gap-3">
                             <span className="font-mono text-sm text-muted-foreground w-6">
@@ -430,6 +435,7 @@ export function SurveyBuilder({ eventId }: SurveyBuilderProps) {
                             </Button>
                           </div>
 
+                          {/* Options Section */}
                           {(field.type === 'single-choice' || field.type === 'multiple-choice') && (
                             <div className="pl-9 space-y-3">
                               <div className="flex flex-wrap gap-2">
@@ -473,6 +479,7 @@ export function SurveyBuilder({ eventId }: SurveyBuilderProps) {
                 ))}
               </div>
 
+              {/* Bottom Actions */}
               <div className="flex gap-3 pt-4">
                 <Button onClick={addField} variant="outline" className="gap-2">
                   <Plus className="h-4 w-4" />
