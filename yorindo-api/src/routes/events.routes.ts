@@ -1,4 +1,4 @@
-import type { FastifyPluginAsync, FastifyReply } from 'fastify'
+import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import {
   auditLogRepository,
@@ -14,7 +14,7 @@ import {
 } from '../container.js'
 import { findTemplateById } from '../data/templates.js'
 import { requireAdmin, requireAuth, requireRoles, type JwtPayload } from '../middleware/auth.js'
-import type { Event, Registration } from '../types/domain.js'
+import type { Event, EventStatus, Registration } from '../types/domain.js'
 import { validateOpenApiRequest, validateOpenApiResponse } from '../lib/openapi-contract.js'
 import { INDONESIAN_INDUSTRIES } from '../repositories/memory/_seeds.js'
 
@@ -275,6 +275,92 @@ function toRegistrationWithContactDto(registration: Registration, contact: Await
   }
 }
 
+const EVENT_STATUS_TRANSITIONS: Record<EventStatus, EventStatus[]> = {
+  draft: ['published'],
+  published: ['active', 'cancelled'],
+  active: ['completed', 'cancelled'],
+  completed: ['archived'],
+  cancelled: [],
+  archived: [],
+}
+
+function isValidEventStatusTransition(from: EventStatus, to: EventStatus) {
+  return EVENT_STATUS_TRANSITIONS[from].includes(to)
+}
+
+function replyInvalidTransition(reply: FastifyReply, from: EventStatus, to: EventStatus) {
+  return reply.status(400).send({
+    error: {
+      code: 'INVALID_EVENT_TRANSITION',
+      message: `Cannot transition event from "${from}" to "${to}"`,
+      details: [
+        {
+          from,
+          to,
+          allowedTransitions: EVENT_STATUS_TRANSITIONS[from],
+        },
+      ],
+    },
+  })
+}
+
+async function updateEventHandler(request: FastifyRequest, reply: FastifyReply) {
+  const params = EventIdParamsSchema.safeParse(request.params)
+  const body = EventUpdateBodySchema.safeParse(request.body)
+  if (!params.success || !body.success) {
+    return replyValidationError(reply, [
+      ...(params.success ? [] : params.error.issues),
+      ...(body.success ? [] : body.error.issues),
+    ], 'Invalid update payload')
+  }
+
+  const existing = await requireEventOr404(reply, params.data.id)
+  if (!existing) return
+  const method = request.method.toLowerCase() as 'put' | 'patch'
+  validateOpenApiRequest({ path: '/events/{id}', method, params: params.data, body: body.data })
+
+  const updateData: Partial<Event> = {}
+  if (body.data.name !== undefined) updateData.name = body.data.name
+  if (body.data.description !== undefined) updateData.description = body.data.description
+  if (body.data.eventDate !== undefined) {
+    updateData.startDate = body.data.eventDate
+    updateData.endDate = body.data.eventDate
+  }
+  if (body.data.timezone !== undefined) updateData.timezone = body.data.timezone
+  if (body.data.capacity !== undefined) updateData.capacity = body.data.capacity
+  if (body.data.targetCriteria !== undefined) updateData.targetCriteria = body.data.targetCriteria as Event['targetCriteria']
+
+  if (body.data.status !== undefined) {
+    if (body.data.status !== existing.status && !isValidEventStatusTransition(existing.status, body.data.status)) {
+      return replyInvalidTransition(reply, existing.status, body.data.status)
+    }
+    updateData.status = body.data.status
+  }
+
+  const updated = await eventRepository.update(existing.id, updateData)
+  const result = updated ?? existing
+
+  if (body.data.status !== undefined && body.data.status !== existing.status) {
+    const actor = request.user as JwtPayload
+    await auditLogRepository.create({
+      action: 'event.status_change',
+      actorId: actor.sub,
+      actorRole: actor.role,
+      eventId: result.id,
+      targetId: result.id,
+      targetType: 'event',
+      metadata: {
+        from: existing.status,
+        to: result.status,
+      },
+    })
+  }
+
+  const responseBody = toEventDto(result)
+  validateOpenApiResponse({ path: '/events/{id}', method, status: 200, body: responseBody })
+  return reply.status(200).send(responseBody)
+}
+
 /**
  * Mengubah daftar industry id event ke slug FE agar URL blast tetap bersih.
  */
@@ -512,6 +598,50 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     })
 
     return reply.status(200).send(toEventDto((updated ?? existing) as Event, undefined, registrations.total))
+  })
+
+  fastify.patch('/api/events/:id', { preHandler: [requireAuth, requireAdmin] }, async (request, reply) => {
+    const params = EventIdParamsSchema.safeParse(request.params)
+    const body = EventUpdateBodySchema.safeParse(request.body)
+    if (!params.success || !body.success) {
+      return replyValidationError(reply, [
+        ...(params.success ? [] : params.error.issues),
+        ...(body.success ? [] : body.error.issues),
+      ], 'Invalid update payload')
+    }
+    const existing = await requireEventOr404(reply, params.data.id)
+    if (!existing) return
+
+    const updateData: Partial<Event> = {}
+    if (body.data.status !== undefined) {
+      if (body.data.status !== existing.status && !isValidEventStatusTransition(existing.status, body.data.status)) {
+        return replyInvalidTransition(reply, existing.status, body.data.status)
+      }
+      updateData.status = body.data.status
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return reply.status(200).send(toEventDto(existing, undefined, 0))
+    }
+
+    const updated = await eventRepository.update(existing.id, updateData)
+    const result = updated ?? existing
+
+    if (body.data.status !== undefined && body.data.status !== existing.status) {
+      const actor = request.user as JwtPayload
+      await auditLogRepository.create({
+        action: 'event.status_change',
+        actorId: actor.sub,
+        actorRole: actor.role,
+        eventId: result.id,
+        targetId: result.id,
+        targetType: 'event',
+        metadata: { from: existing.status, to: body.data.status },
+      })
+    }
+
+    const registrations = await registrationRepository.findByEvent(existing.id, { page: 1, pageSize: 1 })
+    return reply.status(200).send(toEventDto(result, undefined, registrations.total))
   })
 
   fastify.delete('/api/events/:id', { preHandler: [requireAuth, requireAdmin] }, async (request, reply) => {
