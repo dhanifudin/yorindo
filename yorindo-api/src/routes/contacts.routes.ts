@@ -470,8 +470,6 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
 
   fastify.get('/api/contacts/:id/history', adminOnly, async (request, reply) => {
     const paramsResult = MergeParamsSchema.safeParse(request.params)
-  fastify.delete('/api/contacts/duplicates/:id', adminOnly, async (request, reply) => {
-    const paramsResult = FlaggedParamsSchema.safeParse(request.params)
     if (!paramsResult.success) {
       return reply.status(400).send({
         error: {
@@ -490,6 +488,45 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
         error: {
           code: 'NOT_FOUND',
           message: 'Contact not found',
+          details: [],
+        },
+      })
+    }
+
+    const { data: rawRegistrations } = await registrationRepository.findAll(
+      { page: 1, pageSize: 50 },
+      { contactId: contact.id }
+    )
+    const registrationsWithEvents = await Promise.all(
+      rawRegistrations.map(async (reg) => {
+        const event = await eventRepository.findById(reg.eventId)
+        if (!event) return null
+        return toContactHistoryEntry(
+          { eventId: reg.eventId, status: reg.status as RegistrationStatus },
+          { id: event.id, name: event.name, date: event.startDate ?? event.createdAt }
+        )
+      })
+    )
+
+    const data = registrationsWithEvents.filter((item): item is NonNullable<typeof item> => item !== null)
+
+    const responseBody = { data }
+    validateOpenApiResponse({ path: '/contacts/{id}/history', method: 'get', status: 200, body: responseBody })
+    return reply.status(200).send(responseBody)
+  })
+
+  fastify.delete('/api/contacts/duplicates/:id', adminOnly, async (request, reply) => {
+    const paramsResult = FlaggedParamsSchema.safeParse(request.params)
+    if (!paramsResult.success) {
+      return reply.status(400).send({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Invalid duplicate id',
+          details: paramsResult.error.issues,
+        },
+      })
+    }
+
     validateOpenApiRequest({ path: '/contacts/duplicates/{id}', method: 'delete', params: paramsResult.data })
 
     const dismissed = await contactRepository.dismissDuplicate(paramsResult.data.id)
