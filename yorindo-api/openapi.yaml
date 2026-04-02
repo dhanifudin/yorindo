@@ -41,7 +41,7 @@ components:
       schema:
         type: integer
         minimum: 1
-        maximum: 100
+        maximum: 500
         default: 20
       description: Number of items per page
     SortByParam:
@@ -72,7 +72,7 @@ components:
         pageSize:
           type: integer
           minimum: 1
-          maximum: 100
+          maximum: 500
           example: 20
         total:
           type: integer
@@ -485,6 +485,9 @@ components:
             contactName:
               type: string
               example: Budi Santoso
+            contactCompany:
+              type: string
+              example: PT Maju Jaya
             contactEmail:
               type: string
               format: email
@@ -542,7 +545,7 @@ components:
         data:
           type: array
           items:
-            $ref: '#/components/schemas/Registration'
+            $ref: '#/components/schemas/RegistrationWithContact'
         pagination:
           $ref: '#/components/schemas/Pagination'
 
@@ -4096,7 +4099,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Registration'
+                $ref: '#/components/schemas/RegistrationWithContact'
         '401':
           description: Unauthorized
           content:
@@ -4135,7 +4138,105 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Registration'
+                $ref: '#/components/schemas/RegistrationWithContact'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Registration not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+    put:
+      summary: Update registration status (admin only)
+      operationId: updateRegistrationStatusPut
+      tags: [Registrations]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRegistrationStatusBody'
+      responses:
+        '200':
+          description: Registration status updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistrationWithContact'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Registration not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+    patch:
+      summary: Update registration status (admin only)
+      operationId: updateRegistrationStatusPatch
+      tags: [Registrations]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRegistrationStatusBody'
+      responses:
+        '200':
+          description: Registration status updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistrationWithContact'
         '400':
           description: Validation error
           content:
@@ -4223,6 +4324,52 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Admin or staff only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Registration not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+    patch:
+      summary: Clear inherited contact flag for a registration
+      operationId: clearRegistrationFlagPatch
+      description: >
+        Suppresses the inherited contact flag badge for this registration without
+        modifying the contact record. Sets flagOverride=true. Idempotent.
+      tags: [Registrations]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Flag cleared; returns enriched registration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistrationWithContact'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Admin or staff only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
         '404':
           description: Registration not found
           content:
@@ -4234,6 +4381,43 @@ paths:
     put:
       summary: Bulk approve registrations and send tickets (admin/staff)
       operationId: bulkApproveRegistrations
+      tags: [Registrations]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkApproveBody'
+      responses:
+        '200':
+          description: Approval results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkApproveResult'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Insufficient role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+    patch:
+      summary: Bulk approve registrations and send tickets (admin/staff)
+      operationId: bulkApproveRegistrationsPatch
       tags: [Registrations]
       security:
         - BearerAuth: []
