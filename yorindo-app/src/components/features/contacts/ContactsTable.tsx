@@ -64,13 +64,18 @@ const FLAG_FILTER_OPTIONS = [
 ] as const
 
 interface ContactsTableProps {
-  onSelectionChange: (ids: string[]) => void
+  onSelectionChange: (ids: string[], names: string[]) => void   // Diubah: sekarang kirim ids + names
   onToggleSelectMode: () => void
   selectMode: boolean
   selectedIds: string[]
 }
 
-export function ContactsTable({ onSelectionChange, onToggleSelectMode, selectMode, selectedIds }: ContactsTableProps) {
+export function ContactsTable({
+  onSelectionChange,
+  onToggleSelectMode,
+  selectMode,
+  selectedIds,
+}: ContactsTableProps) {
   const searchParams = useSearchParams()
   const { flagFilter, setFilter } = useFilterStore()
   const page = parseInt(searchParams.get('page') ?? '1', 10)
@@ -172,16 +177,21 @@ export function ContactsTable({ onSelectionChange, onToggleSelectMode, selectMod
     manualFiltering: true,
   })
 
-  // Derive stable selectedIds — useMemo with [rowSelection] avoids array reference churn
+  // Ambil selected IDs dan Names
   const derivedSelectedIds = useMemo(
     () => table.getSelectedRowModel().rows.map((r) => r.original.id),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [rowSelection],
+    [rowSelection]
   )
 
+  const derivedSelectedNames = useMemo(
+    () => table.getSelectedRowModel().rows.map((r) => r.original.name),
+    [rowSelection]
+  )
+
+  // Kirim ke parent component
   useEffect(() => {
-    onSelectionChange(derivedSelectedIds)
-  }, [derivedSelectedIds, onSelectionChange])
+    onSelectionChange(derivedSelectedIds, derivedSelectedNames)
+  }, [derivedSelectedIds, derivedSelectedNames, onSelectionChange])
 
   if (isError) {
     return (
@@ -209,200 +219,200 @@ export function ContactsTable({ onSelectionChange, onToggleSelectMode, selectMod
           </SheetHeader>
 
           <div className="flex-1 px-4 overflow-y-auto">
-          <Tabs defaultValue="info" className="mt-0">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="info">Info</TabsTrigger>
-              <TabsTrigger value="riwayat">Riwayat</TabsTrigger>
-              <TabsTrigger value="segmen">Segmen</TabsTrigger>
-            </TabsList>
+            <Tabs defaultValue="info" className="mt-0">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="info">Info</TabsTrigger>
+                <TabsTrigger value="riwayat">Riwayat</TabsTrigger>
+                <TabsTrigger value="segmen">Segmen</TabsTrigger>
+              </TabsList>
 
-            {/* Info tab */}
-            <TabsContent value="info" className="mt-4">
-              <div className="space-y-3 text-sm">
-                <div><span className="text-muted-foreground">Email: </span>{detailContact?.email || '—'}</div>
-                <div><span className="text-muted-foreground">Telepon: </span>{detailContact?.phone}</div>
-                <div><span className="text-muted-foreground">Industri: </span>{detailContact?.industryId}</div>
-                <div><span className="text-muted-foreground">Kota: </span>{detailContact?.city}</div>
-                <div><span className="text-muted-foreground">Ukuran Perusahaan: </span>{detailContact?.companySize}</div>
-                <div>
-                  <span className="text-muted-foreground">Kelengkapan: </span>
-                  {detailContact && `${Math.round(detailContact.completenessScore * 100)}%`}
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Dibuat: </span>
-                  {detailContact && new Date(detailContact.createdAt).toLocaleDateString('id-ID')}
-                </div>
-                {detailContact?.flagCategory && (
+              {/* Info tab */}
+              <TabsContent value="info" className="mt-4">
+                <div className="space-y-3 text-sm">
+                  <div><span className="text-muted-foreground">Email: </span>{detailContact?.email || '—'}</div>
+                  <div><span className="text-muted-foreground">Telepon: </span>{detailContact?.phone}</div>
+                  <div><span className="text-muted-foreground">Industri: </span>{detailContact?.industryId}</div>
+                  <div><span className="text-muted-foreground">Kota: </span>{detailContact?.city}</div>
+                  <div><span className="text-muted-foreground">Ukuran Perusahaan: </span>{detailContact?.companySize}</div>
                   <div>
-                    <span className="text-muted-foreground">Status: </span>
-                    <Badge className={FLAG_LABELS[detailContact.flagCategory].className}>
-                      {FLAG_LABELS[detailContact.flagCategory].label}
-                    </Badge>
+                    <span className="text-muted-foreground">Kelengkapan: </span>
+                    {detailContact && `${Math.round(detailContact.completenessScore * 100)}%`}
                   </div>
-                )}
-              </div>
-
-              {/* Flag actions */}
-              <Separator className="my-4" />
-              <div className="space-y-2">
-                <p className="text-xs text-muted-foreground font-medium">Tandai sebagai:</p>
-                <div className="flex flex-wrap gap-2">
-                  {(Object.keys(FLAG_LABELS) as NonNullable<FlagCategory>[]).map((cat) => (
-                    <Button
-                      key={cat}
-                      variant="outline"
-                      size="sm"
-                      disabled={detailContact?.flagCategory === cat || flagMutation.isPending}
-                      onClick={() => {
-                        if (detailContact) {
-                          flagMutation.mutate({ id: detailContact.id, flagCategory: cat })
-                          setDetailContact({ ...detailContact, flagCategory: cat })
-                        }
-                      }}
-                    >
-                      {FLAG_LABELS[cat].label}
-                    </Button>
-                  ))}
+                  <div>
+                    <span className="text-muted-foreground">Dibuat: </span>
+                    {detailContact && new Date(detailContact.createdAt).toLocaleDateString('id-ID')}
+                  </div>
                   {detailContact?.flagCategory && (
+                    <div>
+                      <span className="text-muted-foreground">Status: </span>
+                      <Badge className={FLAG_LABELS[detailContact.flagCategory].className}>
+                        {FLAG_LABELS[detailContact.flagCategory].label}
+                      </Badge>
+                    </div>
+                  )}
+                </div>
+
+                {/* Flag actions */}
+                <Separator className="my-4" />
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground font-medium">Tandai sebagai:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {(Object.keys(FLAG_LABELS) as NonNullable<FlagCategory>[]).map((cat) => (
+                      <Button
+                        key={cat}
+                        variant="outline"
+                        size="sm"
+                        disabled={detailContact?.flagCategory === cat || flagMutation.isPending}
+                        onClick={() => {
+                          if (detailContact) {
+                            flagMutation.mutate({ id: detailContact.id, flagCategory: cat })
+                            setDetailContact({ ...detailContact, flagCategory: cat })
+                          }
+                        }}
+                      >
+                        {FLAG_LABELS[cat].label}
+                      </Button>
+                    ))}
+                    {detailContact?.flagCategory && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={flagMutation.isPending}
+                        onClick={() => {
+                          if (detailContact) {
+                            flagMutation.mutate({ id: detailContact.id, flagCategory: null })
+                            setDetailContact({ ...detailContact, flagCategory: null })
+                          }
+                        }}
+                      >
+                        Hapus Tanda
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Suggested Events section */}
+                <Separator className="my-4" />
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs text-muted-foreground font-medium">Event yang Disarankan</p>
                     <Button
                       variant="ghost"
                       size="sm"
-                      disabled={flagMutation.isPending}
-                      onClick={() => {
-                        if (detailContact) {
-                          flagMutation.mutate({ id: detailContact.id, flagCategory: null })
-                          setDetailContact({ ...detailContact, flagCategory: null })
-                        }
-                      }}
+                      className="h-auto py-0.5 px-2 text-xs"
+                      onClick={() => setEventsExpanded((v) => !v)}
                     >
-                      Hapus Tanda
+                      {eventsExpanded ? 'Tutup' : 'Lihat'}
                     </Button>
+                  </div>
+                  {eventsExpanded && (
+                    eventsLoading ? (
+                      <div className="space-y-2">
+                        {Array.from({ length: 3 }).map((_, i) => (
+                          <div key={i} className="h-10 bg-muted rounded animate-pulse" />
+                        ))}
+                      </div>
+                    ) : (recommendedEventsData?.recommendations ?? []).length === 0 ? (
+                      <p className="text-xs text-muted-foreground">Tidak ada event yang cocok.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {(recommendedEventsData?.recommendations ?? []).map((rec) => (
+                          <div key={rec.eventId} className="rounded-md border p-2 text-xs">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="font-medium">{rec.name}</span>
+                              <Badge className={
+                                rec.score >= 70 ? 'bg-green-100 text-green-700 text-[10px]' :
+                                rec.score >= 40 ? 'bg-yellow-100 text-yellow-700 text-[10px]' :
+                                'bg-red-100 text-red-700 text-[10px]'
+                              }>
+                                {rec.score}%
+                              </Badge>
+                            </div>
+                            <p className="text-muted-foreground mt-0.5">
+                              {new Date(rec.eventDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                              {' · '}{rec.status}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )
                   )}
                 </div>
-              </div>
+              </TabsContent>
 
-              {/* Suggested Events section */}
-              <Separator className="my-4" />
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs text-muted-foreground font-medium">Event yang Disarankan</p>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-auto py-0.5 px-2 text-xs"
-                    onClick={() => setEventsExpanded((v) => !v)}
-                  >
-                    {eventsExpanded ? 'Tutup' : 'Lihat'}
-                  </Button>
-                </div>
-                {eventsExpanded && (
-                  eventsLoading ? (
-                    <div className="space-y-2">
-                      {Array.from({ length: 3 }).map((_, i) => (
-                        <div key={i} className="h-10 bg-muted rounded animate-pulse" />
-                      ))}
-                    </div>
-                  ) : (recommendedEventsData?.recommendations ?? []).length === 0 ? (
-                    <p className="text-xs text-muted-foreground">Tidak ada event yang cocok.</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {(recommendedEventsData?.recommendations ?? []).map((rec) => (
-                        <div key={rec.eventId} className="rounded-md border p-2 text-xs">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="font-medium">{rec.name}</span>
-                            <Badge className={
-                              rec.score >= 70 ? 'bg-green-100 text-green-700 text-[10px]' :
-                              rec.score >= 40 ? 'bg-yellow-100 text-yellow-700 text-[10px]' :
-                              'bg-red-100 text-red-700 text-[10px]'
-                            }>
-                              {rec.score}%
-                            </Badge>
-                          </div>
-                          <p className="text-muted-foreground mt-0.5">
-                            {new Date(rec.eventDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
-                            {' · '}{rec.status}
+              {/* Riwayat tab */}
+              <TabsContent value="riwayat" className="mt-4">
+                {historyLoading ? (
+                  <div className="space-y-2">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <Skeleton key={i} className="h-12" />
+                    ))}
+                  </div>
+                ) : !historyData?.registrations.length ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">
+                    Belum ada riwayat event
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {historyData.registrations.map((r) => (
+                      <div
+                        key={r.eventId}
+                        className="flex items-center justify-between py-2 border-b last:border-0"
+                      >
+                        <div>
+                          <p className="text-sm font-medium">{r.eventName}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(r.eventDate).toLocaleDateString('id-ID', {
+                              day: 'numeric',
+                              month: 'long',
+                              year: 'numeric',
+                            })}
                           </p>
                         </div>
-                      ))}
-                    </div>
-                  )
-                )}
-              </div>
-            </TabsContent>
-
-            {/* Riwayat tab */}
-            <TabsContent value="riwayat" className="mt-4">
-              {historyLoading ? (
-                <div className="space-y-2">
-                  {Array.from({ length: 3 }).map((_, i) => (
-                    <Skeleton key={i} className="h-12" />
-                  ))}
-                </div>
-              ) : !historyData?.registrations.length ? (
-                <p className="text-sm text-muted-foreground text-center py-8">
-                  Belum ada riwayat event
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {historyData.registrations.map((r) => (
-                    <div
-                      key={r.eventId}
-                      className="flex items-center justify-between py-2 border-b last:border-0"
-                    >
-                      <div>
-                        <p className="text-sm font-medium">{r.eventName}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(r.eventDate).toLocaleDateString('id-ID', {
-                            day: 'numeric',
-                            month: 'long',
-                            year: 'numeric',
-                          })}
-                        </p>
+                        <Badge className={STATUS_BADGE[r.status]}>
+                          {STATUS_LABELS[r.status]}
+                        </Badge>
                       </div>
-                      <Badge className={STATUS_BADGE[r.status]}>
-                        {STATUS_LABELS[r.status]}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-
-            {/* Segmen tab */}
-            <TabsContent value="segmen" className="mt-4 space-y-3 text-sm">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <p className="text-xs text-muted-foreground font-medium uppercase">Industri</p>
-                  <p className="mt-0.5">{detailContact?.industryId || '—'}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground font-medium uppercase">Kota</p>
-                  <p className="mt-0.5">{detailContact?.city || '—'}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground font-medium uppercase">Ukuran Perusahaan</p>
-                  <p className="mt-0.5">{detailContact?.companySize || '—'}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground font-medium uppercase">Kelengkapan</p>
-                  <p className="mt-0.5 font-medium">
-                    {detailContact ? `${Math.round(detailContact.completenessScore * 100)}%` : '—'}
-                  </p>
-                </div>
-              </div>
-              <Separator />
-              <div>
-                <p className="text-xs text-muted-foreground font-medium uppercase mb-1">Status Tanda</p>
-                {detailContact?.flagCategory ? (
-                  <Badge className={FLAG_LABELS[detailContact.flagCategory].className}>
-                    {FLAG_LABELS[detailContact.flagCategory].label}
-                  </Badge>
-                ) : (
-                  <p className="text-muted-foreground">Tidak ada tanda</p>
+                    ))}
+                  </div>
                 )}
-              </div>
-            </TabsContent>
-          </Tabs>
+              </TabsContent>
+
+              {/* Segmen tab */}
+              <TabsContent value="segmen" className="mt-4 space-y-3 text-sm">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-xs text-muted-foreground font-medium uppercase">Industri</p>
+                    <p className="mt-0.5">{detailContact?.industryId || '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground font-medium uppercase">Kota</p>
+                    <p className="mt-0.5">{detailContact?.city || '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground font-medium uppercase">Ukuran Perusahaan</p>
+                    <p className="mt-0.5">{detailContact?.companySize || '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground font-medium uppercase">Kelengkapan</p>
+                    <p className="mt-0.5 font-medium">
+                      {detailContact ? `${Math.round(detailContact.completenessScore * 100)}%` : '—'}
+                    </p>
+                  </div>
+                </div>
+                <Separator />
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium uppercase mb-1">Status Tanda</p>
+                  {detailContact?.flagCategory ? (
+                    <Badge className={FLAG_LABELS[detailContact.flagCategory].className}>
+                      {FLAG_LABELS[detailContact.flagCategory].label}
+                    </Badge>
+                  ) : (
+                    <p className="text-muted-foreground">Tidak ada tanda</p>
+                  )}
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
         </SheetContent>
       </Sheet>
@@ -427,7 +437,6 @@ export function ContactsTable({ onSelectionChange, onToggleSelectMode, selectMod
 
       {/* Mobile section */}
       <div className="md:hidden">
-        {/* Mobile sticky select bar */}
         <div className="sticky top-0 z-10 bg-background border-b py-2 flex items-center justify-between mb-2">
           <button
             type="button"
@@ -450,7 +459,6 @@ export function ContactsTable({ onSelectionChange, onToggleSelectMode, selectMod
           )}
         </div>
 
-        {/* Mobile cards */}
         <div className="space-y-2">
           {isLoading ? (
             Array.from({ length: SKELETON_ROWS }).map((_, i) => (
@@ -547,10 +555,7 @@ export function ContactsTable({ onSelectionChange, onToggleSelectMode, selectMod
                   onClick={() => setDetailContact(row.original)}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell
-                      key={cell.id}
-                      className="whitespace-nowrap"
-                    >
+                    <TableCell key={cell.id} className="whitespace-nowrap">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}

@@ -66,7 +66,10 @@ export class InMemoryEventRepository implements IEventRepository {
         id,
         name: EVENT_NAMES[i]!,
         slug: EVENT_NAMES[i]!.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
-        date: eventDate,
+        startDate: eventDate,
+        startTime: '09:00',
+        endDate: eventDate,
+        endTime: '17:00',
         timezone: i % 3 === 0 ? 'Asia/Makassar' : i % 3 === 1 ? 'Asia/Jayapura' : 'Asia/Jakarta',
         city: CITIES[i % CITIES.length]!,
         venue: faker.location.streetAddress() + ', ' + CITIES[i % CITIES.length],
@@ -84,6 +87,9 @@ export class InMemoryEventRepository implements IEventRepository {
         surveySchemaId: i < 3 ? SURVEY_SCHEMA_IDS[i]! : null,
         vendorId: i < 3 ? SEED_VENDOR_IDS[i]! : null,
         status,
+        isPaid: i % 2 === 0,
+        price: i % 2 === 0 ? 500000 : null,
+        paymentMethod: i % 2 === 0 ? 'bank_transfer' : null,
         deletedAt: null,
         createdAt: new Date(now - (12 - i) * 10 * 86400000).toISOString(),
         updatedAt: new Date(now - i * 86400000).toISOString(),
@@ -165,12 +171,12 @@ export class InMemoryEventRepository implements IEventRepository {
     const upcoming = Array.from(this.events.values())
       .filter((event) => {
         if (!['published', 'active'].includes(event.status)) return false
-        const daysTill = Math.floor((new Date(event.date).getTime() - Date.now()) / 86400000)
+        const daysTill = Math.floor((new Date(event.startDate).getTime() - Date.now()) / 86400000)
         return daysTill >= 0 && daysTill <= 14
       })
-      .sort((left, right) => new Date(left.date).getTime() - new Date(right.date).getTime())[0]
+      .sort((left, right) => new Date(left.startDate).getTime() - new Date(right.startDate).getTime())[0]
     if (!upcoming) return null
-    const daysTill = Math.floor((new Date(upcoming.date).getTime() - Date.now()) / 86400000)
+    const daysTill = Math.floor((new Date(upcoming.startDate).getTime() - Date.now()) / 86400000)
     return { eventId: upcoming.id, eventName: upcoming.name, daysTillEvent: daysTill, uncontactedCount: 42 }
   }
 }

@@ -2,6 +2,7 @@ import type { Registration, RegistrationStatus, ConfirmationStats, BlastHistoryE
 import type { PaginationParams } from './IContactRepository.js'
 
 export interface RegistrationFilters {
+  contactId?: EntityId
   eventId?: EntityId
   status?: RegistrationStatus
   aiScoreMin?: number
