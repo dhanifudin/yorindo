@@ -404,8 +404,6 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       deletedAt: null,
     })
     const registrations = await registrationRepository.findByEvent(event.id, { page: 1, pageSize: 1 })
-    const responseBody = toEventDto(event, undefined, registrations.total)
-    
     const token = request.user as JwtPayload
     await auditLogRepository.create({
       action: 'event.created',
@@ -417,7 +415,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       metadata: { slug: event.slug },
     })
 
-    const responseBody = toEventDto(event)
+    const responseBody = toEventDto(event, undefined, registrations.total)
     validateOpenApiResponse({ path: '/events', method: 'post', status: 201, body: responseBody })
     return reply.status(201).send(responseBody)
   })
@@ -473,7 +471,6 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
 
     const updated = await eventRepository.update(existing.id, updateData)
     const registrations = await registrationRepository.findByEvent(existing.id, { page: 1, pageSize: 1 })
-    return reply.status(200).send(toEventDto(updated ?? existing, undefined, registrations.total))
     
     const token = request.user as JwtPayload
     await auditLogRepository.create({
@@ -486,7 +483,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       metadata: { fieldsUpdated: Object.keys(updateData) },
     })
 
-    return reply.status(200).send(toEventDto(updated ?? existing))
+    return reply.status(200).send(toEventDto((updated ?? existing) as Event, undefined, registrations.total))
   })
 
   fastify.delete('/api/events/:id', { preHandler: [requireAuth, requireAdmin] }, async (request, reply) => {
