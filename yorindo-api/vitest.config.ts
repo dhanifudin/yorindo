@@ -7,6 +7,7 @@ export default defineConfig({
     env: {
       JWT_SECRET: 'test-jwt-secret',
       JWT_REFRESH_SECRET: 'test-jwt-refresh-secret',
+      REDIS_URL: '',
     },
     coverage: {
       provider: 'v8',
