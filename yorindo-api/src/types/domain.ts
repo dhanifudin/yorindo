@@ -75,7 +75,10 @@ export interface Event {
   id: EntityId
   name: string
   slug: string
-  date: ISODateString
+  startDate: ISODateString
+  startTime: string
+  endDate: ISODateString
+  endTime: string
   timezone: string
   city: string | null
   venue: string | null
@@ -89,6 +92,9 @@ export interface Event {
   surveySchemaId: string | null     // document-style survey schema id
   vendorId: EntityId | null
   status: EventStatus
+  isPaid: boolean
+  price: number | null
+  paymentMethod: string | null
   deletedAt: ISODateString | null
   createdAt: ISODateString
   updatedAt: ISODateString

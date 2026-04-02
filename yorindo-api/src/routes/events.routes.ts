@@ -29,8 +29,13 @@ const EventListQuerySchema = z.object({
 
 const EventCreateBodySchema = z.object({
   name: z.string().trim().min(1),
+  slug: z.string().trim().optional(),
   description: z.string().trim().optional(),
-  eventDate: z.string().datetime(),
+  eventDate: z.string().datetime(), // keep backward compatible openapi
+  startDate: z.string().datetime().optional(),
+  startTime: z.string().regex(/^([0-1]\d|2[0-3]):[0-5]\d$/).optional(),
+  endDate: z.string().datetime().optional(),
+  endTime: z.string().regex(/^([0-1]\d|2[0-3]):[0-5]\d$/).optional(),
   timezone: z.enum(['Asia/Jakarta', 'Asia/Makassar', 'Asia/Jayapura']),
   capacity: z.number().int().min(1).optional(),
   venue: z.string().trim().optional(),
@@ -38,16 +43,55 @@ const EventCreateBodySchema = z.object({
   eventType: z.enum(['conference', 'workshop', 'networking', 'seminar', 'webinar']).optional(),
   topicTags: z.array(z.string().trim()).optional(),
   targetCriteria: z.record(z.string(), z.unknown()).optional(),
+  approvalMode: z.enum(['auto', 'hybrid', 'manual']).default('manual'),
+  notificationChannel: z.enum(['email', 'whatsapp']).default('email'),
+  scanFormat: z.enum(['qr']).default('qr'),
+  isPaid: z.boolean().default(false),
+  price: z.number().min(0).nullable().optional(),
+  paymentMethod: z.string().nullable().optional(),
+}).superRefine((val, ctx) => {
+  const sDate = val.startDate ?? val.eventDate;
+  const eDate = val.endDate ?? val.eventDate;
+  if (eDate < sDate) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['endDate'], message: 'Must be after start_date' })
+  } else if (eDate === sDate && val.startTime && val.endTime && val.endTime <= val.startTime) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['endTime'], message: 'Must be after start_time' })
+  }
+  if (val.isPaid && (!val.price || !val.paymentMethod)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['price'], message: 'Price and Payment Method required for paid events' })
+  }
 })
 
 const EventUpdateBodySchema = z.object({
   name: z.string().trim().min(1).optional(),
+  slug: z.string().trim().optional(),
   description: z.string().trim().optional(),
   eventDate: z.string().datetime().optional(),
+  startDate: z.string().datetime().optional(),
+  startTime: z.string().regex(/^([0-1]\d|2[0-3]):[0-5]\d$/).optional(),
+  endDate: z.string().datetime().optional(),
+  endTime: z.string().regex(/^([0-1]\d|2[0-3]):[0-5]\d$/).optional(),
   timezone: z.enum(['Asia/Jakarta', 'Asia/Makassar', 'Asia/Jayapura']).optional(),
   capacity: z.number().int().min(1).optional(),
   status: z.enum(['draft', 'published', 'active', 'completed', 'cancelled', 'archived']).optional(),
   targetCriteria: z.record(z.string(), z.unknown()).optional(),
+  approvalMode: z.enum(['auto', 'hybrid', 'manual']).optional(),
+  notificationChannel: z.enum(['email', 'whatsapp']).optional(),
+  scanFormat: z.enum(['qr']).optional(),
+  isPaid: z.boolean().optional(),
+  price: z.number().min(0).nullable().optional(),
+  paymentMethod: z.string().nullable().optional(),
+}).superRefine((val, ctx) => {
+  const sDate = val.startDate ?? val.eventDate;
+  const eDate = val.endDate ?? val.eventDate;
+  if (sDate && eDate && eDate < sDate) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['endDate'], message: 'Must be after start_date' })
+  } else if (sDate && eDate && sDate === eDate && val.startTime && val.endTime && val.endTime <= val.startTime) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['endTime'], message: 'Must be after start_time' })
+  }
+  if (val.isPaid === true && (!val.price || !val.paymentMethod)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['price'], message: 'Price and Payment Method required for paid events' })
+  }
 })
 
 const EventRegistrationsQuerySchema = z.object({
@@ -103,7 +147,11 @@ function toEventDto(event: Event, surveySchema?: unknown) {
     slug: event.slug,
     description: event.description ?? '',
     status: event.status,
-    eventDate: event.date,
+    eventDate: event.startDate,
+    startDate: event.startDate,
+    endDate: event.endDate,
+    startTime: event.startTime,
+    endTime: event.endTime,
     timezone: event.timezone,
     capacity: event.capacity ?? undefined,
     targetCriteria: event.targetCriteria ?? {},
@@ -114,6 +162,12 @@ function toEventDto(event: Event, surveySchema?: unknown) {
     topicTags: [],
     createdAt: event.createdAt,
     updatedAt: event.updatedAt,
+    isPaid: event.isPaid,
+    price: event.price,
+    paymentMethod: event.paymentMethod,
+    approvalMode: event.approvalMode,
+    scanFormat: event.scanFormat,
+    notificationChannel: event.notificationChannel,
   }
 }
 
@@ -261,6 +315,15 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(200).send(responseBody)
   })
 
+  fastify.get('/api/events/check-slug', { preHandler: requireAuth }, async (request, reply) => {
+    const CheckSlugQuery = z.object({ slug: z.string().trim().min(1), excludeId: z.string().trim().optional() })
+    const parsed = CheckSlugQuery.safeParse(request.query)
+    if (!parsed.success) return replyValidationError(reply, parsed.error.issues, 'Invalid query')
+    const existing = await eventRepository.findBySlug(parsed.data.slug)
+    const isAvailable = !existing || (parsed.data.excludeId && existing.id === parsed.data.excludeId)
+    return reply.status(200).send({ available: !!isAvailable })
+  })
+
   fastify.get('/api/events/upcoming-uncontacted', { preHandler: requireAuth }, async (_request, reply) => {
     const upcoming = await eventRepository.getUpcomingUncontacted()
 
@@ -270,7 +333,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
           event: {
             id: event.id,
             name: event.name,
-            eventDate: event.date,
+            eventDate: event.startDate,
             industryTags: toIndustryTags(event),
           },
           daysUntil: upcoming.daysTillEvent,
@@ -292,19 +355,33 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
 
     const payload = parsed.data
     validateOpenApiRequest({ path: '/events', method: 'post', body: payload })
+    const baseSlug = payload.slug || payload.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+    let finalSlug = baseSlug
+    let counter = 2
+    while (await eventRepository.findBySlug(finalSlug)) {
+      finalSlug = `${baseSlug}-${counter}`
+      counter++
+    }
+
     const event = await eventRepository.create({
       name: payload.name,
-      slug: payload.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
-      date: payload.eventDate,
+      slug: finalSlug,
+      startDate: payload.startDate ?? payload.eventDate,
+      endDate: payload.endDate ?? payload.eventDate,
+      startTime: payload.startTime ?? '09:00',
+      endTime: payload.endTime ?? '17:00',
       timezone: payload.timezone,
       city: null,
       venue: payload.venue ?? null,
       description: payload.description ?? null,
       capacity: payload.capacity ?? null,
       waitlistBuffer: 10,
-      approvalMode: 'manual',
-      notificationChannel: 'email',
-      scanFormat: 'qr',
+      approvalMode: payload.approvalMode,
+      notificationChannel: payload.notificationChannel,
+      scanFormat: payload.scanFormat,
+      isPaid: payload.isPaid,
+      price: payload.price ?? null,
+      paymentMethod: payload.paymentMethod ?? null,
       targetCriteria: payload.targetCriteria ? { ...payload.targetCriteria } : {
         industries: payload.industryTags ?? [],
       },
@@ -313,6 +390,18 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       status: 'draft',
       deletedAt: null,
     })
+    
+    const token = request.user as JwtPayload
+    await auditLogRepository.create({
+      action: 'event.created',
+      actorId: token?.sub ?? null,
+      actorRole: token?.role ?? 'system',
+      eventId: event.id,
+      targetId: event.id,
+      targetType: 'event',
+      metadata: { slug: event.slug },
+    })
+
     const responseBody = toEventDto(event)
     validateOpenApiResponse({ path: '/events', method: 'post', status: 201, body: responseBody })
     return reply.status(201).send(responseBody)
@@ -345,14 +434,40 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     if (!existing) return
     const updateData: Partial<Event> = {}
     if (body.data.name !== undefined) updateData.name = body.data.name
+    if (body.data.slug !== undefined) updateData.slug = body.data.slug
     if (body.data.description !== undefined) updateData.description = body.data.description
-    if (body.data.eventDate !== undefined) updateData.date = body.data.eventDate
+    if (body.data.eventDate !== undefined) {
+      updateData.startDate = body.data.eventDate
+      updateData.endDate = body.data.eventDate
+    }
+    if (body.data.startDate !== undefined) updateData.startDate = body.data.startDate
+    if (body.data.endDate !== undefined) updateData.endDate = body.data.endDate
+    if (body.data.startTime !== undefined) updateData.startTime = body.data.startTime
+    if (body.data.endTime !== undefined) updateData.endTime = body.data.endTime
     if (body.data.timezone !== undefined) updateData.timezone = body.data.timezone
     if (body.data.capacity !== undefined) updateData.capacity = body.data.capacity
     if (body.data.status !== undefined) updateData.status = body.data.status
+    if (body.data.approvalMode !== undefined) updateData.approvalMode = body.data.approvalMode
+    if (body.data.notificationChannel !== undefined) updateData.notificationChannel = body.data.notificationChannel
+    if (body.data.scanFormat !== undefined) updateData.scanFormat = body.data.scanFormat
+    if (body.data.isPaid !== undefined) updateData.isPaid = body.data.isPaid
+    if (body.data.price !== undefined) updateData.price = body.data.price
+    if (body.data.paymentMethod !== undefined) updateData.paymentMethod = body.data.paymentMethod
     if (body.data.targetCriteria !== undefined) updateData.targetCriteria = body.data.targetCriteria as Event['targetCriteria']
 
     const updated = await eventRepository.update(existing.id, updateData)
+    
+    const token = request.user as JwtPayload
+    await auditLogRepository.create({
+      action: 'event.updated',
+      actorId: token?.sub ?? null,
+      actorRole: token?.role ?? 'system',
+      eventId: existing.id,
+      targetId: existing.id,
+      targetType: 'event',
+      metadata: { fieldsUpdated: Object.keys(updateData) },
+    })
+
     return reply.status(200).send(toEventDto(updated ?? existing))
   })
 
@@ -380,7 +495,10 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     const clonedEvent = await eventRepository.create({
       name: clonedEventName,
       slug: clonedEventSlug,
-      date: event.date,
+      startDate: event.startDate,
+      endDate: event.endDate,
+      startTime: event.startTime,
+      endTime: event.endTime,
       timezone: event.timezone,
       city: event.city,
       venue: event.venue,
@@ -394,6 +512,9 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       surveySchemaId: null, // we will recreate survey below
       vendorId: event.vendorId,
       status: 'draft',
+      isPaid: event.isPaid,
+      price: event.price,
+      paymentMethod: event.paymentMethod,
       deletedAt: null,
     })
 
@@ -521,7 +642,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     const snapshot = {
       eventId: event.id,
       eventName: event.name,
-      eventDate: event.date,
+      eventDate: event.startDate,
       capacity: event.capacity,
       registrationCount: registrations.total,
       approvedCount: registrations.data.filter((registration) => ['approved', 'attended'].includes(registration.status)).length,
