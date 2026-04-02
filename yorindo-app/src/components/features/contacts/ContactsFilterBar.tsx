@@ -3,7 +3,7 @@
 import { useCallback, useRef, useState } from 'react'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Search, X } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -70,6 +70,9 @@ export function ContactsFilterBar() {
 
   const hasActiveFilters = !!(industry || city || companySize || q)
 
+  // ── State lokal untuk input nama (debounced ke URL param q) ──────────────
+  const [nameQuery, setNameQuery] = useState(q)
+
   // Facets query
   const { data: facets } = useQuery<ContactsFacets>({
     queryKey: ['contacts-facets'],
@@ -89,7 +92,7 @@ export function ContactsFilterBar() {
     const params = new URLSearchParams(searchParams.toString())
     if (value) params.set(key, value)
     else params.delete(key)
-    params.delete('page') // reset to page 1 on filter change
+    params.delete('page')
     router.push(`${pathname}?${params.toString()}`)
   }, [searchParams, router, pathname])
 
@@ -97,6 +100,20 @@ export function ContactsFilterBar() {
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(fn, 300)
   }, [])
+
+  // ── Handler search nama (debounce 350ms ke URL param q) ──────────────────
+  const handleNameChange = (val: string) => {
+    setNameQuery(val)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      updateParam('q', val)
+    }, 350)
+  }
+
+  const clearNameSearch = () => {
+    setNameQuery('')
+    updateParam('q', '')
+  }
 
   const fetchIndustrySuggestions = async (qval: string) => {
     if (!qval || qval.length < 2) {
@@ -137,12 +154,12 @@ export function ContactsFilterBar() {
   }
 
   const handleReset = () => {
-    const params = new URLSearchParams()
     router.push(pathname)
     setSmartQuery('')
     setAiStatus('idle')
     setMatchedSlug(null)
     setUseSmartMode(false)
+    setNameQuery('')
   }
 
   const handleSaveSegment = () => {
@@ -154,14 +171,12 @@ export function ContactsFilterBar() {
     setSegmentName('')
   }
 
-  // Get facet count for industry
   const getIndustryCount = (slug: string) => {
     if (!facets) return null
     const f = facets.industry.find((i) => i.slug === slug)
     return f?.count ?? null
   }
 
-  // Get facet count for company size
   const getCompanySizeCount = (slug: string) => {
     if (!facets) return null
     const f = facets.companySize.find((s) => s.slug === slug)
@@ -172,6 +187,31 @@ export function ContactsFilterBar() {
 
   return (
     <div className="flex flex-wrap gap-3 mb-4 items-end">
+
+      {/* ── SEARCH NAMA — baru ───────────────────────────────────────────── */}
+      <div>
+        <label className="block text-xs text-muted-foreground mb-1">Cari Nama</label>
+        <div className="relative w-48">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+          <Input
+            type="text"
+            placeholder="Cari nama kontak..."
+            value={nameQuery}
+            onChange={(e) => handleNameChange(e.target.value)}
+            className="h-9 pl-8 pr-7"
+          />
+          {nameQuery && (
+            <button
+              type="button"
+              onClick={clearNameSearch}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Industry filter */}
       <div className="space-y-1">
         <div className="flex items-center gap-2">
@@ -299,7 +339,7 @@ export function ContactsFilterBar() {
         Reset Filter
       </Button>
 
-      {/* Save Segment popover — only when filters active */}
+      {/* Save Segment popover */}
       {hasActiveFilters && (
         <Popover>
           <PopoverTrigger asChild>

@@ -32,7 +32,6 @@ function isParticipantAllowed(pathname: string): boolean {
   return PARTICIPANT_ALLOWED_PATHS.includes(pathname)
 }
 
-
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const accessToken = useAuthStore((s) => s.accessToken)
   const user = useAuthStore((s) => s.user)

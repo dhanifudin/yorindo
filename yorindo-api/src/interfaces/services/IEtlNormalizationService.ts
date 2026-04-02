@@ -4,22 +4,24 @@ export interface RawContactRow {
 
 export interface NormalizedRow {
   name: string
-  phone: string             // normalized to +62XXXXXXXXXX
+  phone: string
   email: string | null
   city: string | null
   company: string | null
+  department: string | null
   companySize: string | null
   industrySlug: string | null
   jobTitleSlug: string | null
-  confidence: number        // 0.0 to 1.0 — rows < 0.7 become flagged records
-  flags: string[]           // reasons for low confidence
+  confidence: number
+  flags: string[]
+  provinceCode: string | null
+  provinceName: string | null
+  cityCode: string | null
+  cityName: string | null
+  eventDate: string | null
+  eventNameRaw: string | null
 }
 
 export interface IEtlNormalizationService {
-  /**
-   * Normalize a batch of raw contact rows from an Excel upload.
-   * Returns one NormalizedRow per input row.
-   * Low-confidence rows (confidence < 0.7) are flagged, not rejected.
-   */
   normalizeBatch(rows: RawContactRow[]): Promise<NormalizedRow[]>
 }
