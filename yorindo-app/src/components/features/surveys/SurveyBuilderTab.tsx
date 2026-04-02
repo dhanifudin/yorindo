@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react'
+'use client'
+
+import React, { useState, useEffect, useMemo } from 'react'
 import {
   DndContext,
   closestCenter,
@@ -62,7 +64,8 @@ interface SortableFieldProps {
 }
 
 function SortableField({ field, onChange, onRemove }: SortableFieldProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: field.id })
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: field.id })
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -90,22 +93,23 @@ export function SurveyBuilderTab({
   onTogglePostSurvey,
   onPreview,
 }: SurveyBuilderTabProps) {
-  const [fields, setFields] = useState<SurveyField[]>([])
   const [selectedType, setSelectedType] = useState<SurveyFieldType>('text')
 
   const { data: schema, isLoading, isError } = useSurveySchema(eventId, type)
   const saveMutation = useSaveSurveySchema(eventId)
 
-  // Use a ref to track if initial data was loaded, preventing infinite effect loops
-  const initialized = useRef(false)
-
-  useEffect(() => {
-    if (schema && !initialized.current) {
-      initialized.current = true
-      const loadedFields = schemaToFields(schema.schema, schema.uiSchema)
-      setFields(loadedFields)
-    }
+  // ✅ FIX: derive initial fields safely
+  const initialFields = useMemo(() => {
+    if (!schema) return []
+    return schemaToFields(schema.schema, schema.uiSchema)
   }, [schema])
+
+  const [fields, setFields] = useState<SurveyField[]>(initialFields)
+
+  // ✅ Sync ketika schema berubah (aman karena dari memo)
+  useEffect(() => {
+    setFields(initialFields)
+  }, [initialFields])
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -179,7 +183,11 @@ export function SurveyBuilderTab({
     return (
       <div className="flex flex-col items-center justify-center py-20 text-destructive gap-3">
         <AlertCircle size={32} />
-        <p className="text-sm text-center">Gagal memuat desain survei.<br />Silakan coba lagi nanti.</p>
+        <p className="text-sm text-center">
+          Gagal memuat desain survei.
+          <br />
+          Silakan coba lagi nanti.
+        </p>
       </div>
     )
 
@@ -190,8 +198,12 @@ export function SurveyBuilderTab({
       {type === 'post-event' && (
         <div className="flex items-center justify-between p-4 bg-violet-50/50 border border-violet-100 rounded-xl">
           <div className="space-y-0.5">
-            <Label className="text-base font-semibold text-violet-900">Aktifkan Survei Post-Event</Label>
-            <p className="text-xs text-violet-600/80">Kirimkan survei kepuasan kepada peserta setelah event berakhir.</p>
+            <Label className="text-base font-semibold text-violet-900">
+              Aktifkan Survei Post-Event
+            </Label>
+            <p className="text-xs text-violet-600/80">
+              Kirimkan survei kepuasan kepada peserta setelah event berakhir.
+            </p>
           </div>
           <Switch
             checked={postSurveyEnabled}
