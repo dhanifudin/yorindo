@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Check, ChevronsUpDown, X, Upload, ImageIcon, Loader2 } from 'lucide-react'
+import { useMutation } from '@tanstack/react-query'
 import { useCreateEvent, useUpdateEvent } from '@/hooks/useEvents'
 import { useTemplates } from '@/hooks/useTemplates'
 import { useVendors } from '@/hooks/useVendors'
@@ -61,6 +62,9 @@ const schema = z.object({
   is_paid: z.boolean().optional(),
   price: z.string().optional(),
   payment_method: z.string().optional(),
+  targetCriteria_industry: z.string().optional(),
+  targetCriteria_city: z.string().optional(),
+  targetCriteria_companySize: z.string().optional(),
 }).refine(
   (data) => !data.is_paid || (data.price !== undefined && data.price !== '' && Number(data.price) >= 0),
   { message: "Harga wajib diisi dan minimal 0", path: ["price"] }
@@ -315,10 +319,34 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
       is_paid: event?.is_paid ?? false,
       price: event?.price != null ? String(event.price) : '',
       payment_method: event?.payment_method ?? '',
+      targetCriteria_industry: (event?.targetCriteria?.industry as string) ?? '',
+      targetCriteria_city: (event?.targetCriteria?.city as string) ?? '',
+      targetCriteria_companySize: (event?.targetCriteria?.companySize as string) ?? '',
     },
   })
 
   const isPaidWatched = watch('is_paid')
+  const targetIndustryWatched = watch('targetCriteria_industry')
+  const targetCityWatched = watch('targetCriteria_city')
+  const targetCompanySizeWatched = watch('targetCriteria_companySize')
+
+  const previewMutation = useMutation({
+    mutationFn: async () => {
+      const crit: Record<string, string> = {}
+      if (targetIndustryWatched) crit.industry = targetIndustryWatched
+      if (targetCityWatched) crit.city = targetCityWatched
+      if (targetCompanySizeWatched) crit.companySize = targetCompanySizeWatched
+
+      const testId = event?.id || 'new'
+      const res = await fetch(`/api/events/${testId}/audience-preview`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(crit),
+      })
+      if (!res.ok) throw new Error('Gagal mendapatkan preview')
+      return res.json() as Promise<{ count: number }>
+    },
+  })
 
   const invitationTemplates = useMemo(() => templates.filter((t) => t.type === 'invitation'), [templates])
   const confirmationTemplates = useMemo(() => templates.filter((t) => t.type === 'confirmation'), [templates])
@@ -366,6 +394,12 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
       : undefined
     const eventType = (values.eventType || undefined) as Event['eventType'] | undefined
 
+    const targetCriteria = {
+      ...(values.targetCriteria_industry && { industry: values.targetCriteria_industry }),
+      ...(values.targetCriteria_city && { city: values.targetCriteria_city }),
+      ...(values.targetCriteria_companySize && { companySize: values.targetCriteria_companySize }),
+    }
+
     const body = {
       name: values.name,
       description: values.description,
@@ -383,6 +417,7 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
       is_paid: !!values.is_paid,
       price: values.is_paid && values.price ? parseInt(values.price, 10) : 0,
       payment_method: values.is_paid && values.payment_method ? values.payment_method : null,
+      ...(Object.keys(targetCriteria).length > 0 && { targetCriteria }),
     }
 
     if (isEdit) {
@@ -583,6 +618,76 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
         />
         <p className="mt-1 text-xs text-muted-foreground">Pisahkan dengan koma</p>
       </div>
+
+      {/* Target Criteria & Audience Preview (AC 4.5) */}
+      <fieldset className="space-y-4 border border-border rounded-lg p-4">
+        <legend className="text-sm font-medium text-foreground px-1">Target Audience</legend>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <Label htmlFor="targetCriteria_industry">Industri</Label>
+            <select
+              id="targetCriteria_industry"
+              {...register('targetCriteria_industry')}
+              className={selectClassName}
+            >
+              <option value="">Semua Industri</option>
+              {INDUSTRIES.map((ind) => (
+                <option key={ind.slug} value={ind.slug}>{ind.label}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <Label htmlFor="targetCriteria_city">Kota</Label>
+            <Input
+              id="targetCriteria_city"
+              type="text"
+              {...register('targetCriteria_city')}
+              placeholder="Contoh: Jakarta"
+              className="h-8 py-1"
+            />
+          </div>
+          <div>
+            <Label htmlFor="targetCriteria_companySize">Ukuran Perusahaan</Label>
+            <select
+              id="targetCriteria_companySize"
+              {...register('targetCriteria_companySize')}
+              className={selectClassName}
+            >
+              <option value="">Semua Ukuran</option>
+              <option value="micro">Micro</option>
+              <option value="small">Small</option>
+              <option value="medium">Medium</option>
+              <option value="large">Large</option>
+              <option value="enterprise">Enterprise</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4 mt-2">
+          <Button 
+            type="button" 
+            size="sm" 
+            variant="secondary"
+            onClick={() => previewMutation.mutate()} 
+            disabled={previewMutation.isPending}
+          >
+            {previewMutation.isPending ? 'Menghitung...' : 'Preview Audience'}
+          </Button>
+          
+          {previewMutation.isSuccess && previewMutation.data && (
+            <div className="text-sm">
+              <span className="font-bold text-lg">{previewMutation.data.count.toLocaleString('id-ID')}</span>
+              <span className="text-muted-foreground ml-1">kontak sesuai target</span>
+              {previewMutation.data.count === 0 && (
+                <p className="text-xs text-destructive mt-0.5">
+                  Peringatan: Tidak ada kontak yang sesuai profil ini.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      </fieldset>
 
       {/* Vendor */}
       <div>

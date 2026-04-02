@@ -181,6 +181,11 @@ export interface CreateEventBody {
   is_paid?: boolean
   price?: number
   payment_method?: string | null
+  targetCriteria?: {
+    industry?: string
+    city?: string
+    companySize?: string
+  }
 }
 
 export interface UpdateRegistrationStatusBody {
