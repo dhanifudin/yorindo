@@ -202,6 +202,14 @@ describe('InMemoryEventRepository', () => {
     expect(typeof metrics.invited).toBe('number')
     expect(typeof metrics.conversionRate).toBe('number')
   })
+
+  it('getUpcomingUncontacted returns a qualifying event within 14 days', async () => {
+    const upcoming = await repo.getUpcomingUncontacted()
+    expect(upcoming).not.toBeNull()
+    expect(upcoming!.daysTillEvent).toBeGreaterThanOrEqual(0)
+    expect(upcoming!.daysTillEvent).toBeLessThanOrEqual(14)
+    expect(upcoming!.uncontactedCount).toBeGreaterThan(0)
+  })
 })
 
 // ─── Registration Repository ──────────────────────────────────────────────────

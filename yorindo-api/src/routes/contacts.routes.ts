@@ -1,8 +1,9 @@
 import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
-import { contactRepository, flaggedRecordsRepository } from '../container.js'
-import type { CompanySize, Contact, DuplicatePair } from '../types/domain.js'
-import { INDONESIAN_INDUSTRIES } from '../repositories/memory/_seeds.js'
+import { auditLogRepository, contactRepository, flaggedRecordsRepository } from '../container.js'
+import { requireAdmin, requireAuth, type JwtPayload } from '../middleware/auth.js'
+import type { CompanySize, Contact, DuplicatePair, FlaggedRecord, FlaggedRecordStatus } from '../types/domain.js'
+import { INDONESIAN_INDUSTRIES, INDONESIAN_JOB_TITLES } from '../repositories/memory/_seeds.js'
 import { validateOpenApiRequest, validateOpenApiResponse } from '../lib/openapi-contract.js'
 
 const COMPANY_SIZE_TO_DOMAIN: Record<string, CompanySize> = {
@@ -25,6 +26,10 @@ const ContactsQuerySchema = z.object({
   industry: z.string().trim().optional(),
   city: z.string().trim().optional(),
   companySize: z.string().trim().optional(),
+  flagFilter: z.enum(['flagged', 'unflagged']).optional(),
+  missingEmail: z.coerce.boolean().optional(),
+  missingPhone: z.coerce.boolean().optional(),
+  q: z.string().trim().optional(),
   sortBy: z.string().trim().optional(),
   sortDir: z.enum(['asc', 'desc']).optional(),
 })
@@ -48,19 +53,28 @@ const MergeParamsSchema = z.object({
   id: z.string().trim().min(1),
 })
 
-const FlaggedRecordParamsSchema = z.object({
+const FlaggedParamsSchema = z.object({
   id: z.string().trim().min(1),
 })
-
-const ResolveFlaggedBodySchema = z.object({
-  action: z.enum(['approve', 'discard']),
-  resolved_data: z.record(z.string()).optional(),
-})
-
 const MergeBodySchema = z.object({
   mergeIntoId: z.string().trim().optional(),
   fieldSelections: z.record(z.enum(['primary', 'duplicate'])).optional(),
 }).optional()
+
+const FlaggedResolutionBodySchema = z.object({
+  action: z.enum(['approve', 'discard']),
+  data: z.object({
+    name: z.string().trim().min(1).optional(),
+    phone: z.string().trim().regex(/^\+62\d{8,13}$/).optional(),
+    email: z.string().trim().email().nullable().optional(),
+    city: z.string().trim().nullable().optional(),
+    company: z.string().trim().nullable().optional(),
+    department: z.string().trim().nullable().optional(),
+    industryId: z.string().trim().nullable().optional(),
+    jobTitleId: z.string().trim().nullable().optional(),
+    companySize: z.enum(['small', 'medium', 'large', 'enterprise']).nullable().optional(),
+  }).optional(),
+})
 
 type ContactsQuery = z.infer<typeof ContactsQuerySchema>
 
@@ -111,6 +125,18 @@ function toApiCompanySize(companySize: Contact['companySize']): string {
   return COMPANY_SIZE_TO_API[companySize] ?? companySize
 }
 
+function toNullableText(value: unknown): string | null {
+  if (value === null || value === undefined) return null
+  const normalized = String(value).trim()
+  return normalized ? normalized : null
+}
+
+function normalizeApprovedEmail(value: unknown): string | null {
+  const email = toNullableText(value)?.toLowerCase() ?? null
+  if (!email) return null
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : null
+}
+
 /**
  * Mengubah id industri internal menjadi slug yang dipakai kontrak FE.
  */
@@ -118,6 +144,18 @@ function toIndustrySlug(industryId: Contact['industryId']): string {
   if (!industryId) return ''
   const found = INDONESIAN_INDUSTRIES.find((item) => item.id === industryId || item.slug === industryId)
   return found?.slug ?? industryId
+}
+
+function toIndustryId(industryId: string | null | undefined): string | null {
+  if (!industryId) return null
+  const found = INDONESIAN_INDUSTRIES.find((item) => item.id === industryId || item.slug === industryId)
+  return found?.id ?? industryId
+}
+
+function toJobTitleId(jobTitleId: string | null | undefined): string | null {
+  if (!jobTitleId) return null
+  const found = INDONESIAN_JOB_TITLES.find((item) => item.id === jobTitleId || item.slug === jobTitleId)
+  return found?.id ?? jobTitleId
 }
 
 /**
@@ -128,6 +166,36 @@ function toSortBy(sortBy?: string): string | undefined {
   if (sortBy === 'industry') return 'industryId'
   if (sortBy === 'created_at') return 'createdAt'
   return sortBy
+}
+
+// Mengubah filter flag FE ke filter repository yang setara.
+function toFlagFilter(flagFilter?: 'flagged' | 'unflagged') {
+  if (!flagFilter) return {}
+  if (flagFilter === 'flagged') return { flagCategory: 'ANY' }
+  return { flagCategory: 'NONE' }
+}
+
+/**
+ * Mengubah hasil facet repository ke shape slug/label/count yang dipakai FE.
+ */
+function toFacetsDto(facets: Awaited<ReturnType<typeof contactRepository.findFacets>>) {
+  return {
+    industry: facets.industries.map((item) => ({
+      slug: toIndustrySlug(item.id),
+      label: item.name,
+      count: item.count,
+    })),
+    city: facets.cities.map((item) => ({
+      slug: item.city.toLowerCase(),
+      label: item.city,
+      count: item.count,
+    })),
+    companySize: facets.companySizes.map((item) => ({
+      slug: toApiCompanySize(item.size as Contact['companySize']),
+      label: toApiCompanySize(item.size as Contact['companySize']).replace(/^./, (value) => value.toUpperCase()),
+      count: item.count,
+    })),
+  }
 }
 
 /**
@@ -165,25 +233,67 @@ function toDuplicatePairDto(pair: DuplicatePair) {
   }
 }
 
-/**
- * Membentuk DTO flagged record yang tetap kompatibel dengan FE dan kontrak OpenAPI.
- */
-function toFlaggedRecordDto(record: Awaited<ReturnType<typeof flaggedRecordsRepository.findById>>) {
-  if (!record) return null
+function getSuggestedData(record: FlaggedRecord): Record<string, unknown> {
+  const rawData = record.rawData ?? {}
+  const normalized = typeof rawData === 'object' && rawData !== null && typeof rawData['normalized'] === 'object' && rawData['normalized'] !== null
+    ? rawData['normalized'] as Record<string, unknown>
+    : {}
 
   return {
-    id: record.id,
-    rawData: record.rawData,
-    suggestedData: record.rawData,
-    reason: record.flags.join(', '),
-    createdAt: record.createdAt,
-    flags: record.flags,
-    status: record.status,
+    name: toNullableText(normalized.name ?? rawData['name']) ?? '',
+    phone: toNullableText(normalized.phone ?? rawData['phone']) ?? '',
+    email: normalizeApprovedEmail(normalized.email ?? rawData['email']),
+    city: toNullableText(normalized.city ?? rawData['city']),
+    company: toNullableText(normalized.company ?? rawData['company']),
+    department: toNullableText(normalized.department ?? rawData['department']),
+    industryId: toIndustrySlug(toIndustryId(toNullableText(normalized.industrySlug ?? normalized.industryId))),
+    jobTitleId: toNullableText(normalized.jobTitleSlug ?? normalized.jobTitleId) ?? '',
+    companySize: toApiCompanySize(toDomainCompanySize(toNullableText(normalized.companySize) ?? undefined) as Contact['companySize']),
   }
 }
 
+function toFlaggedRecordDto(record: FlaggedRecord) {
+  return {
+    id: record.id,
+    rawData: record.rawData,
+    suggestedData: getSuggestedData(record),
+    reason: record.flags.join(', '),
+    status: record.status,
+    flags: record.flags,
+    uploadId: record.uploadId,
+    resolvedBy: record.resolvedBy,
+    resolvedAt: record.resolvedAt,
+    createdAt: record.createdAt,
+  }
+}
+
+function computeApprovalCompleteness(input: {
+  name: string
+  phone: string
+  email: string | null
+  company: string | null
+  industryId: string | null
+  jobTitleId: string | null
+  city: string | null
+  companySize: Contact['companySize']
+}): number {
+  const fields = [
+    input.name,
+    input.phone,
+    input.email,
+    input.company,
+    input.industryId,
+    input.jobTitleId,
+    input.city,
+    input.companySize,
+  ]
+  const filled = fields.filter((field) => field !== null && field !== undefined && field !== '').length
+  return Math.round((filled / fields.length) * 1000) / 1000
+}
 export const contactRoutes: FastifyPluginAsync = async (fastify) => {
-  fastify.get('/api/contacts/health', async (_request, reply) => {
+  const adminOnly = { preHandler: [requireAuth, requireAdmin] }
+
+  fastify.get('/api/contacts/health', adminOnly, async (_request, reply) => {
     const health = await contactRepository.countHealth()
 
     const responseBody = {
@@ -196,7 +306,13 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(200).send(responseBody)
   })
 
-  fastify.get('/api/contacts', async (request, reply) => {
+  fastify.get('/api/contacts/facets', adminOnly, async (_request, reply) => {
+    const responseBody = toFacetsDto(await contactRepository.findFacets())
+    validateOpenApiResponse({ path: '/contacts/facets', method: 'get', status: 200, body: responseBody })
+    return reply.status(200).send(responseBody)
+  })
+
+  fastify.get('/api/contacts', adminOnly, async (request, reply) => {
     const result = ContactsQuerySchema.safeParse(request.query)
     if (!result.success) {
       return reply.status(400).send({
@@ -223,15 +339,24 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
       industry?: string
       city?: string
       companySize?: string
+      missingEmail?: boolean
+      missingPhone?: boolean
+      flagCategory?: string
+      search?: string
     }
 
     const sortBy = toSortBy(query.sortBy)
     const companySize = toDomainCompanySize(query.companySize)
+    const flagFilter = toFlagFilter(query.flagFilter)
     if (sortBy) paginationParams.sortBy = sortBy
     if (query.sortDir) paginationParams.sortDir = query.sortDir
     if (query.industry) filters.industry = query.industry
     if (query.city) filters.city = query.city
     if (companySize) filters.companySize = companySize
+    if (query.missingEmail) filters.missingEmail = true
+    if (query.missingPhone) filters.missingPhone = true
+    if (query.q) filters.search = query.q
+    if (flagFilter.flagCategory) filters.flagCategory = flagFilter.flagCategory
 
     const { data, total } = await contactRepository.findAll(
       paginationParams,
@@ -251,7 +376,7 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(200).send(responseBody)
   })
 
-  fastify.get('/api/contacts/industry-suggestions', async (request, reply) => {
+  fastify.get('/api/contacts/industry-suggestions', adminOnly, async (request, reply) => {
     const result = IndustrySuggestionsQuerySchema.safeParse(request.query)
     if (!result.success) {
       return reply.status(400).send({
@@ -296,7 +421,7 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(200).send(responseBody)
   })
 
-  fastify.get('/api/contacts/duplicates', async (request, reply) => {
+  fastify.get('/api/contacts/duplicates', adminOnly, async (request, reply) => {
     const result = DuplicatesQuerySchema.safeParse(request.query)
     if (!result.success) {
       return reply.status(400).send({
@@ -328,8 +453,8 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(200).send(responseBody)
   })
 
-  fastify.delete('/api/contacts/duplicates/:id', async (request, reply) => {
-    const paramsResult = FlaggedRecordParamsSchema.safeParse(request.params)
+  fastify.delete('/api/contacts/duplicates/:id', adminOnly, async (request, reply) => {
+    const paramsResult = FlaggedParamsSchema.safeParse(request.params)
     if (!paramsResult.success) {
       return reply.status(400).send({
         error: {
@@ -355,7 +480,7 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(204).send()
   })
 
-  fastify.post('/api/contacts/:id/merge', async (request, reply) => {
+  fastify.post('/api/contacts/:id/merge', adminOnly, async (request, reply) => {
     const paramsResult = MergeParamsSchema.safeParse(request.params)
     const bodyResult = MergeBodySchema.safeParse(request.body)
 
@@ -393,7 +518,7 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(200).send(responseBody)
   })
 
-  fastify.get('/api/contacts/flagged', async (request, reply) => {
+  fastify.get('/api/contacts/flagged', adminOnly, async (request, reply) => {
     const result = FlaggedQuerySchema.safeParse(request.query)
     if (!result.success) {
       return reply.status(400).send({
@@ -404,36 +529,36 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
         },
       })
     }
-    validateOpenApiRequest({ path: '/contacts/flagged', method: 'get', query: result.data })
 
-    const status = result.data.status === 'all' ? undefined : result.data.status
+    validateOpenApiRequest({ path: '/contacts/flagged', method: 'get', query: result.data })
+    const query = result.data
     const { data, total } = await flaggedRecordsRepository.findAll(
-      { page: result.data.page, pageSize: result.data.pageSize },
-      status,
+      { page: query.page, pageSize: query.pageSize },
+      query.status === 'all' ? undefined : query.status as FlaggedRecordStatus | undefined,
     )
 
     const responseBody = {
-      data: data.map((record) => toFlaggedRecordDto(record)).filter(Boolean),
+      data: data.map(toFlaggedRecordDto),
       pagination: {
-        page: result.data.page,
-        pageSize: result.data.pageSize,
+        page: query.page,
+        pageSize: query.pageSize,
         total,
-        totalPages: Math.ceil(total / result.data.pageSize),
+        totalPages: Math.ceil(total / query.pageSize),
       },
     }
     validateOpenApiResponse({ path: '/contacts/flagged', method: 'get', status: 200, body: responseBody })
     return reply.status(200).send(responseBody)
   })
 
-  fastify.post('/api/contacts/flagged/:id', async (request, reply) => {
-    const paramsResult = FlaggedRecordParamsSchema.safeParse(request.params)
-    const bodyResult = ResolveFlaggedBodySchema.safeParse(request.body)
+  fastify.patch('/api/contacts/flagged/:id', adminOnly, async (request, reply) => {
+    const paramsResult = FlaggedParamsSchema.safeParse(request.params)
+    const bodyResult = FlaggedResolutionBodySchema.safeParse(request.body)
 
     if (!paramsResult.success || !bodyResult.success) {
       return reply.status(400).send({
         error: {
           code: 'VALIDATION_ERROR',
-          message: 'Invalid flagged record payload',
+          message: 'Invalid flagged record resolution payload',
           details: [
             ...(paramsResult.success ? [] : paramsResult.error.issues),
             ...(bodyResult.success ? [] : bodyResult.error.issues),
@@ -441,10 +566,16 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
         },
       })
     }
-    validateOpenApiRequest({ path: '/contacts/flagged/{id}', method: 'post', params: paramsResult.data, body: bodyResult.data })
 
-    const existing = await flaggedRecordsRepository.findById(paramsResult.data.id)
-    if (!existing) {
+    validateOpenApiRequest({
+      path: '/contacts/flagged/{id}',
+      method: 'patch',
+      params: paramsResult.data,
+      body: bodyResult.data,
+    })
+
+    const flaggedRecord = await flaggedRecordsRepository.findById(paramsResult.data.id)
+    if (!flaggedRecord) {
       return reply.status(404).send({
         error: {
           code: 'NOT_FOUND',
@@ -454,29 +585,147 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
       })
     }
 
-    if (bodyResult.data.action === 'approve') {
-      await flaggedRecordsRepository.resolve(
-        paramsResult.data.id,
-        bodyResult.data.resolved_data ?? {},
-        'system-admin',
-      )
-    } else {
-      await flaggedRecordsRepository.discard(paramsResult.data.id, 'system-admin')
+    const actor = request.user as JwtPayload
+
+    if (bodyResult.data.action === 'discard') {
+      await flaggedRecordsRepository.discard(flaggedRecord.id, actor.sub)
+      const discarded = await flaggedRecordsRepository.findById(flaggedRecord.id)
+      if (!discarded) {
+        return reply.status(404).send({
+          error: {
+            code: 'NOT_FOUND',
+            message: 'Flagged record not found after discard',
+            details: [],
+          },
+        })
+      }
+
+      await auditLogRepository.create({
+        action: 'flagged_record.discarded',
+        actorId: actor.sub,
+        actorRole: actor.role,
+        eventId: null,
+        targetId: discarded.id,
+        targetType: 'flagged_record',
+        metadata: {
+          flags: discarded.flags,
+          uploadId: discarded.uploadId,
+        },
+      })
+
+      const responseBody = toFlaggedRecordDto(discarded)
+      validateOpenApiResponse({ path: '/contacts/flagged/{id}', method: 'patch', status: 200, body: responseBody })
+      return reply.status(200).send(responseBody)
     }
 
-    const updated = await flaggedRecordsRepository.findById(paramsResult.data.id)
-    if (!updated) {
+    const suggested = getSuggestedData(flaggedRecord)
+    const overrideData = bodyResult.data.data
+    const approvedDraft = {
+      name: overrideData?.name !== undefined ? overrideData.name : (toNullableText(suggested.name) ?? ''),
+      phone: overrideData?.phone !== undefined ? overrideData.phone : (toNullableText(suggested.phone) ?? ''),
+      email: overrideData?.email !== undefined ? overrideData.email : normalizeApprovedEmail(suggested.email),
+      city: overrideData?.city !== undefined ? overrideData.city : toNullableText(suggested.city),
+      company: overrideData?.company !== undefined ? overrideData.company : toNullableText(suggested.company),
+      department: overrideData?.department !== undefined ? overrideData.department : toNullableText(suggested.department),
+      industryId: overrideData?.industryId !== undefined ? overrideData.industryId : toNullableText(suggested.industryId),
+      jobTitleId: overrideData?.jobTitleId !== undefined ? overrideData.jobTitleId : toNullableText(suggested.jobTitleId),
+      companySize: overrideData?.companySize !== undefined ? overrideData.companySize : (toNullableText(suggested.companySize) as string | null),
+    }
+
+    if (!approvedDraft.name || !approvedDraft.phone) {
+      return reply.status(400).send({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Approved records require name and phone',
+          details: [
+            ...(!approvedDraft.name ? [{ field: 'name', message: 'Name is required' }] : []),
+            ...(!approvedDraft.phone ? [{ field: 'phone', message: 'Phone is required' }] : []),
+          ],
+        },
+      })
+    }
+
+    const approvedContact = await contactRepository.upsert({
+      name: approvedDraft.name,
+      phone: approvedDraft.phone,
+      email: approvedDraft.email,
+      industryId: toIndustryId(approvedDraft.industryId),
+      jobTitleId: toJobTitleId(approvedDraft.jobTitleId),
+      city: approvedDraft.city,
+      company: approvedDraft.company,
+      department: approvedDraft.department,
+      companySize: toDomainCompanySize(approvedDraft.companySize ?? undefined) as Contact['companySize'],
+      source: 'excel_upload',
+      completenessScore: computeApprovalCompleteness({
+        name: approvedDraft.name,
+        phone: approvedDraft.phone,
+        email: approvedDraft.email,
+        company: approvedDraft.company,
+        industryId: toIndustryId(approvedDraft.industryId),
+        jobTitleId: toJobTitleId(approvedDraft.jobTitleId),
+        city: approvedDraft.city,
+        companySize: toDomainCompanySize(approvedDraft.companySize ?? undefined) as Contact['companySize'],
+      }),
+      consentStatus: 'legacy_unverified',
+      flagCategory: null,
+      deletedAt: null,
+    })
+
+    await flaggedRecordsRepository.resolve(flaggedRecord.id, {
+      name: approvedContact.name,
+      phone: approvedContact.phone,
+      email: approvedContact.email,
+      city: approvedContact.city,
+      company: approvedContact.company,
+      department: approvedContact.department ?? null,
+      industryId: approvedContact.industryId,
+      jobTitleId: approvedContact.jobTitleId,
+      companySize: approvedContact.companySize,
+    }, actor.sub)
+
+    const resolved = await flaggedRecordsRepository.findById(flaggedRecord.id)
+    if (!resolved) {
       return reply.status(404).send({
         error: {
           code: 'NOT_FOUND',
-          message: 'Flagged record not found',
+          message: 'Flagged record not found after approval',
           details: [],
         },
       })
     }
 
-    const responseBody = toFlaggedRecordDto(updated)
-    validateOpenApiResponse({ path: '/contacts/flagged/{id}', method: 'post', status: 200, body: responseBody })
+    resolved.rawData = {
+      ...resolved.rawData,
+      normalized: {
+        ...getSuggestedData(resolved),
+        name: approvedContact.name,
+        phone: approvedContact.phone,
+        email: approvedContact.email,
+        city: approvedContact.city,
+        company: approvedContact.company,
+        department: approvedContact.department ?? null,
+        industryId: toIndustrySlug(approvedContact.industryId),
+        jobTitleId: approvedContact.jobTitleId ?? '',
+        companySize: toApiCompanySize(approvedContact.companySize),
+      },
+    }
+
+    await auditLogRepository.create({
+      action: 'flagged_record.approved',
+      actorId: actor.sub,
+      actorRole: actor.role,
+      eventId: null,
+      targetId: resolved.id,
+      targetType: 'flagged_record',
+      metadata: {
+        contactId: approvedContact.id,
+        uploadId: resolved.uploadId,
+        flags: resolved.flags,
+      },
+    })
+
+    const responseBody = toFlaggedRecordDto(resolved)
+    validateOpenApiResponse({ path: '/contacts/flagged/{id}', method: 'patch', status: 200, body: responseBody })
     return reply.status(200).send(responseBody)
   })
 }

@@ -1,9 +1,10 @@
 # Epic 5: Invitation Blast & Notifications
 
-Admin can proactively invite targeted participants to events via WhatsApp (Everpro) and email (Brevo) — with consent enforcement, suppression list protection, message template management, scheduled delivery, and emergency blast capability.
+Admin can proactively invite targeted participants to events via WhatsApp (Everpro) and email (Brevo) — with consent enforcement, suppression list protection, message template management, scheduled delivery, and emergency blast capability in the current runtime flow.
 
-> **Phase 1 (FE):** Template editor (rich text + variable substitution preview); blast config form (segment filters, channel selector, schedule picker); blast history list + delivery status; emergency blast modal with confirmation dialog; suppression list view — all wired to MSW blast handler
-> **Phase 2 (BE):** `GET/POST/PATCH /api/blast/templates`, `POST /api/blast`, BullMQ blast worker, Everpro WhatsApp integration, Brevo email integration, HMAC webhook verification (NFR-S6), suppression enforcement at worker level, `POST /api/blast/emergency`, delivery status tracking, scheduled blast cron
+> **Current implementation note (2026-03-30):** The active FE/BE still uses the current template and blast flow. The richer AI-targeting/template-delivery model described in later addenda is not fully implemented yet.
+> **Phase 1 (FE):** Template editor, blast config form, blast history list, emergency blast modal, suppression list view — all wired to current MSW blast/template handlers
+> **Phase 2 (BE):** Current runtime includes `POST /api/events/:id/blast`, worker/service adapters, and suppression filtering foundations. Template APIs, emergency blast backend route, and richer AI-targeting flow remain follow-up work.
 
 ## Story 5.1: Notification Message Template Management
 
@@ -37,29 +38,25 @@ So that all outbound communications use consistent, personalized messaging.
 
 ## Story 5.2: Segmented Blast Configuration & Audience Targeting
 
-> **Updated 2026-03-28** — Meeting: blast targeting now supports two modes — manual filter (same criteria as Story 4.5) and AI recommendation (system suggests the best audience segment). Admin can switch modes and must confirm before sending.
+> **Current implementation note (2026-03-30):** The current blast configuration is still centered on the implemented segment filter flow. Manual-vs-AI targeting tabs remain a later target-state follow-up.
 
 As an admin,
-I want to configure a segmented invitation blast using either manual filters or AI-recommended audience targeting,
-So that I send invitations to the most relevant participants with or without AI assistance.
+I want to configure a segmented invitation blast using the current implemented filter-driven targeting flow,
+So that I can send invitations to a selected audience segment from the event workspace.
 
 **Acceptance Criteria:**
 
 **Given** I open the blast configuration for an event,
 **When** the blast config form renders,
-**Then** two targeting mode tabs are shown: "Manual" and "Rekomendasi AI"; manual mode pre-populates from the event's saved target criteria (Story 4.5); AI mode calls `POST /api/events/:id/audience-recommend` and shows the suggested segment with rationale
-
-**Given** I am in AI recommendation mode,
-**When** the recommendation loads,
-**Then** the suggested criteria and expected recipient count are shown with a brief explanation (e.g., "Disarankan berdasarkan industri paling aktif dan riwayat kehadiran rendah"); I can adjust the suggestion before sending
+**Then** the implemented filter-driven targeting form is shown with current audience controls and preview behavior
 
 **Given** I am authenticated as `admin`,
-**When** `POST /api/events/:id/blast` is called with `{ filters: { industry, city, jobTitle, mostActive, lowAttendance, neverAttended, lastAttendedBefore }, templateId, channel, targetingMode: 'manual'|'ai' }`,
+**When** `POST /api/events/:id/blast` is called with the currently implemented blast payload,
 **Then** the blast job is enqueued in BullMQ with `202 Accepted` and `{ jobId, status: 'queued' }`
 
-**Given** the blast configuration form in either mode,
-**When** I adjust filters or accept an AI suggestion,
-**Then** the audience count updates live (same preview mechanism as Story 4.5)
+**Given** the blast configuration form,
+**When** I adjust filters,
+**Then** the audience count updates live using the current preview mechanism
 
 **Given** the blast is configured,
 **When** `requireAuth` and `requireRole('admin')` middleware run,
@@ -107,14 +104,14 @@ So that invitations reach participants at the optimal time without manual interv
 ## Story 5.4: Emergency Blast
 
 As an admin,
-I want to trigger an immediate blast to all confirmed participants of a specific event,
-So that I can communicate urgent changes (e.g., venue change, cancellation) without scheduling delays.
+I want to trigger the current emergency blast flow from the event blast UI,
+So that urgent communication can be initiated from the implemented FE path while the backend route remains follow-up work.
 
 **Acceptance Criteria:**
 
 **Given** I am authenticated as `admin`,
-**When** `POST /api/events/:id/blast/emergency` is called with `{ message, channel }`,
-**Then** a high-priority BullMQ job is enqueued immediately (no delay) targeting all `approved` registrations for the event
+**When** I use the emergency blast flow in the current FE/MSW implementation,
+**Then** an immediate emergency blast request is simulated through the current mocked path
 
 **Given** the emergency blast job executes,
 **When** transmission is initiated,
@@ -129,8 +126,8 @@ So that I can communicate urgent changes (e.g., venue change, cancellation) with
 ## Story 5.5: Suppression List & Consent Enforcement
 
 As an admin,
-I want the system to automatically exclude opted-out and suppressed contacts from all outbound communications,
-So that Yorindo remains compliant with participant consent preferences and UU PDP requirements.
+I want the system to exclude suppressed contacts from outbound communications and expose the current suppression-list management flow,
+So that Yorindo remains compliant with participant consent preferences and the implemented suppression model.
 
 **Acceptance Criteria:**
 

@@ -2,7 +2,15 @@
 title: 'Contacts Page — Row Selection, Bulk Flag & Blast'
 slug: 'contacts-bulk-selection-flag-blast'
 created: '2026-03-22'
-status: 'in-progress'
+status: 'superseded'
+superseded_by:
+  - 'Story 3.9 (row-selection ACs added via sprint-change-proposal-2026-03-31)'
+  - 'Story 3.13 (inline blast modal)'
+notes: >
+  Row selection + bulk flag portions absorbed into Story 3.9 updated ACs.
+  Blast modal pattern replaced navigation-to-/app/blasts/new with inline Dialog (Story 3.13).
+  Bulk flag ACs (Tandai Spam, Tidak Potensial, Hapus Tanda) retained in Story 3.9 AC8.
+  MSW bulk-flag handler pattern from this spec remains valid reference for dev agent.
 stepsCompleted: [1, 2, 3, 4, 5]
 tech_stack: ['react', 'next.js', 'tailwindcss', 'tanstack-table', 'react-query', 'msw', 'zustand', 'shadcn/ui']
 files_to_modify:

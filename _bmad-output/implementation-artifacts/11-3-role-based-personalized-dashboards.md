@@ -13,7 +13,7 @@
 
 As a logged-in user,
 I want to see a dashboard personalized to my role,
-So that admins see management stats, viewers see read-only summaries, and staff see their assigned events for today.
+So that admins, viewers, staff, and participants each land on the dashboard flow currently implemented for them.
 
 > **Depends on:** Story 11.1 (routing migration complete — `/app` route exists at `src/app/app/page.tsx`).
 > **Blocks:** Story 11.4 (staff scan filter requires `GET /api/users/me/assigned-events` MSW handler added here).
@@ -52,14 +52,14 @@ So that admins see management stats, viewers see read-only summaries, and staff 
 
 **AC7:** A new MSW handler `GET /api/users/me` is added to `src/mocks/handlers/users.ts`. It derives the current user from the Authorization header (`Bearer mock-token-{role}`) and returns the matching user from `usersStore`. For `dev-token`, it uses the `X-User-Id` request header (sent by the FE `useCurrentUser` hook) to look up by id; if not found, returns the first admin user.
 
-**AC8:** A new MSW handler `GET /api/users/me/assigned-events` is added to `src/mocks/handlers/users.ts`. It returns the events assigned to the current user (derived same as AC7), looking up from `userEventAssignments` Map and returning the matching events from the events store. Returns an array of `Event[]`.
+**AC8:** A MSW handler `GET /api/users/me/assigned-events` exists in `src/mocks/handlers/users.ts`. It returns the events assigned to the current user using the current `{ data: Event[] }` response shape.
 
 **AC9:** Dashboard components live in `src/components/features/dashboard/`:
 - `AdminDashboard.tsx`
 - `ViewerDashboard.tsx`
 - `StaffDashboard.tsx`
 
-**AC10:** `src/app/app/page.tsx` is updated to be a `'use client'` component that renders the role-based component. The metadata export from the current server component must be preserved.
+**AC10:** `src/app/app/page.tsx` is updated to be a `'use client'` component that renders the role-based component in the current runtime structure.
 
 **AC11:** `npm run build` passes with 0 TypeScript errors.
 

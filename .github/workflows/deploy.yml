@@ -2,8 +2,10 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    tags:
-      - 'v*.*.*'
+    branches:
+      - main
+    paths:
+      - 'yorindo-app/**'
   workflow_dispatch:
 
 # Allow only one concurrent deployment

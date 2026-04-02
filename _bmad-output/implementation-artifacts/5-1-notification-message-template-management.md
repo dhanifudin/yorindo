@@ -15,7 +15,7 @@ As an admin,
 I want to create and edit notification message templates with named variable substitution,
 So that all outbound communications use consistent, personalized messaging.
 
-> **Phase 1 FE scope:** Build the template management UI (list, create, edit) and a live preview that substitutes sample values into `{{variable}}` placeholders — all wired to a new MSW templates handler. No real backend.
+> **Current implementation note (2026-03-30):** The active runtime still uses the simpler current template flow. The richer TipTap + QR-inline template model remains a target-state follow-up.
 
 ---
 
@@ -39,7 +39,7 @@ Then the new template appears in the list and a success toast is shown
 **AC5:** Given I click "Edit" on an existing template,
 Then the form pre-fills with current values and `PATCH /api/templates/:id` is called on save
 
-**AC6 (SCP-2026-03-28-F):** Given the template channel is `email` or `whatsapp`,
+**AC6 (Later-spec follow-up):** Given the template channel is `email` or `whatsapp`,
 When the template form renders,
 Then a TipTap rich-text editor (`shadcn-tiptap` community package) is shown for both channels with channel-appropriate toolbars:
 - **Email toolbar:** bold, italic, underline, headings (H1–H3), ordered list, unordered list, link, image; QR Code block button (visible only when `type=confirmation|ticket_delivery`)
@@ -48,7 +48,7 @@ Output format is determined by `TemplateBodySerializer.serialize(doc, channel)`:
 - `channel=email` → HTML string
 - `channel=whatsapp` → WhatsApp-formatted plain text string (custom serializer)
 
-**AC7 (SCP-2026-03-28-F):** Given a template of type `confirmation` or `ticket_delivery` with `channel=email`,
+**AC7 (Later-spec follow-up):** Given a template of type `confirmation` or `ticket_delivery` with `channel=email`,
 When the admin clicks the "QR Code" toolbar button,
 Then a visual placeholder block is inserted: "QR Code — digenerate otomatis per peserta" (styled as a grey rounded box); in the live preview panel, a sample QR image is rendered via `react-qr-code` with value `"SAMPLE"`; the `{{qr_code}}` variable is stored in the serialized template body at that position
 
@@ -85,21 +85,21 @@ Then a visual placeholder block is inserted: "QR Code — digenerate otomatis pe
   - [x] Test: POST /api/templates creates and returns new template
   - [x] Test: preview substitution replaces {{name}} → 'Budi Santoso'
 
-- [ ] **Task 7: TipTap channel-split editor (AC6 — SCP-2026-03-28-F)**
+- [ ] **Task 7: TipTap channel-split editor (Later-spec follow-up)**
   - [ ] Install `shadcn-tiptap` and `@tiptap/extension-image`, `@tiptap/extension-strike`, `@tiptap/extension-code`
   - [ ] Create `src/components/features/templates/TemplateEditor.tsx` — wraps `shadcn-tiptap`; accepts `channel` prop; renders email toolbar or WhatsApp toolbar accordingly
   - [ ] Email toolbar: bold, italic, underline, H1–H3, ordered list, unordered list, link, image, QR Code block button (conditional on `type`)
   - [ ] WhatsApp toolbar: bold (`*`), italic (`_`), strikethrough (`~`), monospace (`` ` ``), quote (`>`), unordered list (`-`); no image, no headings, no QR button
   - [ ] Replace textarea in `TemplateForm.tsx` with `TemplateEditor`; wire to RHF via `Controller`
 
-- [ ] **Task 8: TemplateBodySerializer + WhatsApp serializer (AC6 — SCP-2026-03-28-F)**
+- [ ] **Task 8: TemplateBodySerializer + WhatsApp serializer (Later-spec follow-up)**
   - [ ] Create `src/components/features/templates/TemplateBodySerializer.ts`
   - [ ] `serialize(doc: JSONContent, channel)` → HTML string (email) or WhatsApp format string (whatsapp)
   - [ ] WhatsApp serializer: walk ProseMirror nodes — bold → `*text*`, italic → `_text_`, strike → `~text~`, code → `` `text` ``, blockquote → `> text\n`, bulletList → `- item\n`, paragraph → `text\n\n`
   - [ ] Update `TemplatePreview.tsx`: email preview renders HTML via `dangerouslySetInnerHTML`; WhatsApp preview renders serialized string in `<pre>` styled panel
   - [ ] Tests: email serializer produces HTML tags; WhatsApp serializer produces `*bold*`, `_italic_`, `~strike~`
 
-- [ ] **Task 9: QR Code block extension (AC7 — SCP-2026-03-28-F)**
+- [ ] **Task 9: QR Code block extension (Later-spec follow-up)**
   - [ ] Create custom TipTap node extension `QrCodeBlock` — renders placeholder block in editor; serializes to `{{qr_code}}` in email HTML output
   - [ ] QR toolbar button shown only when `channel=email` AND `type=confirmation|ticket_delivery`
   - [ ] Update `TemplatePreview.tsx`: when body contains `{{qr_code}}`, render `<QRCode value="SAMPLE" size={128} />` via `react-qr-code`

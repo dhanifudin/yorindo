@@ -1,0 +1,126 @@
+name: CD — API
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'yorindo-api/**'
+  workflow_dispatch:
+
+env:
+  IMAGE_API: ${{ secrets.DOCKERHUB_USERNAME }}/yorindo-api
+
+jobs:
+  build-and-push:
+    name: Build & Push API Image
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.tag.outputs.value }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set image tag
+        id: tag
+        run: echo "value=${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
+
+      - name: Build and push API image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./yorindo-api
+          push: true
+          tags: |
+            ${{ env.IMAGE_API }}:${{ steps.tag.outputs.value }}
+            ${{ env.IMAGE_API }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy API to VPS
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare deploy env file
+        env:
+          VPS_ENV_FILE: ${{ secrets.VPS_ENV_FILE }}
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import os
+
+          Path('.deploy.env').write_text(os.environ['VPS_ENV_FILE'], encoding='utf-8')
+          PY
+          echo "IMAGE_TAG=${{ needs.build-and-push.outputs.image_tag }}" >> .deploy.env
+
+      - name: Ensure VPS directory exists
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: mkdir -p /var/www/yorindo-api
+
+      - name: Upload compose and env files to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: docker-compose.api.yml,.deploy.env
+          target: /var/www/yorindo-api
+
+      - name: Deploy to VPS via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            restore_previous_env() {
+              if [ -f /var/www/yorindo-api/.env.previous ]; then
+                cp /var/www/yorindo-api/.env.previous /var/www/yorindo-api/.env
+              fi
+            }
+
+            test -s /var/www/yorindo-api/.deploy.env
+            chmod 600 /var/www/yorindo-api/.deploy.env
+            if ! grep -Rqs "127.0.0.1:6666" /etc/nginx/sites-enabled /etc/nginx/conf.d 2>/dev/null; then
+              echo "VPS nginx is not configured to proxy port 6666. Configure the VPS nginx virtual host for api.dhanifudin.com before deploying."
+              exit 1
+            fi
+            if [ -f /var/www/yorindo-api/.env ]; then
+              cp /var/www/yorindo-api/.env /var/www/yorindo-api/.env.previous
+            fi
+            mv /var/www/yorindo-api/.deploy.env /var/www/yorindo-api/.env
+            chmod 600 /var/www/yorindo-api/.env
+            cd /var/www/yorindo-api
+            if ! docker compose -f docker-compose.api.yml pull; then
+              restore_previous_env
+              exit 1
+            fi
+            if ! docker compose -f docker-compose.api.yml up -d; then
+              restore_previous_env
+              docker compose -f docker-compose.api.yml up -d
+              exit 1
+            fi
+
+            sleep 15
+            response=$(curl -s -o /dev/null -w "%{http_code}" https://api.dhanifudin.com/api/health)
+            if [ "$response" != "200" ]; then
+              restore_previous_env
+              docker compose -f docker-compose.api.yml up -d
+              echo "Health check failed: HTTP $response"
+              exit 1
+            fi
+            echo "Health check passed: HTTP $response"

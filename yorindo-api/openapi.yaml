@@ -16,8 +16,8 @@ info:
 servers:
   - url: http://localhost:3000/api
     description: Local development (via Docker Compose)
-  - url: https://api.yorindo.id/api
-    description: Production
+  - url: https://demo.dhanifudin.com/api
+    description: Demo / deployed environment
 
 components:
   securitySchemes:
@@ -235,7 +235,7 @@ components:
 
     FlaggedRecord:
       type: object
-      required: [id, rawData, suggestedData, reason, createdAt]
+      required: [id, rawData, suggestedData, reason, status, createdAt]
       properties:
         id:
           type: string
@@ -250,6 +250,23 @@ components:
         reason:
           type: string
           description: Why this record was flagged
+        status:
+          type: string
+          enum: [pending, resolved, discarded]
+        flags:
+          type: array
+          items:
+            type: string
+        uploadId:
+          type: string
+          nullable: true
+        resolvedBy:
+          type: string
+          nullable: true
+        resolvedAt:
+          type: string
+          format: date-time
+          nullable: true
         createdAt:
           type: string
           format: date-time
@@ -1628,6 +1645,7 @@ components:
       properties:
         event:
           type: object
+          nullable: true
           required: [id, name, eventDate]
           properties:
             id:
@@ -1845,6 +1863,27 @@ paths:
             type: string
             enum: [micro, small, medium, large, enterprise]
           description: Filter by company size
+        - name: flagFilter
+          in: query
+          schema:
+            type: string
+            enum: [flagged, unflagged]
+          description: Filter contacts by whether they are flagged
+        - name: missingEmail
+          in: query
+          schema:
+            type: boolean
+          description: Show only contacts without email
+        - name: missingPhone
+          in: query
+          schema:
+            type: boolean
+          description: Show only contacts without phone
+        - name: q
+          in: query
+          schema:
+            type: string
+          description: Free-text search across name, phone, email, and company
       responses:
         '200':
           description: Paginated contacts list
@@ -1961,7 +2000,6 @@ paths:
         - $ref: '#/components/parameters/PageSizeParam'
         - name: status
           in: query
-          required: false
           schema:
             type: string
             enum: [pending, resolved, discarded, all]
@@ -1986,7 +2024,7 @@ paths:
                 $ref: '#/components/schemas/ApiError'
 
   /contacts/flagged/{id}:
-    post:
+    patch:
       summary: Approve or reject a flagged record (admin only)
       operationId: resolveFlaggedRecord
       tags: [Contacts]
@@ -2009,9 +2047,36 @@ paths:
                 action:
                   type: string
                   enum: [approve, discard]
-                resolved_data:
+                data:
                   type: object
-                  additionalProperties: true
+                  properties:
+                    name:
+                      type: string
+                    phone:
+                      type: string
+                    email:
+                      type: string
+                      format: email
+                      nullable: true
+                    city:
+                      type: string
+                      nullable: true
+                    company:
+                      type: string
+                      nullable: true
+                    department:
+                      type: string
+                      nullable: true
+                    industryId:
+                      type: string
+                      nullable: true
+                    jobTitleId:
+                      type: string
+                      nullable: true
+                    companySize:
+                      type: string
+                      nullable: true
+                      enum: [small, medium, large, enterprise, null]
       responses:
         '200':
           description: Record resolved
@@ -2118,6 +2183,27 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
 
+  /events/upcoming-uncontacted:
+    get:
+      summary: Get the next event within 14 days with uncontacted audience
+      operationId: getUpcomingUncontactedEvent
+      tags: [Events]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Upcoming event banner payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpcomingUncontactedResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
   /contacts/health:
     get:
       summary: Get contact database health metrics
@@ -2132,6 +2218,27 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ContactHealth'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /contacts/facets:
+    get:
+      summary: Get contact filter facets with counts
+      operationId: getContactFacets
+      tags: [Contacts]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Contact facets for filter dropdowns
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactFacets'
         '401':
           description: Unauthorized
           content:

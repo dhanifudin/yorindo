@@ -14,7 +14,7 @@ const STAFF_ALLOWED_PATHS = ['/app', '/app/scan']
 
 function isViewerAllowed(pathname: string): boolean {
   if (VIEWER_ALLOWED_PATHS.includes(pathname)) return true
-  if (/^\/app\/events\/[^/]+\/report/.test(pathname)) return true
+  if (/^\/app\/events\/[^/]+\/report$/.test(pathname)) return true
   if (/^\/app\/events\/[^/]+$/.test(pathname)) return true
   return false
 }
@@ -152,22 +152,29 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       router.replace('/login')
       return
     }
-    if (user?.role === 'staff' && !isStaffAllowed(pathname)) {
-      router.replace('/app/scan')
-      return
-    }
+
     if (user?.role === 'viewer' && !isViewerAllowed(pathname)) {
       router.replace('/app/events')
       return
     }
+
     if (user?.role === 'participant' && !isParticipantAllowed(pathname)) {
       router.replace('/app')
+      return
     }
-  }, [accessToken, user, router, pathname])
 
-  if (!accessToken || !user || !isAuthorized) return null
+    if (user?.role === 'staff' && !isStaffAllowed(pathname)) {
+      router.replace('/app/scan')
+      return
+    }
+}, [accessToken, user, router, pathname, isAuthorized])
 
-  if (user?.role === 'participant') {
+  if (!accessToken || !user) return null
+
+  // ✅ Only change: block rendering if user is not authorized for this route
+  if (!isAuthorized) return null
+
+  if (user.role === 'participant') {
     return <ParticipantShell>{children}</ParticipantShell>
   }
 

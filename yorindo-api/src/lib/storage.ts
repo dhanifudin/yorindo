@@ -29,3 +29,11 @@ export async function deleteFile(filePath: string): Promise<void> {
 export async function readUploadFile(filePath: string): Promise<Buffer> {
   return readFile(filePath)
 }
+
+export async function saveFile(buffer: Buffer, filename: string): Promise<string> {
+  const uploadsDir = join(process.cwd(), 'uploads')
+  await ensureDir(uploadsDir)
+  const filePath = join(uploadsDir, filename)
+  await writeFile(filePath, buffer)
+  return filePath
+}
