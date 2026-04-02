@@ -169,7 +169,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       return
     }
 
-    if (user?.role === 'staff' && !isStaffAllowed(pathname)) {
+    if (user?.role === 'staff' && isStaffBlocked(pathname)) {
       router.replace('/app/scan')
       return
     }
@@ -177,7 +177,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (!accessToken || !user) return null
 
-  // ✅ Only change: block rendering if user is not authorized for this route
+
   if (!isAuthorized) return null
 
   if (user.role === 'participant') {
