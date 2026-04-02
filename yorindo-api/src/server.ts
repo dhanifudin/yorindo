@@ -16,6 +16,8 @@ import { usersRoutes } from './routes/users.routes.js'
 import { eventsRoutes } from './routes/events.routes.js'
 import { registrationsRoutes } from './routes/registrations.routes.js'
 import { scanRoutes } from './routes/scan.routes.js'
+import { vendorsRoutes } from './routes/vendors.routes.js'
+import { templatesRoutes } from './routes/templates.routes.js'
 import { authPlugin } from './middleware/auth.js'
 import { loadOpenApiDocument } from './lib/openapi.js'
 
@@ -125,6 +127,8 @@ export async function buildServer() {
   await fastify.register(eventsRoutes)
   await fastify.register(registrationsRoutes)
   await fastify.register(scanRoutes)
+  await fastify.register(vendorsRoutes)
+  await fastify.register(templatesRoutes)
 
   fastify.get('/api/openapi.json', async (_request, reply) => {
     return reply.status(200).send(openapi)

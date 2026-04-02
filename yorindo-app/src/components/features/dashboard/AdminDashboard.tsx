@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
 import {
-  Calendar, Zap, Users, Clock,
+  Calendar, Zap, Users,
   CalendarDays, TrendingUp, ArrowUpRight,
   Upload, Plus, Building2,
 } from 'lucide-react'

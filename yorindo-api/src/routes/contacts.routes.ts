@@ -26,6 +26,10 @@ const ContactsQuerySchema = z.object({
   industry: z.string().trim().optional(),
   city: z.string().trim().optional(),
   companySize: z.string().trim().optional(),
+  flagFilter: z.enum(['flagged', 'unflagged']).optional(),
+  missingEmail: z.coerce.boolean().optional(),
+  missingPhone: z.coerce.boolean().optional(),
+  q: z.string().trim().optional(),
   sortBy: z.string().trim().optional(),
   sortDir: z.enum(['asc', 'desc']).optional(),
 })
@@ -42,7 +46,7 @@ const DuplicatesQuerySchema = z.object({
 const FlaggedQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
-  status: z.enum(['pending', 'resolved', 'discarded']).optional(),
+  status: z.enum(['pending', 'resolved', 'discarded', 'all']).optional(),
 })
 
 const MergeParamsSchema = z.object({
@@ -52,7 +56,6 @@ const MergeParamsSchema = z.object({
 const FlaggedParamsSchema = z.object({
   id: z.string().trim().min(1),
 })
-
 const MergeBodySchema = z.object({
   mergeIntoId: z.string().trim().optional(),
   fieldSelections: z.record(z.enum(['primary', 'duplicate'])).optional(),
@@ -163,6 +166,13 @@ function toSortBy(sortBy?: string): string | undefined {
   if (sortBy === 'industry') return 'industryId'
   if (sortBy === 'created_at') return 'createdAt'
   return sortBy
+}
+
+// Mengubah filter flag FE ke filter repository yang setara.
+function toFlagFilter(flagFilter?: 'flagged' | 'unflagged') {
+  if (!flagFilter) return {}
+  if (flagFilter === 'flagged') return { flagCategory: 'ANY' }
+  return { flagCategory: 'NONE' }
 }
 
 /**
@@ -295,11 +305,10 @@ function computeApprovalCompleteness(input: {
   const filled = fields.filter((field) => field !== null && field !== undefined && field !== '').length
   return Math.round((filled / fields.length) * 1000) / 1000
 }
-
 export const contactRoutes: FastifyPluginAsync = async (fastify) => {
   const adminOnly = { preHandler: [requireAuth, requireAdmin] }
 
-  fastify.get('/api/contacts/health', async (_request, reply) => {
+  fastify.get('/api/contacts/health', adminOnly, async (_request, reply) => {
     const health = await contactRepository.countHealth()
 
     const responseBody = {
@@ -312,13 +321,13 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(200).send(responseBody)
   })
 
-  fastify.get('/api/contacts/facets', async (_request, reply) => {
+  fastify.get('/api/contacts/facets', adminOnly, async (_request, reply) => {
     const responseBody = toFacetsDto(await contactRepository.findFacets())
     validateOpenApiResponse({ path: '/contacts/facets', method: 'get', status: 200, body: responseBody })
     return reply.status(200).send(responseBody)
   })
 
-  fastify.get('/api/contacts', async (request, reply) => {
+  fastify.get('/api/contacts', adminOnly, async (request, reply) => {
     const result = ContactsQuerySchema.safeParse(request.query)
     if (!result.success) {
       return reply.status(400).send({
@@ -345,15 +354,24 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
       industry?: string
       city?: string
       companySize?: string
+      missingEmail?: boolean
+      missingPhone?: boolean
+      flagCategory?: string
+      search?: string
     }
 
     const sortBy = toSortBy(query.sortBy)
     const companySize = toDomainCompanySize(query.companySize)
+    const flagFilter = toFlagFilter(query.flagFilter)
     if (sortBy) paginationParams.sortBy = sortBy
     if (query.sortDir) paginationParams.sortDir = query.sortDir
     if (query.industry) filters.industry = query.industry
     if (query.city) filters.city = query.city
     if (companySize) filters.companySize = companySize
+    if (query.missingEmail) filters.missingEmail = true
+    if (query.missingPhone) filters.missingPhone = true
+    if (query.q) filters.search = query.q
+    if (flagFilter.flagCategory) filters.flagCategory = flagFilter.flagCategory
 
     const { data, total } = await contactRepository.findAll(
       paginationParams,
@@ -373,7 +391,7 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(200).send(responseBody)
   })
 
-  fastify.get('/api/contacts/industry-suggestions', async (request, reply) => {
+  fastify.get('/api/contacts/industry-suggestions', adminOnly, async (request, reply) => {
     const result = IndustrySuggestionsQuerySchema.safeParse(request.query)
     if (!result.success) {
       return reply.status(400).send({
@@ -418,7 +436,7 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(200).send(responseBody)
   })
 
-  fastify.get('/api/contacts/duplicates', async (request, reply) => {
+  fastify.get('/api/contacts/duplicates', adminOnly, async (request, reply) => {
     const result = DuplicatesQuerySchema.safeParse(request.query)
     if (!result.success) {
       return reply.status(400).send({
@@ -452,6 +470,8 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
 
   fastify.get('/api/contacts/:id/history', adminOnly, async (request, reply) => {
     const paramsResult = MergeParamsSchema.safeParse(request.params)
+  fastify.delete('/api/contacts/duplicates/:id', adminOnly, async (request, reply) => {
+    const paramsResult = FlaggedParamsSchema.safeParse(request.params)
     if (!paramsResult.success) {
       return reply.status(400).send({
         error: {
@@ -470,32 +490,23 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
         error: {
           code: 'NOT_FOUND',
           message: 'Contact not found',
+    validateOpenApiRequest({ path: '/contacts/duplicates/{id}', method: 'delete', params: paramsResult.data })
+
+    const dismissed = await contactRepository.dismissDuplicate(paramsResult.data.id)
+    if (!dismissed) {
+      return reply.status(404).send({
+        error: {
+          code: 'NOT_FOUND',
+          message: 'Duplicate pair not found',
           details: [],
         },
       })
     }
 
-    const registrations = await registrationRepository.findAll(
-      { page: 1, pageSize: 500 },
-      { contactId: contact.id },
-    )
-
-    const historyEntries = (
-      await Promise.all(registrations.data.map(async (registration) => {
-        const event = await eventRepository.findById(registration.eventId)
-        if (!event) return null
-        return toContactHistoryEntry(registration, event)
-      }))
-    )
-      .filter((item): item is NonNullable<typeof item> => item !== null)
-      .sort((a, b) => new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime())
-
-    const responseBody = { registrations: historyEntries }
-    validateOpenApiResponse({ path: '/contacts/{id}/history', method: 'get', status: 200, body: responseBody })
-    return reply.status(200).send(responseBody)
+    return reply.status(204).send()
   })
 
-  fastify.post('/api/contacts/:id/merge', async (request, reply) => {
+  fastify.post('/api/contacts/:id/merge', adminOnly, async (request, reply) => {
     const paramsResult = MergeParamsSchema.safeParse(request.params)
     const bodyResult = MergeBodySchema.safeParse(request.body)
 
@@ -533,7 +544,7 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(200).send(responseBody)
   })
 
-  fastify.get('/api/contacts/flagged', { preHandler: [requireAuth, requireAdmin] }, async (request, reply) => {
+  fastify.get('/api/contacts/flagged', adminOnly, async (request, reply) => {
     const result = FlaggedQuerySchema.safeParse(request.query)
     if (!result.success) {
       return reply.status(400).send({
@@ -549,7 +560,7 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
     const query = result.data
     const { data, total } = await flaggedRecordsRepository.findAll(
       { page: query.page, pageSize: query.pageSize },
-      query.status as FlaggedRecordStatus | undefined,
+      query.status === 'all' ? undefined : query.status as FlaggedRecordStatus | undefined,
     )
 
     const responseBody = {
@@ -565,7 +576,7 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(200).send(responseBody)
   })
 
-  fastify.patch('/api/contacts/flagged/:id', { preHandler: [requireAuth, requireAdmin] }, async (request, reply) => {
+  fastify.patch('/api/contacts/flagged/:id', adminOnly, async (request, reply) => {
     const paramsResult = FlaggedParamsSchema.safeParse(request.params)
     const bodyResult = FlaggedResolutionBodySchema.safeParse(request.body)
 

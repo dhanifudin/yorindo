@@ -34,6 +34,9 @@ export interface Event {
   industryTags?: string[]   // e.g. ['teknologi', 'keuangan']
   eventType?: 'conference' | 'workshop' | 'networking' | 'seminar' | 'webinar'
   topicTags?: string[]      // e.g. ['fintech', 'digital-banking']
+  is_paid: boolean         // AC7: default false
+  price: number            // AC7: default 0
+  payment_method: string | null  // AC7
   createdAt: string
   updatedAt: string
 }
@@ -168,6 +171,9 @@ export interface CreateEventBody {
   blastTemplateId?: string
   confirmationTemplateId?: string
   rejectionTemplateId?: string
+  is_paid?: boolean
+  price?: number
+  payment_method?: string | null
 }
 
 export interface UpdateRegistrationStatusBody {

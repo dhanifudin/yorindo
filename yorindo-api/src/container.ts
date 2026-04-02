@@ -8,6 +8,8 @@ import type { IRegistrationRepository } from './interfaces/repositories/IRegistr
 import type { ISuppressionRepository } from './interfaces/repositories/ISuppressionRepository.js'
 import type { ISurveyRepository } from './interfaces/repositories/ISurveyRepository.js'
 import type { IUserRepository } from './interfaces/repositories/IUserRepository.js'
+import type { IVendorRepository } from './interfaces/repositories/IVendorRepository.js'
+import type { IEventSponsorRepository } from './interfaces/repositories/IEventSponsorRepository.js'
 import type { IDeduplicationService } from './interfaces/services/IDeduplicationService.js'
 import type { IEmailService } from './interfaces/services/IEmailService.js'
 import type { IEtlNormalizationService } from './interfaces/services/IEtlNormalizationService.js'
@@ -24,6 +26,8 @@ import { InMemoryRegistrationRepository } from './repositories/memory/Registrati
 import { InMemorySuppressionRepository } from './repositories/memory/SuppressionRepository.js'
 import { InMemorySurveyRepository } from './repositories/memory/SurveyRepository.js'
 import { InMemoryUserRepository } from './repositories/memory/UserRepository.js'
+import { InMemoryVendorRepository } from './repositories/memory/VendorRepository.js'
+import { InMemoryEventSponsorRepository } from './repositories/memory/EventSponsorRepository.js'
 import { FuzzyDeduplicationService } from './services/FuzzyDeduplicationService.js'
 import { MockEmailService } from './services/adapters/mock/EmailService.js'
 import { MockEtlNormalizationService } from './services/adapters/mock/EtlNormalizationService.js'
@@ -47,6 +51,8 @@ function resolveRepositories(): {
   suppressionRepository: ISuppressionRepository
   rawUploadRepository: IRawUploadRepository
   auditLogRepository: IAuditLogRepository
+  vendorRepository: IVendorRepository
+  eventSponsorRepository: IEventSponsorRepository
 } {
   if (config.repositoryImpl === 'memory') {
     return {
@@ -59,6 +65,8 @@ function resolveRepositories(): {
       suppressionRepository: new InMemorySuppressionRepository(),
       rawUploadRepository: new InMemoryRawUploadRepository(),
       auditLogRepository: new InMemoryAuditLogRepository(),
+      vendorRepository: new InMemoryVendorRepository(),
+      eventSponsorRepository: new InMemoryEventSponsorRepository(),
     }
   }
 
@@ -137,6 +145,8 @@ export const flaggedRecordsRepository: IFlaggedRecordsRepository = repos.flagged
 export const suppressionRepository: ISuppressionRepository = repos.suppressionRepository
 export const rawUploadRepository: IRawUploadRepository = repos.rawUploadRepository
 export const auditLogRepository: IAuditLogRepository = repos.auditLogRepository
+export const vendorRepository: IVendorRepository = repos.vendorRepository
+export const eventSponsorRepository: IEventSponsorRepository = repos.eventSponsorRepository
 
 export const emailService: IEmailService = svcs.emailService
 export const whatsAppService: IWhatsAppService = svcs.whatsAppService

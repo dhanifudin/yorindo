@@ -24,11 +24,56 @@ afterAll(async () => {
   await app.close()
 })
 
+describe('Contacts route auth guards', () => {
+  it('returns 401 for unauthenticated access to internal contact routes', async () => {
+    const responses = await Promise.all([
+      app.inject({ method: 'GET', url: '/api/contacts?page=1&pageSize=20' }),
+      app.inject({ method: 'GET', url: '/api/contacts/health' }),
+      app.inject({ method: 'GET', url: '/api/contacts/facets' }),
+      app.inject({ method: 'GET', url: '/api/contacts/industry-suggestions?q=teknologi' }),
+      app.inject({ method: 'GET', url: '/api/contacts/duplicates?page=1&pageSize=10' }),
+      app.inject({
+        method: 'POST',
+        url: '/api/contacts/cuid2contact000000000001/merge',
+        payload: { mergeIntoId: 'cuid2contact000000000001' },
+      }),
+    ])
+
+    for (const response of responses) {
+      expect(response.statusCode).toBe(401)
+      expect(response.json().error.code).toBe('UNAUTHORIZED')
+    }
+  })
+
+  it('returns 403 for staff access to internal contact routes', async () => {
+    const headers = { authorization: `Bearer ${getAuthToken('staff')}` }
+    const responses = await Promise.all([
+      app.inject({ method: 'GET', url: '/api/contacts?page=1&pageSize=20', headers }),
+      app.inject({ method: 'GET', url: '/api/contacts/health', headers }),
+      app.inject({ method: 'GET', url: '/api/contacts/facets', headers }),
+      app.inject({ method: 'GET', url: '/api/contacts/industry-suggestions?q=teknologi', headers }),
+      app.inject({ method: 'GET', url: '/api/contacts/duplicates?page=1&pageSize=10', headers }),
+      app.inject({
+        method: 'POST',
+        url: '/api/contacts/cuid2contact000000000001/merge',
+        headers,
+        payload: { mergeIntoId: 'cuid2contact000000000001' },
+      }),
+    ])
+
+    for (const response of responses) {
+      expect(response.statusCode).toBe(403)
+      expect(response.json().error.code).toBe('FORBIDDEN')
+    }
+  })
+})
+
 describe('GET /api/contacts/health', () => {
   it('returns contacts health counters', async () => {
     const res = await app.inject({
       method: 'GET',
       url: '/api/contacts/health',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
     })
 
     expect(res.statusCode).toBe(200)
@@ -45,6 +90,7 @@ describe('GET /api/contacts/facets', () => {
     const res = await app.inject({
       method: 'GET',
       url: '/api/contacts/facets',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
     })
 
     expect(res.statusCode).toBe(200)
@@ -77,6 +123,7 @@ describe('GET /api/contacts', () => {
     const res = await app.inject({
       method: 'GET',
       url: '/api/contacts?page=1&pageSize=20',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
     })
 
     expect(res.statusCode).toBe(200)
@@ -91,6 +138,7 @@ describe('GET /api/contacts', () => {
     const res = await app.inject({
       method: 'GET',
       url: '/api/contacts?page=1&pageSize=20&industry=teknologi',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
     })
 
     expect(res.statusCode).toBe(200)
@@ -104,6 +152,7 @@ describe('GET /api/contacts', () => {
     const res = await app.inject({
       method: 'GET',
       url: '/api/contacts?page=1&pageSize=20&companySize=medium',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
     })
 
     expect(res.statusCode).toBe(200)
@@ -112,10 +161,71 @@ describe('GET /api/contacts', () => {
     expect(body.data.every((contact: { companySize: string }) => contact.companySize === 'medium')).toBe(true)
   })
 
+  it('filters contacts by city using case-insensitive partial matches', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/contacts?page=1&pageSize=20&city=jak',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
+    })
+
+    expect(res.statusCode).toBe(200)
+    const body = res.json()
+    expect(body.pagination.total).toBeGreaterThan(0)
+    expect(body.data.every((contact: { city: string }) => contact.city.toLowerCase().includes('jak'))).toBe(true)
+  })
+
+  it('filters contacts by flagged state', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/contacts?page=1&pageSize=20&flagFilter=flagged',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
+    })
+
+    expect(res.statusCode).toBe(200)
+    const body = res.json()
+    expect(body.pagination.total).toBeGreaterThan(0)
+    expect(body.data.every((contact: { flagCategory: string | null }) => contact.flagCategory !== null)).toBe(true)
+  })
+
+  it('filters contacts with missing email only', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/contacts?page=1&pageSize=20&missingEmail=true',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
+    })
+
+    expect(res.statusCode).toBe(200)
+    const body = res.json()
+    expect(body.pagination.total).toBe(15)
+    expect(body.data.every((contact: { email: string | null }) => contact.email === null)).toBe(true)
+  })
+
+  it('searches contacts by free-text query', async () => {
+    const seed = await app.inject({
+      method: 'GET',
+      url: '/api/contacts?page=1&pageSize=1',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
+    })
+    const contact = seed.json().data[0]
+    const query = String(contact.name).split(' ')[0]
+
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/contacts?page=1&pageSize=20&q=${encodeURIComponent(query)}`,
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
+    })
+
+    expect(res.statusCode).toBe(200)
+    const body = res.json()
+    expect(body.pagination.total).toBeGreaterThan(0)
+    expect(body.data.some((item: { id: string }) => item.id === contact.id)).toBe(true)
+  })
+
   it('sorts contacts by name ascending', async () => {
     const res = await app.inject({
       method: 'GET',
       url: '/api/contacts?page=1&pageSize=5&sortBy=name&sortDir=asc',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
     })
 
     expect(res.statusCode).toBe(200)
@@ -128,6 +238,7 @@ describe('GET /api/contacts', () => {
     const res = await app.inject({
       method: 'GET',
       url: '/api/contacts?page=0&pageSize=20',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
     })
 
     expect(res.statusCode).toBe(400)
@@ -140,6 +251,7 @@ describe('GET /api/contacts/industry-suggestions', () => {
     const res = await app.inject({
       method: 'GET',
       url: '/api/contacts/industry-suggestions?q=teknologi%20informasi',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
     })
 
     expect(res.statusCode).toBe(200)
@@ -154,6 +266,7 @@ describe('GET /api/contacts/industry-suggestions', () => {
     const res = await app.inject({
       method: 'GET',
       url: '/api/contacts/industry-suggestions?q=xyzabc',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
     })
 
     expect(res.statusCode).toBe(200)
@@ -166,6 +279,7 @@ describe('GET /api/contacts/industry-suggestions', () => {
     const res = await app.inject({
       method: 'GET',
       url: '/api/contacts/industry-suggestions?q=t',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
     })
 
     expect(res.statusCode).toBe(200)
@@ -234,6 +348,7 @@ describe('Duplicate contacts routes', () => {
     const res = await app.inject({
       method: 'GET',
       url: '/api/contacts/duplicates?page=1&pageSize=3',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
     })
 
     expect(res.statusCode).toBe(200)
@@ -248,6 +363,7 @@ describe('Duplicate contacts routes', () => {
     const beforeRes = await app.inject({
       method: 'GET',
       url: '/api/contacts/duplicates?page=1&pageSize=10',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
     })
     const beforeBody = beforeRes.json()
     const pair = beforeBody.data[0]
@@ -255,6 +371,7 @@ describe('Duplicate contacts routes', () => {
     const mergeRes = await app.inject({
       method: 'POST',
       url: `/api/contacts/${pair.primary.id}/merge`,
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
       payload: {
         mergeIntoId: pair.primary.id,
         fieldSelections: {
@@ -273,6 +390,7 @@ describe('Duplicate contacts routes', () => {
     const afterRes = await app.inject({
       method: 'GET',
       url: '/api/contacts/duplicates?page=1&pageSize=10',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
     })
     const afterBody = afterRes.json()
     expect(afterBody.pagination.total).toBe(beforeBody.pagination.total - 1)
@@ -282,6 +400,7 @@ describe('Duplicate contacts routes', () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/contacts/not-a-real-contact-id/merge',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
     })
 
     expect(res.statusCode).toBe(404)
@@ -357,6 +476,7 @@ describe('Flagged records routes', () => {
     const contactsRes = await app.inject({
       method: 'GET',
       url: '/api/contacts?page=1&pageSize=100',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
     })
     expect(contactsRes.statusCode).toBe(200)
     expect(contactsRes.json().data.some((contact: { phone: string; name: string }) => (
@@ -403,5 +523,31 @@ describe('Flagged records routes', () => {
 
     expect(res.statusCode).toBe(404)
     expect(res.json().error.code).toBe('NOT_FOUND')
+  })
+
+  it('dismisses a duplicate pair as not duplicate', async () => {
+    const beforeRes = await app.inject({
+      method: 'GET',
+      url: '/api/contacts/duplicates?page=1&pageSize=10',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
+    })
+    const beforeBody = beforeRes.json()
+    const pair = beforeBody.data[0]
+
+    const dismissRes = await app.inject({
+      method: 'DELETE',
+      url: `/api/contacts/duplicates/${pair.id}`,
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
+    })
+
+    expect(dismissRes.statusCode).toBe(204)
+
+    const afterRes = await app.inject({
+      method: 'GET',
+      url: '/api/contacts/duplicates?page=1&pageSize=10',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
+    })
+    const afterBody = afterRes.json()
+    expect(afterBody.pagination.total).toBe(beforeBody.pagination.total - 1)
   })
 })
