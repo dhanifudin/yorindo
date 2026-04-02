@@ -56,7 +56,6 @@ export const etlHandlers = [
       )
     }
 
-    const allowed = ['.xlsx', '.csv', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/csv']
     const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
     if (!['xlsx', 'csv'].includes(ext)) {
       return HttpResponse.json(

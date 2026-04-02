@@ -67,6 +67,19 @@ describe('InMemoryContactRepository', () => {
     expect(after.total).toBe(before.total - 1)
   })
 
+  it('dismissDuplicate resolves one duplicate pair without deleting contacts', async () => {
+    const before = await repo.findDuplicates({ page: 1, pageSize: 10 })
+    const pair = before.data[0]
+
+    const dismissed = await repo.dismissDuplicate(pair.id)
+
+    expect(dismissed).toBe(true)
+    const after = await repo.findDuplicates({ page: 1, pageSize: 10 })
+    expect(after.total).toBe(before.total - 1)
+    expect(await repo.findById(pair.primary.id)).not.toBeNull()
+    expect(await repo.findById(pair.duplicate.id)).not.toBeNull()
+  })
+
   it('findById returns contact by id', async () => {
     const { data } = await repo.findAll({ page: 1, pageSize: 1 })
     const found = await repo.findById(data[0].id)
@@ -188,6 +201,14 @@ describe('InMemoryEventRepository', () => {
     const metrics = await repo.getOverviewMetrics(data[0].id)
     expect(typeof metrics.invited).toBe('number')
     expect(typeof metrics.conversionRate).toBe('number')
+  })
+
+  it('getUpcomingUncontacted returns a qualifying event within 14 days', async () => {
+    const upcoming = await repo.getUpcomingUncontacted()
+    expect(upcoming).not.toBeNull()
+    expect(upcoming!.daysTillEvent).toBeGreaterThanOrEqual(0)
+    expect(upcoming!.daysTillEvent).toBeLessThanOrEqual(14)
+    expect(upcoming!.uncontactedCount).toBeGreaterThan(0)
   })
 })
 

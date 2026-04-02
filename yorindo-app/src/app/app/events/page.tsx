@@ -61,7 +61,6 @@ export default function EventsPage() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
-  // URL-driven state
   const activeTab = (searchParams.get('tab') as TabValue) || 'upcoming'
   const activeStatus = searchParams.get('status') as Event['status'] | null
   const searchQuery = searchParams.get('search') || ''
@@ -72,13 +71,9 @@ export default function EventsPage() {
     (updates: Record<string, string | null>) => {
       const params = new URLSearchParams(searchParams.toString())
       for (const [key, value] of Object.entries(updates)) {
-        if (value === null || value === '') {
-          params.delete(key)
-        } else {
-          params.set(key, value)
-        }
+        if (value === null || value === '') params.delete(key)
+        else params.set(key, value)
       }
-      // Remove default tab from URL
       if (params.get('tab') === 'upcoming') params.delete('tab')
       const qs = params.toString()
       router.replace(`${pathname}${qs ? `?${qs}` : ''}`, { scroll: false })
@@ -95,22 +90,17 @@ export default function EventsPage() {
   )
 
   const setStatusFilter = useCallback(
-    (status: Event['status'] | null) => {
-      updateParams({ status })
-    },
+    (status: Event['status'] | null) => updateParams({ status }),
     [updateParams],
   )
 
   const setSearch = useCallback(
-    (value: string) => {
-      updateParams({ search: value || null })
-    },
+    (value: string) => updateParams({ search: value || null }),
     [updateParams],
   )
 
   const activeFilterCount = [activeStatus, searchQuery, startDate, endDate].filter(Boolean).length
 
-  // Derived data
   const allEvents = data?.data ?? []
 
   const { upcomingEvents, historyEvents } = useMemo(() => {
@@ -124,34 +114,21 @@ export default function EventsPage() {
 
   const filteredEvents = useMemo(() => {
     let events = tabEvents
-
-    // Status filter
     if (activeStatus && tabStatuses.includes(activeStatus)) {
       events = events.filter((e) => e.status === activeStatus)
     }
-
-    // Text search
     if (searchQuery) {
       const q = searchQuery.toLowerCase()
       events = events.filter((e) => e.name.toLowerCase().includes(q))
     }
-
-    // Date range filter
-    if (startDate) {
-      events = events.filter((e) => e.eventDate.slice(0, 10) >= startDate)
-    }
-    if (endDate) {
-      events = events.filter((e) => e.eventDate.slice(0, 10) <= endDate)
-    }
-
-    // Sort: upcoming = ascending by date, history = descending
+    if (startDate) events = events.filter((e) => e.eventDate.slice(0, 10) >= startDate)
+    if (endDate) events = events.filter((e) => e.eventDate.slice(0, 10) <= endDate)
     return [...events].sort((a, b) => {
       const diff = new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime()
       return activeTab === 'upcoming' ? diff : -diff
     })
   }, [tabEvents, activeStatus, searchQuery, tabStatuses, activeTab, startDate, endDate])
 
-  // Reset to page 0 when filters change (update state while rendering pattern)
   const filterKey = [activeStatus, searchQuery, startDate, endDate, activeTab].join('|')
   const [prevFilterKey, setPrevFilterKey] = useState(filterKey)
   if (filterKey !== prevFilterKey) {
@@ -161,7 +138,6 @@ export default function EventsPage() {
 
   const pagedEvents = filteredEvents.slice(eventsPage * PAGE_SIZE, (eventsPage + 1) * PAGE_SIZE)
 
-  // Status counts for chips
   const statusCounts = useMemo(() => {
     const counts: Partial<Record<Event['status'], number>> = {}
     for (const status of tabStatuses) {
@@ -212,11 +188,7 @@ export default function EventsPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Manajemen Event</h1>
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowDeleted((v) => !v)}
-          >
+          <Button variant="outline" size="sm" onClick={() => setShowDeleted((v) => !v)}>
             {showDeleted ? 'Aktif' : 'Terhapus'} ({deletedData?.data.length ?? 0})
           </Button>
           {!showDeleted && <Button onClick={() => setShowForm(true)}>+ Event Baru</Button>}
@@ -227,10 +199,7 @@ export default function EventsPage() {
         <Card className="mb-6">
           <CardContent className="pt-6">
             <h2 className="text-lg font-semibold mb-4">Buat Event Baru</h2>
-            <EventCreateForm
-              onSuccess={() => setShowForm(false)}
-              onCancel={() => setShowForm(false)}
-            />
+            <EventCreateForm onSuccess={() => setShowForm(false)} onCancel={() => setShowForm(false)} />
           </CardContent>
         </Card>
       )}
@@ -279,9 +248,7 @@ export default function EventsPage() {
       {/* Mobile filter sheet */}
       <Sheet open={showFilterSheet} onOpenChange={setShowFilterSheet}>
         <SheetContent side="bottom" className="flex flex-col max-h-[70vh] overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>Filter</SheetTitle>
-          </SheetHeader>
+          <SheetHeader><SheetTitle>Filter</SheetTitle></SheetHeader>
           <div className="flex-1 px-4 space-y-4 overflow-y-auto">
             <div>
               <Label className="text-xs text-muted-foreground uppercase tracking-wide mb-2 block">Cari Event</Label>
@@ -305,13 +272,10 @@ export default function EventsPage() {
                       type="button"
                       onClick={() => updateParams({ status: isActive ? null : status })}
                       className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                        isActive
-                          ? 'border-primary bg-primary/10 text-primary'
-                          : 'border-border text-muted-foreground hover:bg-muted'
+                        isActive ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:bg-muted'
                       }`}
                     >
-                      {badge.label}
-                      <span className="text-muted-foreground">({count})</span>
+                      {badge.label} <span className="text-muted-foreground">({count})</span>
                     </button>
                   )
                 })}
@@ -320,19 +284,11 @@ export default function EventsPage() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs text-muted-foreground uppercase tracking-wide mb-2 block">Dari Tanggal</Label>
-                <Input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => updateParams({ startDate: e.target.value || null })}
-                />
+                <Input type="date" value={startDate} onChange={(e) => updateParams({ startDate: e.target.value || null })} />
               </div>
               <div>
                 <Label className="text-xs text-muted-foreground uppercase tracking-wide mb-2 block">Sampai Tanggal</Label>
-                <Input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => updateParams({ endDate: e.target.value || null })}
-                />
+                <Input type="date" value={endDate} onChange={(e) => updateParams({ endDate: e.target.value || null })} />
               </div>
             </div>
           </div>
@@ -351,13 +307,29 @@ export default function EventsPage() {
         </SheetContent>
       </Sheet>
 
-      {/* Event detail sheet (mobile) */}
+      {/* ── Event detail sheet ─────────────────────────────────────────────── */}
       <Sheet open={!!detailEvent} onOpenChange={(v) => !v && setDetailEvent(null)}>
-        <SheetContent side="bottom" className="flex flex-col max-h-[70vh] overflow-y-auto">
+        <SheetContent side="bottom" className="flex flex-col max-h-[80vh] overflow-y-auto">
           <SheetHeader>
             <SheetTitle>{detailEvent?.name}</SheetTitle>
           </SheetHeader>
           <div className="flex-1 px-4 space-y-3 overflow-y-auto text-sm">
+
+            {/* ── Banner image — tampil kalau ada ──────────────────────── */}
+            {detailEvent?.bannerUrl && (
+              <div className="rounded-lg overflow-hidden border border-border -mx-1">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={detailEvent.bannerUrl}
+                  alt={`Banner ${detailEvent.name}`}
+                  className="w-full h-44 object-cover"
+                  onError={(e) => {
+                    ;(e.target as HTMLImageElement).parentElement!.style.display = 'none'
+                  }}
+                />
+              </div>
+            )}
+
             <div>
               <span className="text-muted-foreground">Status: </span>
               {detailEvent && (
@@ -419,14 +391,7 @@ export default function EventsPage() {
               Lihat Detail
             </Button>
             {detailEvent && EDITABLE_STATUSES.includes(detailEvent.status) && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  setEditEvent(detailEvent)
-                  setDetailEvent(null)
-                }}
-              >
+              <Button size="sm" variant="outline" onClick={() => { setEditEvent(detailEvent); setDetailEvent(null) }}>
                 Edit
               </Button>
             )}
@@ -435,10 +400,7 @@ export default function EventsPage() {
                 size="sm"
                 variant="ghost"
                 className="text-destructive hover:text-destructive"
-                onClick={() => {
-                  if (detailEvent) setDeleteTarget(detailEvent)
-                  setDetailEvent(null)
-                }}
+                onClick={() => { if (detailEvent) setDeleteTarget(detailEvent); setDetailEvent(null) }}
               >
                 Hapus
               </Button>
@@ -460,16 +422,11 @@ export default function EventsPage() {
                     <div>
                       <h3 className="font-medium">{event.name}</h3>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        Dihapus: {new Date(event.deletedAt).toLocaleDateString('id-ID')} ·
+                        Dihapus: {new Date(event.deletedAt).toLocaleDateString('id-ID')} ·{' '}
                         Pulihkan sebelum {new Date(new Date(event.deletedAt).getTime() + 30 * 86400000).toLocaleDateString('id-ID')}
                       </p>
                     </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => restoreMutation.mutate(event.id)}
-                      disabled={restoreMutation.isPending}
-                    >
+                    <Button size="sm" variant="outline" onClick={() => restoreMutation.mutate(event.id)} disabled={restoreMutation.isPending}>
                       Pulihkan
                     </Button>
                   </CardContent>
@@ -482,44 +439,26 @@ export default function EventsPage() {
         <>
           {/* Tab navigation */}
           <div className="flex items-center gap-1 border-b mb-4">
-            <button
-              type="button"
-              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === 'upcoming'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
-              onClick={() => setTab('upcoming')}
-            >
-              Mendatang
-              <Badge variant="secondary" className="ml-2 text-xs">
-                {upcomingEvents.length}
-              </Badge>
-            </button>
-            <button
-              type="button"
-              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === 'history'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
-              onClick={() => setTab('history')}
-            >
-              Riwayat
-              <Badge variant="secondary" className="ml-2 text-xs">
-                {historyEvents.length}
-              </Badge>
-            </button>
+            {(['upcoming', 'history'] as TabValue[]).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === tab ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+                onClick={() => setTab(tab)}
+              >
+                {tab === 'upcoming' ? 'Mendatang' : 'Riwayat'}
+                <Badge variant="secondary" className="ml-2 text-xs">
+                  {tab === 'upcoming' ? upcomingEvents.length : historyEvents.length}
+                </Badge>
+              </button>
+            ))}
           </div>
 
           {/* Mobile: filter button */}
           <div className="md:hidden flex items-center gap-2 mb-3">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowFilterSheet(true)}
-              className="relative"
-            >
+            <Button variant="outline" size="sm" onClick={() => setShowFilterSheet(true)} className="relative">
               Filter
               {activeFilterCount > 0 && (
                 <Badge className="ml-2 h-4 w-4 p-0 flex items-center justify-center text-[10px]">
@@ -527,9 +466,7 @@ export default function EventsPage() {
                 </Badge>
               )}
             </Button>
-            {searchQuery && (
-              <span className="text-xs text-muted-foreground">&quot;{searchQuery}&quot;</span>
-            )}
+            {searchQuery && <span className="text-xs text-muted-foreground">&quot;{searchQuery}&quot;</span>}
           </div>
 
           {/* Desktop: search + status chips + date range */}
@@ -542,27 +479,11 @@ export default function EventsPage() {
                 onChange={(e) => setSearch(e.target.value)}
                 className="max-w-sm"
               />
-              <Input
-                type="date"
-                value={startDate}
-                onChange={(e) => updateParams({ startDate: e.target.value || null })}
-                className="w-40"
-                title="Dari tanggal"
-              />
+              <Input type="date" value={startDate} onChange={(e) => updateParams({ startDate: e.target.value || null })} className="w-40" title="Dari tanggal" />
               <span className="text-muted-foreground text-sm">—</span>
-              <Input
-                type="date"
-                value={endDate}
-                onChange={(e) => updateParams({ endDate: e.target.value || null })}
-                className="w-40"
-                title="Sampai tanggal"
-              />
+              <Input type="date" value={endDate} onChange={(e) => updateParams({ endDate: e.target.value || null })} className="w-40" title="Sampai tanggal" />
               {activeFilterCount > 0 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => updateParams({ status: null, search: null, startDate: null, endDate: null })}
-                >
+                <Button variant="ghost" size="sm" onClick={() => updateParams({ status: null, search: null, startDate: null, endDate: null })}>
                   Reset
                 </Button>
               )}
@@ -578,14 +499,10 @@ export default function EventsPage() {
                     type="button"
                     onClick={() => setStatusFilter(isActive ? null : status)}
                     className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                      isActive
-                        ? 'border-primary bg-primary/10 text-primary'
-                        : 'border-border text-muted-foreground hover:bg-muted'
+                      isActive ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:bg-muted'
                     }`}
                   >
-                    <span
-                      className={`inline-block h-2 w-2 rounded-full ${badge.className.split(' ')[0]}`}
-                    />
+                    <span className={`inline-block h-2 w-2 rounded-full ${badge.className.split(' ')[0]}`} />
                     {badge.label}
                     <span className="text-muted-foreground">({count})</span>
                   </button>
@@ -594,7 +511,6 @@ export default function EventsPage() {
             </div>
           </div>
 
-          {/* Events table / cards */}
           {isLoading ? (
             <div className="space-y-3">
               {Array.from({ length: 4 }).map((_, i) => (
@@ -614,37 +530,43 @@ export default function EventsPage() {
                   return (
                     <div
                       key={event.id}
-                      className="rounded-lg border border-border bg-card p-3 cursor-pointer active:bg-muted/50"
+                      className="rounded-lg border border-border bg-card overflow-hidden cursor-pointer active:bg-muted/50"
                       onClick={() => setDetailEvent(event)}
                     >
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium text-sm">{event.name}</span>
-                        <Badge className={badge.className}>{badge.label}</Badge>
-                      </div>
-                      <div className="flex items-center justify-between mt-1">
-                        <div className="text-xs text-muted-foreground">
-                          {new Date(event.eventDate).toLocaleDateString('id-ID', {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric',
-                            timeZone: event.timezone,
-                          })}
-                          {event.venue && ` · ${event.venue}`}
-                          {event.capacity != null && ` · Kapasitas: ${event.capacity}`}
+                      {/* Banner thumbnail di mobile card */}
+                      {event.bannerUrl && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={event.bannerUrl}
+                          alt=""
+                          className="w-full h-24 object-cover"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                        />
+                      )}
+                      <div className="p-3">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-sm">{event.name}</span>
+                          <Badge className={badge.className}>{badge.label}</Badge>
                         </div>
-                        {event.status === 'draft' && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-destructive hover:text-destructive -mr-2 h-7 px-2"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setDeleteTarget(event)
-                            }}
-                          >
-                            Hapus
-                          </Button>
-                        )}
+                        <div className="flex items-center justify-between mt-1">
+                          <div className="text-xs text-muted-foreground">
+                            {new Date(event.eventDate).toLocaleDateString('id-ID', {
+                              year: 'numeric', month: 'short', day: 'numeric', timeZone: event.timezone,
+                            })}
+                            {event.venue && ` · ${event.venue}`}
+                            {event.capacity != null && ` · Kapasitas: ${event.capacity}`}
+                          </div>
+                          {event.status === 'draft' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive -mr-2 h-7 px-2"
+                              onClick={(e) => { e.stopPropagation(); setDeleteTarget(event) }}
+                            >
+                              Hapus
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )
@@ -656,6 +578,7 @@ export default function EventsPage() {
                 <Table className="lg:min-w-[900px] xl:min-w-full">
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-16">Banner</TableHead>
                       <TableHead>Nama Event</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Tanggal</TableHead>
@@ -667,18 +590,26 @@ export default function EventsPage() {
                     {pagedEvents.map((event) => {
                       const badge = STATUS_BADGE[event.status] ?? STATUS_BADGE.draft
                       return (
-                        <TableRow
-                          key={event.id}
-                          className="cursor-pointer"
-                          onClick={() => setDetailEvent(event)}
-                        >
+                        <TableRow key={event.id} className="cursor-pointer" onClick={() => setDetailEvent(event)}>
+                          {/* Thumbnail di tabel desktop */}
+                          <TableCell onClick={(e) => e.stopPropagation()}>
+                            {event.bannerUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={event.bannerUrl}
+                                alt=""
+                                className="w-12 h-8 object-cover rounded"
+                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                              />
+                            ) : (
+                              <div className="w-12 h-8 rounded bg-muted flex items-center justify-center">
+                                <span className="text-[10px] text-muted-foreground">—</span>
+                              </div>
+                            )}
+                          </TableCell>
                           <TableCell
                             className="font-medium"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setSelectedEvent(event.id)
-                              router.push(`/app/events/${event.id}`)
-                            }}
+                            onClick={(e) => { e.stopPropagation(); setSelectedEvent(event.id); router.push(`/app/events/${event.id}`) }}
                           >
                             {event.name}
                           </TableCell>
@@ -687,25 +618,16 @@ export default function EventsPage() {
                           </TableCell>
                           <TableCell className="text-muted-foreground text-sm" onClick={(e) => e.stopPropagation()}>
                             {new Date(event.eventDate).toLocaleDateString('id-ID', {
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric',
-                              timeZone: event.timezone,
+                              year: 'numeric', month: 'short', day: 'numeric', timeZone: event.timezone,
                             })}
                           </TableCell>
                           <TableCell className="text-muted-foreground text-sm" onClick={(e) => e.stopPropagation()}>
-                            {event.capacity ?? '\u2014'}
+                            {event.capacity ?? '—'}
                           </TableCell>
                           <TableCell onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center gap-1">
                               {EDITABLE_STATUSES.includes(event.status) && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => setEditEvent(event)}
-                                >
-                                  Edit
-                                </Button>
+                                <Button variant="outline" size="sm" onClick={() => setEditEvent(event)}>Edit</Button>
                               )}
                               {event.status === 'draft' && (
                                 <Button
