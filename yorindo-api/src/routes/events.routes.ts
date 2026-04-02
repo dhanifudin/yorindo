@@ -423,6 +423,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(204).send()
   })
 
+  fastify.post('/api/events/:id/restore', { preHandler: [requireAuth, requireAdmin] }, restoreEventHandler)
   fastify.patch('/api/events/:id/restore', { preHandler: [requireAuth, requireAdmin] }, restoreEventHandler)
 
   fastify.post('/api/events/:id/clone', { preHandler: [requireAuth, requireAdmin] }, async (request, reply) => {
