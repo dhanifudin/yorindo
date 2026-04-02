@@ -97,7 +97,25 @@ describe('BlastService', () => {
     expect(result.suppressedCount).toBeGreaterThan(0)
   })
 
-  it('writes blast.initiated audit entry after processing', async () => {
+  it('email-only suppression is enforced for email blasts', async () => {
+    const { data: contacts } = await contactRepo.findAll({ page: 1, pageSize: 20 })
+    const contactWithEmail = contacts.find((contact) => contact.email !== null)!
+    await suppressionRepo.suppress('manual-email-suppression', 'manually_added', {
+      email: contactWithEmail.email,
+    })
+
+    const beforeCount = emailService.getSentEmails().length
+    const result = await blastService.processJob(makeJob({ channel: 'email' }))
+    const matchingEmail = emailService.getSentEmails().find(
+      (item) => item.payload.to === contactWithEmail.email,
+    )
+
+    expect(matchingEmail).toBeUndefined()
+    expect(emailService.getSentEmails().length).toBeGreaterThanOrEqual(beforeCount)
+    expect(result.suppressedCount).toBeGreaterThan(0)
+  })
+
+  it('writes blast.initiated audit entry after job', async () => {
     await blastService.processJob(makeJob())
 
     const initiated = auditLogRepository.entries.find((entry) => entry.action === 'blast.initiated')

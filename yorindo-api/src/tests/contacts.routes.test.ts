@@ -290,6 +290,76 @@ describe('GET /api/contacts/industry-suggestions', () => {
   })
 })
 
+describe('Suppression routes', () => {
+  it('lists suppression entries with pagination', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/contacts/suppression?page=1&pageSize=20',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
+    })
+
+    expect(res.statusCode).toBe(200)
+    const body = res.json()
+    expect(body.data).toBeDefined()
+    expect(body.pagination).toBeDefined()
+  })
+
+  it('adds and searches a manual suppression entry', async () => {
+    const createRes = await app.inject({
+      method: 'POST',
+      url: '/api/contacts/suppression',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
+      payload: {
+        email: 'blocked@example.com',
+        phone: '+6281999999999',
+        reason: 'manually_added',
+      },
+    })
+
+    expect(createRes.statusCode).toBe(201)
+    const created = createRes.json()
+    expect(created.email).toBe('blocked@example.com')
+    expect(created.phone).toBe('+6281999999999')
+
+    const searchRes = await app.inject({
+      method: 'GET',
+      url: '/api/contacts/suppression?q=blocked@example.com&pageSize=20',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
+    })
+
+    expect(searchRes.statusCode).toBe(200)
+    expect(searchRes.json().data.some((entry: { id: string }) => entry.id === created.id)).toBe(true)
+  })
+
+  it('removes a suppression entry', async () => {
+    const createRes = await app.inject({
+      method: 'POST',
+      url: '/api/contacts/suppression',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
+      payload: {
+        email: 'remove-me@example.com',
+        reason: 'manually_added',
+      },
+    })
+
+    const created = createRes.json()
+    const deleteRes = await app.inject({
+      method: 'DELETE',
+      url: `/api/contacts/suppression/${created.id}`,
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
+    })
+
+    expect(deleteRes.statusCode).toBe(204)
+
+    const searchRes = await app.inject({
+      method: 'GET',
+      url: '/api/contacts/suppression?q=remove-me@example.com&pageSize=20',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
+    })
+    expect(searchRes.json().data).toHaveLength(0)
+  })
+})
+
 describe('GET /api/contacts/:id/history', () => {
   it('returns contact event history for admins sorted by most recent event date', async () => {
     const res = await app.inject({
