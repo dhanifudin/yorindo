@@ -6,6 +6,7 @@ export interface EventFilters {
   status?: EventStatus
   city?: string
   search?: string
+  deleted?: 'exclude' | 'only'
 }
 
 export interface IEventRepository {

@@ -1,4 +1,4 @@
-import type { FastifyPluginAsync, FastifyReply } from 'fastify'
+import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import {
   auditLogRepository,
@@ -25,6 +25,7 @@ const EventListQuerySchema = z.object({
   sortBy: z.string().trim().optional(),
   sortDir: z.enum(['asc', 'desc']).optional(),
   status: z.enum(['draft', 'published', 'active', 'completed', 'cancelled', 'archived']).optional(),
+  deleted: z.coerce.boolean().optional(),
 })
 
 const EventCreateBodySchema = z.object({
@@ -112,6 +113,7 @@ function toEventDto(event: Event, surveySchema?: unknown) {
     industryTags: event.targetCriteria?.industries ?? [],
     eventType: 'conference',
     topicTags: [],
+    deletedAt: event.deletedAt,
     createdAt: event.createdAt,
     updatedAt: event.updatedAt,
   }
@@ -202,6 +204,57 @@ async function requireEventOr404(reply: FastifyReply, eventId: string) {
   return event
 }
 
+async function restoreEventHandler(request: FastifyRequest, reply: FastifyReply) {
+  const parsed = EventIdParamsSchema.safeParse(request.params)
+  if (!parsed.success) return replyValidationError(reply, parsed.error.issues, 'Invalid event id')
+
+  const deletedEvents = await eventRepository.findAll({ page: 1, pageSize: 500 }, { deleted: 'only' })
+  const event = deletedEvents.data.find((item) => item.id === parsed.data.id)
+
+  if (!event) {
+    return reply.status(404).send({
+      error: { code: 'NOT_FOUND', message: 'Event not found in deleted items', details: [] },
+    })
+  }
+
+  const deletedAt = new Date(event.deletedAt ?? 0).getTime()
+  if (!Number.isNaN(deletedAt) && Date.now() - deletedAt > 30 * 86400000) {
+    return reply.status(400).send({
+      error: {
+        code: 'RECOVERY_WINDOW_EXPIRED',
+        message: 'This event can no longer be restored because the 30-day recovery window has expired',
+        details: [],
+      },
+    })
+  }
+
+  const method = request.method.toLowerCase() as 'post' | 'patch'
+  validateOpenApiRequest({ path: '/events/{id}/restore', method, params: parsed.data })
+  await eventRepository.restore(event.id)
+  const restored = await eventRepository.findById(event.id)
+
+  if (!restored) {
+    return reply.status(500).send({
+      error: { code: 'INTERNAL_ERROR', message: 'Failed to restore event', details: [] },
+    })
+  }
+
+  const payload = request.user as JwtPayload
+  await auditLogRepository.create({
+    action: 'event.restored',
+    actorId: payload.sub,
+    actorRole: payload.role,
+    eventId: restored.id,
+    targetId: restored.id,
+    targetType: 'event',
+    metadata: { deletedAt: event.deletedAt, restoredAt: restored.updatedAt },
+  })
+
+  const responseBody = toEventDto(restored)
+  validateOpenApiResponse({ path: '/events/{id}/restore', method, status: 200, body: responseBody })
+  return reply.status(200).send(responseBody)
+}
+
 async function requireEventAccessOr403(
   reply: FastifyReply,
   user: JwtPayload | undefined,
@@ -234,12 +287,17 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     if (query.sortBy) paginationParams.sortBy = query.sortBy
     if (query.sortDir) paginationParams.sortDir = query.sortDir
 
-    const eventFilters: { ids?: string[]; status?: 'draft' | 'published' | 'active' | 'completed' | 'cancelled' | 'archived' } = {}
+    const eventFilters: {
+      ids?: string[]
+      status?: 'draft' | 'published' | 'active' | 'completed' | 'cancelled' | 'archived'
+      deleted?: 'exclude' | 'only'
+    } = {}
     const user = request.user as JwtPayload | undefined
     if (user && user.role !== 'admin' && user.role !== 'participant') {
       eventFilters.ids = await userRepository.getAssignedEvents(user.sub)
     }
     if (query.status) eventFilters.status = query.status
+    if (query.deleted) eventFilters.deleted = 'only'
 
     const result = await eventRepository.findAll(paginationParams, eventFilters)
 
@@ -364,6 +422,9 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     await eventRepository.softDelete(event.id)
     return reply.status(204).send()
   })
+
+  fastify.post('/api/events/:id/restore', { preHandler: [requireAuth, requireAdmin] }, restoreEventHandler)
+  fastify.patch('/api/events/:id/restore', { preHandler: [requireAuth, requireAdmin] }, restoreEventHandler)
 
   fastify.post('/api/events/:id/clone', { preHandler: [requireAuth, requireAdmin] }, async (request, reply) => {
     const parsed = EventIdParamsSchema.safeParse(request.params)
