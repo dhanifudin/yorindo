@@ -132,6 +132,7 @@ development_status:
   4-12-event-pipeline-hub-laporan-tab: review
   4-13-event-banner-poster-upload: ready-for-dev  # SCP-2026-03-28-E: shared typed media library (banner/poster separate); MediaPickerModal reused in event form; displayed on landing page + registration form strip + checkout step
   4-14-vendor-roster-management: review
+  be-4-14-vendor-roster-management: review
   4-15-attach-sponsors-to-event: review
   4-16-vendor-form-edit-pre-population-fix: review
   epic-4-retrospective: optional

@@ -25,9 +25,21 @@ export interface JobTitle {
 export interface Vendor {
   id: EntityId
   name: string
-  contact: string | null
-  phone: string | null
-  email: string | null
+  contactEmail: string
+  industry: string
+  logoUrl: string | null
+  website: string | null
+  notes: string | null
+  createdAt: ISODateString
+  updatedAt: ISODateString
+}
+
+export interface EventSponsor {
+  id: EntityId
+  eventId: EntityId
+  vendorId: EntityId
+  tier: 'premium' | 'standard' | 'supporter'
+  displayOrder: number
   createdAt: ISODateString
 }
 
