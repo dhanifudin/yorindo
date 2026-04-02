@@ -1,6 +1,6 @@
 'use client'
 
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useCreateTemplate, useUpdateTemplate, type Template, type CreateTemplateBody } from '@/hooks/useTemplates'
@@ -33,7 +33,7 @@ export function TemplateForm({ template, onSuccess, onCancel }: TemplateFormProp
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -42,7 +42,7 @@ export function TemplateForm({ template, onSuccess, onCancel }: TemplateFormProp
       : { type: 'invitation', channel: 'whatsapp' },
   })
 
-  const bodyValue = watch('body') ?? ''
+  const bodyValue = useWatch({ control, name: 'body' }) ?? ''
 
   const onSubmit = (values: FormValues) => {
     const payload: CreateTemplateBody = {
