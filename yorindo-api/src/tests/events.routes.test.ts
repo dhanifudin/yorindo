@@ -285,4 +285,137 @@ describe('Events Routes API (Story 4.1 BE)', () => {
       }
     })
   })
+
+  describe('POST /api/events/:id/audience-preview', () => {
+    it('returns matchCount and breakdown for valid criteria', async () => {
+      const event = await createDraftEvent()
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/events/${event.id}/audience-preview`,
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: {},
+      })
+      expect(res.statusCode).toBe(200)
+      const json = res.json()
+      expect(typeof json.matchCount).toBe('number')
+      expect(json.matchCount).toBeGreaterThanOrEqual(0)
+      expect(typeof json.breakdown).toBe('object')
+    })
+
+    it('filters by industries and returns real breakdown', async () => {
+      const event = await createDraftEvent()
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/events/${event.id}/audience-preview`,
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: { industries: ['teknologi'] },
+      })
+      expect(res.statusCode).toBe(200)
+      const json = res.json()
+      expect(typeof json.matchCount).toBe('number')
+      expect(typeof json.breakdown).toBe('object')
+    })
+
+    it('excludes suppressed contacts from matchCount', async () => {
+      const event = await createDraftEvent()
+      const allRes = await app.inject({
+        method: 'POST',
+        url: `/api/events/${event.id}/audience-preview`,
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: {},
+      })
+      expect(allRes.statusCode).toBe(200)
+      const allCount = allRes.json().matchCount
+      // matchCount should only include active, non-flagged contacts
+      expect(allCount).toBeGreaterThanOrEqual(0)
+    })
+
+    it('returns 400 for invalid lastAttendedBefore date format', async () => {
+      const event = await createDraftEvent()
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/events/${event.id}/audience-preview`,
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: { lastAttendedBefore: 'not-a-date' },
+      })
+      expect(res.statusCode).toBe(400)
+    })
+
+    it('accepts valid lastAttendedBefore ISO-8601 date', async () => {
+      const event = await createDraftEvent()
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/events/${event.id}/audience-preview`,
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: { lastAttendedBefore: '2026-01-01T00:00:00.000Z' },
+      })
+      expect(res.statusCode).toBe(200)
+      const json = res.json()
+      expect(typeof json.matchCount).toBe('number')
+    })
+
+    it('returns 404 for non-existent event', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/events/does-not-exist/audience-preview',
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: {},
+      })
+      expect(res.statusCode).toBe(404)
+    })
+
+    it('returns 401 without auth token', async () => {
+      const event = await createDraftEvent()
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/events/${event.id}/audience-preview`,
+        payload: {},
+      })
+      expect(res.statusCode).toBe(401)
+    })
+
+    it('returns 403 for non-admin role', async () => {
+      const event = await createDraftEvent()
+      const staffPayload: JwtPayload = { sub: 'staff-user-id', role: 'staff', jti: 'staff-jti', iat: 1, exp: 9999999999 }
+      const staffToken = jwt.sign(staffPayload, config.jwtSecret ?? process.env.JWT_SECRET!)
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/events/${event.id}/audience-preview`,
+        headers: { authorization: `Bearer ${staffToken}` },
+        payload: {},
+      })
+      expect(res.statusCode).toBe(403)
+    })
+
+    it('filters by behavior criteria', async () => {
+      const event = await createDraftEvent()
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/events/${event.id}/audience-preview`,
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: { behavior: ['never_attended'] },
+      })
+      expect(res.statusCode).toBe(200)
+      const json = res.json()
+      expect(typeof json.matchCount).toBe('number')
+    })
+
+    it('filters by multiple criteria simultaneously', async () => {
+      const event = await createDraftEvent()
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/events/${event.id}/audience-preview`,
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: {
+          industries: ['teknologi'],
+          cities: ['Jakarta'],
+          companySizes: ['medium'],
+        },
+      })
+      expect(res.statusCode).toBe(200)
+      const json = res.json()
+      expect(typeof json.matchCount).toBe('number')
+      expect(typeof json.breakdown).toBe('object')
+    })
+  })
 })

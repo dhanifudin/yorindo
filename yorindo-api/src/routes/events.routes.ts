@@ -166,7 +166,7 @@ const AudiencePreviewBodySchema = z.object({
   companySizes: z.array(z.string()).optional(),
   jobTitles: z.array(z.string()).optional(),
   behavior: z.array(z.enum(['most_active', 'low_attendance', 'never_attended'])).optional(),
-  lastAttendedBefore: z.string().optional(),
+  lastAttendedBefore: z.string().datetime({ offset: true }).optional(),
 })
 
 function replyValidationError(reply: FastifyReply, details: unknown, message: string) {
@@ -948,29 +948,78 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     if (!event) return
     validateOpenApiRequest({ path: '/events/{id}/audience-preview', method: 'post', params: params.data, body: request.body })
 
-    // Simulate complex criteria filtering
-    // In a real app we would pass these to contactRepository.countMatches or similar
-    const contacts = await contactRepository.findAll({ page: 1, pageSize: 1000 })
-    let filtered = contacts.data
+    // Delegate filtering to the repository (handles slug→ID conversion, excludes deleted)
+    const filters: import('../interfaces/repositories/IContactRepository.js').ContactFilters = {
+      consentStatus: 'active',       // Exclude suppressed contacts
+      flagCategory: 'NONE',          // Exclude flagged contacts
+    }
+    if (body.data.industries?.length) filters.industries = body.data.industries
+    if (body.data.cities?.length) filters.cities = body.data.cities
+    if (body.data.companySizes?.length) filters.companySizes = body.data.companySizes
+    if (body.data.jobTitles?.length) filters.jobTitles = body.data.jobTitles
 
-    if (body.data.industries && body.data.industries.length > 0) {
-      filtered = filtered.filter(c => c.industryId && body.data.industries!.includes(c.industryId))
-    }
-    if (body.data.cities && body.data.cities.length > 0) {
-      filtered = filtered.filter(c => c.city && body.data.cities!.includes(c.city))
-    }
-    if (body.data.companySizes && body.data.companySizes.length > 0) {
-      filtered = filtered.filter(c => c.companySize && body.data.companySizes!.includes(c.companySize))
+    // Fetch all matching contacts (use large pageSize, rely on total for accurate count)
+    const contacts = await contactRepository.findAll({ page: 1, pageSize: 10000 }, filters)
+    let matchedContacts = contacts.data
+    const matchTotal = contacts.total
+
+    // Apply behavior and lastAttendedBefore filters using registrationRepository
+    if (body.data.behavior?.length || body.data.lastAttendedBefore) {
+      const allRegistrations = await registrationRepository.findAll({ page: 1, pageSize: 10000 })
+      const regsByContact = new Map<string, typeof allRegistrations.data>()
+      for (const reg of allRegistrations.data) {
+        const list = regsByContact.get(reg.contactId) ?? []
+        list.push(reg)
+        regsByContact.set(reg.contactId, list)
+      }
+
+      if (body.data.behavior?.length) {
+        matchedContacts = matchedContacts.filter(c => {
+          const regs = regsByContact.get(c.id) ?? []
+          const attendedCount = regs.filter(r => r.status === 'attended').length
+          const totalRegs = regs.length
+          for (const b of body.data.behavior!) {
+            if (b === 'most_active' && attendedCount >= 3) return true
+            if (b === 'low_attendance' && totalRegs > 0 && attendedCount <= 1) return true
+            if (b === 'never_attended' && attendedCount === 0) return true
+          }
+          return false
+        })
+      }
+
+      if (body.data.lastAttendedBefore) {
+        const cutoff = new Date(body.data.lastAttendedBefore).getTime()
+        matchedContacts = matchedContacts.filter(c => {
+          const regs = regsByContact.get(c.id) ?? []
+          const lastAttended = regs
+            .filter(r => r.attendedAt)
+            .map(r => new Date(r.attendedAt!).getTime())
+            .sort((a, b) => b - a)[0]
+          return lastAttended !== undefined && lastAttended < cutoff
+        })
+      }
     }
 
-    const breakdown = {
-      industries: body.data.industries?.length ? body.data.industries.length * 5 : 0,
-      cities: body.data.cities?.length ? body.data.cities.length * 5 : 0,
-      behavior: body.data.behavior?.length ? body.data.behavior.length * 5 : 0,
+    // Build real breakdown from matched contacts
+    const industryBreakdown: Record<string, number> = {}
+    const cityBreakdown: Record<string, number> = {}
+    const companySizeBreakdown: Record<string, number> = {}
+    const jobTitleBreakdown: Record<string, number> = {}
+    for (const c of matchedContacts) {
+      if (c.industryId) industryBreakdown[c.industryId] = (industryBreakdown[c.industryId] ?? 0) + 1
+      if (c.city) cityBreakdown[c.city] = (cityBreakdown[c.city] ?? 0) + 1
+      if (c.companySize) companySizeBreakdown[c.companySize] = (companySizeBreakdown[c.companySize] ?? 0) + 1
+      if (c.jobTitleId) jobTitleBreakdown[c.jobTitleId] = (jobTitleBreakdown[c.jobTitleId] ?? 0) + 1
     }
+
+    const breakdown: Record<string, number> = {}
+    if (Object.keys(industryBreakdown).length) Object.assign(breakdown, industryBreakdown)
+    if (Object.keys(cityBreakdown).length) Object.assign(breakdown, cityBreakdown)
+    if (Object.keys(companySizeBreakdown).length) Object.assign(breakdown, companySizeBreakdown)
+    if (Object.keys(jobTitleBreakdown).length) Object.assign(breakdown, jobTitleBreakdown)
 
     const responseBody = {
-      matchCount: filtered.length,
+      matchCount: body.data.behavior?.length || body.data.lastAttendedBefore ? matchedContacts.length : matchTotal,
       breakdown,
     }
     validateOpenApiResponse({ path: '/events/{id}/audience-preview', method: 'post', status: 200, body: responseBody })
