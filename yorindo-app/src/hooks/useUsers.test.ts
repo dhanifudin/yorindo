@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createElement } from 'react'
-import { useUsers, useCreateUser, useDeleteUser } from './useUsers'
+import { useUsers, useCreateUser } from './useUsers'
 
 function makeWrapper() {
   const client = new QueryClient({

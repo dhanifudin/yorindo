@@ -511,6 +511,7 @@ export const eventHandlers = [
         { status: 404 }
       )
     }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { deletedAt: _del, ...restored } = deletedEventsStore[deletedIdx]
     deletedEventsStore = deletedEventsStore.filter((e) => e.id !== params.id)
     eventsStore.push({ ...restored, updatedAt: new Date().toISOString() })

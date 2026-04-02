@@ -52,32 +52,32 @@ Implement the Fastify API endpoints for uploading Excel/CSV files and triggering
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: Create ETL upload route** (`src/routes/etl.ts`)
-  - [ ] Subtask 1.1: Register `@fastify/multipart` v7.x with limits: `fileSize: 10 * 1024 * 1024` (10MB), `files: 1`
-  - [ ] Subtask 1.2: `POST /api/etl/upload` — require `admin` role via auth middleware
-  - [ ] Subtask 1.3: Extract file from multipart; validate mimetype (`application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` for xlsx, `text/csv`) and extension (`.xlsx`, `.csv`). Reject with 400 `INVALID_FILE_TYPE` if invalid.
-  - [ ] Subtask 1.4: Reject files > 10MB with 400 `FILE_TOO_LARGE`
-  - [ ] Subtask 1.5: Save file via `storage.saveFile(buffer, filename)` — returns `filePath`
-  - [ ] Subtask 1.6: Enqueue job: `container.queueService.enqueue('etl', { filePath, uploadedBy: req.user.id, eventId: body.eventId ?? null, uploadSource: body.uploadSource ?? 'etl_import' })`
+- [x] **Task 1: Create ETL upload route** (`src/routes/etl.ts`)
+  - [x] Subtask 1.1: Register `@fastify/multipart` v7.x with limits: `fileSize: 10 * 1024 * 1024` (10MB), `files: 1`
+  - [x] Subtask 1.2: `POST /api/etl/upload` — require `admin` role via auth middleware
+  - [x] Subtask 1.3: Extract file from multipart; validate mimetype (`application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` for xlsx, `text/csv`) and extension (`.xlsx`, `.csv`). Reject with 400 `INVALID_FILE_TYPE` if invalid.
+  - [x] Subtask 1.4: Reject files > 10MB with 400 `FILE_TOO_LARGE`
+  - [x] Subtask 1.5: Save file via `storage.saveFile(buffer, filename)` — returns `filePath`
+  - [x] Subtask 1.6: Enqueue job: `container.queueService.enqueue('etl', { filePath, uploadedBy: req.user.id, eventId: body.eventId ?? null, uploadSource: body.uploadSource ?? 'etl_import' })`
     - `eventId` (optional): the event this upload belongs to. Required for on-site imports; null for historical ETL imports.
     - `uploadSource`: `'etl_import'` (default, historical contacts) | `'onsite_import'` (walk-in at a specific event)
-  - [ ] Subtask 1.7: Return 202 `{ jobId, status: 'queued' }` — `jobId` comes from BullMQ job ID
+  - [x] Subtask 1.7: Return 202 `{ jobId, status: 'queued' }` — `jobId` comes from BullMQ job ID
 
-- [ ] **Task 2: Create ETL job status route**
-  - [ ] Subtask 2.1: `GET /api/etl/jobs/:jobId` — require `admin` role
-  - [ ] Subtask 2.2: Query BullMQ for job status via `container.queueService.getStatus(jobId)`
-  - [ ] Subtask 2.3: Return `{ jobId, status, progress }` or 404 if not found
+- [x] **Task 2: Create ETL job status route**
+  - [x] Subtask 2.1: `GET /api/etl/jobs/:jobId` — require `admin` role
+  - [x] Subtask 2.2: Query BullMQ for job status via `container.queueService.getStatus(jobId)`
+  - [x] Subtask 2.3: Return `{ jobId, status, progress }` or 404 if not found
 
-- [ ] **Task 3: Register routes in Fastify app**
-  - [ ] Subtask 3.1: Register `etl.routes.ts` in `src/server.ts` under `/api` prefix
+- [x] **Task 3: Register routes in Fastify app**
+  - [x] Subtask 3.1: Register `etl.routes.ts` in `src/server.ts` under `/api` prefix
 
-- [ ] **Task 4: Write vitest tests**
-  - [ ] Subtask 4.1: Valid xlsx upload → 202 with jobId
-  - [ ] Subtask 4.2: Invalid file type → 400 INVALID_FILE_TYPE
-  - [ ] Subtask 4.3: File > 10MB → 400 FILE_TOO_LARGE
-  - [ ] Subtask 4.4: `GET /api/etl/jobs/:jobId` → returns status from mock queue
-  - [ ] Subtask 4.5: `GET /api/etl/jobs/nonexistent` → 404
-  - [ ] Mock `container.queueService` in all tests — no real Redis connections
+- [x] **Task 4: Write vitest tests**
+  - [x] Subtask 4.1: Valid xlsx upload → 202 with jobId
+  - [x] Subtask 4.2: Invalid file type → 400 INVALID_FILE_TYPE
+  - [x] Subtask 4.3: File > 10MB → 400 FILE_TOO_LARGE
+  - [x] Subtask 4.4: `GET /api/etl/jobs/:jobId` → returns status from mock queue
+  - [x] Subtask 4.5: `GET /api/etl/jobs/nonexistent` → 404
+  - [x] Mock `container.queueService` in all tests — no real Redis connections
 
 ## Status
-ready-for-dev
+review

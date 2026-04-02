@@ -47,6 +47,7 @@ export interface Contact {
   jobTitleId: EntityId | null
   city: string | null
   company: string | null
+  department?: string | null
   companySize: CompanySize | null
   source: ContactSource | null
   completenessScore: number        // 0.000 to 1.000
@@ -129,6 +130,9 @@ export interface Registration {
   flagOverride: boolean
   approvedAt: ISODateString | null
   attendedAt: ISODateString | null
+  uploadSource?: 'etl_import' | 'onsite_import' | 'form'
+  eventDate?: string | null
+  eventNameRaw?: string | null
   createdAt: ISODateString
 }
 
@@ -259,4 +263,19 @@ export interface AuditLog {
   targetType: string | null
   metadata: Record<string, unknown> | null
   createdAt: ISODateString
+}
+
+// ─── Template ────────────────────────────────────────────────────────────────
+
+export type TemplateType = 'invitation' | 'confirmation' | 'rejection' | 'ticket_delivery'
+export type TemplateChannel = 'email' | 'whatsapp'
+
+export interface Template {
+  id: EntityId
+  name: string
+  type: TemplateType
+  channel: TemplateChannel
+  body: string
+  createdAt: ISODateString
+  updatedAt: ISODateString
 }

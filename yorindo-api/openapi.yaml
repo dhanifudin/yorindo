@@ -235,7 +235,7 @@ components:
 
     FlaggedRecord:
       type: object
-      required: [id, rawData, suggestedData, reason, createdAt]
+      required: [id, rawData, suggestedData, reason, status, createdAt]
       properties:
         id:
           type: string
@@ -250,6 +250,23 @@ components:
         reason:
           type: string
           description: Why this record was flagged
+        status:
+          type: string
+          enum: [pending, resolved, discarded]
+        flags:
+          type: array
+          items:
+            type: string
+        uploadId:
+          type: string
+          nullable: true
+        resolvedBy:
+          type: string
+          nullable: true
+        resolvedAt:
+          type: string
+          format: date-time
+          nullable: true
         createdAt:
           type: string
           format: date-time
@@ -1628,6 +1645,7 @@ components:
       properties:
         event:
           type: object
+          nullable: true
           required: [id, name, eventDate]
           properties:
             id:
@@ -1704,6 +1722,97 @@ components:
           example: data-rights-request-001
 
 paths:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # TEMPLATES
+  # ─────────────────────────────────────────────────────────────────────────────
+  /templates:
+    get:
+      summary: Get all templates
+      operationId: getTemplates
+      tags: [Blast]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of templates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Template'
+    post:
+      summary: Create template
+      operationId: createTemplate
+      tags: [Blast]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, type, channel, body]
+              properties:
+                name: { type: string }
+                type: { type: string }
+                channel: { type: string }
+                body: { type: string }
+      responses:
+        '201':
+          description: Template created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+  /templates/{id}:
+    patch:
+      summary: Update template
+      operationId: updateTemplate
+      tags: [Blast]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                type: { type: string }
+                channel: { type: string }
+                body: { type: string }
+      responses:
+        '200':
+          description: Template updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+    delete:
+      summary: Delete template
+      operationId: deleteTemplate
+      tags: [Blast]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Template deleted
+
   # ─────────────────────────────────────────────────────────────────────────────
   # HEALTH
   # ─────────────────────────────────────────────────────────────────────────────
@@ -1845,6 +1954,27 @@ paths:
             type: string
             enum: [micro, small, medium, large, enterprise]
           description: Filter by company size
+        - name: flagFilter
+          in: query
+          schema:
+            type: string
+            enum: [flagged, unflagged]
+          description: Filter contacts by whether they are flagged
+        - name: missingEmail
+          in: query
+          schema:
+            type: boolean
+          description: Show only contacts without email
+        - name: missingPhone
+          in: query
+          schema:
+            type: boolean
+          description: Show only contacts without phone
+        - name: q
+          in: query
+          schema:
+            type: string
+          description: Free-text search across name, phone, email, and company
       responses:
         '200':
           description: Paginated contacts list
@@ -1959,6 +2089,11 @@ paths:
       parameters:
         - $ref: '#/components/parameters/PageParam'
         - $ref: '#/components/parameters/PageSizeParam'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, resolved, discarded, all]
       responses:
         '200':
           description: Paginated flagged records
@@ -1979,8 +2114,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
 
-  /contacts/flagged-records/{id}:
-    post:
+  /contacts/flagged/{id}:
+    patch:
       summary: Approve or reject a flagged record (admin only)
       operationId: resolveFlaggedRecord
       tags: [Contacts]
@@ -2002,7 +2137,37 @@ paths:
               properties:
                 action:
                   type: string
-                  enum: [approve, reject]
+                  enum: [approve, discard]
+                data:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    phone:
+                      type: string
+                    email:
+                      type: string
+                      format: email
+                      nullable: true
+                    city:
+                      type: string
+                      nullable: true
+                    company:
+                      type: string
+                      nullable: true
+                    department:
+                      type: string
+                      nullable: true
+                    industryId:
+                      type: string
+                      nullable: true
+                    jobTitleId:
+                      type: string
+                      nullable: true
+                    companySize:
+                      type: string
+                      nullable: true
+                      enum: [small, medium, large, enterprise, null]
       responses:
         '200':
           description: Record resolved
@@ -2030,6 +2195,41 @@ paths:
                 $ref: '#/components/schemas/ApiError'
         '404':
           description: Flagged record not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /contacts/duplicates/{id}:
+    delete:
+      summary: Mark a duplicate pair as not duplicate
+      operationId: dismissDuplicatePair
+      tags: [Contacts]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Duplicate pair dismissed
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Duplicate pair not found
           content:
             application/json:
               schema:
@@ -2069,6 +2269,27 @@ paths:
                 $ref: '#/components/schemas/ApiError'
         '404':
           description: Contact not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /events/upcoming-uncontacted:
+    get:
+      summary: Get the next event within 14 days with uncontacted audience
+      operationId: getUpcomingUncontactedEvent
+      tags: [Events]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Upcoming event banner payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpcomingUncontactedResponse'
+        '401':
+          description: Unauthorized
           content:
             application/json:
               schema:
@@ -2498,6 +2719,45 @@ paths:
                 $ref: '#/components/schemas/ApiError'
         '403':
           description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /events/{id}/clone:
+    post:
+      summary: Clone an existing event (admin only)
+      operationId: cloneEvent
+      tags: [Events]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          description: Event successfully cloned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Event not found
           content:
             application/json:
               schema:

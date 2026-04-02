@@ -32,7 +32,6 @@ function isParticipantAllowed(pathname: string): boolean {
   return PARTICIPANT_ALLOWED_PATHS.includes(pathname)
 }
 
-
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const accessToken = useAuthStore((s) => s.accessToken)
   const user = useAuthStore((s) => s.user)
@@ -172,7 +171,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (!accessToken || !user) return null
 
-  // ✅ Only change: block rendering if user is not authorized for this route
+
   if (!isAuthorized) return null
 
   if (user.role === 'participant') {
