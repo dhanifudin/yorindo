@@ -164,7 +164,7 @@ function fieldsToSurveyContract(fields: Array<{ key: string; label: string; type
 
     properties[field.key] = property
     if (field.required) {
-      ;(schema.required as string[]).push(field.key)
+      ; (schema.required as string[]).push(field.key)
     }
   }
 
@@ -325,20 +325,20 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     const event = upcoming ? await eventRepository.findById(upcoming.eventId) : null
     const responseBody = upcoming && event
       ? {
-          event: {
-            id: event.id,
-            name: event.name,
-            eventDate: event.date,
-            industryTags: toIndustryTags(event),
-          },
-          daysUntil: upcoming.daysTillEvent,
-          uncontactedCount: upcoming.uncontactedCount,
-        }
+        event: {
+          id: event.id,
+          name: event.name,
+          eventDate: event.date,
+          industryTags: toIndustryTags(event),
+        },
+        daysUntil: upcoming.daysTillEvent,
+        uncontactedCount: upcoming.uncontactedCount,
+      }
       : {
-          event: null,
-          daysUntil: 0,
-          uncontactedCount: 0,
-        }
+        event: null,
+        daysUntil: 0,
+        uncontactedCount: 0,
+      }
 
     validateOpenApiResponse({ path: '/events/upcoming-uncontacted', method: 'get', status: 200, body: responseBody })
     return reply.status(200).send(responseBody)
@@ -423,7 +423,6 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(204).send()
   })
 
-  fastify.post('/api/events/:id/restore', { preHandler: [requireAuth, requireAdmin] }, restoreEventHandler)
   fastify.patch('/api/events/:id/restore', { preHandler: [requireAuth, requireAdmin] }, restoreEventHandler)
 
   fastify.post('/api/events/:id/clone', { preHandler: [requireAuth, requireAdmin] }, async (request, reply) => {
