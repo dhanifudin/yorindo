@@ -157,6 +157,8 @@ const CreateEventSponsorBodySchema = z.object({
 const UpdateEventSponsorBodySchema = z.object({
   tier: z.enum(['premium', 'standard', 'supporter']).optional(),
   display_order: z.number().int().min(1).optional(),
+})
+
 const AudiencePreviewBodySchema = z.object({
   industries: z.array(z.string()).optional(),
   cities: z.array(z.string()).optional(),
