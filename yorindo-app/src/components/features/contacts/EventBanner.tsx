@@ -13,7 +13,7 @@ function buildBlastUrl(event: { id: string; industryTags?: string[] }, count: nu
   params.set('eventId', event.id)
   if (event.industryTags?.length) params.set('segment', event.industryTags.join(','))
   params.set('count', String(count))
-  return `/app/blasts/new?${params.toString()}`
+  return `/app/blast?${params.toString()}`
 }
 
 export function EventBanner() {
