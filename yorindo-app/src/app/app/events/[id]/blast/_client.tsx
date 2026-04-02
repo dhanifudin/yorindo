@@ -1,7 +1,7 @@
 'use client'
 
 import { use, useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -24,8 +24,7 @@ interface Template {
 
 export default function BlastPage({ params }: BlastPageProps) {
   const { id } = use(params)
-  const queryClient = useQueryClient()
-  const [sheetOpen, setSheetOpen] = useState(false)
+const [sheetOpen, setSheetOpen] = useState(false)
   const [showEmergencySheet, setShowEmergencySheet] = useState(false)
   const [activeJobId, setActiveJobId] = useState<string | null>(null)
 

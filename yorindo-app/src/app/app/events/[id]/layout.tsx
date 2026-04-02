@@ -83,7 +83,7 @@ function getQuickAction(
 
 // ─── Tab key detection ────────────────────────────────────────────────────────
 
-function getActiveTab(pathname: string, baseHref: string): string {
+function getActiveTab(pathname: string): string {
   if (pathname.endsWith('/blast')) return 'blast'
   if (pathname.includes('/registrations')) return 'registrations'
   if (pathname.endsWith('/confirmation')) return 'confirmation'
@@ -100,7 +100,7 @@ export default function EventHubLayout({ children, params }: HubLayoutProps) {
   const queryClient = useQueryClient()
 
   const baseHref = `/app/events/${id}`
-  const activeTab = getActiveTab(pathname, baseHref)
+  const activeTab = getActiveTab(pathname)
 
   const { data: event, isLoading } = useQuery<Event>({
     queryKey: ['events', id],

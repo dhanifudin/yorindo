@@ -501,8 +501,6 @@ export default function RegistrationsPage({ params }: RegistrationsPageProps) {
     .getSelectedRowModel()
     .rows.map((r) => r.original.id)
 
-  const total = rawData?.pagination?.total ?? allRows.length
-
   // Quota info banner
   const quotaBannerText = capacity !== null
     ? `${approvedCount} / ${capacity} kuota terisi${quotaFull ? ' — kuota penuh, pendaftar baru akan masuk waitlist' : ''}`
