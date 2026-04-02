@@ -20,6 +20,9 @@ type RegistrationWithContact = {
 let app: FastifyInstance
 let adminToken = ''
 let staffToken = ''
+let confirmationEventId = ''
+let resendRegistrationId = ''
+let pendingRegistrationId = ''
 
 async function login(email: string, password: string) {
   const response = await app.inject({
@@ -52,10 +55,87 @@ beforeAll(async () => {
 
   adminToken = await login('admin@yorindo.id', 'Password123!')
   staffToken = await login('staff@yorindo.id', 'Password123!')
+
+  const approvedRegs = await app.inject({
+    method: 'GET',
+    url: '/api/registrations?page=1&pageSize=100&status=approved',
+    headers: { authorization: `Bearer ${adminToken}` },
+  })
+  const approved = approvedRegs.json().data[0]
+  confirmationEventId = approved.eventId
+  resendRegistrationId = approved.id
+
+  const pendingRegs = await app.inject({
+    method: 'GET',
+    url: '/api/registrations?page=1&pageSize=100&status=pending',
+    headers: { authorization: `Bearer ${adminToken}` },
+  })
+  pendingRegistrationId = pendingRegs.json().data[0].id
 })
 
 afterAll(async () => {
   await app.close()
+})
+
+describe('Registration and confirmation routes', () => {
+  it('GET /api/events/:id/confirmation returns confirmation stats and rows', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/events/${confirmationEventId}/confirmation`,
+      headers: { authorization: `Bearer ${adminToken}` },
+    })
+
+    expect(res.statusCode).toBe(200)
+    const body = res.json()
+    expect(body.stats).toMatchObject({
+      ticketSent: expect.any(Number),
+      pendingConfirmation: expect.any(Number),
+    })
+    expect(body.stats.waitlisted).toBeUndefined()
+    expect(Array.isArray(body.registrations)).toBe(true)
+    expect(body.registrations.length).toBeGreaterThan(0)
+    expect(body.registrations[0]).toMatchObject({
+      id: expect.any(String),
+      contact: {
+        name: expect.any(String),
+        company: expect.any(String),
+      },
+      channel: expect.stringMatching(/^(email|whatsapp)$/),
+      confirmationStatus: expect.stringMatching(/^(confirmed|pending)$/),
+    })
+    expect(body.registrations.every((registration: { confirmationStatus: string }) => registration.confirmationStatus !== 'waitlisted')).toBe(true)
+  })
+
+  it('POST /api/registrations/:id/resend-ticket accepts resend for an approved registration', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/registrations/${resendRegistrationId}/resend-ticket`,
+      headers: { authorization: `Bearer ${adminToken}` },
+    })
+
+    expect(res.statusCode).toBe(202)
+    expect(res.json()).toMatchObject({
+      accepted: true,
+      registrationId: resendRegistrationId,
+      channel: expect.stringMatching(/^(email|whatsapp)$/),
+      resentAt: expect.any(String),
+    })
+  })
+
+  it('POST /api/registrations/:id/resend-ticket rejects resend for non-approved registrations', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/registrations/${pendingRegistrationId}/resend-ticket`,
+      headers: { authorization: `Bearer ${adminToken}` },
+    })
+
+    expect(res.statusCode).toBe(409)
+    expect(res.json()).toMatchObject({
+      error: {
+        code: 'INVALID_REGISTRATION_STATUS',
+      },
+    })
+  })
 })
 
 describe('Registrations routes', () => {
@@ -116,6 +196,48 @@ describe('Registrations routes', () => {
       aiScore: expect.any(Number),
     })
     expect(response.json().ticketToken).toEqual(expect.any(String))
+  })
+
+  it('updates a registration status via POST for frontend compatibility', async () => {
+    const registrations = await listRegistrations(adminToken, 'status=pending')
+    const target = registrations.data[0]
+
+    const response = await app.inject({
+      method: 'POST',
+      url: `/api/registrations/${target.id}/status`,
+      headers: {
+        authorization: `Bearer ${adminToken}`,
+        'content-type': 'application/json',
+      },
+      payload: { status: 'confirmed' },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toMatchObject({
+      id: target.id,
+      status: 'confirmed',
+    })
+  })
+
+  it('PATCH /api/registrations/:id/status remains supported for mock/frontend contract compatibility', async () => {
+    const registrations = await listRegistrations(adminToken, 'status=pending')
+    const target = registrations.data[0]
+
+    const response = await app.inject({
+      method: 'PATCH',
+      url: `/api/registrations/${target.id}/status`,
+      headers: {
+        authorization: `Bearer ${adminToken}`,
+        'content-type': 'application/json',
+      },
+      payload: { status: 'confirmed' },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toMatchObject({
+      id: target.id,
+      status: 'confirmed',
+    })
   })
 
   it('clears an inherited flag via PATCH without changing the underlying registration id', async () => {
