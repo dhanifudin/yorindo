@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import {
   useReactTable,
   getCoreRowModel,
@@ -35,7 +35,8 @@ export function SurveyResponsesTable({ responses, total }: SurveyResponsesTableP
   const [globalFilter, setGlobalFilter] = useState('')
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
 
-  const columns = [
+  // ✅ Memoized columns (biar tidak recreate tiap render)
+  const columns = useMemo(() => [
     columnHelper.display({
       id: 'expander',
       header: () => null,
@@ -63,7 +64,9 @@ export function SurveyResponsesTable({ responses, total }: SurveyResponsesTableP
     }),
     columnHelper.accessor('contactPhone', {
       header: 'Telepon',
-      cell: (info) => <span className="text-muted-foreground">{info.getValue()}</span>,
+      cell: (info) => (
+        <span className="text-muted-foreground">{info.getValue()}</span>
+      ),
     }),
     columnHelper.accessor('submittedAt', {
       header: 'Waktu Respons',
@@ -88,8 +91,10 @@ export function SurveyResponsesTable({ responses, total }: SurveyResponsesTableP
         </Badge>
       ),
     }),
-  ]
+  ], [expanded])
 
+  // ✅ Disable lint untuk TanStack (safe)
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data: responses,
     columns,
@@ -106,9 +111,13 @@ export function SurveyResponsesTable({ responses, total }: SurveyResponsesTableP
 
   return (
     <div className="space-y-4">
+      {/* Header */}
       <div className="flex items-center justify-between gap-4">
         <div className="relative max-w-xs w-full">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Search
+            size={14}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+          />
           <Input
             placeholder="Cari responden..."
             value={globalFilter}
@@ -121,23 +130,37 @@ export function SurveyResponsesTable({ responses, total }: SurveyResponsesTableP
         </span>
       </div>
 
+      {/* Table */}
       <div className="rounded-xl border border-violet-100 overflow-hidden">
         <Table>
           <TableHeader className="bg-violet-50/40">
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id} className="hover:bg-transparent border-violet-100">
+              <TableRow
+                key={headerGroup.id}
+                className="hover:bg-transparent border-violet-100"
+              >
                 {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id} className="text-xs font-semibold text-violet-800 py-3">
-                    {flexRender(header.column.columnDef.header, header.getContext())}
+                  <TableHead
+                    key={header.id}
+                    className="text-xs font-semibold text-violet-800 py-3"
+                  >
+                    {flexRender(
+                      header.column.columnDef.header,
+                      header.getContext()
+                    )}
                   </TableHead>
                 ))}
               </TableRow>
             ))}
           </TableHeader>
+
           <TableBody>
             {table.getRowModel().rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-32 text-center text-muted-foreground text-sm">
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-32 text-center text-muted-foreground text-sm"
+                >
                   Tidak ada data ditemukan.
                 </TableCell>
               </TableRow>
@@ -146,16 +169,24 @@ export function SurveyResponsesTable({ responses, total }: SurveyResponsesTableP
                 <React.Fragment key={row.id}>
                   <TableRow
                     className="hover:bg-violet-50/30 border-violet-100 cursor-pointer"
-                    onClick={() => setExpanded((prev) => ({ ...prev, [row.id]: !prev[row.id] }))}
+                    onClick={() =>
+                      setExpanded((prev) => ({
+                        ...prev,
+                        [row.id]: !prev[row.id],
+                      }))
+                    }
                   >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id} className="py-3 text-sm">
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
                       </TableCell>
                     ))}
                   </TableRow>
 
-                  {/* Expanded Detail Row */}
+                  {/* Expanded Row */}
                   {expanded[row.id] && (
                     <TableRow className="bg-violet-50/20 hover:bg-violet-50/20">
                       <TableCell colSpan={columns.length} className="px-6 py-4">
@@ -163,17 +194,25 @@ export function SurveyResponsesTable({ responses, total }: SurveyResponsesTableP
                           <p className="text-xs font-semibold text-violet-700 uppercase tracking-wider">
                             Detail Jawaban
                           </p>
+
                           <div className="grid gap-2 sm:grid-cols-2">
-                            {Object.entries(row.original.answers).map(([key, val]) => (
-                              <div key={key} className="bg-white rounded-lg border border-violet-100 p-3">
-                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">
-                                  {key}
-                                </p>
-                                <p className="text-sm text-foreground">
-                                  {Array.isArray(val) ? val.join(', ') : String(val)}
-                                </p>
-                              </div>
-                            ))}
+                            {Object.entries(row.original.answers).map(
+                              ([key, val]) => (
+                                <div
+                                  key={key}
+                                  className="bg-white rounded-lg border border-violet-100 p-3"
+                                >
+                                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">
+                                    {key}
+                                  </p>
+                                  <p className="text-sm text-foreground">
+                                    {Array.isArray(val)
+                                      ? val.join(', ')
+                                      : String(val)}
+                                  </p>
+                                </div>
+                              )
+                            )}
                           </div>
                         </div>
                       </TableCell>
@@ -186,6 +225,7 @@ export function SurveyResponsesTable({ responses, total }: SurveyResponsesTableP
         </Table>
       </div>
 
+      {/* Pagination */}
       <TablePagination
         page={pageIndex}
         pageSize={pageSize}
