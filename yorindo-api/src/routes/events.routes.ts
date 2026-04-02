@@ -141,6 +141,15 @@ const AudienceRecommendationQuerySchema = z.object({
   minScore: z.coerce.number().int().min(0).max(100).default(0),
 })
 
+const AudiencePreviewBodySchema = z.object({
+  industries: z.array(z.string()).optional(),
+  cities: z.array(z.string()).optional(),
+  companySizes: z.array(z.string()).optional(),
+  jobTitles: z.array(z.string()).optional(),
+  behavior: z.array(z.enum(['most_active', 'low_attendance', 'never_attended'])).optional(),
+  lastAttendedBefore: z.string().optional(),
+})
+
 function replyValidationError(reply: FastifyReply, details: unknown, message: string) {
   return reply.status(400).send({
     error: {
@@ -774,6 +783,48 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       uiSchema: savedSurvey.uiSchema ?? {},
     }
     validateOpenApiResponse({ path: '/events/{id}/survey', method: 'put', status: 200, body: responseBody })
+    return reply.status(200).send(responseBody)
+  })
+
+  fastify.post('/api/events/:id/audience-preview', { preHandler: [requireAuth, requireAdmin] }, async (request, reply) => {
+    const params = EventIdParamsSchema.safeParse(request.params)
+    const body = AudiencePreviewBodySchema.safeParse(request.body)
+    if (!params.success || !body.success) {
+      return replyValidationError(reply, [
+        ...(params.success ? [] : params.error.issues),
+        ...(body.success ? [] : body.error.issues),
+      ], 'Invalid audience preview payload')
+    }
+    const event = await requireEventOr404(reply, params.data.id)
+    if (!event) return
+    validateOpenApiRequest({ path: '/events/{id}/audience-preview', method: 'post', params: params.data, body: request.body })
+    
+    // Simulate complex criteria filtering
+    // In a real app we would pass these to contactRepository.countMatches or similar
+    const contacts = await contactRepository.findAll({ page: 1, pageSize: 1000 })
+    let filtered = contacts.data
+
+    if (body.data.industries && body.data.industries.length > 0) {
+      filtered = filtered.filter(c => c.industryId && body.data.industries!.includes(c.industryId))
+    }
+    if (body.data.cities && body.data.cities.length > 0) {
+      filtered = filtered.filter(c => c.city && body.data.cities!.includes(c.city))
+    }
+    if (body.data.companySizes && body.data.companySizes.length > 0) {
+      filtered = filtered.filter(c => c.companySize && body.data.companySizes!.includes(c.companySize))
+    }
+
+    const breakdown = {
+      industries: body.data.industries?.length ? body.data.industries.length * 5 : 0,
+      cities: body.data.cities?.length ? body.data.cities.length * 5 : 0,
+      behavior: body.data.behavior?.length ? body.data.behavior.length * 5 : 0,
+    }
+
+    const responseBody = {
+      matchCount: filtered.length,
+      breakdown,
+    }
+    validateOpenApiResponse({ path: '/events/{id}/audience-preview', method: 'post', status: 200, body: responseBody })
     return reply.status(200).send(responseBody)
   })
 

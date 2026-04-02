@@ -2773,6 +2773,58 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
 
+  /events/{id}/audience-preview:
+    post:
+      summary: Preview target audience size based on criteria (admin only)
+      operationId: previewAudience
+      tags: [Events]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Audience preview counts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  matchCount:
+                    type: integer
+                  breakdown:
+                    type: object
+                    additionalProperties: true
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
   /events/{id}/clone:
     post:
       summary: Clone an existing event (admin only)
