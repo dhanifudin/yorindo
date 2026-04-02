@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Card } from '@/components/ui/card'
@@ -15,12 +15,21 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Send, X } from 'lucide-react'
+import { Send, X, Calendar, Eye } from 'lucide-react'
 import type { FlagCategory } from '@/types/api'
 
 interface Recipient {
   id: string
   name: string
+}
+
+interface OngoingEvent {
+  id: string
+  name: string
+  link: string
+  date: string
+  emailSubject: string
+  emailPreview: string
 }
 
 interface ActionToolbarProps {
@@ -48,6 +57,35 @@ export function ActionToolbar({
   const [isBlasting, setIsBlasting] = useState(false)
   const [recipients, setRecipients] = useState<Recipient[]>([])
 
+  const [ongoingEvents] = useState<OngoingEvent[]>([
+    {
+      id: '1',
+      name: 'Webinar Digital Marketing 2026',
+      link: 'https://event.yorindo.com/webinar-dm-2026',
+      date: '15 April 2026',
+      emailSubject: 'Undangan Webinar: Strategi Digital Marketing Terbaru 2026',
+      emailPreview: 'Halo {nama},\n\nKami mengundang Anda untuk bergabung dalam webinar eksklusif kami tentang strategi Digital Marketing yang sedang tren di tahun 2026.\n\nApa yang akan Anda dapatkan:\n• Teknik lead generation terbaru\n• Strategi konten yang konversi tinggi\n• Studi kasus sukses dari brand lokal\n\nJangan lewatkan kesempatan ini!',
+    },
+    {
+      id: '2',
+      name: 'Workshop Sales Mastery',
+      link: 'https://event.yorindo.com/sales-mastery',
+      date: '20 April 2026',
+      emailSubject: 'Workshop Sales Mastery - Tingkatkan Closing Rate Tim Anda',
+      emailPreview: 'Hai {nama},\n\nApakah tim sales Anda sudah siap menghadapi persaingan tahun ini?\n\nWorkshop Sales Mastery ini akan membekali Anda dengan teknik closing modern, handling objection, dan membangun rapport yang kuat.\n\nTempat terbatas!',
+    },
+    {
+      id: '3',
+      name: 'Seminar Properti Investment',
+      link: 'https://event.yorindo.com/properti-investment',
+      date: '25 April 2026',
+      emailSubject: 'Seminar Gratis: Cara Investasi Properti yang Menguntungkan di 2026',
+      emailPreview: 'Yth. {nama},\n\nAnda ingin tahu cara berinvestasi properti yang aman dan menguntungkan di tahun 2026?\n\nBergabunglah dengan seminar kami bersama para pakar properti ternama.',
+    },
+  ])
+
+  const [selectedEvent, setSelectedEvent] = useState<OngoingEvent | null>(null)
+
   const bulkFlagMutation = useMutation({
     mutationFn: async ({ ids, flagCategory }: { ids: string[]; flagCategory: FlagCategory | null }) => {
       const res = await fetch('/api/contacts/bulk-flag', {
@@ -61,11 +99,8 @@ export function ActionToolbar({
     onSuccess: ({ updated }) => {
       queryClient.invalidateQueries({ queryKey: ['contacts'] })
       queryClient.invalidateQueries({ queryKey: ['contacts-health'] })
-      if (updated === 0) {
-        toast.warning('Tidak ada kontak yang diperbarui')
-      } else {
-        toast.success(`${updated} kontak berhasil ditandai`)
-      }
+      if (updated === 0) toast.warning('Tidak ada kontak yang diperbarui')
+      else toast.success(`${updated} kontak berhasil ditandai`)
       onClearSelection()
     },
     onError: () => toast.error('Gagal menandai kontak'),
@@ -74,23 +109,24 @@ export function ActionToolbar({
   if (!isVisible) return null
 
   const isSelectedMode = selectedIds.length > 0
-
   const blastLabel = isSelectedMode
     ? `Blast ${selectedIds.length} kontak →`
     : `Blast Segmen · ${total} kontak →`
 
   const handleOpenBlast = () => {
     if (isSelectedMode) {
-      const newRecipients = selectedIds.map((id, index) => ({
-        id,
-        name: selectedNames[index]?.trim() || `Kontak #${index + 1}`,
-      }))
-      setRecipients(newRecipients)
+      setRecipients(
+        selectedIds.map((id, i) => ({
+          id,
+          name: selectedNames[i]?.trim() || `Kontak #${i + 1}`,
+        }))
+      )
     } else {
       setRecipients([])
     }
     setEventLink('')
     setLinkError('')
+    setSelectedEvent(null)
     setBlastOpen(true)
   }
 
@@ -99,6 +135,7 @@ export function ActionToolbar({
     setEventLink('')
     setLinkError('')
     setRecipients([])
+    setSelectedEvent(null)
   }
 
   const removeRecipient = (id: string) => {
@@ -106,24 +143,24 @@ export function ActionToolbar({
   }
 
   const restoreAllRecipients = () => {
-    const newRecipients = selectedIds.map((id, index) => ({
-      id,
-      name: selectedNames[index]?.trim() || `Kontak #${index + 1}`,
-    }))
-    setRecipients(newRecipients)
+    setRecipients(
+      selectedIds.map((id, i) => ({
+        id,
+        name: selectedNames[i]?.trim() || `Kontak #${i + 1}`,
+      }))
+    )
+  }
+
+  const handleSelectEvent = (event: OngoingEvent) => {
+    setSelectedEvent(event)
+    setEventLink(event.link)
+    setLinkError('')
+    toast.success(`Event "${event.name}" dipilih`, { duration: 2000 })
   }
 
   const handleBlast = async () => {
-    const trimmed = eventLink.trim()
-    if (!trimmed) {
-      setLinkError('Link event wajib diisi')
-      return
-    }
-    try {
-      const url = new URL(trimmed)
-      if (!['http:', 'https:'].includes(url.protocol)) throw new Error()
-    } catch {
-      setLinkError('Masukkan link yang valid, contoh: https://event.yorindo.com/xyz')
+    if (!eventLink) {
+      setLinkError('Silakan pilih event terlebih dahulu')
       return
     }
 
@@ -137,8 +174,8 @@ export function ActionToolbar({
       const effectiveIds = isSelectedMode ? recipients.map(r => r.id) : null
 
       const body = isSelectedMode
-        ? { contactIds: effectiveIds, eventLink: trimmed }
-        : { segmentParams: Object.fromEntries(searchParams), eventLink: trimmed, total }
+        ? { contactIds: effectiveIds, eventLink }
+        : { segmentParams: Object.fromEntries(searchParams), eventLink, total }
 
       const res = await fetch('/api/contacts/blast', {
         method: 'POST',
@@ -146,18 +183,15 @@ export function ActionToolbar({
         body: JSON.stringify(body),
       })
 
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data?.error?.message ?? 'Blast gagal')
-      }
+      if (!res.ok) throw new Error('Blast gagal')
 
       const count = isSelectedMode ? recipients.length : total
-      toast.success(`Blast berhasil dikirim ke ${count} kontak!`, { description: trimmed })
+      toast.success(`Blast berhasil dikirim ke ${count} kontak!`)
 
       handleCloseBlast()
       if (isSelectedMode) onClearSelection()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Blast gagal')
+      toast.error('Blast gagal, coba lagi')
     } finally {
       setIsBlasting(false)
     }
@@ -171,159 +205,129 @@ export function ActionToolbar({
         <div className="flex items-center justify-between px-4 py-3 gap-3 flex-wrap">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm text-muted-foreground">
-              {isSelectedMode
-                ? `${selectedIds.length} kontak terpilih di halaman ini`
-                : `${total} kontak di segmen ini`}
+              {isSelectedMode ? `${selectedIds.length} kontak terpilih di halaman ini` : `${total} kontak di segmen ini`}
             </span>
             {isSelectedMode && (
               <>
                 <Badge variant="secondary">{selectedIds.length} terpilih</Badge>
-                <button
-                  type="button"
-                  className="text-xs text-muted-foreground hover:text-foreground"
-                  onClick={onClearSelection}
-                >
+                <button type="button" className="text-xs text-muted-foreground hover:text-foreground" onClick={onClearSelection}>
                   × Batalkan
                 </button>
               </>
             )}
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
-            {isSelectedMode && (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={bulkFlagMutation.isPending}
-                  onClick={() => bulkFlagMutation.mutate({ ids: selectedIds, flagCategory: 'invalid-data' })}
-                >
-                  Tandai Data Invalid
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={bulkFlagMutation.isPending}
-                  onClick={() => bulkFlagMutation.mutate({ ids: selectedIds, flagCategory: 'duplicate' })}
-                >
-                  Tandai Duplikat
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={bulkFlagMutation.isPending}
-                  onClick={() => bulkFlagMutation.mutate({ ids: selectedIds, flagCategory: null })}
-                >
-                  Hapus Tanda
-                </Button>
-              </>
-            )}
-            <Button variant="outline" size="sm" onClick={() => toast.info('Export CSV belum tersedia')}>
-              Export CSV
-            </Button>
-
-            <Button size="sm" onClick={handleOpenBlast} className="gap-2">
-              <Send className="w-3.5 h-3.5" />
-              {blastLabel}
-            </Button>
-          </div>
+          <Button size="sm" onClick={handleOpenBlast} className="gap-2">
+            <Send className="w-3.5 h-3.5" />
+            {blastLabel}
+          </Button>
         </div>
       </Card>
 
-      {/* Dialog Blast */}
+      {/* Dialog Blast - Layout Lebih Besar & Nyaman */}
       <Dialog open={blastOpen} onOpenChange={handleCloseBlast}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+        <DialogContent className="sm:max-w-xl max-h-[95vh] p-0 flex flex-col">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b">
+            <DialogTitle className="flex items-center gap-2 text-xl">
               <Send className="w-5 h-5" />
               Blast Event
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4 py-2">
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+
+            {/* Daftar Penerima */}
             {isSelectedMode && (
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm font-medium">Daftar Penerima</Label>
-                  <span className="text-xs text-muted-foreground">
-                    {recipients.length} dari {selectedIds.length} kontak
+                <div className="flex justify-between items-center">
+                  <Label className="text-base font-medium">Daftar Penerima</Label>
+                  <span className="text-sm text-muted-foreground">
+                    {recipients.length} dari {selectedIds.length}
                   </span>
                 </div>
-
-                <div className="border border-input rounded-md bg-muted/30 max-h-[340px] overflow-y-auto p-3">
+                <div className="border rounded-xl bg-muted/50 max-h-64 overflow-y-auto p-4 space-y-2 text-sm">
                   {recipients.length > 0 ? (
-                    <div className="space-y-2">
-                      {recipients.map((recipient, index) => (
-                        <div
-                          key={recipient.id}
-                          className="group flex items-center justify-between bg-background border border-border rounded-lg px-4 py-3 hover:border-destructive/40"
-                        >
-                          <div className="flex items-center gap-4 flex-1 min-w-0">
-                            <span className="text-xs text-muted-foreground font-mono w-6 shrink-0">
-                              {index + 1}.
-                            </span>
-                            <span className="text-sm font-medium break-words">
-                              {recipient.name}
-                            </span>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => removeRecipient(recipient.id)}
-                            className="h-9 w-9 text-muted-foreground hover:text-destructive"
-                          >
-                            <X className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
+                    recipients.map((r, i) => (
+                      <div key={r.id} className="flex justify-between items-center bg-white border rounded-lg px-4 py-3">
+                        <span className="font-medium">{i + 1}. {r.name}</span>
+                        <Button variant="ghost" size="sm" onClick={() => removeRecipient(r.id)}>
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))
                   ) : (
-                    <div className="py-10 text-center text-muted-foreground">
-                      Tidak ada penerima
-                    </div>
+                    <p className="text-center py-6 text-muted-foreground">Tidak ada penerima</p>
                   )}
                 </div>
-
-                {recipients.length < selectedIds.length && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={restoreAllRecipients}
-                    className="w-full"
-                  >
-                    ↺ Kembalikan semua penerima
-                  </Button>
-                )}
               </div>
             )}
 
+            {/* Daftar Event */}
+            <div className="space-y-3">
+              <Label className="text-base font-medium flex items-center gap-2">
+                <Calendar className="w-5 h-5" />
+                Pilih Event yang Sedang Berlangsung
+              </Label>
+
+              <div className="space-y-2">
+                {ongoingEvents.map((event) => (
+                  <Button
+                    key={event.id}
+                    variant={selectedEvent?.id === event.id ? "default" : "outline"}
+                    className="w-full justify-start h-auto py-4 px-5 text-left"
+                    onClick={() => handleSelectEvent(event)}
+                  >
+                    <div className="flex-1 text-left">
+                      <p className="font-semibold text-base">{event.name}</p>
+                      <p className="text-sm text-muted-foreground mt-1">{event.date}</p>
+                    </div>
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {/* Link Event (Read Only) */}
             <div className="space-y-2">
-              <Label htmlFor="event-link">Link Event</Label>
+              <Label className="text-base font-medium">Link Event</Label>
               <Input
-                id="event-link"
                 type="url"
-                placeholder="https://event.yorindo.com/..."
                 value={eventLink}
-                autoFocus
-                onChange={(e) => {
-                  setEventLink(e.target.value)
-                  if (linkError) setLinkError('')
-                }}
-                className={linkError ? 'border-destructive' : ''}
-                onKeyDown={(e) => e.key === 'Enter' && handleBlast()}
+                readOnly
+                className="bg-muted/50 cursor-default"
+                placeholder="Pilih event di atas untuk mengisi link"
               />
-              {linkError && <p className="text-xs text-destructive">{linkError}</p>}
+            </div>
+
+            {/* Preview Email */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Eye className="w-5 h-5" />
+                <Label className="text-base font-medium">Preview Email yang akan dikirim</Label>
+              </div>
+
+              <div className="border rounded-2xl overflow-hidden bg-white shadow-sm">
+                <div className="bg-gray-100 px-5 py-4 font-medium text-sm border-b">
+                  {selectedEvent ? selectedEvent.emailSubject : 'Subject akan muncul di sini'}
+                </div>
+                <div className="p-5 whitespace-pre-wrap text-sm leading-relaxed text-gray-700 min-h-[180px]">
+                  {selectedEvent ? (
+                    selectedEvent.emailPreview.replace(/{nama}/g, 'Budi Santoso')
+                  ) : (
+                    'Silakan pilih salah satu event di atas untuk melihat preview email yang akan dikirim ke kontak.'
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={handleCloseBlast} disabled={isBlasting}>
+          <DialogFooter className="px-6 py-5 border-t bg-gray-50">
+            <Button variant="outline" onClick={handleCloseBlast} disabled={isBlasting} className="px-8">
               Batal
             </Button>
             <Button
               onClick={handleBlast}
-              disabled={isBlasting || (isSelectedMode && recipients.length === 0)}
-              className="gap-2"
+              disabled={isBlasting || !eventLink || (isSelectedMode && recipients.length === 0)}
+              className="gap-2 px-8"
             >
               <Send className="w-4 h-4" />
               {isBlasting ? 'Mengirim…' : `Blast ${effectiveCount} Kontak`}

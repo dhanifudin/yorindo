@@ -1,4 +1,4 @@
-import type { FastifyPluginAsync, FastifyReply } from 'fastify'
+import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import {
   auditLogRepository,
@@ -12,8 +12,9 @@ import {
   vendorRepository,
   eventSponsorRepository,
 } from '../container.js'
+import { findTemplateById } from '../data/templates.js'
 import { requireAdmin, requireAuth, requireRoles, type JwtPayload } from '../middleware/auth.js'
-import type { Event, Registration } from '../types/domain.js'
+import type { Event, EventStatus, Registration } from '../types/domain.js'
 import { validateOpenApiRequest, validateOpenApiResponse } from '../lib/openapi-contract.js'
 import { INDONESIAN_INDUSTRIES } from '../repositories/memory/_seeds.js'
 
@@ -255,7 +256,7 @@ function fieldsToSurveyContract(fields: Array<{ key: string; label: string; type
 
     properties[field.key] = property
     if (field.required) {
-      ;(schema.required as string[]).push(field.key)
+      ; (schema.required as string[]).push(field.key)
     }
   }
 
@@ -272,6 +273,92 @@ function toRegistrationWithContactDto(registration: Registration, contact: Await
     aiScore: Math.max(0, Math.min(99, Math.round((registration.aiScore ?? 0) * 100))),
     flagOverride: registration.flagOverride,
   }
+}
+
+const EVENT_STATUS_TRANSITIONS: Record<EventStatus, EventStatus[]> = {
+  draft: ['published'],
+  published: ['active', 'cancelled'],
+  active: ['completed', 'cancelled'],
+  completed: ['archived'],
+  cancelled: [],
+  archived: [],
+}
+
+function isValidEventStatusTransition(from: EventStatus, to: EventStatus) {
+  return EVENT_STATUS_TRANSITIONS[from].includes(to)
+}
+
+function replyInvalidTransition(reply: FastifyReply, from: EventStatus, to: EventStatus) {
+  return reply.status(400).send({
+    error: {
+      code: 'INVALID_EVENT_TRANSITION',
+      message: `Cannot transition event from "${from}" to "${to}"`,
+      details: [
+        {
+          from,
+          to,
+          allowedTransitions: EVENT_STATUS_TRANSITIONS[from],
+        },
+      ],
+    },
+  })
+}
+
+async function updateEventHandler(request: FastifyRequest, reply: FastifyReply) {
+  const params = EventIdParamsSchema.safeParse(request.params)
+  const body = EventUpdateBodySchema.safeParse(request.body)
+  if (!params.success || !body.success) {
+    return replyValidationError(reply, [
+      ...(params.success ? [] : params.error.issues),
+      ...(body.success ? [] : body.error.issues),
+    ], 'Invalid update payload')
+  }
+
+  const existing = await requireEventOr404(reply, params.data.id)
+  if (!existing) return
+  const method = request.method.toLowerCase() as 'put' | 'patch'
+  validateOpenApiRequest({ path: '/events/{id}', method, params: params.data, body: body.data })
+
+  const updateData: Partial<Event> = {}
+  if (body.data.name !== undefined) updateData.name = body.data.name
+  if (body.data.description !== undefined) updateData.description = body.data.description
+  if (body.data.eventDate !== undefined) {
+    updateData.startDate = body.data.eventDate
+    updateData.endDate = body.data.eventDate
+  }
+  if (body.data.timezone !== undefined) updateData.timezone = body.data.timezone
+  if (body.data.capacity !== undefined) updateData.capacity = body.data.capacity
+  if (body.data.targetCriteria !== undefined) updateData.targetCriteria = body.data.targetCriteria as Event['targetCriteria']
+
+  if (body.data.status !== undefined) {
+    if (body.data.status !== existing.status && !isValidEventStatusTransition(existing.status, body.data.status)) {
+      return replyInvalidTransition(reply, existing.status, body.data.status)
+    }
+    updateData.status = body.data.status
+  }
+
+  const updated = await eventRepository.update(existing.id, updateData)
+  const result = updated ?? existing
+
+  if (body.data.status !== undefined && body.data.status !== existing.status) {
+    const actor = request.user as JwtPayload
+    await auditLogRepository.create({
+      action: 'event.status_change',
+      actorId: actor.sub,
+      actorRole: actor.role,
+      eventId: result.id,
+      targetId: result.id,
+      targetType: 'event',
+      metadata: {
+        from: existing.status,
+        to: result.status,
+      },
+    })
+  }
+
+  const responseBody = toEventDto(result)
+  validateOpenApiResponse({ path: '/events/{id}', method, status: 200, body: responseBody })
+  return reply.status(200).send(responseBody)
 }
 
 /**
@@ -370,20 +457,20 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     const event = upcoming ? await eventRepository.findById(upcoming.eventId) : null
     const responseBody = upcoming && event
       ? {
-          event: {
-            id: event.id,
-            name: event.name,
-            eventDate: event.startDate,
-            industryTags: toIndustryTags(event),
-          },
-          daysUntil: upcoming.daysTillEvent,
-          uncontactedCount: upcoming.uncontactedCount,
-        }
+        event: {
+          id: event.id,
+          name: event.name,
+          eventDate: event.startDate,
+          industryTags: toIndustryTags(event),
+        },
+        daysUntil: upcoming.daysTillEvent,
+        uncontactedCount: upcoming.uncontactedCount,
+      }
       : {
-          event: null,
-          daysUntil: 0,
-          uncontactedCount: 0,
-        }
+        event: null,
+        daysUntil: 0,
+        uncontactedCount: 0,
+      }
 
     validateOpenApiResponse({ path: '/events/upcoming-uncontacted', method: 'get', status: 200, body: responseBody })
     return reply.status(200).send(responseBody)
@@ -498,7 +585,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
 
     const updated = await eventRepository.update(existing.id, updateData)
     const registrations = await registrationRepository.findByEvent(existing.id, { page: 1, pageSize: 1 })
-    
+
     const token = request.user as JwtPayload
     await auditLogRepository.create({
       action: 'event.updated',
@@ -511,6 +598,50 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     })
 
     return reply.status(200).send(toEventDto((updated ?? existing) as Event, undefined, registrations.total))
+  })
+
+  fastify.patch('/api/events/:id', { preHandler: [requireAuth, requireAdmin] }, async (request, reply) => {
+    const params = EventIdParamsSchema.safeParse(request.params)
+    const body = EventUpdateBodySchema.safeParse(request.body)
+    if (!params.success || !body.success) {
+      return replyValidationError(reply, [
+        ...(params.success ? [] : params.error.issues),
+        ...(body.success ? [] : body.error.issues),
+      ], 'Invalid update payload')
+    }
+    const existing = await requireEventOr404(reply, params.data.id)
+    if (!existing) return
+
+    const updateData: Partial<Event> = {}
+    if (body.data.status !== undefined) {
+      if (body.data.status !== existing.status && !isValidEventStatusTransition(existing.status, body.data.status)) {
+        return replyInvalidTransition(reply, existing.status, body.data.status)
+      }
+      updateData.status = body.data.status
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return reply.status(200).send(toEventDto(existing, undefined, 0))
+    }
+
+    const updated = await eventRepository.update(existing.id, updateData)
+    const result = updated ?? existing
+
+    if (body.data.status !== undefined && body.data.status !== existing.status) {
+      const actor = request.user as JwtPayload
+      await auditLogRepository.create({
+        action: 'event.status_change',
+        actorId: actor.sub,
+        actorRole: actor.role,
+        eventId: result.id,
+        targetId: result.id,
+        targetType: 'event',
+        metadata: { from: existing.status, to: body.data.status },
+      })
+    }
+
+    const registrations = await registrationRepository.findByEvent(existing.id, { page: 1, pageSize: 1 })
+    return reply.status(200).send(toEventDto(result, undefined, registrations.total))
   })
 
   fastify.delete('/api/events/:id', { preHandler: [requireAuth, requireAdmin] }, async (request, reply) => {
@@ -816,7 +947,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     const event = await requireEventOr404(reply, params.data.id)
     if (!event) return
     validateOpenApiRequest({ path: '/events/{id}/audience-preview', method: 'post', params: params.data, body: request.body })
-    
+
     // Simulate complex criteria filtering
     // In a real app we would pass these to contactRepository.countMatches or similar
     const contacts = await contactRepository.findAll({ page: 1, pageSize: 1000 })
@@ -913,7 +1044,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     let templateName = 'Custom Message'
     let templateBody = body.data.customMessage || 'Mocked template body for ' + (body.data.templateId ?? 'unknown')
 
-    const queueName = body.data.channel === 'whatsapp' ? 'marketing' : 'transactional'
+    const queueName = 'marketing'
     const jobId = await queueService.enqueue(queueName, {
       eventId: event.id,
       templateId: body.data.templateId ?? 'custom',
@@ -924,7 +1055,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       filters: body.data.filters,
       contactIds: body.data.contactIds,
       scheduledAt: body.data.scheduledAt,
-      requestedBy: payload.sub,
+      enqueuedBy: payload.sub,
     }, body.data.scheduledAt ? { delay: Math.max(new Date(body.data.scheduledAt).getTime() - Date.now(), 0) } : undefined)
 
     await auditLogRepository.create({
@@ -973,11 +1104,11 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       display_order: s.displayOrder,
       created_at: s.createdAt,
     }))
-    
+
     // enhance with vendor_name
     for (const sponsor of responseBody) {
       const vendor = await vendorRepository.findById(sponsor.vendor_id)
-      ;(sponsor as any).vendor_name = vendor?.name ?? 'Unknown Vendor'
+        ; (sponsor as any).vendor_name = vendor?.name ?? 'Unknown Vendor'
     }
 
     validateOpenApiResponse({ path: '/events/{id}/sponsors', method: 'get', status: 200, body: responseBody })

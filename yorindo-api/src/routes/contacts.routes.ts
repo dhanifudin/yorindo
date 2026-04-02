@@ -1,8 +1,8 @@
 import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
-import { auditLogRepository, contactRepository, flaggedRecordsRepository } from '../container.js'
+import { auditLogRepository, contactRepository, eventRepository, flaggedRecordsRepository, registrationRepository, suppressionRepository } from '../container.js'
 import { requireAdmin, requireAuth, type JwtPayload } from '../middleware/auth.js'
-import type { CompanySize, Contact, DuplicatePair, FlaggedRecord, FlaggedRecordStatus } from '../types/domain.js'
+import type { CompanySize, Contact, DuplicatePair, FlaggedRecord, FlaggedRecordStatus, RegistrationStatus, SuppressionRecord } from '../types/domain.js'
 import { INDONESIAN_INDUSTRIES, INDONESIAN_JOB_TITLES } from '../repositories/memory/_seeds.js'
 import { validateOpenApiRequest, validateOpenApiResponse } from '../lib/openapi-contract.js'
 
@@ -49,6 +49,12 @@ const FlaggedQuerySchema = z.object({
   status: z.enum(['pending', 'resolved', 'discarded', 'all']).optional(),
 })
 
+const SuppressionQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+  q: z.string().trim().optional(),
+})
+
 const MergeParamsSchema = z.object({
   id: z.string().trim().min(1),
 })
@@ -56,6 +62,11 @@ const MergeParamsSchema = z.object({
 const FlaggedParamsSchema = z.object({
   id: z.string().trim().min(1),
 })
+
+const SuppressionParamsSchema = z.object({
+  id: z.string().trim().min(1),
+})
+
 const MergeBodySchema = z.object({
   mergeIntoId: z.string().trim().optional(),
   fieldSelections: z.record(z.enum(['primary', 'duplicate'])).optional(),
@@ -74,6 +85,20 @@ const FlaggedResolutionBodySchema = z.object({
     jobTitleId: z.string().trim().nullable().optional(),
     companySize: z.enum(['small', 'medium', 'large', 'enterprise']).nullable().optional(),
   }).optional(),
+})
+
+const AddSuppressionBodySchema = z.object({
+  email: z.string().trim().email().optional(),
+  phone: z.string().trim().min(8).optional(),
+  reason: z.enum(['unsubscribed', 'erasure_request', 'manually_added']).default('manually_added'),
+}).superRefine((value, ctx) => {
+  if (!value.email && !value.phone) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['email'],
+      message: 'email or phone is required',
+    })
+  }
 })
 
 type ContactsQuery = z.infer<typeof ContactsQuerySchema>
@@ -233,6 +258,21 @@ function toDuplicatePairDto(pair: DuplicatePair) {
   }
 }
 
+/**
+ * Membentuk item riwayat event dari pasangan registration dan event yang cocok.
+ */
+function toContactHistoryEntry(
+  registration: { eventId: string; status: RegistrationStatus },
+  event: { id: string; name: string; date: string },
+) {
+  return {
+    eventId: event.id,
+    eventName: event.name,
+    eventDate: event.date,
+    status: registration.status,
+  }
+}
+
 function getSuggestedData(record: FlaggedRecord): Record<string, unknown> {
   const rawData = record.rawData ?? {}
   const normalized = typeof rawData === 'object' && rawData !== null && typeof rawData['normalized'] === 'object' && rawData['normalized'] !== null
@@ -290,6 +330,34 @@ function computeApprovalCompleteness(input: {
   const filled = fields.filter((field) => field !== null && field !== undefined && field !== '').length
   return Math.round((filled / fields.length) * 1000) / 1000
 }
+
+async function findContactByEmailOrPhone(email?: string, phone?: string) {
+  if (phone) {
+    const byPhone = await contactRepository.findByPhone(phone)
+    if (byPhone) return byPhone
+  }
+
+  if (email) {
+    const { data } = await contactRepository.findAll({ page: 1, pageSize: 1000 })
+    const normalizedEmail = email.toLowerCase()
+    return data.find((contact) => (contact.email ?? '').toLowerCase() === normalizedEmail) ?? null
+  }
+
+  return null
+}
+
+async function toSuppressionDto(record: Awaited<ReturnType<typeof suppressionRepository.findAll>>['data'][number]) {
+  const linkedContact = await contactRepository.findById(record.contactId)
+  return {
+    id: record.id,
+    name: linkedContact?.name ?? record.name ?? '',
+    email: linkedContact?.email ?? record.email ?? '',
+    phone: linkedContact?.phone ?? record.phone ?? '',
+    suppressedAt: record.createdAt,
+    reason: record.reason,
+  }
+}
+
 export const contactRoutes: FastifyPluginAsync = async (fastify) => {
   const adminOnly = { preHandler: [requireAuth, requireAdmin] }
 
@@ -376,6 +444,163 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(200).send(responseBody)
   })
 
+  fastify.get('/api/contacts/suppression', adminOnly, async (request, reply) => {
+    const result = SuppressionQuerySchema.safeParse(request.query)
+    if (!result.success) {
+      return reply.status(400).send({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Invalid suppression query params',
+          details: result.error.issues,
+        },
+      })
+    }
+
+    const query = result.data
+    validateOpenApiRequest({ path: '/contacts/suppression', method: 'get', query })
+
+    const suppressionResult = await suppressionRepository.findAll({ page: 1, pageSize: 1000 })
+    const dto = await Promise.all(suppressionResult.data.map(async (record: SuppressionRecord) => toSuppressionDto(record)))
+    const filtered = query.q
+      ? dto.filter((entry) => {
+        const needle = query.q!.toLowerCase()
+        return entry.name.toLowerCase().includes(needle)
+          || entry.email.toLowerCase().includes(needle)
+          || entry.phone.toLowerCase().includes(needle)
+      })
+      : dto
+
+    const total = filtered.length
+    const start = (query.page - 1) * query.pageSize
+    const responseBody = {
+      data: filtered.slice(start, start + query.pageSize),
+      pagination: {
+        page: query.page,
+        pageSize: query.pageSize,
+        total,
+        totalPages: Math.ceil(total / query.pageSize),
+      },
+    }
+    validateOpenApiResponse({ path: '/contacts/suppression', method: 'get', status: 200, body: responseBody })
+    return reply.status(200).send(responseBody)
+  })
+
+  fastify.post('/api/contacts/suppression', adminOnly, async (request, reply) => {
+    const result = AddSuppressionBodySchema.safeParse(request.body)
+    if (!result.success) {
+      return reply.status(400).send({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Invalid suppression payload',
+          details: result.error.issues,
+        },
+      })
+    }
+
+    const payload = result.data
+    validateOpenApiRequest({ path: '/contacts/suppression', method: 'post', body: payload })
+
+    const normalizedPhone = payload.phone?.trim()
+    const normalizedEmail = payload.email?.trim().toLowerCase()
+    const suppressionLookup: { phone?: string | null; email?: string | null } = {}
+    if (normalizedPhone) suppressionLookup.phone = normalizedPhone
+    if (normalizedEmail) suppressionLookup.email = normalizedEmail
+    const alreadySuppressed = await suppressionRepository.isSuppressed(suppressionLookup)
+    if (alreadySuppressed) {
+      return reply.status(409).send({
+        error: {
+          code: 'ALREADY_EXISTS',
+          message: 'Contact is already suppressed',
+          details: [],
+        },
+      })
+    }
+
+    const linkedContact = await findContactByEmailOrPhone(normalizedEmail, normalizedPhone)
+    const actor = request.user as JwtPayload | undefined
+    const record = await suppressionRepository.suppress(
+      linkedContact?.id ?? normalizedPhone ?? normalizedEmail ?? `manual-${Date.now()}`,
+      payload.reason,
+      {
+        phone: linkedContact?.phone ?? normalizedPhone ?? null,
+        email: linkedContact?.email ?? normalizedEmail ?? null,
+        name: linkedContact?.name ?? null,
+      },
+    )
+
+    if (linkedContact) {
+      await contactRepository.update(linkedContact.id, {
+        consentStatus: 'suppressed',
+      })
+    }
+
+    await auditLogRepository.create({
+      action: 'contact.suppressed',
+      actorId: actor?.sub ?? null,
+      actorRole: actor?.role ?? 'system',
+      eventId: null,
+      targetId: linkedContact?.id ?? record.id,
+      targetType: 'contact',
+      metadata: {
+        suppressionId: record.id,
+        reason: payload.reason,
+        phone: record.phone,
+        email: record.email,
+      },
+    })
+
+    const responseBody = await toSuppressionDto(record)
+    validateOpenApiResponse({ path: '/contacts/suppression', method: 'post', status: 201, body: responseBody })
+    return reply.status(201).send(responseBody)
+  })
+
+  fastify.delete('/api/contacts/suppression/:id', adminOnly, async (request, reply) => {
+    const result = SuppressionParamsSchema.safeParse(request.params)
+    if (!result.success) {
+      return reply.status(400).send({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Invalid suppression id',
+          details: result.error.issues,
+        },
+      })
+    }
+
+    validateOpenApiRequest({ path: '/contacts/suppression/{id}', method: 'delete', params: result.data })
+    const suppressionResult = await suppressionRepository.findAll({ page: 1, pageSize: 1000 })
+    const existing = suppressionResult.data.find((record: SuppressionRecord) => record.id === result.data.id)
+    if (!existing) {
+      return reply.status(404).send({
+        error: { code: 'NOT_FOUND', message: 'Suppression entry not found', details: [] },
+      })
+    }
+
+    await suppressionRepository.remove(existing.id)
+    const linkedContact = await contactRepository.findById(existing.contactId)
+    if (linkedContact) {
+      await contactRepository.update(linkedContact.id, {
+        consentStatus: 'active',
+      })
+    }
+
+    const actor = request.user as JwtPayload | undefined
+    await auditLogRepository.create({
+      action: 'contact.unsuppressed',
+      actorId: actor?.sub ?? null,
+      actorRole: actor?.role ?? 'system',
+      eventId: null,
+      targetId: linkedContact?.id ?? existing.id,
+      targetType: 'contact',
+      metadata: {
+        suppressionId: existing.id,
+        phone: existing.phone,
+        email: existing.email,
+      },
+    })
+
+    return reply.status(204).send()
+  })
+
   fastify.get('/api/contacts/industry-suggestions', adminOnly, async (request, reply) => {
     const result = IndustrySuggestionsQuerySchema.safeParse(request.query)
     if (!result.success) {
@@ -453,6 +678,53 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(200).send(responseBody)
   })
 
+  fastify.get('/api/contacts/:id/history', adminOnly, async (request, reply) => {
+    const paramsResult = MergeParamsSchema.safeParse(request.params)
+    if (!paramsResult.success) {
+      return reply.status(400).send({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Invalid contact id',
+          details: paramsResult.error.issues,
+        },
+      })
+    }
+
+    validateOpenApiRequest({ path: '/contacts/{id}/history', method: 'get', params: paramsResult.data })
+
+    const contact = await contactRepository.findById(paramsResult.data.id)
+    if (!contact) {
+      return reply.status(404).send({
+        error: {
+          code: 'NOT_FOUND',
+          message: 'Contact not found',
+          details: [],
+        },
+      })
+    }
+
+    const { data: rawRegistrations } = await registrationRepository.findAll(
+      { page: 1, pageSize: 50 },
+      { contactId: contact.id }
+    )
+    const registrationsWithEvents = await Promise.all(
+      rawRegistrations.map(async (reg) => {
+        const event = await eventRepository.findById(reg.eventId)
+        if (!event) return null
+        return toContactHistoryEntry(
+          { eventId: reg.eventId, status: reg.status as RegistrationStatus },
+          { id: event.id, name: event.name, date: event.startDate ?? event.createdAt }
+        )
+      })
+    )
+
+    const registrations = registrationsWithEvents.filter((item): item is NonNullable<typeof item> => item !== null)
+
+    const responseBody = { registrations }
+    validateOpenApiResponse({ path: '/contacts/{id}/history', method: 'get', status: 200, body: responseBody })
+    return reply.status(200).send(responseBody)
+  })
+
   fastify.delete('/api/contacts/duplicates/:id', adminOnly, async (request, reply) => {
     const paramsResult = FlaggedParamsSchema.safeParse(request.params)
     if (!paramsResult.success) {
@@ -464,6 +736,7 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
         },
       })
     }
+
     validateOpenApiRequest({ path: '/contacts/duplicates/{id}', method: 'delete', params: paramsResult.data })
 
     const dismissed = await contactRepository.dismissDuplicate(paramsResult.data.id)

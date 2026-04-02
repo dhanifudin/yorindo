@@ -234,6 +234,8 @@ export interface SuppressionRecord {
   id: EntityId
   contactId: EntityId
   phone: string
+  email: string | null
+  name: string | null
   reason: string
   createdAt: ISODateString
 }

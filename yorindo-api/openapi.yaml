@@ -1166,7 +1166,7 @@ components:
           example: Undangan Event
         type:
           type: string
-          enum: [invitation, confirmation, rejection, cancellation]
+          enum: [invitation, confirmation, rejection, ticket_delivery]
           example: invitation
         channel:
           type: string
@@ -1390,7 +1390,7 @@ components:
           format: date-time
         status:
           type: string
-          enum: [approved, attended, cancelled, pending, rejected]
+          enum: [pending, confirmed, approved, rejected, waitlisted, attended, cancelled]
           example: attended
 
     ContactHistoryResponse:
@@ -2282,6 +2282,26 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
 
+  /contacts/{id}/history:
+    get:
+      summary: Get event registration history for a contact (admin only)
+      operationId: getContactHistory
+      tags: [Contacts]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Event registration history for this contact
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactHistoryResponse'
   /events/upcoming-uncontacted:
     get:
       summary: Get the next event within 14 days with uncontacted audience
@@ -2298,6 +2318,18 @@ paths:
                 $ref: '#/components/schemas/UpcomingUncontactedResponse'
         '401':
           description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Contact not found
           content:
             application/json:
               schema:
@@ -2373,6 +2405,105 @@ paths:
                 $ref: '#/components/schemas/ApiError'
         '401':
           description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /contacts/suppression:
+    get:
+      summary: List suppression entries with search
+      operationId: listSuppressions
+      tags: [Contacts]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: q
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Paginated suppression list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSuppressions'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+    post:
+      summary: Add a contact or address to the suppression list
+      operationId: createSuppression
+      tags: [Contacts]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddSuppressionBody'
+      responses:
+        '201':
+          description: Suppression entry created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuppressionEntry'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Already suppressed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /contacts/suppression/{id}:
+    delete:
+      summary: Remove an entry from the suppression list
+      operationId: deleteSuppression
+      tags: [Contacts]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Suppression entry removed
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Suppression entry not found
           content:
             application/json:
               schema:
@@ -2923,6 +3054,55 @@ paths:
                 $ref: '#/components/schemas/Event'
         '400':
           description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+    patch:
+      summary: Update event lifecycle or fields (admin only)
+      operationId: patchEvent
+      tags: [Events]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateEventBody'
+      responses:
+        '200':
+          description: Event updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '400':
+          description: Validation error or invalid lifecycle transition
           content:
             application/json:
               schema:
