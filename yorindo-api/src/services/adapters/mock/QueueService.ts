@@ -5,6 +5,7 @@ interface EnqueuedJob {
   jobId: string
   queueName: QueueName
   job: object
+  opts?: EnqueueOptions
   enqueuedAt: string
   status: JobStatus
 }
@@ -14,13 +15,15 @@ export class MockQueueService implements IQueueService {
 
   async enqueue(queueName: QueueName, job: object, _opts?: EnqueueOptions): Promise<string> {
     const jobId = `mock-job-${createId()}`
-    this.enqueuedJobs.push({
+    const entry: EnqueuedJob = {
       jobId,
       queueName,
       job,
       enqueuedAt: new Date().toISOString(),
       status: 'queued',
-    })
+    }
+    if (_opts) entry.opts = _opts
+    this.enqueuedJobs.push(entry)
     return jobId
   }
 

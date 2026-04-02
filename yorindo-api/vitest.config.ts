@@ -4,6 +4,9 @@ export default defineConfig({
   test: {
     environment: 'node',
     globals: false,
+    // The backend test suite relies on shared in-memory container singletons.
+    // Running files serially avoids intermittent CI flakes from cross-file state.
+    fileParallelism: false,
     env: {
       JWT_SECRET: 'test-jwt-secret',
       JWT_REFRESH_SECRET: 'test-jwt-refresh-secret',

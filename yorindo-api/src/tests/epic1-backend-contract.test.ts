@@ -1,6 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import type { FastifyInstance } from 'fastify'
 import { buildServer } from '../server.js'
+import { queueService } from '../container.js'
+import { MockQueueService } from '../services/adapters/mock/QueueService.js'
 
 let app: FastifyInstance
 let adminToken = ''
@@ -135,18 +137,42 @@ describe('Epic 1 backend contract routes', () => {
   })
 
   it('queues event blast via /api/events/:id/blast', async () => {
+    const mockQueueService = queueService as MockQueueService
+    mockQueueService.reset()
     const response = await app.inject({
       method: 'POST',
       url: `/api/events/${seededActiveEventId}/blast`,
       headers: { authorization: `Bearer ${adminToken}` },
       payload: {
-        templateId: 'template-001',
+        templateId: 'tmpl-001',
         channel: 'email',
       },
     })
 
     expect(response.statusCode).toBe(202)
     expect(response.json()).toHaveProperty('jobId')
+    expect(mockQueueService.getEnqueuedJobs()[0]?.queueName).toBe('marketing')
+  })
+
+  it('sets queue delay when scheduledAt is in the future', async () => {
+    const mockQueueService = queueService as MockQueueService
+    mockQueueService.reset()
+    const scheduledAt = new Date(Date.now() + 10 * 60 * 1000).toISOString()
+
+    const response = await app.inject({
+      method: 'POST',
+      url: `/api/events/${seededActiveEventId}/blast`,
+      headers: { authorization: `Bearer ${adminToken}` },
+      payload: {
+        templateId: 'tmpl-001',
+        channel: 'whatsapp',
+        scheduledAt,
+      },
+    })
+
+    expect(response.statusCode).toBe(202)
+    expect(response.json().status).toBe('scheduled')
+    expect(mockQueueService.getEnqueuedJobs()[0]?.opts?.delay).toBeGreaterThan(0)
   })
 
   it('verifies ticket scans for staff', async () => {
