@@ -1645,6 +1645,7 @@ components:
       properties:
         event:
           type: object
+          nullable: true
           required: [id, name, eventDate]
           properties:
             id:
@@ -2142,6 +2143,27 @@ paths:
                 $ref: '#/components/schemas/ApiError'
         '404':
           description: Contact not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /events/upcoming-uncontacted:
+    get:
+      summary: Get the next event within 14 days with uncontacted audience
+      operationId: getUpcomingUncontactedEvent
+      tags: [Events]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Upcoming event banner payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpcomingUncontactedResponse'
+        '401':
+          description: Unauthorized
           content:
             application/json:
               schema:
