@@ -29,11 +29,16 @@ export interface Event {
   capacity?: number
   bannerUrl?: string // Event banner image URL (Story 4.7)
   targetCriteria?: Record<string, unknown>
-  surveySchema?: Record<string, unknown>
+  registrationSurveySchema?: SurveySchema | null
+  postSurveySchema?: SurveySchema | null
+  postSurveyEnabled?: boolean
   venue?: string            // e.g. 'Jakarta Convention Center'
   industryTags?: string[]   // e.g. ['teknologi', 'keuangan']
   eventType?: 'conference' | 'workshop' | 'networking' | 'seminar' | 'webinar'
   topicTags?: string[]      // e.g. ['fintech', 'digital-banking']
+  is_paid: boolean         // AC7: default false
+  price: number            // AC7: default 0
+  payment_method: string | null  // AC7
   createdAt: string
   updatedAt: string
 }
@@ -120,6 +125,11 @@ export interface PaginatedResponse<T> {
 }
 
 // EventReport type — contract between Story 4.12 (stub) and Epic 8 (full implementation)
+export interface SurveySchema {
+  schema: Record<string, unknown>
+  uiSchema: Record<string, unknown>
+}
+
 export interface EventReport {
   eventId: string
   funnelMetrics: {
@@ -168,6 +178,9 @@ export interface CreateEventBody {
   blastTemplateId?: string
   confirmationTemplateId?: string
   rejectionTemplateId?: string
+  is_paid?: boolean
+  price?: number
+  payment_method?: string | null
 }
 
 export interface UpdateRegistrationStatusBody {

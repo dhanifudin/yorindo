@@ -3,7 +3,7 @@ import type { FastifyInstance } from 'fastify'
 import jwt from 'jsonwebtoken'
 import { buildServer } from '../server.js'
 import { config } from '../config/index.js'
-import { SEED_USER_IDS } from '../repositories/memory/_seeds.js'
+import { SEED_CONTACT_IDS, SEED_USER_IDS } from '../repositories/memory/_seeds.js'
 import type { JwtPayload } from '../middleware/auth.js'
 
 let app: FastifyInstance
@@ -287,6 +287,129 @@ describe('GET /api/contacts/industry-suggestions', () => {
     expect(body.suggestions).toEqual([])
     expect(body.matchedSlug).toBeNull()
     expect(body.fallback).toBe(false)
+  })
+})
+
+describe('Suppression routes', () => {
+  it('lists suppression entries with pagination', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/contacts/suppression?page=1&pageSize=20',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
+    })
+
+    expect(res.statusCode).toBe(200)
+    const body = res.json()
+    expect(body.data).toBeDefined()
+    expect(body.pagination).toBeDefined()
+  })
+
+  it('adds and searches a manual suppression entry', async () => {
+    const createRes = await app.inject({
+      method: 'POST',
+      url: '/api/contacts/suppression',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
+      payload: {
+        email: 'blocked@example.com',
+        phone: '+6281999999999',
+        reason: 'manually_added',
+      },
+    })
+
+    expect(createRes.statusCode).toBe(201)
+    const created = createRes.json()
+    expect(created.email).toBe('blocked@example.com')
+    expect(created.phone).toBe('+6281999999999')
+
+    const searchRes = await app.inject({
+      method: 'GET',
+      url: '/api/contacts/suppression?q=blocked@example.com&pageSize=20',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
+    })
+
+    expect(searchRes.statusCode).toBe(200)
+    expect(searchRes.json().data.some((entry: { id: string }) => entry.id === created.id)).toBe(true)
+  })
+
+  it('removes a suppression entry', async () => {
+    const createRes = await app.inject({
+      method: 'POST',
+      url: '/api/contacts/suppression',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
+      payload: {
+        email: 'remove-me@example.com',
+        reason: 'manually_added',
+      },
+    })
+
+    const created = createRes.json()
+    const deleteRes = await app.inject({
+      method: 'DELETE',
+      url: `/api/contacts/suppression/${created.id}`,
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
+    })
+
+    expect(deleteRes.statusCode).toBe(204)
+
+    const searchRes = await app.inject({
+      method: 'GET',
+      url: '/api/contacts/suppression?q=remove-me@example.com&pageSize=20',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
+    })
+    expect(searchRes.json().data).toHaveLength(0)
+  })
+})
+
+describe('GET /api/contacts/:id/history', () => {
+  it('returns contact event history for admins sorted by most recent event date', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/contacts/${SEED_CONTACT_IDS[0]}/history`,
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
+    })
+
+    expect(res.statusCode).toBe(200)
+    const body = res.json()
+    expect(body.registrations.length).toBeGreaterThan(0)
+    expect(body.registrations[0]).toMatchObject({
+      eventId: expect.any(String),
+      eventName: expect.any(String),
+      eventDate: expect.any(String),
+      status: expect.any(String),
+    })
+
+    const eventDates = body.registrations.map((item: { eventDate: string }) => item.eventDate)
+    expect(eventDates).toEqual([...eventDates].sort((a, b) => new Date(b).getTime() - new Date(a).getTime()))
+  })
+
+  it('rejects unauthenticated access to contact history', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/contacts/${SEED_CONTACT_IDS[0]}/history`,
+    })
+
+    expect(res.statusCode).toBe(401)
+  })
+
+  it('rejects non-admin access to contact history', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/contacts/${SEED_CONTACT_IDS[0]}/history`,
+      headers: { authorization: `Bearer ${getAuthToken('staff')}` },
+    })
+
+    expect(res.statusCode).toBe(403)
+  })
+
+  it('returns 404 for unknown contact history requests', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/contacts/not-a-real-contact-id/history',
+      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
+    })
+
+    expect(res.statusCode).toBe(404)
+    expect(res.json().error.code).toBe('NOT_FOUND')
   })
 })
 

@@ -202,6 +202,10 @@ export class InMemoryContactRepository implements IContactRepository {
     if (filters?.consentStatus) data = data.filter(c => c.consentStatus === filters.consentStatus)
     if (filters?.missingEmail) data = data.filter(c => c.email === null)
     if (filters?.missingPhone) data = data.filter(c => !c.phone)
+    if (filters?.industries?.length) data = data.filter(c => c.industryId && filters.industries!.includes(c.industryId))
+    if (filters?.cities?.length) data = data.filter(c => c.city && filters.cities!.includes(c.city))
+    if (filters?.companySizes?.length) data = data.filter(c => c.companySize && filters.companySizes!.includes(c.companySize))
+    if (filters?.jobTitles?.length) data = data.filter(c => c.jobTitleId && filters.jobTitles!.includes(c.jobTitleId))
     if (filters?.search) {
       const q = filters.search.toLowerCase()
       data = data.filter(c =>

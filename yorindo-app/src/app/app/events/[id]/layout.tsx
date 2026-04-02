@@ -12,8 +12,18 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { BlockerStrip } from '@/components/hub/BlockerStrip'
 import { EventCreateForm } from '@/components/features/events/EventCreateForm'
 import { EventCloneDialog } from '@/components/features/events/EventCloneDialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { cn } from '@/lib/utils'
-import type { Event } from '@/types/api'
+import type { Event, ApiError } from '@/types/api'
 
 const EDITABLE_STATUSES: Event['status'][] = ['draft', 'published', 'cancelled']
 
@@ -35,12 +45,14 @@ interface HubLayoutProps {
 // ─── Tab config ───────────────────────────────────────────────────────────────
 
 const TABS: { label: string; key: string; href: string; visibleOn: Event['status'][] }[] = [
-  { label: 'Overview',   key: 'overview',      href: '',               visibleOn: ['draft', 'published', 'active', 'completed', 'cancelled', 'archived'] },
-  { label: 'Undangan',   key: 'blast',         href: '/blast',         visibleOn: ['published', 'active'] },
-  { label: 'Registrasi', key: 'registrations', href: '/registrations', visibleOn: ['draft', 'published', 'active', 'completed', 'cancelled', 'archived'] },
-  { label: 'Konfirmasi', key: 'confirmation',  href: '/confirmation',  visibleOn: ['published', 'active'] },
-  { label: 'Check-in',   key: 'checkin',       href: '/checkin',       visibleOn: ['active'] },
-  { label: 'Laporan',    key: 'report',        href: '/report',        visibleOn: ['completed', 'archived'] },
+  { label: 'Overview',          key: 'overview',          href: '',                   visibleOn: ['draft', 'published', 'active', 'completed', 'cancelled', 'archived'] },
+  { label: 'Undangan',          key: 'blast',             href: '/blast',             visibleOn: ['published', 'active'] },
+  { label: 'Registrasi',        key: 'registrations',     href: '/registrations',     visibleOn: ['draft', 'published', 'active', 'completed', 'cancelled', 'archived'] },
+  { label: 'Konfirmasi',        key: 'confirmation',      href: '/confirmation',      visibleOn: ['published', 'active'] },
+  { label: 'Check-in',          key: 'checkin',           href: '/checkin',           visibleOn: ['active'] },
+  { label: 'Survey Builder',    key: 'builder',           href: '/builder',           visibleOn: ['draft', 'published', 'active', 'completed', 'cancelled', 'archived'] },
+  { label: 'Respons Survei',    key: 'survey-responses',  href: '/survey-responses',  visibleOn: ['published', 'active', 'completed', 'archived'] },
+  { label: 'Laporan',           key: 'report',            href: '/report',            visibleOn: ['completed', 'archived'] },
 ]
 
 // ─── Status badge colors ──────────────────────────────────────────────────────
@@ -54,31 +66,52 @@ const STATUS_BADGE: Record<string, string> = {
   archived:  'bg-muted text-muted-foreground',
 }
 
-// ─── Quick-action button config ───────────────────────────────────────────────
+// ─── Lifecycle action config ──────────────────────────────────────────────────
 
-function getQuickAction(
+interface LifecycleAction {
+  label: string
+  nextStatus: Event['status']
+  hint: string
+  variant?: 'default' | 'outline' | 'destructive'
+  disabled?: boolean
+  requireConfirm?: boolean
+}
+
+function getLifecycleActions(
   status: Event['status'],
   eventDate: string
-): { label: string; nextStatus: Event['status']; hint: string; disabled?: boolean } | null {
+): LifecycleAction[] {
+  const actions: LifecycleAction[] = []
+
   switch (status) {
     case 'draft':
-      return { label: 'Publikasikan', nextStatus: 'published', hint: 'Buka pendaftaran untuk peserta' }
+      actions.push({ label: 'Publikasikan', nextStatus: 'published', hint: 'Buka pendaftaran untuk peserta' })
+      actions.push({ label: 'Batalkan', nextStatus: 'cancelled', hint: 'Batalkan rencana event ini', variant: 'outline', requireConfirm: true })
+      break
     case 'published':
-      return { label: 'Mulai Live', nextStatus: 'active', hint: 'Aktifkan event dan buka fitur check-in' }
+      actions.push({ label: 'Mulai Live', nextStatus: 'active', hint: 'Aktifkan event dan buka fitur check-in' })
+      actions.push({ label: 'Batalkan', nextStatus: 'cancelled', hint: 'Batalkan event yang sudah dipublikasi', variant: 'outline', requireConfirm: true })
+      break
     case 'active': {
       const eventPassed = new Date(eventDate) <= new Date()
-      return {
+      actions.push({
         label: 'Selesaikan',
         nextStatus: 'completed',
         hint: eventPassed ? 'Tandai event sebagai selesai' : 'Hanya tersedia setelah tanggal event berlalu',
         disabled: !eventPassed,
-      }
+      })
+      actions.push({ label: 'Batalkan', nextStatus: 'cancelled', hint: 'Batalkan event yang sedang berjalan', variant: 'outline', requireConfirm: true })
+      break
     }
     case 'completed':
-      return { label: 'Arsipkan', nextStatus: 'archived', hint: 'Pindahkan ke arsip riwayat' }
-    default:
-      return null
+      actions.push({ label: 'Arsipkan', nextStatus: 'archived', hint: 'Pindahkan ke arsip riwayat', variant: 'outline' })
+      break
+    case 'cancelled':
+      actions.push({ label: 'Arsipkan', nextStatus: 'archived', hint: 'Pindahkan ke arsip riwayat', variant: 'outline' })
+      break
   }
+
+  return actions
 }
 
 // ─── Tab key detection ────────────────────────────────────────────────────────
@@ -88,6 +121,8 @@ function getActiveTab(pathname: string): string {
   if (pathname.includes('/registrations')) return 'registrations'
   if (pathname.endsWith('/confirmation')) return 'confirmation'
   if (pathname.endsWith('/checkin')) return 'checkin'
+  if (pathname.endsWith('/builder')) return 'builder'
+  if (pathname.endsWith('/survey-responses')) return 'survey-responses'
   if (pathname.endsWith('/report')) return 'report'
   return 'overview'
 }
@@ -116,26 +151,32 @@ export default function EventHubLayout({ children, params }: HubLayoutProps) {
   const pendingCount = registrationStats?.pagination.total ?? 0
 
   const [showEditSheet, setShowEditSheet] = useState(false)
-  const quickAction = event ? getQuickAction(event.status, event.eventDate) : null
+  const [confirmStatus, setConfirmStatus] = useState<Event['status'] | null>(null)
+  
+  const lifecycleActions = event ? getLifecycleActions(event.status, event.eventDate) : []
   const isEditable = event ? EDITABLE_STATUSES.includes(event.status) : false
   const visibleTabs = event ? TABS.filter((tab) => tab.visibleOn.includes(event.status)) : TABS
 
   const statusMutation = useMutation({
     mutationFn: async (nextStatus: Event['status']) => {
       const res = await fetch(`/api/events/${id}`, {
-        method: 'PUT',
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: nextStatus }),
       })
-      if (!res.ok) throw new Error('Gagal mengubah status')
+      if (!res.ok) {
+        const errorData = await res.json() as ApiError
+        throw new Error(errorData.error.message || 'Gagal mengubah status')
+      }
       return res.json()
     },
     onSuccess: (updated: Event) => {
       queryClient.setQueryData(['events', id], updated)
       queryClient.invalidateQueries({ queryKey: ['events'] })
       toast.success(`Status diubah ke "${updated.status}"`)
+      setConfirmStatus(null)
     },
-    onError: () => toast.error('Gagal mengubah status event'),
+    onError: (err: Error) => toast.error(err.message || 'Gagal mengubah status event'),
   })
 
   // Blocker strip items
@@ -168,6 +209,28 @@ export default function EventHubLayout({ children, params }: HubLayoutProps) {
           </div>
         </SheetContent>
       </Sheet>
+      
+      {/* Confirm status change dialog */}
+      <AlertDialog open={!!confirmStatus} onOpenChange={(open) => !open && setConfirmStatus(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Konfirmasi Perubahan Status</AlertDialogTitle>
+            <AlertDialogDescription>
+              Apakah Anda yakin ingin mengubah status event ini menjadi <strong>{confirmStatus}</strong>?
+              {confirmStatus === 'cancelled' && ' Tindakan ini akan membatalkan seluruh agenda event.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => confirmStatus && statusMutation.mutate(confirmStatus)}
+              className={confirmStatus === 'cancelled' ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : ''}
+            >
+              Lanjutkan
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div>
         {/* Event header */}
@@ -218,19 +281,27 @@ export default function EventHubLayout({ children, params }: HubLayoutProps) {
                     Edit Event
                   </Button>
                 )}
-                {quickAction && (
-                  <div className="flex flex-col items-end gap-0.5">
+                {lifecycleActions.map((action) => (
+                  <div key={action.nextStatus} className="flex flex-col items-end gap-0.5">
                     <Button
                       size="sm"
-                      onClick={() => !quickAction.disabled && statusMutation.mutate(quickAction.nextStatus)}
-                      disabled={statusMutation.isPending || quickAction.disabled}
-                      title={quickAction.hint}
+                      variant={action.variant ?? 'default'}
+                      onClick={() => {
+                        if (action.requireConfirm) {
+                          setConfirmStatus(action.nextStatus)
+                        } else {
+                          statusMutation.mutate(action.nextStatus)
+                        }
+                      }}
+                      disabled={statusMutation.isPending || action.disabled}
+                      title={action.hint}
                     >
-                      {statusMutation.isPending ? 'Memproses…' : quickAction.label}
+                      {statusMutation.isPending && (statusMutation.variables === action.nextStatus) 
+                        ? 'Memproses…' 
+                        : action.label}
                     </Button>
-                    <p className="text-xs text-muted-foreground">{quickAction.hint}</p>
                   </div>
-                )}
+                ))}
               </div>
             </div>
           )}
