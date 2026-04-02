@@ -116,6 +116,7 @@ development_status:
   4-1-event-creation-with-full-configuration: review       # AC updated 2026-03-28: paid/free toggle (admin-only) + preview button
   4-2-event-lifecycle-management-state-machine: review
   4-3-event-clone: review
+  be-4-3-event-clone: review
   4-4-survey-template-builder: ready-for-dev               # REOPENED 2026-03-28: dual survey + GForms parity + response dashboard
   4-5-event-capacity-target-criteria-with-audience-preview: review  # AC update needed: multi-criteria + AI recommendation
   4-6-soft-delete-recovery-for-events-and-records: review
@@ -143,6 +144,7 @@ development_status:
   5-3-blast-scheduling-delivery-via-brevo-everpro: review  # QR code generation added: buildVariables() resolves {{qr_code}}; IWhatsAppService.sendImage() added (SCP-2026-03-28-F)
   5-4-emergency-blast: review
   5-5-suppression-list-consent-enforcement: review
+  be-5-1-notification-message-template-management: review
   epic-5-retrospective: optional
 
   # ─────────────────────────────────────────────

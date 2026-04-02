@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useQuery, useMutation } from '@tanstack/react-query'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -11,7 +11,6 @@ import { toast } from 'sonner'
 import Link from 'next/link'
 import { CalendarDays, MapPin, Users, CheckCircle2, Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
-import type { Event } from '@/types/api'
 
 // Adjust Event type fields to match your actual API shape
 interface EventItem {

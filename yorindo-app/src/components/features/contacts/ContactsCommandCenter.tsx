@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, startTransition } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useContacts } from '@/hooks/useContacts'
 import { Button } from '@/components/ui/button'
@@ -19,8 +19,10 @@ const FILTER_KEYS = ['industry', 'city', 'companySize', 'q', 'missingEmail', 'mi
 export function ContactsCommandCenter() {
   const [triageMode, setTriageMode] = useState<'flagged' | 'duplicates' | null>(null)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [selectedNames, setSelectedNames] = useState<string[]>([])   // ← Baru
   const [selectMode, setSelectMode] = useState(false)
   const [resetKey, setResetKey] = useState(0)
+
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -29,12 +31,15 @@ export function ContactsCommandCenter() {
 
   const hasFilters = FILTER_KEYS.some((k) => !!searchParams.get(k))
 
-  const handleSelectionChange = useCallback((ids: string[]) => {
+  // Handle selection dari table (ids + names)
+  const handleSelectionChange = useCallback((ids: string[], names: string[]) => {
     setSelectedIds(ids)
+    setSelectedNames(names)
   }, [])
 
   const handleClearSelection = useCallback(() => {
     setSelectedIds([])
+    setSelectedNames([])
     setResetKey((k) => k + 1)
   }, [])
 
@@ -44,12 +49,10 @@ export function ContactsCommandCenter() {
     if (!next) handleClearSelection()
   }, [selectMode, handleClearSelection])
 
-  // Reset selection on page change
-  const page = searchParams.get('page')
+  // Reset selection saat ganti halaman
   useEffect(() => {
-    handleClearSelection()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page])
+    startTransition(() => { handleClearSelection() })
+  }, [searchParams.get('page'), handleClearSelection])
 
   useEffect(() => {
     setFilter({
@@ -74,11 +77,9 @@ export function ContactsCommandCenter() {
     if (type === 'missingEmail') {
       params.set('missingEmail', 'true')
       params.delete('missingPhone')
-      setFilter({ missingEmail: true, missingPhone: false })
     } else {
       params.set('missingPhone', 'true')
       params.delete('missingEmail')
-      setFilter({ missingPhone: true, missingEmail: false })
     }
     router.push(`${pathname}?${params.toString()}`)
   }
@@ -106,19 +107,23 @@ export function ContactsCommandCenter() {
         mode={triageMode}
         onClose={() => setTriageMode(null)}
       />
+
       <ContactsTable
         key={resetKey}
-        onSelectionChange={handleSelectionChange}
+        onSelectionChange={handleSelectionChange}   // ← sekarang terima 2 params
         onToggleSelectMode={handleToggleSelectMode}
         selectMode={selectMode}
         selectedIds={selectedIds}
       />
+
       <ContactsPagination />
+
       <ActionToolbar
         total={contacts?.pagination.total ?? 0}
         searchParams={searchParams}
         isVisible={hasFilters || selectedIds.length > 0}
         selectedIds={selectedIds}
+        selectedNames={selectedNames}          // ← ini yang bikin nama muncul
         onClearSelection={handleClearSelection}
       />
     </div>

@@ -264,3 +264,18 @@ export interface AuditLog {
   metadata: Record<string, unknown> | null
   createdAt: ISODateString
 }
+
+// ─── Template ────────────────────────────────────────────────────────────────
+
+export type TemplateType = 'invitation' | 'confirmation' | 'rejection' | 'ticket_delivery'
+export type TemplateChannel = 'email' | 'whatsapp'
+
+export interface Template {
+  id: EntityId
+  name: string
+  type: TemplateType
+  channel: TemplateChannel
+  body: string
+  createdAt: ISODateString
+  updatedAt: ISODateString
+}

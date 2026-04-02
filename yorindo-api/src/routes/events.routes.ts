@@ -427,6 +427,80 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(204).send()
   })
 
+  fastify.post('/api/events/:id/clone', { preHandler: [requireAuth, requireAdmin] }, async (request, reply) => {
+    const parsed = EventIdParamsSchema.safeParse(request.params)
+    if (!parsed.success) return replyValidationError(reply, parsed.error.issues, 'Invalid event id')
+    const event = await requireEventOr404(reply, parsed.data.id)
+    if (!event) return
+
+    validateOpenApiRequest({ path: '/events/{id}/clone', method: 'post', params: parsed.data })
+
+    const clonedEventName = `${event.name} (Copy)`
+    // Generating a unique slug based on timestamp
+    const clonedEventSlug = `${event.slug}-copy-${Date.now()}`
+
+    const clonedEvent = await eventRepository.create({
+      name: clonedEventName,
+      slug: clonedEventSlug,
+      date: event.date,
+      timezone: event.timezone,
+      city: event.city,
+      venue: event.venue,
+      description: event.description,
+      capacity: event.capacity,
+      waitlistBuffer: event.waitlistBuffer,
+      approvalMode: event.approvalMode,
+      notificationChannel: event.notificationChannel,
+      scanFormat: event.scanFormat,
+      targetCriteria: event.targetCriteria ? JSON.parse(JSON.stringify(event.targetCriteria)) : null,
+      surveySchemaId: null, // we will recreate survey below
+      vendorId: event.vendorId,
+      status: 'draft',
+      deletedAt: null,
+    })
+
+    const surveySchema = await surveyRepository.findByEventId(event.id)
+    let clonedSurveySchemaFields: any = {}
+
+    if (surveySchema) {
+      const newSurveySchemaId = `${clonedEvent.id}-survey`
+      const clonedSurvey = await surveyRepository.upsert(clonedEvent.id, {
+        id: newSurveySchemaId,
+        eventId: clonedEvent.id,
+        fields: surveySchema.fields ? JSON.parse(JSON.stringify(surveySchema.fields)) : [],
+        schema: surveySchema.schema ? JSON.parse(JSON.stringify(surveySchema.schema)) : undefined,
+        uiSchema: surveySchema.uiSchema ? JSON.parse(JSON.stringify(surveySchema.uiSchema)) : undefined,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      })
+      clonedSurveySchemaFields = clonedSurvey.schema ? { schema: clonedSurvey.schema, uiSchema: clonedSurvey.uiSchema ?? {} } : clonedSurvey.fields
+    }
+
+    const payload = request.user as JwtPayload
+    await auditLogRepository.create({
+      action: 'event.cloned',
+      actorId: payload.sub,
+      actorRole: payload.role,
+      eventId: clonedEvent.id,
+      targetId: event.id,
+      targetType: 'event',
+      metadata: { originalEventId: event.id, newEventId: clonedEvent.id },
+    })
+    await auditLogRepository.create({
+      action: 'event.created',
+      actorId: payload.sub,
+      actorRole: payload.role,
+      eventId: clonedEvent.id,
+      targetId: clonedEvent.id,
+      targetType: 'event',
+      metadata: { method: 'clone', originalEventId: event.id },
+    })
+
+    const responseBody = toEventDto(clonedEvent, clonedSurveySchemaFields)
+    validateOpenApiResponse({ path: '/events/{id}/clone', method: 'post', status: 201, body: responseBody })
+    return reply.status(201).send(responseBody)
+  })
+
   fastify.get('/api/events/:id/registrations', { preHandler: requireAuth }, async (request, reply) => {
     const params = EventIdParamsSchema.safeParse(request.params)
     const query = EventRegistrationsQuerySchema.safeParse(request.query)

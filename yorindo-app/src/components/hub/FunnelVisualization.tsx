@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { ConversionBadge } from './ConversionBadge'
-import { getHealth, type FunnelStage, type Health } from '@/lib/benchmarks'
+import { getHealth, type Health } from '@/lib/benchmarks'
 import { cn } from '@/lib/utils'
 
 export interface FunnelData {

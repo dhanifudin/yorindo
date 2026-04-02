@@ -1,5 +1,4 @@
 import { http, HttpResponse, delay } from 'msw'
-import { faker } from '@faker-js/faker'
 import type { Vendor, CreateVendorBody } from '@/types/api'
 import { makeMockCuid2 } from './id'
 
