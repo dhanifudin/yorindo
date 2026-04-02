@@ -14,6 +14,7 @@ import { findTemplateById } from '../data/templates.js'
 import { requireAdmin, requireAuth, requireRoles, type JwtPayload } from '../middleware/auth.js'
 import type { Event, Registration } from '../types/domain.js'
 import { validateOpenApiRequest, validateOpenApiResponse } from '../lib/openapi-contract.js'
+import { INDONESIAN_INDUSTRIES } from '../repositories/memory/_seeds.js'
 
 const EventIdParamsSchema = z.object({
   id: z.string().trim().min(1),
@@ -181,6 +182,16 @@ function toRegistrationWithContactDto(registration: Registration, contact: Await
   }
 }
 
+/**
+ * Mengubah daftar industry id event ke slug FE agar URL blast tetap bersih.
+ */
+function toIndustryTags(event: Event | null): string[] {
+  return (event?.targetCriteria?.industries ?? []).map((industryId) => {
+    const found = INDONESIAN_INDUSTRIES.find((item) => item.id === industryId || item.slug === industryId)
+    return found?.slug ?? industryId
+  })
+}
+
 async function requireEventOr404(reply: FastifyReply, eventId: string) {
   const event = await eventRepository.findById(eventId)
   if (!event) {
@@ -248,6 +259,31 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       },
     }
     validateOpenApiResponse({ path: '/events', method: 'get', status: 200, body: responseBody })
+    return reply.status(200).send(responseBody)
+  })
+
+  fastify.get('/api/events/upcoming-uncontacted', { preHandler: requireAuth }, async (_request, reply) => {
+    const upcoming = await eventRepository.getUpcomingUncontacted()
+
+    const event = upcoming ? await eventRepository.findById(upcoming.eventId) : null
+    const responseBody = upcoming && event
+      ? {
+          event: {
+            id: event.id,
+            name: event.name,
+            eventDate: event.date,
+            industryTags: toIndustryTags(event),
+          },
+          daysUntil: upcoming.daysTillEvent,
+          uncontactedCount: upcoming.uncontactedCount,
+        }
+      : {
+          event: null,
+          daysUntil: 0,
+          uncontactedCount: 0,
+        }
+
+    validateOpenApiResponse({ path: '/events/upcoming-uncontacted', method: 'get', status: 200, body: responseBody })
     return reply.status(200).send(responseBody)
   })
 
