@@ -99,7 +99,13 @@ export class InMemoryEventRepository implements IEventRepository {
   }
 
   async findAll(params: PaginationParams, filters?: EventFilters): Promise<{ data: Event[]; total: number }> {
-    let data = Array.from(this.events.values()).filter(e => e.deletedAt === null)
+    let data = Array.from(this.events.values())
+
+    if (filters?.deleted === 'only') {
+      data = data.filter((event) => event.deletedAt !== null)
+    } else {
+      data = data.filter((event) => event.deletedAt === null)
+    }
 
     if (filters?.ids?.length) data = data.filter(e => filters.ids!.includes(e.id))
     if (filters?.status) data = data.filter(e => e.status === filters.status)
