@@ -52,13 +52,13 @@ export function SurveyFieldEditor({ field, onChange, onRemove, dragHandleProps }
   }
 
   return (
-    <Card className="group border-violet-100 shadow-sm hover:shadow-md transition-shadow">
-      <CardHeader className="p-3 bg-violet-50/50 flex flex-row items-center gap-3 space-y-0">
-        <div {...dragHandleProps} className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-violet-600 transition-colors">
+    <Card className="group border shadow-sm hover:shadow-md transition-shadow">
+      <CardHeader className="p-3 bg-muted/30 flex flex-row items-center gap-3 space-y-0">
+        <div {...dragHandleProps} className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground transition-colors">
           <GripVertical size={18} />
         </div>
         <div className="flex-1">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-violet-500/80">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
             {FIELD_TYPE_LABELS[field.type]}
           </span>
         </div>

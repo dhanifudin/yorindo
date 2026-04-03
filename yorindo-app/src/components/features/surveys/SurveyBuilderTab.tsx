@@ -196,28 +196,27 @@ export function SurveyBuilderTab({
   return (
     <div className="space-y-6">
       {type === 'post-event' && (
-        <div className="flex items-center justify-between p-4 bg-violet-50/50 border border-violet-100 rounded-xl">
+        <div className="flex items-center justify-between p-4 bg-accent/50 border border-accent rounded-xl">
           <div className="space-y-0.5">
-            <Label className="text-base font-semibold text-violet-900">
+            <Label className="text-base font-semibold">
               Aktifkan Survei Post-Event
             </Label>
-            <p className="text-xs text-violet-600/80">
+            <p className="text-xs text-muted-foreground">
               Kirimkan survei kepuasan kepada peserta setelah event berakhir.
             </p>
           </div>
           <Switch
             checked={postSurveyEnabled}
             onCheckedChange={onTogglePostSurvey}
-            className="data-[state=checked]:bg-violet-600"
           />
         </div>
       )}
 
       <div className={`space-y-6 ${isDisabled ? 'opacity-50 pointer-events-none' : ''}`}>
-        <div className="flex flex-wrap items-center justify-between gap-4 sticky top-0 bg-background/95 backdrop-blur z-20 py-3 border-b border-violet-100 px-1">
+        <div className="flex flex-wrap items-center justify-between gap-4 sticky top-0 bg-background/95 backdrop-blur z-20 py-3 px-1">
           <div className="flex items-center gap-2">
             <Select value={selectedType} onValueChange={(val) => setSelectedType(val as SurveyFieldType)}>
-              <SelectTrigger className="w-[180px] h-9 border-violet-200">
+              <SelectTrigger className="w-[180px] h-9">
                 <SelectValue placeholder="Pilih tipe" />
               </SelectTrigger>
               <SelectContent>
@@ -228,7 +227,7 @@ export function SurveyBuilderTab({
                 ))}
               </SelectContent>
             </Select>
-            <Button size="sm" onClick={handleAddField} className="bg-violet-600 hover:bg-violet-700">
+            <Button size="sm" onClick={handleAddField}>
               <Plus size={16} className="mr-1" /> Tambah Pertanyaan
             </Button>
           </div>
@@ -241,7 +240,6 @@ export function SurveyBuilderTab({
               size="sm"
               onClick={handleSave}
               disabled={saveMutation.isPending}
-              className="bg-violet-600 hover:bg-violet-700"
             >
               {saveMutation.isPending ? (
                 <Loader2 size={16} className="animate-spin mr-1" />
@@ -254,7 +252,7 @@ export function SurveyBuilderTab({
         </div>
 
         {fields.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed border-violet-100 rounded-2xl bg-violet-50/20">
+          <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed border-muted rounded-2xl bg-muted/20">
             <p className="text-sm text-muted-foreground">
               Belum ada pertanyaan. Tambahkan pertanyaan pertama Anda di atas.
             </p>

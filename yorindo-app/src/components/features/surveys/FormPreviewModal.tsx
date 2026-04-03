@@ -7,8 +7,10 @@ import { SurveyField } from '@/types/surveys'
 import { buildSurveySchema } from './surveySchemaBuilder'
 import { surveyCustomWidgets } from './widgets'
 import { Button } from '@/components/ui/button'
-import { X, ClipboardCheck, MessageSquare, Eye } from 'lucide-react'
+import { X, Eye, ClipboardCheck, MessageSquare } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Card, CardContent } from '@/components/ui/card'
+import { Theme as ShadcnTheme } from '@rjsf/shadcn'
 
 interface FormPreviewModalProps {
   open: boolean
@@ -17,18 +19,6 @@ interface FormPreviewModalProps {
   postEventFields: SurveyField[]
   postSurveyEnabled: boolean
 }
-
-// Fixed fields for registration form
-const FIXED_REGISTRATION_PROPERTIES: Record<string, RJSFSchema> = {
-  name: { type: 'string', title: 'Nama Lengkap' },
-  email: { type: 'string', title: 'Email' },
-  phone: { type: 'string', title: 'Nomor Telepon' },
-  company_name: { type: 'string', title: 'Nama Perusahaan' },
-  position: { type: 'string', title: 'Jabatan' },
-  industry_type: { type: 'string', title: 'Industri' },
-}
-
-const FIXED_REGISTRATION_ORDER = ['name', 'email', 'phone', 'company_name', 'position', 'industry_type']
 
 export function FormPreviewModal({
   open,
@@ -42,6 +32,17 @@ export function FormPreviewModal({
   const postSurvey = buildSurveySchema(postEventFields)
 
   // Merge registration fixed fields with survey fields
+  const FIXED_REGISTRATION_PROPERTIES: Record<string, RJSFSchema> = {
+    name: { type: 'string', title: 'Nama Lengkap' },
+    email: { type: 'string', title: 'Email' },
+    phone: { type: 'string', title: 'Nomor Telepon' },
+    company_name: { type: 'string', title: 'Nama Perusahaan' },
+    position: { type: 'string', title: 'Jabatan' },
+    industry_type: { type: 'string', title: 'Industri' },
+  }
+
+  const FIXED_REGISTRATION_ORDER = ['name', 'email', 'phone', 'company_name', 'position', 'industry_type']
+
   const mergedRegSchema: RJSFSchema = {
     type: 'object',
     properties: {
@@ -59,34 +60,42 @@ export function FormPreviewModal({
     ],
   }
 
+  // Merge custom widgets with shadcn theme widgets
+  const customWidgets = {
+    ...ShadcnTheme.widgets,
+    ...surveyCustomWidgets,
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col p-0 border-none shadow-2xl">
-        <DialogHeader className="p-6 bg-violet-600 text-white">
+      <DialogContent className="max-w-5xl w-[95vw] sm:max-w-5xl max-h-[90vh] overflow-hidden flex flex-col p-0">
+        <DialogHeader className="p-6 border-b">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-white/20 rounded-lg">
-              <Eye className="text-white" size={20} />
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <Eye className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <DialogTitle className="text-xl font-bold text-white">Preview Formulir</DialogTitle>
-              <p className="text-sm text-violet-100">Lihat tampilan survei Anda dari perspektif peserta</p>
+              <p className="uppercase text-xs tracking-[2px] text-muted-foreground font-medium">
+                PREVIEW FORMULIR
+              </p>
+              <DialogTitle className="text-2xl mt-0.5">Preview Formulir</DialogTitle>
             </div>
           </div>
         </DialogHeader>
 
         <Tabs defaultValue="registration" className="flex-1 flex flex-col overflow-hidden">
-          <div className="px-6 border-b bg-violet-50/30">
-            <TabsList className="bg-transparent h-12 gap-6">
+          <div className="px-6 border-b bg-muted/30">
+            <TabsList className="bg-transparent h-auto p-0 gap-6">
               <TabsTrigger
                 value="registration"
-                className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-violet-600 rounded-none h-full px-1 text-sm font-medium"
+                className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none pb-3 pt-0 px-0 text-sm font-semibold transition-all relative overflow-visible"
               >
                 <ClipboardCheck size={16} className="mr-2" />
                 Formulir Registrasi
               </TabsTrigger>
               <TabsTrigger
                 value="post-event"
-                className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-violet-600 rounded-none h-full px-1 text-sm font-medium"
+                className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none pb-3 pt-0 px-0 text-sm font-semibold transition-all relative overflow-visible"
               >
                 <MessageSquare size={16} className="mr-2" />
                 Survei Post-Event
@@ -94,59 +103,77 @@ export function FormPreviewModal({
             </TabsList>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50">
+          <div className="flex-1 overflow-y-auto p-6 bg-background">
             <TabsContent value="registration" className="m-0 focus-visible:outline-none">
-              <div className="max-w-xl mx-auto bg-white rounded-2xl shadow-sm border p-8 space-y-6">
-                <div className="space-y-1 pb-4 border-b">
-                  <h4 className="text-lg font-bold">Pendaftaran Event</h4>
-                  <p className="text-sm text-muted-foreground">Silakan isi formulir di bawah ini untuk mendaftar.</p>
-                </div>
-                <Form
-                  schema={mergedRegSchema}
-                  uiSchema={mergedRegUiSchema}
-                  validator={validator}
-                  widgets={surveyCustomWidgets}
-                  disabled={true}
-                >
-                  <Button type="button" className="w-full h-11 pointer-events-none mt-6 bg-violet-600 text-white rounded-xl">
-                    Daftar Sekarang
-                  </Button>
-                </Form>
-              </div>
+              <Card className="border border-border shadow-sm overflow-hidden">
+                <CardContent className="pt-10 pb-12">
+                  {registrationFields.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground space-y-2">
+                      <p className="text-sm font-medium">Formulir Registrasi</p>
+                      <p className="text-sm">Berisi field wajib: Nama Lengkap, Email, Nomor Telepon, Nama Perusahaan, Jabatan, dan Industri.</p>
+                      <p className="text-xs">Tambahkan pertanyaan survei untuk melihat preview lengkap di sini.</p>
+                    </div>
+                  ) : (
+                    <div className="max-w-3xl mx-auto">
+                      <Form
+                        schema={mergedRegSchema}
+                        uiSchema={mergedRegUiSchema}
+                        validator={validator}
+                        widgets={customWidgets}
+                        templates={ShadcnTheme.templates}
+                        disabled={true}
+                        formContext={{ isPreview: true }}
+                      >
+                        <Button type="button" className="w-full h-11 pointer-events-none mt-8 bg-primary text-primary-foreground rounded-md" disabled>
+                          Daftar Sekarang
+                        </Button>
+                      </Form>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </TabsContent>
 
             <TabsContent value="post-event" className="m-0 focus-visible:outline-none">
-              <div className="max-w-xl mx-auto">
+              <div className="max-w-3xl mx-auto">
                 {!postSurveyEnabled ? (
-                  <div className="text-center py-20 space-y-4 bg-white rounded-2xl border border-dashed border-slate-200">
-                    <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto text-muted-foreground">
-                      <X size={32} />
-                    </div>
-                    <div className="space-y-1">
-                      <h4 className="font-bold">Survei Belum Aktif</h4>
-                      <p className="text-sm text-muted-foreground max-w-xs mx-auto">
-                        Aktifkan survei post-event di tab builder untuk melihat preview di sini.
-                      </p>
-                    </div>
-                  </div>
+                  <Card className="border border-dashed border-muted-foreground/25">
+                    <CardContent className="pt-10 pb-12 text-center space-y-4">
+                      <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto text-muted-foreground">
+                        <X size={32} />
+                      </div>
+                      <div className="space-y-1">
+                        <h4 className="font-semibold text-lg">Survei Belum Diaktifkan</h4>
+                        <p className="text-sm text-muted-foreground max-w-xs mx-auto">
+                          Aktifkan survei post-event di tab builder untuk melihat preview di sini.
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
                 ) : (
-                  <div className="bg-white rounded-2xl shadow-sm border p-8 space-y-6">
-                    <div className="space-y-1 pb-4 border-b">
-                      <h4 className="text-lg font-bold">Umpan Balik Event</h4>
-                      <p className="text-sm text-muted-foreground">Bagikan kesan Anda tentang event yang baru saja berakhir.</p>
-                    </div>
-                    <Form
-                      schema={postSurvey.schema as RJSFSchema}
-                      uiSchema={postSurvey.uiSchema}
-                      validator={validator}
-                      widgets={surveyCustomWidgets}
-                      disabled={true}
-                    >
-                      <Button type="button" className="w-full h-11 pointer-events-none mt-6 bg-violet-600 text-white rounded-xl">
-                        Kirim Jawaban
-                      </Button>
-                    </Form>
-                  </div>
+                  <Card className="border border-border shadow-sm overflow-hidden">
+                    <CardContent className="pt-10 pb-12">
+                      {postEventFields.length === 0 ? (
+                        <div className="text-center py-12 text-muted-foreground">
+                          <p className="text-sm">Belum ada pertanyaan survei ditambahkan.</p>
+                        </div>
+                      ) : (
+                        <Form
+                          schema={postSurvey.schema as RJSFSchema}
+                          uiSchema={postSurvey.uiSchema}
+                          validator={validator}
+                          widgets={customWidgets}
+                          templates={ShadcnTheme.templates}
+                          disabled={true}
+                          formContext={{ isPreview: true }}
+                        >
+                          <Button type="button" className="w-full h-11 pointer-events-none mt-8 bg-primary text-primary-foreground rounded-md" disabled>
+                            Kirim Jawaban
+                          </Button>
+                        </Form>
+                      )}
+                    </CardContent>
+                  </Card>
                 )}
               </div>
             </TabsContent>
