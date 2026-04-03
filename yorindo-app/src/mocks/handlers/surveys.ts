@@ -31,17 +31,21 @@ export const surveysHandlers = [
   http.put('/api/events/:id/survey/registration', async ({ params, request }) => {
     await delay(300)
     const id = params.id as string
-    const body = (await request.json()) as SurveySchema
-    
+    const body = await request.json() as SurveySchema
+
     const current = eventSurveysStore.get(id) ?? {}
     eventSurveysStore.set(id, { ...current, registration: body })
-    
+
     // Also update eventsStore for consistency if needed, but the Map is our primary source
-    const event = eventsStore.find(e => e.id === id)
-    if (event) {
-      event.registrationSurveySchema = body
+    const eventIndex = eventsStore.findIndex(e => e.id === id)
+    if (eventIndex !== -1) {
+      eventsStore[eventIndex] = {
+        ...eventsStore[eventIndex],
+        registrationSurveySchema: body,
+        updatedAt: new Date().toISOString()
+      }
     }
-    
+
     return HttpResponse.json({ ok: true })
   }),
 
@@ -49,14 +53,18 @@ export const surveysHandlers = [
   http.put('/api/events/:id/survey/post-event', async ({ params, request }) => {
     await delay(300)
     const id = params.id as string
-    const body = (await request.json()) as SurveySchema
-    
+    const body = await request.json() as SurveySchema
+
     const current = eventSurveysStore.get(id) ?? {}
     eventSurveysStore.set(id, { ...current, 'post-event': body })
-    
-    const event = eventsStore.find(e => e.id === id)
-    if (event) {
-      event.postSurveySchema = body
+
+    const eventIndex = eventsStore.findIndex(e => e.id === id)
+    if (eventIndex !== -1) {
+      eventsStore[eventIndex] = {
+        ...eventsStore[eventIndex],
+        postSurveySchema: body,
+        updatedAt: new Date().toISOString()
+      }
     }
 
     return HttpResponse.json({ ok: true })

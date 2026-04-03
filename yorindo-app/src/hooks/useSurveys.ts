@@ -26,7 +26,10 @@ export function useSaveSurveySchema(eventId: string) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ schema, uiSchema }),
       })
-      if (!res.ok) throw new Error('Gagal menyimpan survei')
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        throw new Error(errorData?.message || `Gagal menyimpan survei: ${res.status} ${res.statusText}`)
+      }
       return res.json()
     },
     onSuccess: (_, { type }) => {
@@ -34,6 +37,9 @@ export function useSaveSurveySchema(eventId: string) {
       queryClient.invalidateQueries({ queryKey: ['events', eventId] })
       toast.success('Survei berhasil disimpan')
     },
+    onError: (error) => {
+      toast.error(error.message || 'Gagal menyimpan survei')
+    }
   })
 }
 
