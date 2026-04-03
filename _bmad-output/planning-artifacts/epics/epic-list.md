@@ -61,4 +61,9 @@ Admin gets a personalized intelligence command center at `/app/dashboard` — sh
 **FRs covered:** FR-D1 (dashboard intelligence view), FR-D2 (company aggregation view), FR-D3 (vendor-event breakdown)
 **Architecture requirements:** New route `/app/dashboard`; `/app` redirects to `/app/dashboard`; new MSW handlers for `GET /api/dashboard/stats`, `GET /api/contacts/companies`; reuses existing `events.vendor_id` FK for vendor grouping
 
+## Epic 11: Demo Environment Deployment
+A self-contained demo environment at `demo.dhanifudin.com` with realistic seed data that resets on every deployment — enabling prospects and team members to experience the full product lifecycle without affecting production data.
+**FRs covered:** None (enables sales/demo, not a user-facing feature)
+**Architecture requirements:** Docker Compose demo profile, seed script with relative dates, HTTPS configuration, known demo user credentials, self-validating seed data
+
 ---

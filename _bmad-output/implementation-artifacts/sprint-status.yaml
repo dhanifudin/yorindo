@@ -253,3 +253,16 @@ development_status:
   12-1-admin-intelligence-dashboard-page: backlog
   12-2-company-intelligence-view: backlog
   epic-12-retrospective: optional
+
+  # ─────────────────────────────────────────────
+  # EPIC 13: Demo Environment Deployment
+  # docker-compose.demo.yml, seed script with relative dates, HTTPS, reset-on-deploy
+  # Planning epic file: epics/epic-11-demo-environment-deployment.md
+  # ─────────────────────────────────────────────
+  epic-13: backlog
+  13-1-docker-compose-demo-profile: ready-for-dev
+  13-2-demo-seed-script-with-relative-dates: ready-for-dev
+  13-3-deploy-reset-script-and-makefile: ready-for-dev
+  13-4-https-and-domain-configuration: ready-for-dev
+  13-5-seed-data-validation-tests: ready-for-dev
+  epic-13-retrospective: optional
