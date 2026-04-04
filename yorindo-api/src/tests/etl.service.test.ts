@@ -34,12 +34,7 @@ function buildRow(overrides: Partial<NormalizedRow> = {}): NormalizedRow {
     jobTitle: 'Manajer',
     confidence: 0.9,
     flags: [],
-    provinceCode: null,
-    provinceName: null,
-    cityCode: null,
-    cityName: 'Jakarta',
     eventDate: '2026-03-31',
-    eventNameRaw: 'Yorindo Summit',
     ...overrides,
   }
 }

@@ -13,12 +13,7 @@ export interface NormalizedRow {
   jobTitle: string | null
   confidence: number
   flags: string[]
-  provinceCode: string | null
-  provinceName: string | null
-  cityCode: string | null
-  cityName: string | null
   eventDate: string | null
-  eventNameRaw: string | null
 }
 
 export interface IEtlNormalizationService {

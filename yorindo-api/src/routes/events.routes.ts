@@ -162,9 +162,8 @@ const UpdateEventSponsorBodySchema = z.object({
 })
 
 const AudiencePreviewBodySchema = z.object({
-  industries: z.array(z.string()).optional(),
+  serviceTypes: z.array(z.string()).optional(),
   cities: z.array(z.string()).optional(),
-  companySizes: z.array(z.string()).optional(),
   jobTitles: z.array(z.string()).optional(),
   behavior: z.array(z.enum(['most_active', 'low_attendance', 'never_attended'])).optional(),
   lastAttendedBefore: z.string().datetime({ offset: true }).optional(),
@@ -1066,9 +1065,8 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       consentStatus: 'active',       // Exclude suppressed contacts
       flagCategory: 'NONE',          // Exclude flagged contacts
     }
-    if (body.data.industries?.length) filters.industries = body.data.industries
+    if (body.data.serviceTypes?.length) filters.serviceTypes = body.data.serviceTypes
     if (body.data.cities?.length) filters.cities = body.data.cities
-    if (body.data.companySizes?.length) filters.companySizes = body.data.companySizes
     if (body.data.jobTitles?.length) filters.jobTitles = body.data.jobTitles
 
     // Fetch all matching contacts (use large pageSize, rely on total for accurate count)
@@ -1114,21 +1112,18 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     // Build real breakdown from matched contacts
-    const industryBreakdown: Record<string, number> = {}
+    const serviceTypeBreakdown: Record<string, number> = {}
     const cityBreakdown: Record<string, number> = {}
-    const companySizeBreakdown: Record<string, number> = {}
     const jobTitleBreakdown: Record<string, number> = {}
     for (const c of matchedContacts) {
-      if (c.industryId) industryBreakdown[c.industryId] = (industryBreakdown[c.industryId] ?? 0) + 1
+      if (c.serviceType) serviceTypeBreakdown[c.serviceType] = (serviceTypeBreakdown[c.serviceType] ?? 0) + 1
       if (c.city) cityBreakdown[c.city] = (cityBreakdown[c.city] ?? 0) + 1
-      if (c.companySize) companySizeBreakdown[c.companySize] = (companySizeBreakdown[c.companySize] ?? 0) + 1
-      if (c.jobTitleId) jobTitleBreakdown[c.jobTitleId] = (jobTitleBreakdown[c.jobTitleId] ?? 0) + 1
+      if (c.jobTitle) jobTitleBreakdown[c.jobTitle] = (jobTitleBreakdown[c.jobTitle] ?? 0) + 1
     }
 
     const breakdown: Record<string, number> = {}
-    if (Object.keys(industryBreakdown).length) Object.assign(breakdown, industryBreakdown)
+    if (Object.keys(serviceTypeBreakdown).length) Object.assign(breakdown, serviceTypeBreakdown)
     if (Object.keys(cityBreakdown).length) Object.assign(breakdown, cityBreakdown)
-    if (Object.keys(companySizeBreakdown).length) Object.assign(breakdown, companySizeBreakdown)
     if (Object.keys(jobTitleBreakdown).length) Object.assign(breakdown, jobTitleBreakdown)
 
     const responseBody = {
@@ -1158,9 +1153,8 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
         name: contact.name,
         email: contact.email ?? '',
         phone: contact.phone,
-        industryId: contact.industryId ?? '',
+        serviceType: contact.serviceType ?? '',
         city: contact.city ?? '',
-        companySize: contact.companySize ?? '',
         score: Math.max(0, 100 - index),
         factors: [
           `event:${event.slug}`,

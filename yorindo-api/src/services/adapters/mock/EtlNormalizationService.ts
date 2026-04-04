@@ -43,17 +43,11 @@ export class MockEtlNormalizationService implements IEtlNormalizationService {
         city: (row.city ?? row['Asal Kota']) ? String(row.city ?? row['Asal Kota']) : null,
         company: (row.company ?? row.perusahaan ?? row['Nama Instansi']) ? String(row.company ?? row.perusahaan ?? row['Nama Instansi']) : null,
         department: (row.department ?? row['Departemen']) ? String(row.department ?? row['Departemen']) : null,
-        companySize: null,
-        industrySlug: null,
-        jobTitleSlug: null,
+        serviceType: (row.serviceType ?? row['Jenis Industri'] ?? row['Jenis Layanan']) ? String(row.serviceType ?? row['Jenis Industri'] ?? row['Jenis Layanan']) : null,
+        jobTitle: (row.jobTitle ?? row['Jabatan']) ? String(row.jobTitle ?? row['Jabatan']) : null,
         confidence: isLowConfidence ? 0.5 : 0.85,
         flags,
-        provinceCode: null,
-        provinceName: null,
-        cityCode: null,
-        cityName: null,
         eventDate: (row.eventDate ?? row['Tanggal Acara']) ? String(row.eventDate ?? row['Tanggal Acara']) : null,
-        eventNameRaw: (row.eventNameRaw ?? row['Nama Acara']) ? String(row.eventNameRaw ?? row['Nama Acara']) : null,
       }
     })
   }
