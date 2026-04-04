@@ -14,8 +14,8 @@ import type { CompanySize, ContactSource } from '../types/domain.js'
 
 export const NormalizedRowSchema = z.object({
   name: z.string().trim().min(1),
-  phone: z.string().regex(/^\+62\d{8,13}$/).nullable(),
-  email: z.string().email().nullable(),
+  phone: z.string().nullable(),
+  email: z.string().nullable(),
   city: z.string().trim().nullable(),
   company: z.string().trim().nullable(),
   department: z.string().trim().nullable(),
@@ -23,12 +23,7 @@ export const NormalizedRowSchema = z.object({
   jobTitle: z.string().trim().nullable(),
   confidence: z.number().min(0).max(1),
   flags: z.array(z.string()),
-  provinceCode: z.string().trim().nullable(),
-  provinceName: z.string().trim().nullable(),
-  cityCode: z.string().trim().nullable(),
-  cityName: z.string().trim().nullable(),
-  eventDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
-  eventNameRaw: z.string().trim().nullable(),
+  eventDate: z.string().nullable(),
 })
 
 type ValidatedNormalizedRow = z.infer<typeof NormalizedRowSchema>
@@ -465,7 +460,6 @@ export class EtlService {
                   attendedAt: validatedRow.eventDate ? `${validatedRow.eventDate}T00:00:00.000Z` : new Date().toISOString(),
                   uploadSource,
                   eventDate: validatedRow.eventDate,
-                  eventNameRaw: validatedRow.eventNameRaw,
                 })
               }
 

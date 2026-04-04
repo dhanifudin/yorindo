@@ -133,8 +133,14 @@ describe('EtlService', () => {
     expect(result.upserted).toBe(0)
     expect(result.flagged).toBe(1)
 
-    const flagged = await flaggedRepo.findAll({ page: 1, pageSize: 10 })
-    expect(flagged.data[0].flags).toContain('low_confidence')
+    const { data: allFlagged } = await flaggedRepo.findAll({ page: 1, pageSize: 50 })
+    const flagged = allFlagged.filter(r => r.rawData.name === 'Low Confidence')
+    expect(flagged.length).toBe(1)
+    expect(flagged[0]?.rawData.normalized.flags).toContain('low_confidence')
+
+    const { data: allContacts } = await contactRepo.findAll({ page: 1, pageSize: 200 })
+    const newContacts = allContacts.filter(c => c.name === 'Low Confidence')
+    expect(newContacts.length).toBe(0)
   })
 
   it('handles empty files gracefully', async () => {

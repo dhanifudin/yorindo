@@ -331,6 +331,7 @@ export class InMemoryContactRepository implements IContactRepository {
       contact.phone = hashedPhone
       contact.email = null
       contact.name = 'Anonymized'
+      contact.consentStatus = 'suppressed'
       this.contacts.set(id, contact)
     }
   }

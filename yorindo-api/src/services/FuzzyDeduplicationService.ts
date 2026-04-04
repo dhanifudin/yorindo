@@ -7,9 +7,8 @@ export class FuzzyDeduplicationService implements IDeduplicationService {
 
   constructor(private contactRepository: IContactRepository) {}
 
-  async findPotentialDuplicates(contact: Contact): Promise<void> {
-    // 1. Fetch all existing contacts (excluding the current one)
-    // For small in-memory datasets, we fetch all. In production, we'd use fuzzy search queries.
+  async findPotentialDuplicates(contact: Contact | null): Promise<void> {
+    if (!contact) return
     const { data: others } = await this.contactRepository.findAll({ page: 1, pageSize: 5000 })
     
     for (const other of others) {

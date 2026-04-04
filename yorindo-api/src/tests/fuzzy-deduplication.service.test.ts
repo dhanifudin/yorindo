@@ -32,12 +32,12 @@ describe('FuzzyDeduplicationService', () => {
       deletedAt: null,
     })
 
-    // 2. Insert the duplicate contact manually to avoid upsert merging, 
-    // simulating a case where two unique contacts share an email (potential duplicate).
-    const duplicate = await contactRepo.update(createId(), {
+    // 2. Create another contact first, then update it to HAVE the same email
+    // but a different phone, simulating a data-quality issue.
+    const tempContact = await contactRepo.upsert({
       name: 'Different Name But Same Email',
       phone: '+628999999999',
-      email: 'duplicate@example.com',
+      email: 'unique-to-start@example.com',
       serviceType: null,
       jobTitle: null,
       city: null,
@@ -48,9 +48,11 @@ describe('FuzzyDeduplicationService', () => {
       completenessScore: 0.5,
       consentStatus: 'legacy_unverified',
       flagCategory: null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      deletedAt: null
+      deletedAt: null,
+    })
+
+    const duplicate = await contactRepo.update(tempContact.id, {
+      email: 'duplicate@example.com',
     }) as Contact
 
     await service.findPotentialDuplicates(duplicate)
