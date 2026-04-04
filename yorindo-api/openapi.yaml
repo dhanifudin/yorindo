@@ -171,16 +171,16 @@ components:
           format: email
           nullable: true
           example: budi@example.com
-        industryId:
+        serviceType:
           type: string
           nullable: true
-          example: teknologi
-          description: Industry id from industries lookup table
-        jobTitleId:
+          example: Konsultasi
+          description: Raw service type from uploaded data
+        jobTitle:
           type: string
           nullable: true
-          example: direktur
-          description: Id from job_titles lookup table
+          example: Manajer
+          description: Raw job title from uploaded data
         city:
           type: string
           nullable: true
@@ -189,11 +189,15 @@ components:
           type: string
           nullable: true
           example: PT Teknologi Maju
-        companySize:
+        department:
           type: string
           nullable: true
-          enum: [small, medium, large, enterprise, '', null]
-          example: medium
+          example: Sales
+        eventDate:
+          type: string
+          nullable: true
+          example: '2026-03-31'
+          description: Date of the event the contact attended
         source:
           type: string
           nullable: true
@@ -1304,17 +1308,13 @@ components:
 
     ContactFacets:
       type: object
-      required: [industry, city, companySize]
+      required: [serviceType, city]
       properties:
-        industry:
+        serviceType:
           type: array
           items:
             $ref: '#/components/schemas/FacetItem'
         city:
-          type: array
-          items:
-            $ref: '#/components/schemas/FacetItem'
-        companySize:
           type: array
           items:
             $ref: '#/components/schemas/FacetItem'
@@ -2013,22 +2013,16 @@ paths:
         - $ref: '#/components/parameters/PageSizeParam'
         - $ref: '#/components/parameters/SortByParam'
         - $ref: '#/components/parameters/SortDirParam'
-        - name: industry
+        - name: serviceType
           in: query
           schema:
             type: string
-          description: Filter by industry slug
+          description: Filter by serviceType
         - name: city
           in: query
           schema:
             type: string
           description: Filter by city name
-        - name: companySize
-          in: query
-          schema:
-            type: string
-            enum: [micro, small, medium, large, enterprise]
-          description: Filter by company size
         - name: flagFilter
           in: query
           schema:

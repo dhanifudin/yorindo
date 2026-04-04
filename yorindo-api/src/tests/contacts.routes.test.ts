@@ -95,10 +95,9 @@ describe('GET /api/contacts/facets', () => {
 
     expect(res.statusCode).toBe(200)
     const body = res.json()
-    expect(body.industry).toBeInstanceOf(Array)
+    expect(body.serviceType).toBeInstanceOf(Array)
     expect(body.city).toBeInstanceOf(Array)
-    expect(body.companySize).toBeInstanceOf(Array)
-    expect(body.industry[0]).toMatchObject({
+    expect(body.serviceType[0]).toMatchObject({
       slug: expect.any(String),
       label: expect.any(String),
       count: expect.any(Number),
@@ -108,13 +107,7 @@ describe('GET /api/contacts/facets', () => {
       label: expect.any(String),
       count: expect.any(Number),
     })
-    expect(body.companySize[0]).toMatchObject({
-      slug: expect.any(String),
-      label: expect.any(String),
-      count: expect.any(Number),
-    })
     expect(body.city.reduce((sum: number, item: { count: number }) => sum + item.count, 0)).toBe(120)
-    expect(body.companySize.reduce((sum: number, item: { count: number }) => sum + item.count, 0)).toBe(120)
   })
 })
 
@@ -134,10 +127,10 @@ describe('GET /api/contacts', () => {
     expect(body.data[0]).toHaveProperty('company')
   })
 
-  it('filters contacts by industry', async () => {
+  it('filters contacts by serviceType', async () => {
     const res = await app.inject({
       method: 'GET',
-      url: '/api/contacts?page=1&pageSize=20&industry=teknologi',
+      url: '/api/contacts?page=1&pageSize=20&serviceType=teknologi',
       headers: { authorization: `Bearer ${getAuthToken('admin')}` },
     })
 
@@ -145,21 +138,10 @@ describe('GET /api/contacts', () => {
     const body = res.json()
     expect(body.pagination.total).toBeGreaterThan(0)
     expect(body.pagination.total).toBeLessThan(120)
-    expect(body.data.every((contact: { industryId: string }) => contact.industryId === 'teknologi')).toBe(true)
+    expect(body.data.every((contact: { serviceType: string }) => contact.serviceType === 'Teknologi')).toBe(true)
   })
 
-  it('filters contacts by companySize using FE enum values', async () => {
-    const res = await app.inject({
-      method: 'GET',
-      url: '/api/contacts?page=1&pageSize=20&companySize=medium',
-      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
-    })
-
-    expect(res.statusCode).toBe(200)
-    const body = res.json()
-    expect(body.pagination.total).toBeGreaterThan(0)
-    expect(body.data.every((contact: { companySize: string }) => contact.companySize === 'medium')).toBe(true)
-  })
+// Legacy companySize filter test removed
 
   it('filters contacts by city using case-insensitive partial matches', async () => {
     const res = await app.inject({
@@ -532,7 +514,8 @@ describe('Flagged records routes', () => {
           email: 'approved@example.com',
           city: 'Jakarta',
           company: 'PT Approved',
-          companySize: 'medium',
+          serviceType: 'Teknologi',
+          jobTitle: 'Manager',
         },
       },
     })

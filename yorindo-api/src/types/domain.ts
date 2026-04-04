@@ -55,12 +55,12 @@ export interface Contact {
   name: string
   phone: string                    // normalized: +62XXXXXXXXXX
   email: string | null
-  industryId: EntityId | null
-  jobTitleId: EntityId | null
+  serviceType: string | null
+  jobTitle: string | null
   city: string | null
   company: string | null
-  department?: string | null
-  companySize: CompanySize | null
+  department: string | null
+  eventDate: string | null
   source: ContactSource | null
   completenessScore: number        // 0.000 to 1.000
   consentStatus: ConsentStatus
@@ -243,9 +243,8 @@ export interface SuppressionRecord {
 // ─── Facet Results (for filter UI) ───────────────────────────────────────────
 
 export interface FacetResult {
-  industries: Array<{ id: string; name: string; count: number }>
-  cities: Array<{ city: string; count: number }>
-  companySizes: Array<{ size: string; count: number }>
+  serviceType: Array<{ slug: string; label: string; count: number }>
+  city: Array<{ slug: string; label: string; count: number }>
 }
 
 export type DuplicateMatchReason = 'same_phone' | 'same_email' | 'similar_name'

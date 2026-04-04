@@ -8,17 +8,15 @@ export interface PaginationParams {
 }
 
 export interface ContactFilters {
-  industry?: string
+  serviceType?: string
   city?: string
-  companySize?: string
   missingEmail?: boolean
   missingPhone?: boolean
   flagCategory?: string
   consentStatus?: string
   search?: string
-  industries?: string[]
+  serviceTypes?: string[]
   cities?: string[]
-  companySizes?: string[]
   jobTitles?: string[]
   behavior?: string[]
   lastAttendedBefore?: string

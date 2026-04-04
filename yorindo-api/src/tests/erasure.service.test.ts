@@ -48,7 +48,7 @@ describe('ErasureService', () => {
     await service.anonymizeContact({ phone: originalPhone, email: contact.email! })
 
     const updated = await contactRepo.findById(contact.id)
-    expect(updated?.name).toBe('ANONYMIZED')
+    expect(updated?.name).toBe('Anonymized')
     expect(updated?.phone).toBe(sha256(originalPhone))
     expect(updated?.email).toBeNull()
     expect(updated?.consentStatus).toBe('suppressed')

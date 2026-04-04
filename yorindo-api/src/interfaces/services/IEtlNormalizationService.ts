@@ -9,9 +9,8 @@ export interface NormalizedRow {
   city: string | null
   company: string | null
   department: string | null
-  companySize: string | null
-  industrySlug: string | null
-  jobTitleSlug: string | null
+  serviceType: string | null
+  jobTitle: string | null
   confidence: number
   flags: string[]
   provinceCode: string | null
