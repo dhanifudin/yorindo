@@ -4,7 +4,7 @@ export interface RawContactRow {
 
 export interface NormalizedRow {
   name: string
-  phone: string
+  phone: string | null
   email: string | null
   city: string | null
   company: string | null

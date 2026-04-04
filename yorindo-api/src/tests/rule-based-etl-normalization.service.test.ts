@@ -38,7 +38,7 @@ describe('RuleBasedEtlNormalizationService', () => {
       { name: 'John', phone: '' }
     ]
     const results = await service.normalizeBatch(rows)
-    expect(results[0].phone).toBe('+620000000000')
+    expect(results[0].phone).toBe(null)
     expect(results[0].flags).toContain('missing_phone')
     expect(results[0].confidence).toBeLessThan(0.7)
   })

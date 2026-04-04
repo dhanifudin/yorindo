@@ -45,7 +45,7 @@ export class InMemoryContactRepository implements IContactRepository {
         id,
         name: faker.person.fullName(),
         phone: i >= 115
-          ? `+62811000000${i}`
+          ? null
           : `+6281${faker.number.int({ min: 100000000, max: 999999999 })}`,
         email: i % 8 === 0 ? null : faker.internet.email(),
         serviceType: i % 5 === 0 ? null : industry.name,
@@ -126,7 +126,7 @@ export class InMemoryContactRepository implements IContactRepository {
     switch (sortBy) {
       case 'name': return contact.name.toLowerCase()
       case 'email': return (contact.email ?? '').toLowerCase()
-      case 'phone': return contact.phone
+      case 'phone': return contact.phone ?? ''
       case 'serviceType': return (contact.serviceType ?? '').toLowerCase()
       case 'city': return (contact.city ?? '').toLowerCase()
       case 'company': return (contact.company ?? '').toLowerCase()
@@ -152,7 +152,7 @@ export class InMemoryContactRepository implements IContactRepository {
     
     if (filters?.consentStatus) data = data.filter(c => c.consentStatus === filters.consentStatus)
     if (filters?.missingEmail) data = data.filter(c => c.email === null)
-    if (filters?.missingPhone) data = data.filter(c => !c.phone || c.phone === '+620000000000')
+    if (filters?.missingPhone) data = data.filter(c => c.phone === null)
 
     if (filters?.serviceTypes?.length) data = data.filter(c => c.serviceType && filters.serviceTypes!.includes(c.serviceType))
     if (filters?.cities?.length) data = data.filter(c => c.city && filters.cities!.includes(c.city))
@@ -162,7 +162,7 @@ export class InMemoryContactRepository implements IContactRepository {
       const q = filters.search.toLowerCase()
       data = data.filter(c =>
         c.name.toLowerCase().includes(q) ||
-        c.phone.includes(q) ||
+        (c.phone ?? '').includes(q) ||
         (c.email ?? '').toLowerCase().includes(q) ||
         (c.company ?? '').toLowerCase().includes(q),
       )
@@ -178,7 +178,8 @@ export class InMemoryContactRepository implements IContactRepository {
     return this.contacts.get(id) ?? null
   }
 
-  async findByPhone(phone: string): Promise<Contact | null> {
+  async findByPhone(phone: string | null): Promise<Contact | null> {
+    if (!phone) return null
     return Array.from(this.contacts.values()).find(c => c.phone === phone) ?? null
   }
 
@@ -231,8 +232,29 @@ export class InMemoryContactRepository implements IContactRepository {
     return primary
   }
 
+  async createDuplicatePair(data: Omit<DuplicatePair, 'id' | 'resolvedAt'>): Promise<void> {
+    const id = createId()
+    this.duplicatePairs.set(id, {
+      id,
+      primaryId: data.primary.id,
+      duplicateId: data.duplicate.id,
+      matchScore: data.matchScore,
+      matchReasons: data.matchReasons,
+      resolvedAt: null,
+    })
+  }
+
   async upsert(data: Omit<Contact, 'id' | 'createdAt' | 'updatedAt'>): Promise<Contact> {
-    const existing = await this.findByPhone(data.phone)
+    let existing: Contact | null = null
+    
+    if (data.phone) {
+      existing = await this.findByPhone(data.phone)
+    }
+    
+    if (!existing && data.email) {
+      existing = Array.from(this.contacts.values()).find(c => c.email === data.email) ?? null
+    }
+
     if (existing) {
       const updated = { ...existing, ...data, updatedAt: new Date().toISOString() }
       this.contacts.set(existing.id, updated)
@@ -270,7 +292,7 @@ export class InMemoryContactRepository implements IContactRepository {
       flagged: all.filter(c => c.flagCategory !== null).length,
       duplicates: this._activeDuplicatePairs().length,
       missingEmail: all.filter(c => c.email === null).length,
-      missingPhone: all.filter(c => !c.phone || c.phone === '+620000000000').length,
+      missingPhone: all.filter(c => c.phone === null).length,
     }
   }
 

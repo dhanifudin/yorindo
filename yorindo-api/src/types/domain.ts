@@ -53,7 +53,7 @@ export type ContactSource = 'excel_upload' | 'form' | 'manual'
 export interface Contact {
   id: EntityId
   name: string
-  phone: string                    // normalized: +62XXXXXXXXXX
+  phone: string | null                // normalized: +62XXXXXXXXXX or null if missing
   email: string | null
   serviceType: string | null
   jobTitle: string | null
@@ -233,7 +233,7 @@ export interface SurveyResponse {
 export interface SuppressionRecord {
   id: EntityId
   contactId: EntityId
-  phone: string
+  phone: string | null
   email: string | null
   name: string | null
   reason: string

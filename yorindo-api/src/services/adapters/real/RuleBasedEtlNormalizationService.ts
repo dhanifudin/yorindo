@@ -1,12 +1,12 @@
 import type { IEtlNormalizationService, NormalizedRow, RawContactRow } from '../../../interfaces/services/IEtlNormalizationService.js'
 
-function normalizePhone(value: string | null | undefined): string {
+function normalizePhone(value: string | null | undefined): string | null {
   const digits = String(value ?? '').replace(/\D/g, '')
-  if (!digits) return '+620000000000'
+  if (!digits) return null
   if (digits.startsWith('0')) return `+62${digits.slice(1)}`
   if (digits.startsWith('62')) return `+${digits}`
   if (digits.startsWith('8')) return `+62${digits}`
-  return '+620000000000'
+  return null
 }
 
 function normalizeEmail(value: string | null | undefined): string | null {
@@ -51,7 +51,7 @@ export class RuleBasedEtlNormalizationService implements IEtlNormalizationServic
         confidence = Math.min(confidence, 0.4)
       }
 
-      if (phone === '+620000000000') {
+      if (phone === null) {
         flags.push('missing_phone')
         confidence = Math.min(confidence, 0.4)
       }

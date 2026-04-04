@@ -155,7 +155,7 @@ components:
     # ─── Contact ───────────────────────────────────────────────────────────────
     Contact:
       type: object
-      required: [id, name, phone, completenessScore, consentStatus, createdAt, updatedAt]
+      required: [id, name, completenessScore, consentStatus, createdAt, updatedAt]
       properties:
         id:
           type: string
@@ -165,6 +165,7 @@ components:
           example: Budi Santoso
         phone:
           type: string
+          nullable: true
           example: "+6281234567890"
         email:
           type: string

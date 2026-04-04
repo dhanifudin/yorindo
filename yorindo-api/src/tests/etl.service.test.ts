@@ -118,12 +118,18 @@ describe('EtlService', () => {
       rawUploadRepo,
       auditLogRepo,
       registrationRepo,
-      makeNormalizer((rows) => rows.map(() => buildRow({
-        name: 'Low Confidence',
-        phone: '+6281200000000',
-        confidence: 0.4,
-        flags: ['low_confidence'],
-      }))),
+      makeNormalizer((rows: RawContactRow[]) => {
+        return rows.map(() => {
+          const row = buildRow()
+          return {
+            ...row,
+            name: 'Low Confidence',
+            phone: '+6281200000000',
+            confidence: 0.4,
+            flags: ['low_confidence'],
+          }
+        })
+      }),
       makeDeduplicator(),
     )
 

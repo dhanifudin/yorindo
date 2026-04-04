@@ -14,7 +14,7 @@ import type { CompanySize, ContactSource } from '../types/domain.js'
 
 export const NormalizedRowSchema = z.object({
   name: z.string().trim().min(1),
-  phone: z.string().regex(/^\+62\d{8,13}$/),
+  phone: z.string().regex(/^\+62\d{8,13}$/).nullable(),
   email: z.string().email().nullable(),
   city: z.string().trim().nullable(),
   company: z.string().trim().nullable(),
@@ -212,7 +212,7 @@ function chunk<T>(items: T[], size: number): T[][] {
 
 function computeCompletenessScore(row: {
   name: string
-  phone: string
+  phone: string | null
   email: string | null
   company: string | null
   serviceType: string | null
@@ -278,7 +278,7 @@ function sanitizeNormalizedRow(row: NormalizedRow, fallback: PreparedRawRow): No
   return {
     ...row,
     name: normalizedName ?? 'Unknown',
-    phone: sanitizedPhone ?? '+620000000000',
+    phone: sanitizedPhone,
     email: sanitizedEmail,
     city: normalizeText(row.city ?? fallback.city),
     company: normalizeText(row.company ?? fallback.company),
