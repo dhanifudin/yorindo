@@ -1,12 +1,12 @@
-Apr 05, 2026 3:52:44 PM reposense.system.LogsManager addFileHandler
+Apr 05, 2026 4:05:54 PM reposense.system.LogsManager addFileHandler
 INFO: Log temp folder has been successfully created
-Apr 05, 2026 3:52:45 PM reposense.parser.ReportConfigYamlParser parse
+Apr 05, 2026 4:05:54 PM reposense.parser.ReportConfigYamlParser parse
 INFO: Parsing report-config.yaml file...
-Apr 05, 2026 3:52:45 PM reposense.parser.ArgsParser addReportConfigToBuilder
+Apr 05, 2026 4:05:55 PM reposense.parser.ArgsParser addReportConfigToBuilder
 WARNING: Error parsing report-config.yaml: Unrecognized field "since" (class reposense.model.reportconfig.ReportBranchData), not marked as ignorable (10 known properties: "file-size-limit", "branch", "reportAuthorDetails", "authors", "blurb", "ignore-authors-list", "ignore-glob-list", "ignoreAuthorList", "fileSizeLimit", "ignoreGlobList"])
  at [Source: (File); line: 96, column: 1] (through reference chain: reposense.model.reportconfig.ReportConfiguration["repos"]->java.util.ArrayList[0]->reposense.model.reportconfig.ReportRepoConfiguration["branches"]->java.util.ArrayList[0]->reposense.model.reportconfig.ReportBranchData["since"])
 /home/runner/work/yorindo/yorindo/report-config.yaml Ignoring the report config provided.
-Apr 05, 2026 3:52:45 PM reposense.RepoSense main
+Apr 05, 2026 4:05:55 PM reposense.RepoSense main
 WARNING: Csv file does not exist at the given path.
 Use '-help' to list all the available subcommands and some concept guides.
 java.io.FileNotFoundException: Csv file does not exist at the given path.
