@@ -65,9 +65,20 @@ jobs:
           fi
           java -jar RepoSense.jar \
             --config ${{ github.workspace }} \
-            --output ${{ github.workspace }}/reposense-output/reposense \
-            $SINCE_DATE \
-            --view
+            --output ${{ github.workspace }}/reposense-output/reposense-tmp \
+            $SINCE_DATE
+
+      - name: Flatten RepoSense output
+        run: |
+          REPOSENSE_DIR=$(find ${{ github.workspace }}/reposense-output/reposense-tmp -type d -name "reposense*" | head -1)
+          mkdir -p ${{ github.workspace }}/reposense-output/reposense
+          if [ -n "$REPOSENSE_DIR" ] && [ -f "$REPOSENSE_DIR/index.html" ]; then
+            cp -r "$REPOSENSE_DIR"/* ${{ github.workspace }}/reposense-output/reposense/
+            echo "✅ Found and copied RepoSense report from $REPOSENSE_DIR"
+          else
+            echo "⚠️ RepoSense report not found at expected path. Dumping structure:"
+            find ${{ github.workspace }}/reposense-output/reposense-tmp -type f | head -20
+          fi
 
       - name: Run GitHub API Report (issues, PRs, comments)
         env:
