@@ -10,7 +10,8 @@ body:
         Use this QA form when something is not broken, but could be better.
 
         Relevant deployment targets:
-        - FE only (mocked frontend): `https://yorindo.dhanifudin.com`
+        - FE only (mocked frontend): `https://app.dhanifudin.com`
+        - BE only (mocked backend): `https://api.dhanifudin.com`
         - FE + BE integrated demo: `https://demo.dhanifudin.com`
 
         Please create one issue for one improvement idea.
@@ -35,7 +36,8 @@ body:
       label: Where is this related?
       description: Choose where you noticed this or where it should be checked.
       options:
-        - FE only - https://yorindo.dhanifudin.com
+        - FE only - https://app.dhanifudin.com
+        - BE only - https://api.dhanifudin.com
         - FE + BE - https://demo.dhanifudin.com
         - Both environments
         - Not environment-specific
@@ -99,67 +101,57 @@ body:
   - type: textarea
     id: target_users
     attributes:
-      label: Who needs this?
+      label: Who needs this? (optional)
       description: Explain who will use it and in what situation.
       placeholder: |
         Example:
         - Admin operations team
         - During event targeting and audience review
         - Needed several times per day
-    validations:
-      required: true
 
   - type: textarea
     id: expected_impact
     attributes:
-      label: Expected benefit
+      label: Expected benefit (optional)
       description: Explain why this would help users or the business.
       placeholder: |
         Example:
         - Reduce repeated filter setup time
         - Lower operator error rate
         - Improve conversion or completion rate
-    validations:
-      required: true
 
   - type: textarea
     id: acceptance_notes
     attributes:
-      label: What should be included?
+      label: What should be included? (optional)
       description: List the main things that should exist if this improvement is done.
       placeholder: |
         Example:
         1. User can save the current filter combination with a custom name
         2. Saved filters can be reopened later
         3. Users can rename or delete saved filters
-    validations:
-      required: true
 
   - type: textarea
     id: workaround
     attributes:
-      label: Current workaround
-      description: Explain how the team handles this today, or write `None`.
+      label: Current workaround (optional)
+      description: Explain how the team handles this today, or leave blank if none.
       placeholder: Describe the temporary process if one exists.
-    validations:
-      required: true
 
   - type: dropdown
     id: urgency
     attributes:
-      label: How important is this?
+      label: How important is this? (optional)
       options:
         - Critical - urgent for release or operations
         - High - strong value and should be prioritized soon
         - Medium - useful improvement with moderate urgency
         - Low - nice to have
-    validations:
-      required: true
 
   - type: dropdown
     id: role
     attributes:
-      label: Who is requesting this?
+      label: Who is requesting this? (optional)
       options:
         - QA
         - Public visitor
@@ -170,13 +162,11 @@ body:
         - Vendor
         - Internal team
         - Not role-specific
-    validations:
-      required: true
 
   - type: textarea
     id: references
     attributes:
-      label: Supporting references
+      label: Supporting references (optional)
       description: Add related bugs, screenshots, mockups, docs, or recordings.
       placeholder: |
         Include any useful references such as:
@@ -184,17 +174,13 @@ body:
         - Screenshot or video
         - Figma or design notes
         - API endpoint or data example
-    validations:
-      required: true
 
   - type: input
     id: version_info
     attributes:
-      label: Version or date noticed
+      label: Version or date noticed (optional)
       description: Add the app version if known. If not, add the date you noticed this.
       placeholder: v1.2.3 / commit abc123 / observed on 2026-03-27
-    validations:
-      required: true
 
   - type: checkboxes
     id: checklist

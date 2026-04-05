@@ -98,7 +98,7 @@ jobs:
             test -s /var/www/yorindo-app/.deploy.env
             chmod 600 /var/www/yorindo-app/.deploy.env
             if ! grep -Rqs "127.0.0.1:5173" /etc/nginx/sites-enabled /etc/nginx/conf.d 2>/dev/null; then
-              echo "VPS nginx is not configured to proxy port 5173. Configure the VPS nginx virtual host for yorindo.dhanifudin.com before deploying."
+              echo "VPS nginx is not configured to proxy port 5173. Configure the VPS nginx virtual host for app.dhanifudin.com before deploying."
               exit 1
             fi
             if [ -f /var/www/yorindo-app/.env ]; then
@@ -118,7 +118,7 @@ jobs:
             fi
 
             sleep 15
-            response=$(curl -s -o /dev/null -w "%{http_code}" https://yorindo.dhanifudin.com)
+            response=$(curl -s -o /dev/null -w "%{http_code}" https://app.dhanifudin.com)
             if [ "$response" != "200" ]; then
               restore_previous_env
               docker compose -f docker-compose.app.yml up -d

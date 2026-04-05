@@ -1,4 +1,4 @@
-# Frontend preview — yorindo.dhanifudin.com
+# Frontend preview — app.dhanifudin.com
 # Pulls pre-built image from Docker Hub, serves with MSW mocks.
 #
 # Usage:
@@ -7,7 +7,7 @@
 #   make logs-app      (follow logs)
 #
 # VPS nginx reverse proxy (external, not in this stack):
-#   yorindo.dhanifudin.com → localhost:5173
+#   app.dhanifudin.com → localhost:5173
 
 services:
   app:
