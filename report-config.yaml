@@ -25,7 +25,14 @@ repos:
           - "**.sh"
     branches:
       - branch: main
-        since: 01/01/2025
+        ignore-glob-list:
+          - "**/node_modules/**"
+          - "**/dist/**"
+          - "**/.next/**"
+          - "**/package-lock.json"
+        ignore-authors-list:
+          - dependabot
+          - dependabot[bot]
         authors:
           - author-git-host-id: adyatma7
             author-display-name: Adyatma
@@ -73,7 +80,7 @@ repos:
               - nnditya.salma16@gmail.com
           - author-git-host-id: raquellajuvabel
             author-display-name: Raquel
-            author-git-author-name: Raquel
+            author-git-author-name: raquellajuvabel
             author-emails: []
           - author-git-host-id: Rinaaa13
             author-display-name: Sarah Desmarina
@@ -88,8 +95,3 @@ repos:
             author-git-author-name: yohanesjuliantino12
             author-emails:
               - yohanesjuliantino12@gmail.com
-        ignore-glob-list:
-          - "**/node_modules/**"
-          - "**/dist/**"
-          - "**/.next/**"
-          - "**/package-lock.json"

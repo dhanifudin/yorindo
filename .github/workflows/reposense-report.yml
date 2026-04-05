@@ -70,14 +70,19 @@ jobs:
 
       - name: Flatten RepoSense output
         run: |
-          REPOSENSE_DIR=$(find ${{ github.workspace }}/reposense-output/reposense-tmp -type d -name "reposense*" | head -1)
+          # RepoSense v4.0 creates a subdirectory named after the repo inside the output folder
+          # e.g. reposense-tmp/yorindo/index.html or reposense-tmp/reposense-report/index.html
+          REPOSENSE_DIR=$(find ${{ github.workspace }}/reposense-output/reposense-tmp -maxdepth 2 -name "index.html" -exec dirname {} \; | head -1)
           mkdir -p ${{ github.workspace }}/reposense-output/reposense
-          if [ -n "$REPOSENSE_DIR" ] && [ -f "$REPOSENSE_DIR/index.html" ]; then
+          if [ -n "$REPOSENSE_DIR" ]; then
+            echo "📁 Found RepoSense report at: $REPOSENSE_DIR"
             cp -r "$REPOSENSE_DIR"/* ${{ github.workspace }}/reposense-output/reposense/
-            echo "✅ Found and copied RepoSense report from $REPOSENSE_DIR"
+            echo "✅ Copied RepoSense report to reposense/"
+            ls -la ${{ github.workspace }}/reposense-output/reposense/ | head -20
           else
-            echo "⚠️ RepoSense report not found at expected path. Dumping structure:"
-            find ${{ github.workspace }}/reposense-output/reposense-tmp -type f | head -20
+            echo "⚠️ RepoSense report not found. Dumping structure:"
+            find ${{ github.workspace }}/reposense-output/reposense-tmp -type f | head -30
+            exit 1
           fi
 
       - name: Run GitHub API Report (issues, PRs, comments)
