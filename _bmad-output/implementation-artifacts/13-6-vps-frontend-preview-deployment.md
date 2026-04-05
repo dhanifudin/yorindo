@@ -5,14 +5,14 @@ Status: done
 ## Story
 
 As a developer deploying the Yorindo frontend,
-I want `yorindo-app` deployed to VPS at `yorindo.dhanifudin.com` via Docker Compose with a CD workflow,
+I want `yorindo-app` deployed to VPS at `app.dhanifudin.com` via Docker Compose with a CD workflow,
 so that the FE preview is hosted consistently alongside the API and demo endpoints on the same VPS, replacing the GitHub Pages static export.
 
 ## Acceptance Criteria
 
 **AC1:** Given `docker-compose.app.yml` exists, when `docker compose -f docker-compose.app.yml up -d` is run, then the `yorindo-app` service starts and serves the Next.js app on `127.0.0.1:5173`.
 
-**AC2:** Given the app container is running, when VPS nginx proxies `yorindo.dhanifudin.com` to `localhost:5173`, then the app is accessible via HTTPS (SSL managed by VPS nginx, not the compose stack).
+**AC2:** Given the app container is running, when VPS nginx proxies `app.dhanifudin.com` to `localhost:5173`, then the app is accessible via HTTPS (SSL managed by VPS nginx, not the compose stack).
 
 **AC3:** Given the app is running in preview mode, when MSW mocks are enabled (`NEXT_PUBLIC_ENABLE_MOCKS=true`), then the app functions without a real API backend — same behavior as the current GitHub Pages deployment.
 
@@ -20,9 +20,9 @@ so that the FE preview is hosted consistently alongside the API and demo endpoin
 
 **AC5:** Given the CD workflow deploys successfully, when a health check is performed, then the app responds with HTTP 200.
 
-**AC6:** Given all three VPS endpoints are running (`yorindo.dhanifudin.com`, `api.dhanifudin.com`, `demo.dhanifudin.com`), when each is accessed, then none interfere with each other — independent compose stacks with independent volumes.
+**AC6:** Given all three VPS endpoints are running (`app.dhanifudin.com`, `api.dhanifudin.com`, `demo.dhanifudin.com`), when each is accessed, then none interfere with each other — independent compose stacks with independent volumes.
 
-**AC7:** Given the VPS deployment is verified, when `deploy.yml` (GitHub Pages) is removed, then the app is no longer deployed to GitHub Pages and `yorindo.dhanifudin.com` is the sole FE preview endpoint.
+**AC7:** Given the VPS deployment is verified, when `deploy.yml` (GitHub Pages) is removed, then the app is no longer deployed to GitHub Pages and `app.dhanifudin.com` is the sole FE preview endpoint.
 
 ## Tasks / Subtasks
 
@@ -39,7 +39,7 @@ so that the FE preview is hosted consistently alongside the API and demo endpoin
   - [x] 3.1 Trigger on push to `main` with path filter `yorindo-app/**` + `workflow_dispatch`
   - [x] 3.2 Build job: build `dhanifudin/yorindo-app` image, tag with `preview-${GITHUB_SHA::8}` + `preview`, push to Docker Hub
   - [x] 3.3 Deploy job: SCP compose + env files to `/var/www/yorindo-app`, SSH deploy with `docker compose pull && up -d`
-  - [x] 3.4 Add health check: `curl -s -o /dev/null -w "%{http_code}" https://yorindo.dhanifudin.com` must return 200
+  - [x] 3.4 Add health check: `curl -s -o /dev/null -w "%{http_code}" https://app.dhanifudin.com` must return 200
   - [x] 3.5 Add rollback on failure (restore previous `.env`, restart)
 - [x] Task 4: Add Makefile targets (AC: 1)
   - [x] 4.1 Add `deploy-app`, `stop-app`, `logs-app` targets
@@ -65,7 +65,7 @@ so that the FE preview is hosted consistently alongside the API and demo endpoin
 ### Architecture
 
 ```
-yorindo.dhanifudin.com (HTTPS via VPS nginx + Let's Encrypt)
+app.dhanifudin.com (HTTPS via VPS nginx + Let's Encrypt)
          |
          v
    VPS nginx (SSL termination)
@@ -81,21 +81,23 @@ yorindo.dhanifudin.com (HTTPS via VPS nginx + Let's Encrypt)
 
 All three VPS endpoints are independent compose stacks:
 
-| Endpoint | Compose File | VPS Path | Host Port | CD Trigger |
-|----------|-------------|----------|-----------|------------|
-| `yorindo.dhanifudin.com` | `docker-compose.app.yml` | `/var/www/yorindo-app` | 5173 | main push (`yorindo-app/**`) |
-| `api.dhanifudin.com` | `docker-compose.api.yml` | `/var/www/yorindo-api` | 6666 | main push (`yorindo-api/**`) |
-| `demo.dhanifudin.com` | `docker-compose.demo.yml` | `/var/www/yorindo-demo` | 3000+5173 | tag (`v*.*.*`) |
+| Endpoint              | Compose File              | VPS Path                | Host Port | CD Trigger                   |
+| --------------------- | ------------------------- | ----------------------- | --------- | ---------------------------- |
+| `app.dhanifudin.com`  | `docker-compose.app.yml`  | `/var/www/yorindo-app`  | 5173      | main push (`yorindo-app/**`) |
+| `api.dhanifudin.com`  | `docker-compose.api.yml`  | `/var/www/yorindo-api`  | 6666      | main push (`yorindo-api/**`) |
+| `demo.dhanifudin.com` | `docker-compose.demo.yml` | `/var/www/yorindo-demo` | 3000+5173 | tag (`v*.*.*`)               |
 
 ### Reference Files — Follow These Patterns Exactly
 
 **docker-compose.api.yml** — proven compose pattern:
+
 - Port binding: `127.0.0.1:PORT:3000` (localhost-only)
 - `env_file: .env`
 - `restart: unless-stopped`
 - Logging: `json-file` driver, max-size 50m, max-file 5
 
 **cd-api.yml** — proven CD workflow pattern:
+
 - Build: `docker/build-push-action@v5` with `cache-from: type=gha`
 - Tag: `${GITHUB_SHA::8}` + `latest`
 - Deploy: `appleboy/ssh-action@v1` + `appleboy/scp-action@v0.1.7`
@@ -105,6 +107,7 @@ All three VPS endpoints are independent compose stacks:
 - Health check: `curl -s -o /dev/null -w "%{http_code}" https://URL` must return 200
 
 **deploy.yml** (to be retired) — current GH Pages workflow:
+
 - Builds with `NEXT_EXPORT=true` + `NEXT_PUBLIC_ENABLE_MOCKS=true`
 - Uploads static `out/` to GitHub Pages
 - The VPS container replaces this: same MSW mocks, but as a running Next.js server (not static export)
@@ -117,20 +120,20 @@ All three VPS endpoints are independent compose stacks:
   - (a) Use a different image tag like `dhanifudin/yorindo-app:preview`, OR
   - (b) Build with `NEXT_PUBLIC_ENABLE_MOCKS=true` as a build arg and use a separate tag
   - Recommended: Use `dhanifudin/yorindo-app:preview-${GITHUB_SHA::8}` + `dhanifudin/yorindo-app:preview` tags to avoid collision with production `latest` tag.
-- **VPS nginx** for `yorindo.dhanifudin.com` is managed on the VPS directly (Story 13.4 scope) — the compose file only exposes the port.
+- **VPS nginx** for `app.dhanifudin.com` is managed on the VPS directly (Story 13.4 scope) — the compose file only exposes the port.
 - **No API proxy needed** — MSW mocks handle all API calls client-side. No `/api` location block in nginx.
 
 ### Existing Files to Reference
 
-| File | Purpose |
-|------|---------|
-| `docker-compose.api.yml` | Proven compose pattern (single service + deps) |
-| `.github/workflows/cd-api.yml` | Proven CD workflow (build + deploy + health check) |
-| `.github/workflows/cd.yml` | Full-stack CD (references image build with build-args) |
-| `.github/workflows/deploy.yml` | GH Pages workflow to retire |
-| `yorindo-app/Dockerfile` | App image build (standalone output, port 3000) |
-| `yorindo-app/.env.demo` | Demo env reference (created in Story 13.1) |
-| `Makefile` | Demo targets to extend (created in Story 13.1) |
+| File                           | Purpose                                                |
+| ------------------------------ | ------------------------------------------------------ |
+| `docker-compose.api.yml`       | Proven compose pattern (single service + deps)         |
+| `.github/workflows/cd-api.yml` | Proven CD workflow (build + deploy + health check)     |
+| `.github/workflows/cd.yml`     | Full-stack CD (references image build with build-args) |
+| `.github/workflows/deploy.yml` | GH Pages workflow to retire                            |
+| `yorindo-app/Dockerfile`       | App image build (standalone output, port 3000)         |
+| `yorindo-app/.env.demo`        | Demo env reference (created in Story 13.1)             |
+| `Makefile`                     | Demo targets to extend (created in Story 13.1)         |
 
 ### Previous Story (13.1) Learnings
 
@@ -166,7 +169,7 @@ Claude Opus 4.6
 
 - Task 1: Created `docker-compose.app.yml` — single app service, default tag `preview` (not `latest` to avoid collision with production cd.yml), localhost-bound port 5173→3000
 - Task 2: Created `yorindo-app/.env.preview` — MSW mocks enabled, root hosting
-- Task 3: Created `cd-app.yml` — follows `cd-api.yml` pattern exactly; uses `preview-SHA` + `preview` tags; builds with `NEXT_PUBLIC_ENABLE_MOCKS=true` as build arg; uses `VPS_APP_ENV_FILE` secret (separate from `VPS_ENV_FILE`); nginx port check for 5173; health check against `https://yorindo.dhanifudin.com`
+- Task 3: Created `cd-app.yml` — follows `cd-api.yml` pattern exactly; uses `preview-SHA` + `preview` tags; builds with `NEXT_PUBLIC_ENABLE_MOCKS=true` as build arg; uses `VPS_APP_ENV_FILE` secret (separate from `VPS_ENV_FILE`); nginx port check for 5173; health check against `https://app.dhanifudin.com`
 - Task 4: Extended Makefile with `deploy-app`, `stop-app`, `logs-app` targets using `APP_COMPOSE` variable
 - Task 5: Added `!.env.preview` to `.gitignore` whitelist
 - Task 6: Deleted `.github/workflows/deploy.yml` (GitHub Pages)

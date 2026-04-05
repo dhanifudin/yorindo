@@ -1,0 +1,18 @@
+{
+  "repos": [
+    {
+      "repo": {
+        "location": ".",
+        "branch": "main"
+      },
+      "authorList": ["author-config.csv"],
+      "ignoreGlobList": ["**/node_modules/**", "**/dist/**", "**/.next/**", "**/package-lock.json"],
+      "title": "yorindo"
+    }
+  ],
+  "sinceDate": "2025-01-01",
+  "untilDate": "",
+  "formats": ["js", "ts", "tsx", "jsx", "css", "scss", "html", "json", "yaml", "yml", "md", "sql", "sh"],
+  "output": "reposense-output",
+  "viewRepoUrl": "https://github.com/dhanifudin/yorindo"
+}

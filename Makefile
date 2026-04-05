@@ -92,7 +92,7 @@ seed-demo:
 	$(API_EXEC_TTY) npx tsx scripts/seed.ts --demo
 
 # ─────────────────────────────────────────────
-# App Preview (yorindo.dhanifudin.com)
+# App Preview (app.dhanifudin.com)
 # ─────────────────────────────────────────────
 
 ## Deploy app preview (pull + start)

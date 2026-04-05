@@ -10,7 +10,7 @@
 ## Epic Statement
 
 As a team deploying and showcasing the Yorindo platform,
-we want a unified VPS deployment topology with three endpoints — `yorindo.dhanifudin.com` (FE preview with MSW mocks, replacing GitHub Pages), `api.dhanifudin.com` (standalone API, already deployed), and `demo.dhanifudin.com` (full-stack demo with postgres and seed data) — so that all environments are consistently managed via Docker Compose on VPS.
+we want a unified VPS deployment topology with three endpoints — `app.dhanifudin.com` (FE preview with MSW mocks, replacing GitHub Pages), `api.dhanifudin.com` (standalone API, already deployed), and `demo.dhanifudin.com` (full-stack demo with postgres and seed data) — so that all environments are consistently managed via Docker Compose on VPS.
 
 ---
 
@@ -43,14 +43,14 @@ we want a unified VPS deployment topology with three endpoints — `yorindo.dhan
 
 ## Stories
 
-| Story | Title | Status |
-|-------|-------|--------|
-| 11.1 | Docker Compose Demo Profile | backlog |
-| 11.2 | Demo Seed Script with Relative Dates | backlog |
-| 11.3 | Deploy Reset Script & Makefile | backlog |
-| 11.4 | HTTPS & Domain Configuration | backlog |
-| 11.5 | Seed Data Validation Tests | backlog |
-| 11.6 | VPS Frontend Preview Deployment (Replace GitHub Pages) | backlog |
+| Story | Title                                                  | Status  |
+| ----- | ------------------------------------------------------ | ------- |
+| 11.1  | Docker Compose Demo Profile                            | backlog |
+| 11.2  | Demo Seed Script with Relative Dates                   | backlog |
+| 11.3  | Deploy Reset Script & Makefile                         | backlog |
+| 11.4  | HTTPS & Domain Configuration                           | backlog |
+| 11.5  | Seed Data Validation Tests                             | backlog |
+| 11.6  | VPS Frontend Preview Deployment (Replace GitHub Pages) | backlog |
 
 ---
 

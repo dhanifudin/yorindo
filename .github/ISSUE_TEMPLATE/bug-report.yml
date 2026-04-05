@@ -10,7 +10,8 @@ body:
         Use this QA form when you find a bug.
 
         Deployment targets:
-        - FE only (mocked frontend): `https://yorindo.dhanifudin.com`
+        - FE only (mocked frontend): `https://app.dhanifudin.com`
+        - BE only (mocked backend): `https://app.dhanifudin.com`
         - FE + BE integrated demo: `https://demo.dhanifudin.com`
 
         Please create one issue for one bug.
@@ -21,7 +22,8 @@ body:
       label: Where did you find the bug?
       description: Choose the environment where you saw the issue.
       options:
-        - FE only - https://yorindo.dhanifudin.com
+        - FE only - https://app.dhanifudin.com
+        - BE only - https://api.dhanifudin.com
         - FE + BE - https://demo.dhanifudin.com
         - Both environments
     validations:
@@ -146,29 +148,25 @@ body:
   - type: textarea
     id: affected_data
     attributes:
-      label: Affected data or records
+      label: Affected data or records (optional)
       description: Add any related event ID, email, contact ID, or sample record.
-      placeholder: Write the related record details, or write `N/A` if none.
-    validations:
-      required: true
+      placeholder: Write the related record details, or leave blank if none.
 
   - type: textarea
     id: impact_scope
     attributes:
-      label: Impact
+      label: Impact (optional)
       description: Explain who is affected, how often it happens, and whether there is a workaround.
       placeholder: |
         Example:
         - Affects admin users only
         - Happens every time on demo.dhanifudin.com
         - Temporary workaround: refresh and re-open the drawer
-    validations:
-      required: true
 
   - type: dropdown
     id: role
     attributes:
-      label: Which user role did you use?
+      label: Which user role did you use? (optional)
       options:
         - Public visitor
         - Participant
@@ -177,22 +175,18 @@ body:
         - Viewer
         - Vendor
         - Not role-specific
-    validations:
-      required: true
 
   - type: input
     id: test_account
     attributes:
-      label: Test account used
+      label: Test account used (optional)
       description: Add the email, username, or participant identity you used, if relevant.
-      placeholder: qa-admin@example.com / participant email / N/A
-    validations:
-      required: true
+      placeholder: qa-admin@example.com / participant email
 
   - type: dropdown
     id: browser
     attributes:
-      label: Browser used
+      label: Browser used (optional)
       options:
         - Chrome
         - Safari
@@ -200,23 +194,19 @@ body:
         - Edge
         - Mobile browser
         - Other
-    validations:
-      required: true
 
   - type: input
     id: device_os
     attributes:
-      label: Device and OS
+      label: Device and OS (optional)
       description: Include the device type, OS version, and screen size if helpful.
       placeholder: MacBook Pro / macOS 15 / 1440x900
-    validations:
-      required: true
 
   - type: textarea
     id: api_context
     attributes:
-      label: API or backend details
-      description: If this happened on `FE + BE` or `Both environments`, add API/backend details. Otherwise write `N/A`.
+      label: API or backend details (optional)
+      description: If this happened on `FE + BE` or `Both environments`, add API/backend details.
       placeholder: |
         Include when relevant:
         - Endpoint or route
@@ -224,17 +214,13 @@ body:
         - Response payload snippet
         - Request ID / trace ID
         - Related service or third-party integration
-    validations:
-      required: true
 
   - type: input
     id: version_info
     attributes:
-      label: Version or test date
+      label: Version or test date (optional)
       description: Add the app version if known. If not, add the date you tested it.
       placeholder: v1.2.3 / commit abc123 / tested on 2026-03-27
-    validations:
-      required: true
 
   - type: checkboxes
     id: checklist
