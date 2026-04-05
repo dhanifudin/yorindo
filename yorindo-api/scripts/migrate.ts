@@ -30,6 +30,7 @@ const migrations = [
   '004_indexes.sql',
   '005_sprint_changes_2026_03_28.sql',
   '006_location_fields.sql',
+  '007_demo_support_tables.sql',
 ]
 
 async function migrate(): Promise<void> {
