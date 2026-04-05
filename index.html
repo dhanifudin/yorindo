@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contribution Reports</title>
+  <style>
+    :root { --bg: #0d1117; --surface: #161b22; --border: #30363d; --text: #c9d1d9; --accent: #58a6ff; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+    .container { text-align: center; }
+    h1 { margin-bottom: 2rem; font-size: 2rem; }
+    .cards { display: flex; gap: 2rem; justify-content: center; flex-wrap: wrap; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 2rem 3rem; text-decoration: none; color: var(--text); transition: border-color 0.2s, transform 0.2s; min-width: 250px; }
+    .card:hover { border-color: var(--accent); transform: translateY(-2px); }
+    .card h2 { color: var(--accent); margin-bottom: 0.5rem; }
+    .card p { color: var(--text-muted); font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Contribution Reports</h1>
+    <div class="cards">
+      <a href="reposense/index.html" class="card">
+        <h2>Code Contributions</h2>
+        <p>RepoSense — commits, lines changed, files touched</p>
+      </a>
+      <a href="contribution-api/index.html" class="card">
+        <h2>GitHub Activity</h2>
+        <p>Issues, PRs, comments, and reviews</p>
+      </a>
+    </div>
+  </div>
+</body>
+</html>
