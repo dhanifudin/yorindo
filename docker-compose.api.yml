@@ -1,5 +1,6 @@
 services:
   api:
+    container_name: yorindo-api
     image: dhanifudin/yorindo-api:${IMAGE_TAG:-latest}
     ports:
       - "127.0.0.1:6666:3000"
@@ -24,6 +25,7 @@ services:
         max-file: "5"
 
   postgres:
+    container_name: yorindo-api-db
     image: postgres:16-alpine
     expose:
       - "5432"
@@ -36,6 +38,7 @@ services:
     restart: unless-stopped
 
   redis:
+    container_name: yorindo-api-redis
     image: redis:7-alpine
     expose:
       - "6379"

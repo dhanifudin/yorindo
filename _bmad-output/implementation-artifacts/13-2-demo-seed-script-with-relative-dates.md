@@ -2,7 +2,7 @@
 title: 'Demo Seed Script with Relative Dates'
 slug: '13-2-demo-seed-script-with-relative-dates'
 created: '2026-04-02'
-status: 'ready-for-dev'
+status: 'review'
 epic: 13
 story: 2
 tech_stack: ['typescript', 'pg', 'cuid2', 'bcrypt']
@@ -119,23 +119,34 @@ All dates computed as `new Date() ± N days`. Full spec:
 
 ## Implementation Plan
 
-### Task 1: Create `scripts/seed-demo.ts`
+### Task 1: Create `scripts/seed-demo.ts` ✅
 
-Implement the full demo seed script with all 10 events, ~500 contacts, registrations, survey responses, blast history, flagged records, templates, vendors, and users.
+Implement the full demo seed script with all 10 events, ~500 contacts, registrations, survey responses, flagged records, vendors, and users.
 
-### Task 2: Add `--demo` flag to `scripts/seed.ts`
+### Task 2: Add `--demo` flag to `scripts/seed.ts` ✅
 
-Modify the existing seed script to accept `--demo` flag that delegates to `seed-demo.ts` logic.
+Modified seed.ts to import `seedDemo` from `seed-demo.ts` and delegate when `--demo` flag is present. Updated Makefile targets (deploy-demo, reset-demo, seed-demo) to pass `--demo`.
 
-### Task 3: Self-validation
+### Task 3: Self-validation ✅
 
-After seeding, run verification queries:
-- Count events per status
-- Verify all active/published events are in the future or today
-- Verify all completed events are in the past
-- Verify user count and known emails exist
-- Verify flagged record count is 5-10
-- Log pass/fail for each check
+21 validation checks built into `seed-demo.ts` — runs automatically after seeding. Verifies event counts per status, contact totals, registration counts, survey responses, flagged records, user existence, and date correctness.
+
+---
+
+## Completion Notes
+
+- **Credentials aligned** with DEMO.md: `admin@yorindo.id / Password123!` (not demo-specific emails)
+- **Blast history** (AC7) skipped — `blast_logs` table does not exist in current migrations (001-006). Can be added when blast feature lands.
+- **Templates/raw_uploads/event_sponsors** also not seeded — tables don't exist yet
+- All 198 existing tests pass after changes
+- Demo seed uses `TRUNCATE CASCADE` for clean slate on re-seed
+
+### Files Created
+- `yorindo-api/scripts/seed-demo.ts`
+
+### Files Modified
+- `yorindo-api/scripts/seed.ts` — added `--demo` flag routing
+- `Makefile` — all demo targets now pass `--demo` to seed script
 
 ---
 

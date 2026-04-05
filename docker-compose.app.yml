@@ -1,0 +1,24 @@
+# Frontend preview — yorindo.dhanifudin.com
+# Pulls pre-built image from Docker Hub, serves with MSW mocks.
+#
+# Usage:
+#   make deploy-app    (pull + start)
+#   make stop-app      (stop)
+#   make logs-app      (follow logs)
+#
+# VPS nginx reverse proxy (external, not in this stack):
+#   yorindo.dhanifudin.com → localhost:5173
+
+services:
+  app:
+    container_name: yorindo-preview-app
+    image: dhanifudin/yorindo-app:${IMAGE_TAG:-preview}
+    ports:
+      - "127.0.0.1:5173:3000"
+    env_file: .env
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"

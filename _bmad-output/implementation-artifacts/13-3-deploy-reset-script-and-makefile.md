@@ -2,7 +2,7 @@
 title: 'Deploy Reset Script and Makefile'
 slug: '13-3-deploy-reset-script-and-makefile'
 created: '2026-04-02'
-status: 'ready-for-dev'
+status: 'review'
 epic: 13
 story: 3
 tech_stack: ['make', 'bash', 'docker-compose']

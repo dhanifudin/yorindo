@@ -4,13 +4,17 @@
  * Inserts realistic dev data for local development.
  * Guards against running in production.
  *
- * Usage: npx tsx scripts/seed.ts
+ * Usage:
+ *   npx tsx scripts/seed.ts          # basic seed (10 contacts, 3 events)
+ *   npx tsx scripts/seed.ts --demo   # comprehensive demo seed (500 contacts, 10 events)
+ *
  * Requires: DATABASE_URL environment variable, NODE_ENV != production
  */
 
 import { Pool } from 'pg'
 import bcrypt from 'bcrypt'
 import { createId } from '@paralleldrive/cuid2'
+import { seedDemo } from './seed-demo'
 
 if (process.env.NODE_ENV === 'production') {
   console.error('Seed script must not run in production.')
@@ -24,6 +28,8 @@ if (!databaseUrl) {
 }
 
 const pool = new Pool({ connectionString: databaseUrl })
+
+const isDemo = process.argv.includes('--demo')
 
 // wilayah.id city → location codes mapping (sample subset)
 const cityLocationMap: Record<string, { province_code: string; province_name: string; city_code: string; city_name: string }> = {
@@ -142,7 +148,9 @@ async function seed(): Promise<void> {
   }
 }
 
-seed().catch((err: unknown) => {
+const run = isDemo ? () => seedDemo(pool).then(() => pool.end()) : seed
+
+run().catch((err: unknown) => {
   console.error('Seed failed:', err)
   process.exit(1)
 })
