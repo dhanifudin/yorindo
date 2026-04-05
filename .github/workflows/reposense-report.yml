@@ -47,7 +47,7 @@ jobs:
 
       - name: Download RepoSense
         run: |
-          REPOSENSE_VERSION="v1.18.0"
+          REPOSENSE_VERSION="v4.0"
           wget "https://github.com/reposense/RepoSense/releases/download/${REPOSENSE_VERSION}/RepoSense.jar" \
             -O RepoSense.jar
 
