@@ -86,6 +86,7 @@ jobs:
 
       - name: Generate combined index
         run: |
+          cp ${{ github.workspace }}/CNAME ${{ github.workspace }}/reposense-output/CNAME
           cat > ${{ github.workspace }}/reposense-output/index.html << 'INDEX'
           <!DOCTYPE html>
           <html lang="en">
