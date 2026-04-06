@@ -1275,6 +1275,126 @@ components:
           items:
             type: string
 
+    # ─── Survey Schemas ────────────────────────────────────────────────────────
+    SurveySchemaInput:
+      type: object
+      required: [schema]
+      properties:
+        schema:
+          type: object
+          required: [type, properties]
+          properties:
+            type:
+              type: string
+              enum: [object]
+            properties:
+              type: object
+              additionalProperties: true
+        uiSchema:
+          type: object
+          additionalProperties: true
+          default: {}
+
+    SurveySchemaResponse:
+      type: object
+      required: [schema, uiSchema]
+      properties:
+        schema:
+          type: object
+          additionalProperties: true
+        uiSchema:
+          type: object
+          additionalProperties: true
+        enabled:
+          type: boolean
+          description: Only present for post-event type
+
+    SurveyResponseAggregate:
+      type: object
+      required: [questionId, questionLabel, fieldType]
+      properties:
+        questionId:
+          type: string
+        questionLabel:
+          type: string
+        fieldType:
+          type: string
+          enum: [text, textarea, radio, select, checkboxes, range, grid_radio, grid_checkbox, date, time, section]
+        optionCounts:
+          type: array
+          items:
+            type: object
+            properties:
+              label:
+                type: string
+              count:
+                type: integer
+              percentage:
+                type: integer
+        average:
+          type: number
+          description: For range questions
+        distribution:
+          type: array
+          items:
+            type: object
+            properties:
+              label:
+                type: string
+              count:
+                type: integer
+        totalCount:
+          type: integer
+          description: For text questions
+        samples:
+          type: array
+          items:
+            type: string
+          description: Up to 3 sample responses for text questions
+
+    SurveyResponseRecord:
+      type: object
+      required: [id, registrationId, contactName, contactPhone, submittedAt, answers]
+      properties:
+        id:
+          type: string
+        registrationId:
+          type: string
+        contactName:
+          type: string
+        contactPhone:
+          type: string
+        submittedAt:
+          type: string
+          format: date-time
+        answers:
+          type: object
+          additionalProperties: true
+
+    SurveyResponsesApiResponse:
+      type: object
+      required: [total, aggregates, responses, pagination]
+      properties:
+        total:
+          type: integer
+        aggregates:
+          type: array
+          items:
+            $ref: '#/components/schemas/SurveyResponseAggregate'
+        responses:
+          type: array
+          items:
+            $ref: '#/components/schemas/SurveyResponseRecord'
+        pagination:
+          type: object
+          properties:
+            page:
+              type: integer
+            pageSize:
+              type: integer
+            totalPages:
+              type: integer
+
     # ─── Contact Health & Facets ────────────────────────────────────────────────
     ContactHealth:
       type: object
@@ -3920,11 +4040,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
 
-  /events/{id}/survey:
+  /events/{id}/survey/{type}:
     get:
-      summary: Get survey schema for event
-      operationId: getSurveySchema
-      tags: [Events]
+      summary: Get survey schema for event by type (registration or post-event)
+      operationId: getSurveySchemaByType
+      tags: [Surveys]
       security:
         - BearerAuth: []
       parameters:
@@ -3933,16 +4053,28 @@ paths:
           required: true
           schema:
             type: string
+        - name: type
+          in: path
+          required: true
+          description: Survey type
+          schema:
+            type: string
+            enum: [registration, post-event]
       responses:
         '200':
           description: Survey schema (JSONB)
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: true
+                $ref: '#/components/schemas/SurveySchemaResponse'
         '401':
           description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Forbidden
           content:
             application/json:
               schema:
@@ -3954,9 +4086,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
     put:
-      summary: Update survey schema for event (admin only)
-      operationId: updateSurveySchema
-      tags: [Events]
+      summary: Update survey schema for event by type (admin only)
+      operationId: updateSurveySchemaByType
+      tags: [Surveys]
       security:
         - BearerAuth: []
       parameters:
@@ -3965,20 +4097,26 @@ paths:
           required: true
           schema:
             type: string
+        - name: type
+          in: path
+          required: true
+          description: Survey type
+          schema:
+            type: string
+            enum: [registration, post-event]
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: true
+              $ref: '#/components/schemas/SurveySchemaInput'
       responses:
         '200':
           description: Survey schema updated
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Event'
+                $ref: '#/components/schemas/SurveySchemaResponse'
         '400':
           description: Validation error
           content:
@@ -3993,6 +4131,112 @@ paths:
                 $ref: '#/components/schemas/ApiError'
         '403':
           description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /events/{id}/survey/responses:
+    get:
+      summary: Get survey responses with per-question aggregates (admin + viewer)
+      operationId: getSurveyResponses
+      tags: [Surveys]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [registration, post-event]
+            default: registration
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Survey responses with aggregates
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SurveyResponsesApiResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /events/{id}/survey/responses/download:
+    get:
+      summary: Export survey responses to CSV/XLSX (admin + viewer)
+      operationId: downloadSurveyResponses
+      tags: [Surveys]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [registration, post-event]
+            default: registration
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [xlsx]
+            default: xlsx
+      responses:
+        '200':
+          description: CSV/XLSX file download
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Forbidden
           content:
             application/json:
               schema:
