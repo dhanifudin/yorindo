@@ -556,7 +556,7 @@ export const eventHandlers = [
     return HttpResponse.json(cloned, { status: 201 })
   }),
 
-  http.post('/api/events/:id/restore', async ({ params }) => {
+  http.patch('/api/events/:id/restore', async ({ params }) => {
     await delay(400)
     const deletedIdx = deletedEventsStore.findIndex((e) => e.id === params.id)
     if (deletedIdx === -1) {
