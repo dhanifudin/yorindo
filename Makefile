@@ -10,7 +10,7 @@ DEV_API_EXEC = $(DEV_COMPOSE) exec -T api
 DEV_API_TTY  = $(DEV_COMPOSE) exec api
 
 .PHONY: deploy-demo reset-demo stop-demo logs-demo migrate-demo seed-demo \
-        up-dev stop-dev logs-dev migrate-dev seed-dev setup-dev \
+        up-dev stop-dev clean-dev logs-dev migrate-dev seed-dev setup-dev \
         deploy-app stop-app logs-app
 
 ## Deploy demo from scratch (wipe data, pull images, migrate, seed)
@@ -119,6 +119,12 @@ stop-dev:
 	@echo "⏹️  Stopping dev services..."
 	$(DEV_COMPOSE) down
 	@echo "✅ Dev stopped. node_modules volumes preserved."
+
+## Wipe all dev data (postgres + node_modules volumes) — full clean slate
+clean-dev:
+	@echo "🗑️  Removing all dev containers and volumes..."
+	$(DEV_COMPOSE) down -v
+	@echo "✅ Clean. Run 'make setup-dev' to start fresh."
 
 ## Follow dev logs (all services)
 logs-dev:
