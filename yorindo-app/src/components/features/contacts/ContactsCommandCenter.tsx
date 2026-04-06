@@ -13,6 +13,7 @@ import { TriagePanel } from './TriagePanel'
 import { ContactsTable } from './ContactsTable'
 import { ContactsPagination } from './ContactsPagination'
 import { ActionToolbar } from './ActionToolbar'
+import { BlastModal } from './BlastModal'
 
 const FILTER_KEYS = ['industry', 'city', 'companySize', 'q', 'missingEmail', 'missingPhone', 'flagFilter']
 
@@ -22,6 +23,7 @@ export function ContactsCommandCenter() {
   const [selectedNames, setSelectedNames] = useState<string[]>([])   // ← Baru
   const [selectMode, setSelectMode] = useState(false)
   const [resetKey, setResetKey] = useState(0)
+  const [blastModalOpen, setBlastModalOpen] = useState(false)
 
   const router = useRouter()
   const pathname = usePathname()
@@ -120,11 +122,20 @@ export function ContactsCommandCenter() {
 
       <ActionToolbar
         total={contacts?.pagination.total ?? 0}
-        searchParams={searchParams}
         isVisible={hasFilters || selectedIds.length > 0}
         selectedIds={selectedIds}
-        selectedNames={selectedNames}          // ← ini yang bikin nama muncul
+        selectedNames={selectedNames}
         onClearSelection={handleClearSelection}
+        onOpenBlastModal={() => setBlastModalOpen(true)}
+      />
+
+      <BlastModal
+        open={blastModalOpen}
+        onClose={() => setBlastModalOpen(false)}
+        onBlastSuccess={handleClearSelection}
+        recipientCount={selectedIds.length > 0 ? selectedIds.length : (contacts?.pagination.total ?? 0)}
+        mode={selectedIds.length > 0 ? 'selection' : 'segment'}
+        selectedIds={selectedIds}
       />
     </div>
   )

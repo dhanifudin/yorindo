@@ -78,7 +78,7 @@ export function ContactsTable({
 }: ContactsTableProps) {
   const searchParams = useSearchParams()
   const { flagFilter, setFilter } = useFilterStore()
-  const page = parseInt(searchParams.get('page') ?? '1', 10)
+  const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10) || 1)
   const { data, isLoading, isError } = useContacts()
   const [detailContact, setDetailContact] = useState<Contact | null>(null)
   const [eventsExpanded, setEventsExpanded] = useState(false)
@@ -153,7 +153,7 @@ export function ContactsTable({
       },
     },
     { accessorKey: 'phone', header: 'Telepon' },
-    { accessorKey: 'industryId', header: 'Industri' },
+    { accessorKey: 'serviceType', header: 'Industri' },
     { accessorKey: 'city', header: 'Kota' },
     {
       accessorKey: 'completenessScore',
@@ -552,7 +552,13 @@ export function ContactsTable({
                 <TableRow
                   key={row.id}
                   className={`cursor-pointer ${row.getIsSelected() ? 'bg-muted/30' : ''}`}
-                  onClick={() => setDetailContact(row.original)}
+                  onClick={() => {
+                    if (selectMode) {
+                      row.toggleSelected()
+                    } else {
+                      setDetailContact(row.original)
+                    }
+                  }}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id} className="whitespace-nowrap">

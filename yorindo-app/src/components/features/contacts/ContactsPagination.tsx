@@ -12,7 +12,7 @@ export function ContactsPagination() {
   const { data } = useContacts()
   const setFilter = useFilterStore((s) => s.setFilter)
 
-  const page = parseInt(searchParams.get('page') ?? '1', 10)
+  const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10) || 1)
   const totalPages = data?.pagination.totalPages ?? 1
   const total = data?.pagination.total ?? 0
 

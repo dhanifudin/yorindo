@@ -62,6 +62,7 @@ export function ContactsFilterBar() {
   const router = useRouter()
   const pathname = usePathname()
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const cityDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const industry = searchParams.get('industry') ?? ''
   const city = searchParams.get('city') ?? ''
@@ -70,8 +71,9 @@ export function ContactsFilterBar() {
 
   const hasActiveFilters = !!(industry || city || companySize || q)
 
-  // ── State lokal untuk input nama (debounced ke URL param q) ──────────────
+  // ── State lokal untuk input nama dan kota (debounced ke URL param) ───────
   const [nameQuery, setNameQuery] = useState(q)
+  const [cityQuery, setCityQuery] = useState(city)
 
   // Facets query
   const { data: facets } = useQuery<ContactsFacets>({
@@ -96,9 +98,9 @@ export function ContactsFilterBar() {
     router.push(`${pathname}?${params.toString()}`)
   }, [searchParams, router, pathname])
 
-  const debounce = useCallback((fn: () => void) => {
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(fn, 300)
+  const debounceCity = useCallback((fn: () => void) => {
+    if (cityDebounceRef.current) clearTimeout(cityDebounceRef.current)
+    cityDebounceRef.current = setTimeout(fn, 300)
   }, [])
 
   // ── Handler search nama (debounce 350ms ke URL param q) ──────────────────
@@ -304,8 +306,11 @@ export function ContactsFilterBar() {
         <Input
           type="text"
           placeholder="Cari kota..."
-          defaultValue={city}
-          onChange={(e) => debounce(() => updateParam('city', e.target.value))}
+          value={cityQuery}
+          onChange={(e) => {
+            setCityQuery(e.target.value)
+            debounceCity(() => updateParam('city', e.target.value))
+          }}
           className="w-40"
         />
       </div>

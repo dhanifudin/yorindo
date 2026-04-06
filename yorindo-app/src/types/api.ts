@@ -78,6 +78,15 @@ export interface UserEvent {
   grantedAt: string
 }
 
+export interface BlastModalPayload {
+  eventId: string
+  channel: 'whatsapp' | 'email'
+  templateId?: string
+  customMessage?: string
+  recipientCount: number
+  selectedIds?: string[]
+}
+
 export interface AuthResponse {
   accessToken: string
   user: Pick<User, 'id' | 'role'> & { name?: string; email?: string }
