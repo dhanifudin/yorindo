@@ -76,6 +76,7 @@ describe.skipIf(!hasDatabase)('migrate.ts integration', () => {
         '004_indexes.sql',
         '005_sprint_changes_2026_03_28.sql',
         '006_location_fields.sql',
+        '007_demo_support_tables.sql',
       ]) {
         const sql = readFileSync(join(migrationsDir, file), 'utf8')
         await expect(pool.query(sql)).resolves.toBeDefined()

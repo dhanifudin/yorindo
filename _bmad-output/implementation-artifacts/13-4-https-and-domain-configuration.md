@@ -2,7 +2,7 @@
 title: 'HTTPS and Domain Configuration'
 slug: '13-4-https-and-domain-configuration'
 created: '2026-04-02'
-status: 'ready-for-dev'
+status: 'review'
 epic: 13
 story: 4
 tech_stack: ['nginx', 'letsencrypt', 'certbot']
@@ -132,3 +132,35 @@ Document that `demo.dhanifudin.com` must have an A record pointing to the VPS IP
 - VPS must have nginx installed and running
 - VPS must have Certbot installed
 - DNS A record for `demo.dhanifudin.com` must point to VPS IP
+
+---
+
+## Dev Agent Record
+
+**Implementation Date:** 2026-04-02
+**Dev Agent:** bmad-dev-story
+**Status:** Complete - Ready for Review
+
+### Implementation Summary
+
+All 3 tasks from the story file have been completed:
+
+**Task 1: Example nginx config** ✅
+- `nginx/vps.conf` already exists with complete VPS-level nginx configuration
+- Includes SSL termination, HTTP→HTTPS redirect, security headers, Certbot ACME challenge support
+- `nginx/nginx.conf` already exists with Docker-internal routing (api/app containers)
+
+**Task 2: VPS setup steps documented** ✅
+- `DEMO.md` updated with step-by-step VPS nginx setup instructions
+- Includes scp, sed, certbot, symlink, and reload commands
+- Architecture diagram added showing two-tier nginx (VPS → Docker)
+
+**Task 3: DNS requirement documented** ✅
+- DEMO.md notes that `demo.dhanifudin.com` must have an A record pointing to VPS IP
+
+### Files Modified
+1. `DEMO.md` — Updated VPS nginx configuration section with setup steps and architecture diagram
+
+### Files Verified (Already Existed)
+1. `nginx/vps.conf` — VPS-level nginx config with SSL termination
+2. `nginx/nginx.conf` — Docker-internal nginx config routing to api/app

@@ -1,5 +1,5 @@
 generated: 2026-03-19
-last_updated: 2026-04-02 (code review + fixes for be-4-5-audience-preview)
+last_updated: 2026-04-04 (stories 13-1 + 13-6 → done after code review fixes)
 project: yorindo
 project_key: NOKEY
 tracking_system: file-system
@@ -259,10 +259,11 @@ development_status:
   # docker-compose.demo.yml, seed script with relative dates, HTTPS, reset-on-deploy
   # Planning epic file: epics/epic-11-demo-environment-deployment.md
   # ─────────────────────────────────────────────
-  epic-13: backlog
-  13-1-docker-compose-demo-profile: ready-for-dev
-  13-2-demo-seed-script-with-relative-dates: ready-for-dev
-  13-3-deploy-reset-script-and-makefile: ready-for-dev
-  13-4-https-and-domain-configuration: ready-for-dev
-  13-5-seed-data-validation-tests: ready-for-dev
+  epic-13: in-progress
+  13-1-docker-compose-demo-profile: done
+  13-2-demo-seed-script-with-relative-dates: review
+  13-3-deploy-reset-script-and-makefile: review
+  13-4-https-and-domain-configuration: review
+  13-5-seed-data-validation-tests: review
+  13-6-vps-frontend-preview-deployment: done
   epic-13-retrospective: optional

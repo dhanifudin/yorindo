@@ -11,12 +11,12 @@ interface TicketPageProps {
 }
 
 interface TicketData {
-  token: string
+  qrPayload?: string
+  token?: string
   participantName: string
   eventName: string
   eventDate: string
-  eventLocation: string
-  registrationId: string
+  venue: string
 }
 
 export default function TicketPage({ params }: TicketPageProps) {
@@ -81,16 +81,16 @@ export default function TicketPage({ params }: TicketPageProps) {
           <CardContent className="pt-6 pb-6 space-y-4">
             <div className="flex justify-center">
               <div className="p-3 bg-white rounded-lg border">
-                <QRCode value={ticket.token} size={180} />
+                <QRCode value={ticket.qrPayload ?? ticket.token ?? ''} size={256} />
               </div>
             </div>
             <div className="text-center">
               <p className="text-lg font-semibold">{ticket.participantName}</p>
-              <p className="text-sm text-muted-foreground mt-0.5">📍 {ticket.eventLocation}</p>
+              <p className="text-sm text-muted-foreground mt-0.5">📍 {ticket.venue}</p>
             </div>
             <div className="border-t pt-3">
               <p className="text-xs text-muted-foreground text-center font-mono">
-                {ticket.token}
+                {ticket.token ?? ticket.qrPayload}
               </p>
             </div>
           </CardContent>

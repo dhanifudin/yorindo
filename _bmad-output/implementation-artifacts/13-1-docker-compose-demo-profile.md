@@ -2,7 +2,7 @@
 title: 'Docker Compose Demo Profile'
 slug: '13-1-docker-compose-demo-profile'
 created: '2026-04-02'
-status: 'ready-for-dev'
+status: 'done'
 epic: 13
 story: 1
 tech_stack: ['docker-compose', 'dockerhub']
@@ -19,7 +19,7 @@ files_to_create:
 **Story ID:** 13.1
 **Story Key:** 13-1-docker-compose-demo-profile
 **Epic:** Epic 13 — Demo Environment Deployment
-**Status:** ready-for-dev
+**Status:** done
 
 ---
 
@@ -105,32 +105,12 @@ The nginx config is **outside** this compose file — it's managed on the VPS di
 
 ---
 
-## Implementation Plan
+## Tasks/Subtasks
 
-### Task 1: Create `docker-compose.demo.yml`
-
-Define 3 services: `postgres`, `yorindo-api`, `yorindo-app`. Use named volume for postgres data. Expose ports `3000` and `5173` on host for VPS nginx to proxy to. Configure health checks.
-
-### Task 2: Create `.env.demo` files
-
-Create `yorindo-api/.env.demo` and `yorindo-app/.env.demo` with all required variables for demo mode.
-
-### Task 3: Create Makefile demo targets
-
-Add targets:
-- `make deploy-demo` — down -v, pull, up, migrate, seed
-- `make reset-demo` — down -v, up, migrate, seed (re-seed without full rebuild)
-- `make stop-demo` — down (preserve data)
-- `make logs-demo` — follow logs
-
-### Task 4: Create `DEMO.md`
-
-Document:
-- Deployment process
-- Demo credentials (admin@demo.com, viewer@demo.com, staff@demo.com — all password: `demo123`)
-- Reset procedure
-- VPS nginx reverse proxy configuration example
-- Seed data overview (what events, contacts, etc. are included)
+- [x] **Task 1:** Create `docker-compose.demo.yml` — 3 services (postgres, api, app), named volumes, healthcheck, ports bound to 127.0.0.1
+- [x] **Task 2:** Create `.env.demo` files — `yorindo-api/.env.demo` and `yorindo-app/.env.demo` with demo-appropriate values
+- [x] **Task 3:** Create Makefile demo targets — deploy-demo, reset-demo, stop-demo, logs-demo, migrate-demo, seed-demo
+- [x] **Task 4:** Create `DEMO.md` — deployment docs, credentials, reset procedure, nginx example, seed data overview
 
 ---
 
@@ -140,3 +120,46 @@ Document:
 - PostgreSQL migrations 001-006 must exist and be runnable
 - Docker Hub images must be published for both `yorindo-api` and `yorindo-app`
 - VPS nginx must be configured to reverse proxy to ports 5173 and 3000
+
+---
+
+## Dev Agent Record
+
+### Implementation Plan
+
+- Used existing `docker-compose.yml` and `docker-compose.dev.yml` as reference for service definitions
+- App Dockerfile exposes port 3000 (Next.js standalone), so `docker-compose.demo.yml` maps host 5173 → container 3000
+- API Dockerfile only includes `dist/` (no scripts/), so Makefile runs migrations/seeds via one-off container that mounts source and uses `npx tsx`
+- Seed script guards against `NODE_ENV=production`, so migration container sets `NODE_ENV=development`
+- Ports bound to `127.0.0.1` only — VPS nginx handles external traffic
+- Postgres healthcheck ensures API doesn't start before DB is ready
+- Updated `.gitignore` to whitelist `.env.demo` files (no secrets, safe to commit)
+
+### Completion Notes
+
+All 4 tasks completed:
+1. `docker-compose.demo.yml` — 3 services with healthcheck, named volumes, localhost-bound ports
+2. `.env.demo` files — API uses postgres repos + mock services; App disables MSW, points to real API
+3. `Makefile` — 6 targets (deploy, reset, stop, logs, migrate, seed) using one-off containers for DB operations
+4. `DEMO.md` — full deployment guide with credentials, architecture diagram, nginx config example, seed data overview
+
+Date: 2026-04-03
+
+---
+
+## File List
+
+- `docker-compose.demo.yml` (new)
+- `yorindo-api/.env.demo` (new)
+- `yorindo-app/.env.demo` (new)
+- `Makefile` (new)
+- `DEMO.md` (new)
+- `.gitignore` (modified — added `!.env.demo` whitelist)
+- `_bmad-output/implementation-artifacts/13-1-docker-compose-demo-profile.md` (modified)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (modified)
+
+---
+
+## Change Log
+
+- 2026-04-03: Implemented all 4 tasks — docker-compose.demo.yml, .env.demo files, Makefile targets, DEMO.md documentation

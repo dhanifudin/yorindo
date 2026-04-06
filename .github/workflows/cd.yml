@@ -82,13 +82,13 @@ jobs:
             mkdir -p /var/www/yorindo/nginx
             chmod 755 /var/www/yorindo/nginx
 
-      - name: Upload compose and env files to VPS
+      - name: Upload compose, Makefile and env files to VPS
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          source: docker-compose.yml,.deploy.env
+          source: docker-compose.yml,Makefile,.deploy.env
           target: /var/www/yorindo
 
       - name: Upload nginx config
