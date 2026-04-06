@@ -188,12 +188,12 @@ export const registrationHandlers = [
       )
     }
     return HttpResponse.json({
+      qrPayload: `MOCK_ENCRYPTED_QR_${token}`,
       token,
       participantName: faker.person.fullName(),
-      eventName: 'Seminar ERP Jakarta',
-      eventDate: '2026-04-15T02:00:00.000Z',
-      eventLocation: 'Jakarta Convention Center',
-      registrationId: makeMockCuid2(),
+      eventName: 'Seminar ERP Jakarta 2026',
+      eventDate: '2026-04-15T09:00:00.000Z',
+      venue: 'Jakarta Convention Center',
     })
   }),
 

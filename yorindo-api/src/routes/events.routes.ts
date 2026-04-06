@@ -1,4 +1,4 @@
-import type { FastifyPluginAsync, FastifyReply } from 'fastify'
+import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import {
   auditLogRepository,
@@ -14,7 +14,7 @@ import {
 } from '../container.js'
 import { findTemplateById } from '../data/templates.js'
 import { requireAdmin, requireAuth, requireRoles, type JwtPayload } from '../middleware/auth.js'
-import type { Event, Registration } from '../types/domain.js'
+import type { Event, EventStatus, Registration } from '../types/domain.js'
 import { validateOpenApiRequest, validateOpenApiResponse } from '../lib/openapi-contract.js'
 import { INDONESIAN_INDUSTRIES } from '../repositories/memory/_seeds.js'
 
@@ -28,6 +28,7 @@ const EventListQuerySchema = z.object({
   sortBy: z.string().trim().optional(),
   sortDir: z.enum(['asc', 'desc']).optional(),
   status: z.enum(['draft', 'published', 'active', 'completed', 'cancelled', 'archived']).optional(),
+  deleted: z.coerce.boolean().optional(),
 })
 
 const EventCreateBodySchema = z.object({
@@ -99,7 +100,7 @@ const EventUpdateBodySchema = z.object({
 
 const EventRegistrationsQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+  pageSize: z.coerce.number().int().min(1).max(500).default(20),
   status: z.enum(['pending', 'confirmed', 'approved', 'rejected', 'waitlisted', 'attended', 'cancelled']).optional(),
 })
 
@@ -166,7 +167,7 @@ const AudiencePreviewBodySchema = z.object({
   companySizes: z.array(z.string()).optional(),
   jobTitles: z.array(z.string()).optional(),
   behavior: z.array(z.enum(['most_active', 'low_attendance', 'never_attended'])).optional(),
-  lastAttendedBefore: z.string().optional(),
+  lastAttendedBefore: z.string().datetime({ offset: true }).optional(),
 })
 
 function replyValidationError(reply: FastifyReply, details: unknown, message: string) {
@@ -200,6 +201,7 @@ function toEventDto(event: Event, surveySchema?: unknown, registeredCount: numbe
     industryTags: event.targetCriteria?.industries ?? [],
     eventType: 'conference',
     topicTags: [],
+    deletedAt: event.deletedAt,
     createdAt: event.createdAt,
     updatedAt: event.updatedAt,
     isPaid: event.isPaid,
@@ -275,6 +277,102 @@ function toRegistrationWithContactDto(registration: Registration, contact: Await
   }
 }
 
+function toConfirmationChannel(event: Event, contact: Awaited<ReturnType<typeof contactRepository.findById>>): 'email' | 'whatsapp' {
+  if (event.notificationChannel === 'email' && contact?.email) return 'email'
+  return 'whatsapp'
+}
+
+function toConfirmationStatus(registration: Registration): 'confirmed' | 'pending' {
+  if (registration.status === 'confirmed' || registration.status === 'attended') return 'confirmed'
+  return 'pending'
+}
+
+const EVENT_STATUS_TRANSITIONS: Record<EventStatus, EventStatus[]> = {
+  draft: ['published'],
+  published: ['active', 'cancelled'],
+  active: ['completed', 'cancelled'],
+  completed: ['archived'],
+  cancelled: [],
+  archived: [],
+}
+
+function isValidEventStatusTransition(from: EventStatus, to: EventStatus) {
+  return EVENT_STATUS_TRANSITIONS[from].includes(to)
+}
+
+function replyInvalidTransition(reply: FastifyReply, from: EventStatus, to: EventStatus) {
+  return reply.status(400).send({
+    error: {
+      code: 'INVALID_EVENT_TRANSITION',
+      message: `Cannot transition event from "${from}" to "${to}"`,
+      details: [
+        {
+          from,
+          to,
+          allowedTransitions: EVENT_STATUS_TRANSITIONS[from],
+        },
+      ],
+    },
+  })
+}
+
+async function updateEventHandler(request: FastifyRequest, reply: FastifyReply) {
+  const params = EventIdParamsSchema.safeParse(request.params)
+  const body = EventUpdateBodySchema.safeParse(request.body)
+  if (!params.success || !body.success) {
+    return replyValidationError(reply, [
+      ...(params.success ? [] : params.error.issues),
+      ...(body.success ? [] : body.error.issues),
+    ], 'Invalid update payload')
+  }
+
+  const existing = await requireEventOr404(reply, params.data.id)
+  if (!existing) return
+  const method = request.method.toLowerCase() as 'put' | 'patch'
+  validateOpenApiRequest({ path: '/events/{id}', method, params: params.data, body: body.data })
+
+  const updateData: Partial<Event> = {}
+  if (body.data.name !== undefined) updateData.name = body.data.name
+  if (body.data.description !== undefined) updateData.description = body.data.description
+  if (body.data.eventDate !== undefined) {
+    updateData.startDate = body.data.eventDate
+    updateData.endDate = body.data.eventDate
+  }
+  if (body.data.timezone !== undefined) updateData.timezone = body.data.timezone
+  if (body.data.capacity !== undefined) updateData.capacity = body.data.capacity
+  if (body.data.targetCriteria !== undefined) updateData.targetCriteria = body.data.targetCriteria as Event['targetCriteria']
+
+  if (body.data.status !== undefined) {
+    if (body.data.status !== existing.status && !isValidEventStatusTransition(existing.status, body.data.status)) {
+      return replyInvalidTransition(reply, existing.status, body.data.status)
+    }
+    updateData.status = body.data.status
+  }
+
+  const updated = await eventRepository.update(existing.id, updateData)
+  const result = updated ?? existing
+
+  if (body.data.status !== undefined && body.data.status !== existing.status) {
+    const actor = request.user as JwtPayload
+    await auditLogRepository.create({
+      action: 'event.status_change',
+      actorId: actor.sub,
+      actorRole: actor.role,
+      eventId: result.id,
+      targetId: result.id,
+      targetType: 'event',
+      metadata: {
+        from: existing.status,
+        to: result.status,
+      },
+    })
+  }
+
+  const responseBody = toEventDto(result)
+  validateOpenApiResponse({ path: '/events/{id}', method, status: 200, body: responseBody })
+  return reply.status(200).send(responseBody)
+}
+
 /**
  * Mengubah daftar industry id event ke slug FE agar URL blast tetap bersih.
  */
@@ -294,6 +392,57 @@ async function requireEventOr404(reply: FastifyReply, eventId: string) {
     return null
   }
   return event
+}
+
+async function restoreEventHandler(request: FastifyRequest, reply: FastifyReply) {
+  const parsed = EventIdParamsSchema.safeParse(request.params)
+  if (!parsed.success) return replyValidationError(reply, parsed.error.issues, 'Invalid event id')
+
+  const deletedEvents = await eventRepository.findAll({ page: 1, pageSize: 500 }, { deleted: 'only' })
+  const event = deletedEvents.data.find((item) => item.id === parsed.data.id)
+
+  if (!event) {
+    return reply.status(404).send({
+      error: { code: 'NOT_FOUND', message: 'Event not found in deleted items', details: [] },
+    })
+  }
+
+  const deletedAt = new Date(event.deletedAt ?? 0).getTime()
+  if (!Number.isNaN(deletedAt) && Date.now() - deletedAt > 30 * 86400000) {
+    return reply.status(400).send({
+      error: {
+        code: 'RECOVERY_WINDOW_EXPIRED',
+        message: 'This event can no longer be restored because the 30-day recovery window has expired',
+        details: [],
+      },
+    })
+  }
+
+  const method = request.method.toLowerCase() as 'post' | 'patch'
+  validateOpenApiRequest({ path: '/events/{id}/restore', method, params: parsed.data })
+  await eventRepository.restore(event.id)
+  const restored = await eventRepository.findById(event.id)
+
+  if (!restored) {
+    return reply.status(500).send({
+      error: { code: 'INTERNAL_ERROR', message: 'Failed to restore event', details: [] },
+    })
+  }
+
+  const payload = request.user as JwtPayload
+  await auditLogRepository.create({
+    action: 'event.restored',
+    actorId: payload.sub,
+    actorRole: payload.role,
+    eventId: restored.id,
+    targetId: restored.id,
+    targetType: 'event',
+    metadata: { deletedAt: event.deletedAt, restoredAt: restored.updatedAt },
+  })
+
+  const responseBody = toEventDto(restored)
+  validateOpenApiResponse({ path: '/events/{id}/restore', method, status: 200, body: responseBody })
+  return reply.status(200).send(responseBody)
 }
 
 async function requireEventAccessOr403(
@@ -328,12 +477,17 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     if (query.sortBy) paginationParams.sortBy = query.sortBy
     if (query.sortDir) paginationParams.sortDir = query.sortDir
 
-    const eventFilters: { ids?: string[]; status?: 'draft' | 'published' | 'active' | 'completed' | 'cancelled' | 'archived' } = {}
+    const eventFilters: {
+      ids?: string[]
+      status?: 'draft' | 'published' | 'active' | 'completed' | 'cancelled' | 'archived'
+      deleted?: 'exclude' | 'only'
+    } = {}
     const user = request.user as JwtPayload | undefined
     if (user && user.role !== 'admin' && user.role !== 'participant') {
       eventFilters.ids = await userRepository.getAssignedEvents(user.sub)
     }
     if (query.status) eventFilters.status = query.status
+    if (query.deleted) eventFilters.deleted = 'only'
 
     const result = await eventRepository.findAll(paginationParams, eventFilters)
 
@@ -514,6 +668,50 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(200).send(toEventDto((updated ?? existing) as Event, undefined, registrations.total))
   })
 
+  fastify.patch('/api/events/:id', { preHandler: [requireAuth, requireAdmin] }, async (request, reply) => {
+    const params = EventIdParamsSchema.safeParse(request.params)
+    const body = EventUpdateBodySchema.safeParse(request.body)
+    if (!params.success || !body.success) {
+      return replyValidationError(reply, [
+        ...(params.success ? [] : params.error.issues),
+        ...(body.success ? [] : body.error.issues),
+      ], 'Invalid update payload')
+    }
+    const existing = await requireEventOr404(reply, params.data.id)
+    if (!existing) return
+
+    const updateData: Partial<Event> = {}
+    if (body.data.status !== undefined) {
+      if (body.data.status !== existing.status && !isValidEventStatusTransition(existing.status, body.data.status)) {
+        return replyInvalidTransition(reply, existing.status, body.data.status)
+      }
+      updateData.status = body.data.status
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return reply.status(200).send(toEventDto(existing, undefined, 0))
+    }
+
+    const updated = await eventRepository.update(existing.id, updateData)
+    const result = updated ?? existing
+
+    if (body.data.status !== undefined && body.data.status !== existing.status) {
+      const actor = request.user as JwtPayload
+      await auditLogRepository.create({
+        action: 'event.status_change',
+        actorId: actor.sub,
+        actorRole: actor.role,
+        eventId: result.id,
+        targetId: result.id,
+        targetType: 'event',
+        metadata: { from: existing.status, to: body.data.status },
+      })
+    }
+
+    const registrations = await registrationRepository.findByEvent(existing.id, { page: 1, pageSize: 1 })
+    return reply.status(200).send(toEventDto(result, undefined, registrations.total))
+  })
+
   fastify.delete('/api/events/:id', { preHandler: [requireAuth, requireAdmin] }, async (request, reply) => {
     const parsed = EventIdParamsSchema.safeParse(request.params)
     if (!parsed.success) return replyValidationError(reply, parsed.error.issues, 'Invalid event id')
@@ -522,6 +720,9 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     await eventRepository.softDelete(event.id)
     return reply.status(204).send()
   })
+
+  fastify.post('/api/events/:id/restore', { preHandler: [requireAuth, requireAdmin] }, restoreEventHandler)
+  fastify.patch('/api/events/:id/restore', { preHandler: [requireAuth, requireAdmin] }, restoreEventHandler)
 
   fastify.post('/api/events/:id/clone', { preHandler: [requireAuth, requireAdmin] }, async (request, reply) => {
     const parsed = EventIdParamsSchema.safeParse(request.params)
@@ -733,6 +934,48 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(200).send(responseBody)
   })
 
+  fastify.get('/api/events/:id/confirmation', { preHandler: [requireAuth, requireRoles('admin', 'staff')] }, async (request, reply) => {
+    const params = EventIdParamsSchema.safeParse(request.params)
+    if (!params.success) return replyValidationError(reply, params.error.issues, 'Invalid event id')
+    const event = await requireEventOr404(reply, params.data.id)
+    if (!event) return
+    const allowed = await requireEventAccessOr403(reply, request.user as JwtPayload | undefined, event.id)
+    if (!allowed) return
+    validateOpenApiRequest({ path: '/events/{id}/confirmation', method: 'get', params: params.data })
+
+    const result = await registrationRepository.findByEvent(event.id, { page: 1, pageSize: 500 })
+    const relevantRegistrations = result.data.filter((registration) => (
+      registration.status === 'approved'
+      || registration.status === 'confirmed'
+      || registration.status === 'attended'
+    ))
+
+    const registrations = await Promise.all(relevantRegistrations.map(async (registration) => {
+      const contact = await contactRepository.findById(registration.contactId)
+      const confirmationStatus = toConfirmationStatus(registration)
+      return {
+        id: registration.id,
+        contact: {
+          name: contact?.name ?? 'Unknown Contact',
+          company: contact?.company ?? '-',
+        },
+        channel: toConfirmationChannel(event, contact),
+        ticketSentAt: registration.ticketToken ? (registration.approvedAt ?? registration.createdAt) : null,
+        confirmationStatus,
+      }
+    }))
+
+    const responseBody = {
+      stats: {
+        ticketSent: registrations.filter((registration) => registration.ticketSentAt !== null).length,
+        pendingConfirmation: registrations.filter((registration) => registration.confirmationStatus === 'pending').length,
+      },
+      registrations,
+    }
+    validateOpenApiResponse({ path: '/events/{id}/confirmation', method: 'get', status: 200, body: responseBody })
+    return reply.status(200).send(responseBody)
+  })
+
   fastify.get('/api/events/:id/checkin/stats', { preHandler: [requireAuth, requireRoles('admin', 'staff')] }, async (request, reply) => {
     const params = EventIdParamsSchema.safeParse(request.params)
     if (!params.success) return replyValidationError(reply, params.error.issues, 'Invalid event id')
@@ -818,29 +1061,78 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     if (!event) return
     validateOpenApiRequest({ path: '/events/{id}/audience-preview', method: 'post', params: params.data, body: request.body })
 
-    // Simulate complex criteria filtering
-    // In a real app we would pass these to contactRepository.countMatches or similar
-    const contacts = await contactRepository.findAll({ page: 1, pageSize: 1000 })
-    let filtered = contacts.data
+    // Delegate filtering to the repository (handles slug→ID conversion, excludes deleted)
+    const filters: import('../interfaces/repositories/IContactRepository.js').ContactFilters = {
+      consentStatus: 'active',       // Exclude suppressed contacts
+      flagCategory: 'NONE',          // Exclude flagged contacts
+    }
+    if (body.data.industries?.length) filters.industries = body.data.industries
+    if (body.data.cities?.length) filters.cities = body.data.cities
+    if (body.data.companySizes?.length) filters.companySizes = body.data.companySizes
+    if (body.data.jobTitles?.length) filters.jobTitles = body.data.jobTitles
 
-    if (body.data.industries && body.data.industries.length > 0) {
-      filtered = filtered.filter(c => c.industryId && body.data.industries!.includes(c.industryId))
-    }
-    if (body.data.cities && body.data.cities.length > 0) {
-      filtered = filtered.filter(c => c.city && body.data.cities!.includes(c.city))
-    }
-    if (body.data.companySizes && body.data.companySizes.length > 0) {
-      filtered = filtered.filter(c => c.companySize && body.data.companySizes!.includes(c.companySize))
+    // Fetch all matching contacts (use large pageSize, rely on total for accurate count)
+    const contacts = await contactRepository.findAll({ page: 1, pageSize: 10000 }, filters)
+    let matchedContacts = contacts.data
+    const matchTotal = contacts.total
+
+    // Apply behavior and lastAttendedBefore filters using registrationRepository
+    if (body.data.behavior?.length || body.data.lastAttendedBefore) {
+      const allRegistrations = await registrationRepository.findAll({ page: 1, pageSize: 10000 })
+      const regsByContact = new Map<string, typeof allRegistrations.data>()
+      for (const reg of allRegistrations.data) {
+        const list = regsByContact.get(reg.contactId) ?? []
+        list.push(reg)
+        regsByContact.set(reg.contactId, list)
+      }
+
+      if (body.data.behavior?.length) {
+        matchedContacts = matchedContacts.filter(c => {
+          const regs = regsByContact.get(c.id) ?? []
+          const attendedCount = regs.filter(r => r.status === 'attended').length
+          const totalRegs = regs.length
+          for (const b of body.data.behavior!) {
+            if (b === 'most_active' && attendedCount >= 3) return true
+            if (b === 'low_attendance' && totalRegs > 0 && attendedCount <= 1) return true
+            if (b === 'never_attended' && attendedCount === 0) return true
+          }
+          return false
+        })
+      }
+
+      if (body.data.lastAttendedBefore) {
+        const cutoff = new Date(body.data.lastAttendedBefore).getTime()
+        matchedContacts = matchedContacts.filter(c => {
+          const regs = regsByContact.get(c.id) ?? []
+          const lastAttended = regs
+            .filter(r => r.attendedAt)
+            .map(r => new Date(r.attendedAt!).getTime())
+            .sort((a, b) => b - a)[0]
+          return lastAttended !== undefined && lastAttended < cutoff
+        })
+      }
     }
 
-    const breakdown = {
-      industries: body.data.industries?.length ? body.data.industries.length * 5 : 0,
-      cities: body.data.cities?.length ? body.data.cities.length * 5 : 0,
-      behavior: body.data.behavior?.length ? body.data.behavior.length * 5 : 0,
+    // Build real breakdown from matched contacts
+    const industryBreakdown: Record<string, number> = {}
+    const cityBreakdown: Record<string, number> = {}
+    const companySizeBreakdown: Record<string, number> = {}
+    const jobTitleBreakdown: Record<string, number> = {}
+    for (const c of matchedContacts) {
+      if (c.industryId) industryBreakdown[c.industryId] = (industryBreakdown[c.industryId] ?? 0) + 1
+      if (c.city) cityBreakdown[c.city] = (cityBreakdown[c.city] ?? 0) + 1
+      if (c.companySize) companySizeBreakdown[c.companySize] = (companySizeBreakdown[c.companySize] ?? 0) + 1
+      if (c.jobTitleId) jobTitleBreakdown[c.jobTitleId] = (jobTitleBreakdown[c.jobTitleId] ?? 0) + 1
     }
+
+    const breakdown: Record<string, number> = {}
+    if (Object.keys(industryBreakdown).length) Object.assign(breakdown, industryBreakdown)
+    if (Object.keys(cityBreakdown).length) Object.assign(breakdown, cityBreakdown)
+    if (Object.keys(companySizeBreakdown).length) Object.assign(breakdown, companySizeBreakdown)
+    if (Object.keys(jobTitleBreakdown).length) Object.assign(breakdown, jobTitleBreakdown)
 
     const responseBody = {
-      matchCount: filtered.length,
+      matchCount: body.data.behavior?.length || body.data.lastAttendedBefore ? matchedContacts.length : matchTotal,
       breakdown,
     }
     validateOpenApiResponse({ path: '/events/{id}/audience-preview', method: 'post', status: 200, body: responseBody })

@@ -4,12 +4,12 @@ import { use } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { ClipboardList, BarChart3 } from 'lucide-react'
 import { FunnelVisualization } from '@/components/hub/FunnelVisualization'
 import { ActionCard } from '@/components/hub/ActionCard'
 import { SponsorPanel } from '@/components/features/vendors/SponsorPanel'
-import { SurveyBuilder } from '@/components/features/events/SurveyBuilder'
 import { getHealth } from '@/lib/benchmarks'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -208,8 +208,46 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
           </Card>
         </div>
       </div>
-      {/* Survey builder */}
-      <SurveyBuilder eventId={id} />
+      {/* Survey quick actions */}
+      <div className="grid md:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <ClipboardList size={18} className="text-violet-600" />
+              Survey Builder
+            </CardTitle>
+            <CardDescription>
+              Rancang kuesioner registrasi dan post-event untuk event ini.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild className="w-full">
+              <Link href={`/app/events/${id}/builder`}>
+                Buka Survey Builder
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <BarChart3 size={18} className="text-violet-600" />
+              Respons Survei
+            </CardTitle>
+            <CardDescription>
+              Lihat dan analisa jawaban peserta dari survei registrasi dan post-event.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild variant="outline" className="w-full">
+              <Link href={`/app/events/${id}/survey-responses`}>
+                Lihat Dashboard Respons
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

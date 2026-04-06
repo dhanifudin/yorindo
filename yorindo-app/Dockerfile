@@ -13,6 +13,9 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # Sentry DSN is baked into the client bundle at build time
 ARG NEXT_PUBLIC_SENTRY_DSN
 ENV NEXT_PUBLIC_SENTRY_DSN=$NEXT_PUBLIC_SENTRY_DSN
+# MSW mocks — set to 'true' only for preview builds (cd-app.yml)
+ARG NEXT_PUBLIC_ENABLE_MOCKS
+ENV NEXT_PUBLIC_ENABLE_MOCKS=$NEXT_PUBLIC_ENABLE_MOCKS
 RUN npm run build
 
 # Stage 3: Production runner (Next.js standalone output)

@@ -15,6 +15,7 @@ import { toast } from 'sonner'
 import type { Event, Contact } from '@/types/api'
 import { MockGoogleAuthDialog } from '@/components/auth/MockGoogleAuthDialog'
 import { GoogleIcon } from '@/components/icons/GoogleIcon'
+import { surveyCustomWidgets } from '@/components/features/surveys/widgets'
 
 const EVENT_TYPE_LABELS: Record<string, string> = {
   conference: 'Conference',
@@ -334,6 +335,7 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
                   uiSchema={survey.uiSchema}
                   formData={form.surveyAnswers}
                   validator={validator}
+                  widgets={surveyCustomWidgets}
                   onSubmit={({ formData }) => {
                     setForm((p) => ({ ...p, surveyAnswers: formData as Record<string, string> }))
                     setStep(2)

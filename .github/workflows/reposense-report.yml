@@ -1,0 +1,182 @@
+name: RepoSense Contribution Report
+
+on:
+  schedule:
+    # 10:00 UTC = 17:00 WIB (Jakarta, UTC+7), Monday-Friday
+    - cron: "0 10 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      since_date:
+        description: "Start date for report (YYYY-MM-DD). Leave empty for default."
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  generate-report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Compute WIB date (UTC+7)
+        id: wib-date
+        run: |
+          WIB_DATE=$(TZ="Asia/Jakarta" date +%Y-%m-%d)
+          echo "date=$WIB_DATE" >> $GITHUB_OUTPUT
+          echo "Report date (WIB): $WIB_DATE"
+
+      - name: Setup Java (required by RepoSense)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install octokit
+        run: npm install octokit
+
+      - name: Download RepoSense
+        run: |
+          REPOSENSE_VERSION="v4.0"
+          wget "https://github.com/reposense/RepoSense/releases/download/${REPOSENSE_VERSION}/RepoSense.jar" \
+            -O RepoSense.jar
+
+      - name: Parse repository info
+        id: repo-info
+        run: |
+          echo "owner=$(echo '${{ github.repository }}' | cut -d'/' -f1)" >> $GITHUB_OUTPUT
+          echo "repo=$(echo '${{ github.repository }}' | cut -d'/' -f2)" >> $GITHUB_OUTPUT
+
+      - name: Run RepoSense (code contributions)
+        run: |
+          SINCE_DATE=""
+          if [ -n "${{ github.event.inputs.since_date }}" ]; then
+            SINCE_DATE="--since ${{ github.event.inputs.since_date }}"
+          fi
+          java -jar RepoSense.jar \
+            --config ${{ github.workspace }} \
+            --output ${{ github.workspace }}/reposense-output/reposense-tmp \
+            $SINCE_DATE
+
+      - name: Flatten RepoSense output
+        run: |
+          REPOSENSE_DIR=$(find ${{ github.workspace }}/reposense-output/reposense-tmp -maxdepth 2 -name "index.html" -exec dirname {} \; | head -1)
+          mkdir -p ${{ github.workspace }}/reposense-output/reposense
+          if [ -n "$REPOSENSE_DIR" ]; then
+            echo "📁 Found RepoSense report at: $REPOSENSE_DIR"
+            cp -r "$REPOSENSE_DIR"/* ${{ github.workspace }}/reposense-output/reposense/
+            echo "✅ Copied RepoSense report to reposense/"
+            ls -la ${{ github.workspace }}/reposense-output/reposense/ | head -20
+          else
+            echo "⚠️ RepoSense report not found. Dumping structure:"
+            find ${{ github.workspace }}/reposense-output/reposense-tmp -type f | head -30
+            exit 1
+          fi
+
+      - name: Run GitHub API Report (issues, PRs, comments)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          SINCE_DATE=""
+          if [ -n "${{ github.event.inputs.since_date }}" ]; then
+            SINCE_DATE="--since ${{ github.event.inputs.since_date }}"
+          fi
+          node scripts/contribution-report.mjs \
+            --owner ${{ steps.repo-info.outputs.owner }} \
+            --repo ${{ steps.repo-info.outputs.repo }} \
+            --token ${{ secrets.GITHUB_TOKEN }} \
+            --output ${{ github.workspace }}/reposense-output \
+            $SINCE_DATE
+
+      - name: Organize into dated folder
+        run: |
+          REPORT_DATE="${{ steps.wib-date.outputs.date }}"
+          DATED_DIR="${{ github.workspace }}/reposense-output/reports/$REPORT_DATE"
+          mkdir -p "$DATED_DIR"
+
+          # Move report contents into dated folder
+          for item in reposense contribution-api; do
+            if [ -d "${{ github.workspace }}/reposense-output/$item" ]; then
+              mv "${{ github.workspace }}/reposense-output/$item" "$DATED_DIR/"
+            fi
+          done
+
+          # Create a redirect index.html at the dated folder root
+          cat > "$DATED_DIR/index.html" << 'REDIRECT'
+          <!DOCTYPE html>
+          <html>
+          <head><meta http-equiv="refresh" content="0;url=reposense/index.html"></head>
+          <body><a href="reposense/index.html">Redirecting to Code Contributions...</a></body>
+          </html>
+          REDIRECT
+
+          echo "✅ Organized report into reports/$REPORT_DATE/"
+
+      - name: Update manifest
+        run: |
+          REPORT_DATE="${{ steps.wib-date.outputs.date }}"
+          RUN_ID="${{ github.run_id }}"
+          TRIGGER="${{ github.event_name == 'workflow_dispatch' && 'manual' || 'schedule' }}"
+          MANIFEST="${{ github.workspace }}/reposense-output/manifest.json"
+
+          if [ -f "$MANIFEST" ]; then
+            # Append to existing manifest
+            node -e "
+              const fs = require('fs');
+              const manifest = JSON.parse(fs.readFileSync('$MANIFEST', 'utf-8'));
+              manifest.reports.push({ date: '$REPORT_DATE', runId: '$RUN_ID', trigger: '$TRIGGER' });
+              // Deduplicate by date (keep latest)
+              const seen = new Map();
+              manifest.reports.reverse().forEach(r => { if (!seen.has(r.date)) seen.set(r.date, r); });
+              manifest.reports = Array.from(seen.values()).reverse();
+              fs.writeFileSync('$MANIFEST', JSON.stringify(manifest, null, 2));
+            "
+            echo "✅ Updated existing manifest"
+          else
+            # Create new manifest
+            cat > "$MANIFEST" << MANIFEST_EOF
+          {
+            "timezone": "Asia/Jakarta",
+            "reports": [
+              { "date": "$REPORT_DATE", "runId": "$RUN_ID", "trigger": "$TRIGGER" }
+            ]
+          }
+          MANIFEST_EOF
+            echo "✅ Created new manifest"
+          fi
+
+      - name: Copy CNAME
+        run: |
+          cp ${{ github.workspace }}/CNAME ${{ github.workspace }}/reposense-output/CNAME
+
+      - name: Generate landing page
+        run: |
+          node scripts/generate-landing-page.mjs \
+            --manifest ${{ github.workspace }}/reposense-output/manifest.json \
+            --output ${{ github.workspace }}/reposense-output/index.html
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ${{ github.workspace }}/reposense-output
+          publish_branch: gh-pages
+          keep_files: true
+          commit_message: "chore: update contribution report ${{ steps.wib-date.outputs.date }} [${{ github.run_id }}]"

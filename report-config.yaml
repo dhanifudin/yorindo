@@ -1,0 +1,97 @@
+title: Yorindo Contribution Report
+repos:
+  - repo: https://github.com/dhanifudin/yorindo.git
+    groups:
+      - group-name: frontend
+        globs:
+          - "**.js"
+          - "**.ts"
+          - "**.tsx"
+          - "**.jsx"
+          - "**.css"
+          - "**.scss"
+          - "**.html"
+      - group-name: config
+        globs:
+          - "**.json"
+          - "**.yaml"
+          - "**.yml"
+      - group-name: docs
+        globs:
+          - "**.md"
+      - group-name: backend
+        globs:
+          - "**.sql"
+          - "**.sh"
+    branches:
+      - branch: main
+        ignore-glob-list:
+          - "**/node_modules/**"
+          - "**/dist/**"
+          - "**/.next/**"
+          - "**/package-lock.json"
+        ignore-authors-list:
+          - dependabot
+          - dependabot[bot]
+        authors:
+          - author-git-host-id: adyatma7
+            author-display-name: Adyatma
+            author-git-author-name: adyatma7
+            author-emails: []
+          - author-git-host-id: Adzky
+            author-display-name: Adzky
+            author-git-author-name: Adzky
+            author-emails: []
+          - author-git-host-id: azizaja5953
+            author-display-name: Aziz
+            author-git-author-name: azizaja5953
+            author-emails: []
+          - author-git-host-id: bogyramadhan-afk
+            author-display-name: Bogy Ramadhan
+            author-git-author-name: bogyramadhan-afk
+            author-emails: []
+          - author-git-host-id: dimlat
+            author-display-name: Dimlat
+            author-git-author-name: dimlat
+            author-emails: []
+          - author-git-host-id: dhanifudin
+            author-display-name: Dian
+            author-git-author-name: dian
+            author-emails:
+              - dhanifudin@gmail.com
+          - author-git-host-id: erick-surbakti
+            author-display-name: Erick
+            author-git-author-name: erick surbakti
+            author-emails:
+              - ericksubaktii@gmail.com
+          - author-git-host-id: GiovanniDimas
+            author-display-name: DimasG
+            author-git-author-name: GiovanniDimas
+            author-emails:
+              - giovannidimas32@gmail.com
+          - author-git-host-id: lanleimeng
+            author-display-name: Ramon
+            author-git-author-name: lanleimeng
+            author-emails: []
+          - author-git-host-id: ninditya
+            author-display-name: Ninditya
+            author-git-author-name: ninditya
+            author-emails:
+              - nnditya.salma16@gmail.com
+          - author-git-host-id: raquellajuvabel
+            author-display-name: Raquel
+            author-git-author-name: raquellajuvabel
+            author-emails: []
+          - author-git-host-id: Rinaaa13
+            author-display-name: Sarah Desmarina
+            author-git-author-name: Rinaaa13
+            author-emails: []
+          - author-git-host-id: thisiselysa
+            author-display-name: Elysia
+            author-git-author-name: thisiselysa
+            author-emails: []
+          - author-git-host-id: yohanesjuliantino12
+            author-display-name: Yohanes
+            author-git-author-name: yohanesjuliantino12
+            author-emails:
+              - yohanesjuliantino12@gmail.com

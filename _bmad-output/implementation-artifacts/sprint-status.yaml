@@ -1,5 +1,5 @@
 generated: 2026-03-19
-last_updated: 2026-04-02 (implemented Story 3.14 contact API JWT enforcement)
+last_updated: 2026-04-04 (stories 13-1 + 13-6 → done after code review fixes)
 project: yorindo
 project_key: NOKEY
 tracking_system: file-system
@@ -121,7 +121,7 @@ development_status:
   be-4-3-event-clone: review
   4-4-survey-template-builder: ready-for-dev               # REOPENED 2026-03-28: dual survey + GForms parity + response dashboard
   4-5-event-capacity-target-criteria-with-audience-preview: review  # AC update needed: multi-criteria + AI recommendation
-  be-4-5-audience-preview: review
+  be-4-5-audience-preview: done
   4-6-soft-delete-recovery-for-events-and-records: review
   4-7-event-pipeline-hub-shell-navigation: review
   be-4-7-event-pipeline-hub-shell-navigation: review
@@ -253,3 +253,17 @@ development_status:
   12-1-admin-intelligence-dashboard-page: backlog
   12-2-company-intelligence-view: backlog
   epic-12-retrospective: optional
+
+  # ─────────────────────────────────────────────
+  # EPIC 13: Demo Environment Deployment
+  # docker-compose.demo.yml, seed script with relative dates, HTTPS, reset-on-deploy
+  # Planning epic file: epics/epic-11-demo-environment-deployment.md
+  # ─────────────────────────────────────────────
+  epic-13: in-progress
+  13-1-docker-compose-demo-profile: done
+  13-2-demo-seed-script-with-relative-dates: review
+  13-3-deploy-reset-script-and-makefile: review
+  13-4-https-and-domain-configuration: review
+  13-5-seed-data-validation-tests: review
+  13-6-vps-frontend-preview-deployment: done
+  epic-13-retrospective: optional
