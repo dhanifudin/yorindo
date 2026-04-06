@@ -6,12 +6,13 @@ import { toast } from 'sonner'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { ClipboardList, BarChart3 } from 'lucide-react'
 import { FunnelVisualization } from '@/components/hub/FunnelVisualization'
 import { ActionCard } from '@/components/hub/ActionCard'
 import { SponsorPanel } from '@/components/features/vendors/SponsorPanel'
 import { getHealth } from '@/lib/benchmarks'
 import Link from 'next/link'
-import { ClipboardList, BarChart3 } from 'lucide-react'
+import Image from 'next/image'
 import type { Event } from '@/types/api'
 
 interface OverviewMetrics {
@@ -78,6 +79,29 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
 
   return (
     <div className="space-y-4">
+      {/* Banner image — Story 4.7 */}
+      <div className="relative aspect-video lg:aspect-[21/9] w-full rounded-xl overflow-hidden border bg-muted">
+        {event.bannerUrl ? (
+          <Image
+            src={event.bannerUrl}
+            alt={event.name}
+            fill
+            unoptimized
+            className="object-cover"
+            priority
+          />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-primary/10 via-muted to-primary/5 flex items-center justify-center">
+            <span className="text-muted-foreground/50 font-medium">Brosur Event</span>
+          </div>
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
+        <div className="absolute bottom-4 left-6 right-6">
+          <h1 className="text-3xl font-bold text-white drop-shadow-md">{event.name}</h1>
+          <p className="text-white/80 line-clamp-1">{event.venue ?? 'Venue belum ditentukan'}</p>
+        </div>
+      </div>
+
       {/* Main funnel grid */}
       <div className="grid lg:grid-cols-[2fr_1fr] gap-4">
         {/* Left: Funnel visualization */}

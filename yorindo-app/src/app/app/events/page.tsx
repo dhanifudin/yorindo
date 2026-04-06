@@ -6,6 +6,7 @@ import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { useEvents } from '@/hooks/useEvents'
 import { useEventStore } from '@/store/eventStore'
 import { EventCreateForm } from '@/components/features/events/EventCreateForm'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -316,19 +317,22 @@ export default function EventsPage() {
           <div className="flex-1 px-4 space-y-3 overflow-y-auto text-sm">
 
             {/* ── Banner image — tampil kalau ada ──────────────────────── */}
-            {detailEvent?.bannerUrl && (
-              <div className="rounded-lg overflow-hidden border border-border -mx-1">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+            <div className="relative aspect-video w-full rounded-lg overflow-hidden border border-border -mx-1 bg-muted">
+              {detailEvent?.bannerUrl ? (
+                <Image
                   src={detailEvent.bannerUrl}
-                  alt={`Banner ${detailEvent.name}`}
-                  className="w-full h-44 object-cover"
-                  onError={(e) => {
-                    ;(e.target as HTMLImageElement).parentElement!.style.display = 'none'
-                  }}
+                  alt={detailEvent.name}
+                  fill
+                  unoptimized
+                  className="object-cover"
                 />
-              </div>
-            )}
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-primary/10 via-muted to-primary/5 flex items-center justify-center">
+                  <span className="text-muted-foreground/30 text-xs font-medium">No Banner</span>
+                </div>
+              )}
+            </div>
+
 
             <div>
               <span className="text-muted-foreground">Status: </span>
@@ -532,15 +536,22 @@ export default function EventsPage() {
                       onClick={() => setDetailEvent(event)}
                     >
                       {/* Banner thumbnail di mobile card */}
-                      {event.bannerUrl && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={event.bannerUrl}
-                          alt=""
-                          className="w-full h-24 object-cover"
-                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-                        />
-                      )}
+                      <div className="relative aspect-video w-full overflow-hidden bg-muted">
+                        {event.bannerUrl ? (
+                          <Image
+                            src={event.bannerUrl}
+                            alt=""
+                            fill
+                            unoptimized
+                            className="object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-primary/10 via-muted to-primary/5 flex items-center justify-center">
+                            <span className="text-muted-foreground/30 text-[10px]">No Banner</span>
+                          </div>
+                        )}
+                      </div>
+
                       <div className="p-3">
                         <div className="flex items-center justify-between">
                           <span className="font-medium text-sm">{event.name}</span>
@@ -589,20 +600,23 @@ export default function EventsPage() {
                         <TableRow key={event.id} className="cursor-pointer" onClick={() => setDetailEvent(event)}>
                           {/* Thumbnail di tabel desktop */}
                           <TableCell onClick={(e) => e.stopPropagation()}>
-                            {event.bannerUrl ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                src={event.bannerUrl}
-                                alt=""
-                                className="w-12 h-8 object-cover rounded"
-                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-                              />
-                            ) : (
-                              <div className="w-12 h-8 rounded bg-muted flex items-center justify-center">
-                                <span className="text-[10px] text-muted-foreground">—</span>
-                              </div>
-                            )}
+                            <div className="relative w-12 h-8 rounded overflow-hidden bg-muted border">
+                              {event.bannerUrl ? (
+                                <Image
+                                  src={event.bannerUrl}
+                                  alt=""
+                                  fill
+                                  unoptimized
+                                  className="object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full bg-gradient-to-br from-primary/10 via-muted to-primary/5 flex items-center justify-center">
+                                  <span className="text-[8px] text-muted-foreground/50">N/A</span>
+                                </div>
+                              )}
+                            </div>
                           </TableCell>
+
                           <TableCell
                             className="font-medium"
                             onClick={(e) => { e.stopPropagation(); setSelectedEvent(event.id); router.push(`/app/events/${event.id}`) }}

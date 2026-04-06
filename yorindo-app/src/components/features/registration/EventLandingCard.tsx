@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { SponsorStrip } from '@/components/features/registration/SponsorStrip'
+import Image from 'next/image'
 
 interface EventLandingCardProps {
   event: Event & { sponsors?: PublicEventSponsor[] }
@@ -21,10 +22,27 @@ export function EventLandingCard({ event }: EventLandingCardProps) {
   return (
     <div className="max-w-md mx-auto px-4 py-8">
       <Card className="overflow-hidden shadow-sm">
-        <CardHeader className="bg-primary px-6 py-8 text-primary-foreground rounded-none">
-          <p className="text-primary-foreground/70 text-sm font-medium uppercase tracking-wide mb-2">Event</p>
-          <h1 className="text-2xl font-bold leading-tight">{event.name}</h1>
-        </CardHeader>
+        <div className="relative aspect-video w-full bg-primary overflow-hidden">
+          {event.bannerUrl ? (
+            <Image
+              src={event.bannerUrl}
+              alt={event.name}
+              fill
+              unoptimized
+              className="object-cover"
+              priority
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-primary/10 via-muted to-primary/5 flex items-center justify-center">
+              <span className="text-primary-foreground/50 font-medium">Brosur Event</span>
+            </div>
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex flex-col justify-end p-6">
+            <p className="text-white/70 text-xs font-semibold uppercase tracking-widest mb-1">Event Mendatang</p>
+            <h1 className="text-2xl font-bold text-white leading-tight drop-shadow-sm">{event.name}</h1>
+          </div>
+        </div>
+
 
         <CardContent className="px-6 py-6 space-y-4">
           <div>
