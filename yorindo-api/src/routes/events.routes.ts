@@ -1142,6 +1142,27 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(202).send(responseBody)
   })
 
+  // ── GET /api/events/:id/overview ─────────────────────────────────
+  fastify.get('/api/events/:id/overview', { preHandler: requireAuth }, async (request, reply) => {
+    const params = EventIdParamsSchema.safeParse(request.params)
+    if (!params.success) return replyValidationError(reply, params.error.issues, 'Invalid event id')
+    const event = await requireEventOr404(reply, params.data.id)
+    if (!event) return
+
+    const metrics = await eventRepository.getOverviewMetrics(params.data.id)
+    const responseBody = {
+      blastCount:       metrics.invited,
+      registrationCount: metrics.registered,
+      approvedCount:    metrics.approved,
+      attendedCount:    metrics.attended,
+      pendingApprovals: metrics.registered - metrics.approved,
+      seatsRemaining:   Math.max((event.capacity ?? 0) - metrics.approved, 0),
+      daysUntilEvent:   Math.ceil((new Date(event.startDate).getTime() - Date.now()) / 86400000),
+      lastBlastAt:      null,
+    }
+    return reply.status(200).send(responseBody)
+  })
+
   fastify.get('/api/events/:id/sponsors', { preHandler: [requireAuth, requireRoles('admin', 'viewer')] }, async (request, reply) => {
     const params = EventIdParamsSchema.safeParse(request.params)
     if (!params.success) return replyValidationError(reply, params.error.issues, 'Invalid event id')
