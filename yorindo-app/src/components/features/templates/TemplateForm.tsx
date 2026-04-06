@@ -83,7 +83,7 @@ export default function TemplateForm({
   const bgOpacity = watch('bgOpacity')
   const subject = watch('subject') ?? ''
 
-  const [logoPreview, setLogoPreview] = useState<string>(logoUrl)
+  const [imagePreview, setImagePreview] = useState<string>(logoUrl)
 
   // Auto default template when type or channel changes
   useEffect(() => {
@@ -97,18 +97,18 @@ export default function TemplateForm({
     const reader = new FileReader()
     reader.onload = (ev) => {
       const base64 = ev.target?.result as string
-      setLogoPreview(base64)
+      setImagePreview(base64)
       setValue('logoUrl', base64)
     }
     reader.readAsDataURL(file)
   }
 
   const removeLogo = () => {
-    setLogoPreview('')
+    setImagePreview('')
     setValue('logoUrl', '')
   }
 
-  const handleDragStart = (e: React.DragEvent, variable: string) => {
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, variable: string) => {
     e.dataTransfer.setData('text/plain', variable)
   }
 
@@ -208,9 +208,33 @@ export default function TemplateForm({
             </div>
           </div>
 
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>Jenis Gambar</Label>
+              <select {...register('imageType')} className="w-full h-11 border rounded-lg px-4 text-sm">
+                <option value="header">Header</option>
+                <option value="background">Background</option>
+              </select>
+            </div>
+            {imageType === 'background' && (
+              <div>
+                <Label>Opacity Background: {bgOpacity ?? 40}%</Label>
+                <input
+                  type="range"
+                  min={10}
+                  max={70}
+                  value={bgOpacity ?? 40}
+                  onChange={(e) => setValue('bgOpacity', Number(e.target.value))}
+                  className="w-full mt-2"
+                />
+              </div>
+            )}
+          </div>
+
           {/* Upload Gambar */}
           <div>
             <Label>Upload Gambar</Label>
+            <p className="text-xs text-muted-foreground mb-2">Gambar akan digunakan sebagai {imageType === 'background' ? 'background' : 'header'}.</p>
             <div className="flex gap-4 mt-2 items-start">
               <label className="cursor-pointer flex-1 border-2 border-dashed border-input hover:border-primary rounded-2xl p-8 text-center">
                 <Upload className="mx-auto mb-3 w-8 h-8" />
@@ -218,9 +242,9 @@ export default function TemplateForm({
                 <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
               </label>
 
-              {logoPreview && (
+              {imagePreview && (
                 <div className="flex flex-col items-center gap-2">
-                  <img src={logoPreview} alt="preview" className="h-20 w-20 object-contain border rounded-xl" />
+                  <img src={imagePreview} alt="preview" className="h-20 w-20 object-contain border rounded-xl" />
                   <Button type="button" variant="destructive" size="sm" onClick={removeLogo}>
                     Hapus
                   </Button>
@@ -261,7 +285,7 @@ export default function TemplateForm({
             body={bodyValue}
             type={type}
             channel={channel}
-            logoUrl={logoPreview}
+            logoUrl={imagePreview}
             imageType={imageType}
             bgOpacity={bgOpacity}
             subject={subject}
