@@ -377,19 +377,19 @@ describe('InMemorySurveyRepository', () => {
   beforeEach(() => { repo = new InMemorySurveyRepository() })
 
   it('returns a schema for the seeded survey event', async () => {
-    const schema = await repo.findByEventId(SEED_EVENT_IDS[2]!)
+    const schema = await repo.findByEventId(SEED_EVENT_IDS[2]!, 'registration')
     expect(schema).not.toBeNull()
     expect(schema!.fields.length).toBeGreaterThanOrEqual(3)
   })
 
   it('returns seeded responses for the seeded survey event', async () => {
-    const responses = await repo.getResponsesByEvent(SEED_EVENT_IDS[2]!)
-    expect(responses.length).toBe(5)
+    const { responses } = await repo.getResponsesByEvent(SEED_EVENT_IDS[2]!, 'registration')
+    expect(responses.length).toBe(7)
   })
 
   it('saves new seeded-registration responses under the event bucket', async () => {
-    await repo.saveResponse(SEED_REGISTRATION_IDS[5]!, { interest: 'Fintech' })
-    const responses = await repo.getResponsesByEvent(SEED_EVENT_IDS[2]!)
-    expect(responses.length).toBe(6)
+    await repo.saveResponse(SEED_REGISTRATION_IDS[5]!, SEED_EVENT_IDS[2]!, 'registration', { interest: 'Fintech' })
+    const { responses } = await repo.getResponsesByEvent(SEED_EVENT_IDS[2]!, 'registration')
+    expect(responses.length).toBe(8)
   })
 })

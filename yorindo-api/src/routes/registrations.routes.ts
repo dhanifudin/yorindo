@@ -89,7 +89,7 @@ function toRegistrationWithContactDto(registration: Registration, contact: Conta
 }
 
 async function getSurveyAnswers(registration: Registration) {
-  const responses = await surveyRepository.getResponsesByEvent(registration.eventId)
+  const { responses } = await surveyRepository.getResponsesByEvent(registration.eventId, 'registration')
   return responses.find((response) => response.registrationId === registration.id)?.answers ?? {}
 }
 
@@ -174,7 +174,7 @@ export const registrationsRoutes: FastifyPluginAsync = async (fastify) => {
     })
 
     if (payload.surveyAnswers && Object.keys(payload.surveyAnswers).length > 0) {
-      await surveyRepository.saveResponse(registration.id, payload.surveyAnswers)
+      await surveyRepository.saveResponse(registration.id, registration.eventId, 'registration', payload.surveyAnswers)
     }
 
     const responseBody = toRegistrationDto(registration, payload.surveyAnswers ?? {})
