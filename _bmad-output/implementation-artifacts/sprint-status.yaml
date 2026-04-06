@@ -120,6 +120,7 @@ development_status:
   4-3-event-clone: review
   be-4-3-event-clone: review
   4-4-survey-template-builder: ready-for-dev               # REOPENED 2026-03-28: dual survey + GForms parity + response dashboard
+  be-4-4-survey-storage-responses-export: ready-for-dev    # Phase 2 BE: dual survey JSONB, response aggregation, XLSX export
   4-5-event-capacity-target-criteria-with-audience-preview: review  # AC update needed: multi-criteria + AI recommendation
   be-4-5-audience-preview: done
   4-6-soft-delete-recovery-for-events-and-records: review

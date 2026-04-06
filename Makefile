@@ -1,12 +1,17 @@
 DEMO_COMPOSE = docker compose
-APP_COMPOSE = docker compose -f docker-compose.app.yml
+DEV_COMPOSE  = docker compose -f docker-compose.dev.yml
+APP_COMPOSE  = docker compose -f docker-compose.app.yml
 DEMO_COMPOSE_FILE = docker-compose.yml
 
 # Run commands inside the api container
-API_EXEC = $(DEMO_COMPOSE) exec -T api
+API_EXEC     = $(DEMO_COMPOSE) exec -T api
 API_EXEC_TTY = $(DEMO_COMPOSE) exec api
+DEV_API_EXEC = $(DEV_COMPOSE) exec -T api
+DEV_API_TTY  = $(DEV_COMPOSE) exec api
 
-.PHONY: deploy-demo reset-demo stop-demo logs-demo migrate-demo seed-demo deploy-app stop-app logs-app
+.PHONY: deploy-demo reset-demo stop-demo logs-demo migrate-demo seed-demo \
+        up-dev stop-dev clean-dev logs-dev migrate-dev seed-dev setup-dev \
+        deploy-app stop-app logs-app
 
 ## Deploy demo from scratch (wipe data, pull images, migrate, seed)
 deploy-demo:
@@ -90,6 +95,70 @@ migrate-demo:
 seed-demo:
 	@echo "🌱 Running seed..."
 	$(API_EXEC_TTY) npx tsx scripts/seed.ts --demo
+
+# ─────────────────────────────────────────────
+# Local Development (docker-compose.dev.yml)
+# Hot-reload: API @ http://localhost:3000
+#             App @ http://localhost:5173
+# ─────────────────────────────────────────────
+
+## Start local dev environment (hot-reload, no pre-built images)
+up-dev:
+	@echo "═══════════════════════════════════════════"
+	@echo "🛠️  Starting Local Dev Environment"
+	@echo "═══════════════════════════════════════════"
+	$(DEV_COMPOSE) up -d
+	@echo ""
+	@echo "✅ Dev environment started."
+	@echo "   API: http://localhost:3000"
+	@echo "   App: http://localhost:5173"
+	@echo "   Run 'make logs-dev' to follow logs."
+
+## Stop local dev environment (preserve volumes)
+stop-dev:
+	@echo "⏹️  Stopping dev services..."
+	$(DEV_COMPOSE) down
+	@echo "✅ Dev stopped. node_modules volumes preserved."
+
+## Wipe all dev data (postgres + node_modules volumes) — full clean slate
+clean-dev:
+	@echo "🗑️  Removing all dev containers and volumes..."
+	$(DEV_COMPOSE) down -v
+	@echo "✅ Clean. Run 'make setup-dev' to start fresh."
+
+## Follow dev logs (all services)
+logs-dev:
+	$(DEV_COMPOSE) logs -f
+
+## Run migrations inside dev api container
+migrate-dev:
+	@echo "🔄 Running migrations in dev..."
+	$(DEV_COMPOSE) exec api npx tsx scripts/migrate.ts
+
+## Run basic dev seed (10 contacts, 3 events)
+seed-dev:
+	@echo "🌱 Running dev seed..."
+	$(DEV_COMPOSE) exec api npx tsx scripts/seed.ts
+
+## Migrate + seed in one step (first-time local setup)
+setup-dev:
+	@echo "═══════════════════════════════════════════"
+	@echo "⚙️  Setting up Local Dev Database"
+	@echo "═══════════════════════════════════════════"
+	@echo "🔌 Starting services..."
+	$(DEV_COMPOSE) up -d
+	@echo "⏳ Waiting for postgres..."
+	@until $(DEV_COMPOSE) exec -T postgres pg_isready -U yorindo -d yorindo > /dev/null 2>&1; do printf "."; sleep 1; done
+	@echo ""
+	@echo "⏳ Waiting for api npm install..."
+	@until $(DEV_COMPOSE) exec -T api sh -c "[ -f /app/node_modules/.bin/tsx ]" > /dev/null 2>&1; do printf "."; sleep 2; done
+	@echo ""
+	@echo "🔄 Running migrations..."
+	$(DEV_COMPOSE) exec api npx tsx scripts/migrate.ts
+	@echo "🌱 Running seed..."
+	$(DEV_COMPOSE) exec api npx tsx scripts/seed.ts
+	@echo ""
+	@echo "✅ Dev database ready."
 
 # ─────────────────────────────────────────────
 # App Preview (app.dhanifudin.com)

@@ -135,11 +135,6 @@ const BlastBodySchema = z.object({
   }
 })
 
-const SurveySchemaBody = z.object({
-  schema: z.record(z.string(), z.unknown()),
-  uiSchema: z.record(z.string(), z.unknown()).default({}),
-})
-
 const AudienceRecommendationQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(50).default(20),
   minScore: z.coerce.number().int().min(0).max(100).default(0),
@@ -162,9 +157,8 @@ const UpdateEventSponsorBodySchema = z.object({
 })
 
 const AudiencePreviewBodySchema = z.object({
-  industries: z.array(z.string()).optional(),
+  serviceTypes: z.array(z.string()).optional(),
   cities: z.array(z.string()).optional(),
-  companySizes: z.array(z.string()).optional(),
   jobTitles: z.array(z.string()).optional(),
   behavior: z.array(z.enum(['most_active', 'low_attendance', 'never_attended'])).optional(),
   lastAttendedBefore: z.string().datetime({ offset: true }).optional(),
@@ -224,45 +218,6 @@ function toRegistrationDto(registration: Registration, surveyAnswers: Record<str
     attendedAt: registration.attendedAt,
     createdAt: registration.createdAt,
   }
-}
-
-function fieldsToSurveyContract(fields: Array<{ key: string; label: string; type: string; required: boolean; options?: string[] }>) {
-  const schema: Record<string, unknown> = {
-    type: 'object',
-    properties: {},
-    required: [] as string[],
-  }
-  const uiSchema: Record<string, unknown> = {}
-
-  for (const field of fields) {
-    const properties = schema.properties as Record<string, Record<string, unknown>>
-    const property: Record<string, unknown> = { title: field.label }
-
-    if (field.type === 'number') {
-      property.type = 'number'
-    } else if (field.type === 'checkbox') {
-      property.type = 'array'
-      property.items = { type: 'string', enum: field.options ?? [] }
-      property.uniqueItems = true
-      uiSchema[field.key] = { 'ui:widget': 'checkboxes' }
-    } else if (field.type === 'radio') {
-      property.type = 'string'
-      property.enum = field.options ?? []
-      uiSchema[field.key] = { 'ui:widget': 'radio' }
-    } else if (field.type === 'select') {
-      property.type = 'string'
-      property.enum = field.options ?? []
-    } else {
-      property.type = 'string'
-    }
-
-    properties[field.key] = property
-    if (field.required) {
-      ; (schema.required as string[]).push(field.key)
-    }
-  }
-
-  return { schema, uiSchema }
 }
 
 function toRegistrationWithContactDto(registration: Registration, contact: Awaited<ReturnType<typeof contactRepository.findById>>) {
@@ -492,7 +447,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     const result = await eventRepository.findAll(paginationParams, eventFilters)
 
     const data = await Promise.all(result.data.map(async (event) => {
-      const surveySchema = await surveyRepository.findByEventId(event.id)
+      const surveySchema = await surveyRepository.findByEventId(event.id, 'registration')
       const registrations = await registrationRepository.findByEvent(event.id, { page: 1, pageSize: 1 })
       return toEventDto(event, surveySchema?.fields ?? {}, registrations.total)
     }))
@@ -609,7 +564,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     if (!event) return
     const allowed = await requireEventAccessOr403(reply, request.user as JwtPayload | undefined, event.id)
     if (!allowed) return
-    const surveySchema = await surveyRepository.findByEventId(event.id)
+    const surveySchema = await surveyRepository.findByEventId(event.id, 'registration')
     validateOpenApiRequest({ path: '/events/{id}', method: 'get', params: parsed.data })
     const registrations = await registrationRepository.findByEvent(event.id, { page: 1, pageSize: 1 })
     const responseBody = toEventDto(event, surveySchema?.fields ?? {}, registrations.total)
@@ -762,14 +717,15 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       deletedAt: null,
     })
 
-    const surveySchema = await surveyRepository.findByEventId(event.id)
+    const surveySchema = await surveyRepository.findByEventId(event.id, 'registration')
     let clonedSurveySchemaFields: any = {}
 
     if (surveySchema) {
-      const newSurveySchemaId = `${clonedEvent.id}-survey`
-      const clonedSurvey = await surveyRepository.upsert(clonedEvent.id, {
+      const newSurveySchemaId = `${clonedEvent.id}-survey-registration`
+      const clonedSurvey = await surveyRepository.upsert(clonedEvent.id, 'registration', {
         id: newSurveySchemaId,
         eventId: clonedEvent.id,
+        type: 'registration',
         fields: surveySchema.fields ? JSON.parse(JSON.stringify(surveySchema.fields)) : [],
         schema: surveySchema.schema ? JSON.parse(JSON.stringify(surveySchema.schema)) : undefined,
         uiSchema: surveySchema.uiSchema ? JSON.parse(JSON.stringify(surveySchema.uiSchema)) : undefined,
@@ -996,58 +952,6 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(200).send(responseBody)
   })
 
-  fastify.get('/api/events/:id/survey', async (request, reply) => {
-    const params = EventIdParamsSchema.safeParse(request.params)
-    if (!params.success) return replyValidationError(reply, params.error.issues, 'Invalid event id')
-    const event = await requireEventOr404(reply, params.data.id)
-    if (!event) return
-    const user = request.user as JwtPayload | undefined
-    if (user) {
-      const allowed = await requireEventAccessOr403(reply, user, event.id)
-      if (!allowed) return
-    }
-    validateOpenApiRequest({ path: '/events/{id}/survey', method: 'get', params: params.data })
-    const schema = await surveyRepository.findByEventId(event.id)
-    if (!schema) {
-      return reply.status(404).send({
-        error: { code: 'NOT_FOUND', message: 'Survey schema not found', details: [] },
-      })
-    }
-    const surveyPayload = schema.schema ? { schema: schema.schema, uiSchema: schema.uiSchema ?? {} } : fieldsToSurveyContract(schema.fields)
-    validateOpenApiResponse({ path: '/events/{id}/survey', method: 'get', status: 200, body: surveyPayload })
-    return reply.status(200).send(surveyPayload)
-  })
-
-  fastify.put('/api/events/:id/survey', { preHandler: [requireAuth, requireAdmin] }, async (request, reply) => {
-    const params = EventIdParamsSchema.safeParse(request.params)
-    const body = SurveySchemaBody.safeParse(request.body)
-    if (!params.success || !body.success) {
-      return replyValidationError(reply, [
-        ...(params.success ? [] : params.error.issues),
-        ...(body.success ? [] : body.error.issues),
-      ], 'Invalid survey schema payload')
-    }
-    const event = await requireEventOr404(reply, params.data.id)
-    if (!event) return
-    validateOpenApiRequest({ path: '/events/{id}/survey', method: 'put', params: params.data, body: body.data })
-    const existing = await surveyRepository.findByEventId(event.id)
-    const savedSurvey = await surveyRepository.upsert(event.id, {
-      id: existing?.id ?? `${event.id}-survey`,
-      eventId: event.id,
-      fields: existing?.fields ?? [],
-      schema: body.data.schema,
-      uiSchema: body.data.uiSchema,
-      createdAt: existing?.createdAt ?? new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    })
-    const responseBody = {
-      schema: savedSurvey.schema ?? {},
-      uiSchema: savedSurvey.uiSchema ?? {},
-    }
-    validateOpenApiResponse({ path: '/events/{id}/survey', method: 'put', status: 200, body: responseBody })
-    return reply.status(200).send(responseBody)
-  })
-
   fastify.post('/api/events/:id/audience-preview', { preHandler: [requireAuth, requireAdmin] }, async (request, reply) => {
     const params = EventIdParamsSchema.safeParse(request.params)
     const body = AudiencePreviewBodySchema.safeParse(request.body)
@@ -1066,9 +970,8 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       consentStatus: 'active',       // Exclude suppressed contacts
       flagCategory: 'NONE',          // Exclude flagged contacts
     }
-    if (body.data.industries?.length) filters.industries = body.data.industries
+    if (body.data.serviceTypes?.length) filters.serviceTypes = body.data.serviceTypes
     if (body.data.cities?.length) filters.cities = body.data.cities
-    if (body.data.companySizes?.length) filters.companySizes = body.data.companySizes
     if (body.data.jobTitles?.length) filters.jobTitles = body.data.jobTitles
 
     // Fetch all matching contacts (use large pageSize, rely on total for accurate count)
@@ -1114,21 +1017,18 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     // Build real breakdown from matched contacts
-    const industryBreakdown: Record<string, number> = {}
+    const serviceTypeBreakdown: Record<string, number> = {}
     const cityBreakdown: Record<string, number> = {}
-    const companySizeBreakdown: Record<string, number> = {}
     const jobTitleBreakdown: Record<string, number> = {}
     for (const c of matchedContacts) {
-      if (c.industryId) industryBreakdown[c.industryId] = (industryBreakdown[c.industryId] ?? 0) + 1
+      if (c.serviceType) serviceTypeBreakdown[c.serviceType] = (serviceTypeBreakdown[c.serviceType] ?? 0) + 1
       if (c.city) cityBreakdown[c.city] = (cityBreakdown[c.city] ?? 0) + 1
-      if (c.companySize) companySizeBreakdown[c.companySize] = (companySizeBreakdown[c.companySize] ?? 0) + 1
-      if (c.jobTitleId) jobTitleBreakdown[c.jobTitleId] = (jobTitleBreakdown[c.jobTitleId] ?? 0) + 1
+      if (c.jobTitle) jobTitleBreakdown[c.jobTitle] = (jobTitleBreakdown[c.jobTitle] ?? 0) + 1
     }
 
     const breakdown: Record<string, number> = {}
-    if (Object.keys(industryBreakdown).length) Object.assign(breakdown, industryBreakdown)
+    if (Object.keys(serviceTypeBreakdown).length) Object.assign(breakdown, serviceTypeBreakdown)
     if (Object.keys(cityBreakdown).length) Object.assign(breakdown, cityBreakdown)
-    if (Object.keys(companySizeBreakdown).length) Object.assign(breakdown, companySizeBreakdown)
     if (Object.keys(jobTitleBreakdown).length) Object.assign(breakdown, jobTitleBreakdown)
 
     const responseBody = {
@@ -1158,9 +1058,8 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
         name: contact.name,
         email: contact.email ?? '',
         phone: contact.phone,
-        industryId: contact.industryId ?? '',
+        serviceType: contact.serviceType ?? '',
         city: contact.city ?? '',
-        companySize: contact.companySize ?? '',
         score: Math.max(0, 100 - index),
         factors: [
           `event:${event.slug}`,
@@ -1241,6 +1140,27 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     }
     validateOpenApiResponse({ path: '/events/{id}/blast', method: 'post', status: 202, body: responseBody })
     return reply.status(202).send(responseBody)
+  })
+
+  // ── GET /api/events/:id/overview ─────────────────────────────────
+  fastify.get('/api/events/:id/overview', { preHandler: requireAuth }, async (request, reply) => {
+    const params = EventIdParamsSchema.safeParse(request.params)
+    if (!params.success) return replyValidationError(reply, params.error.issues, 'Invalid event id')
+    const event = await requireEventOr404(reply, params.data.id)
+    if (!event) return
+
+    const metrics = await eventRepository.getOverviewMetrics(params.data.id)
+    const responseBody = {
+      blastCount:       metrics.invited,
+      registrationCount: metrics.registered,
+      approvedCount:    metrics.approved,
+      attendedCount:    metrics.attended,
+      pendingApprovals: metrics.registered - metrics.approved,
+      seatsRemaining:   Math.max((event.capacity ?? 0) - metrics.approved, 0),
+      daysUntilEvent:   Math.ceil((new Date(event.startDate).getTime() - Date.now()) / 86400000),
+      lastBlastAt:      null,
+    }
+    return reply.status(200).send(responseBody)
   })
 
   fastify.get('/api/events/:id/sponsors', { preHandler: [requireAuth, requireRoles('admin', 'viewer')] }, async (request, reply) => {

@@ -1,0 +1,428 @@
+﻿
+[7m[1m[36m RUN [39m[22m[27m [36mv1.6.1[39m [90mC:/Users/handr/OneDrive/Desktop/Capstone/New/yorindo/yorindo-api[39m
+
+node.exe : (node:12232) 
+[DEP0169] 
+DeprecationWarning: 
+`url.parse()` behavior is 
+not standardized and 
+prone to errors that have 
+security implications. 
+Use the WHATWG URL API 
+instead. CVEs are not 
+issued for `url.parse()` 
+vulnerabilities.
+At line:1 char:1
++ & "C:\Program 
+Files\nodejs/node.exe" 
+"C:\Program 
+Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo        
+      : NotSpecified: ((  
+  node:12232) [D...ulne   
+ rabilities.:String) [    
+], RemoteException
+    + FullyQualifiedError 
+   Id : NativeCommandErr  
+  or
+ 
+(Use `node 
+--trace-deprecation ...` 
+to show where the warning 
+was created)
+[90mstdout[2m | src/tests/etl.service.test.ts[2m > [22m[2mEtlService[2m > [22m[2mupserts high-confidence rows and creates registrations when eventId is provided[22m[39m
+[ETL] Upload registered {
+  uploadId: [32m'sftmdg5o006q61opmzb23dzs'[39m,
+  filename: [32m'etl-service-1775235691969-0.8652657911420174.xlsx'[39m,
+  filePath: [32m'C:\\Users\\handr\\AppData\\Local\\Temp\\etl-service-1775235691969-0.8652657911420174.xlsx'[39m,
+  uploadedBy: [32m'user-1'[39m,
+  eventId: [32m'event-1'[39m,
+  uploadSource: [32m'onsite_import'[39m
+}
+
+[90mstdout[2m | src/tests/etl.service.test.ts[2m > [22m[2mEtlService[2m > [22m[2mupserts high-confidence rows and creates registrations when eventId is provided[22m[39m
+[ETL] File parsed {
+  uploadId: [32m'sftmdg5o006q61opmzb23dzs'[39m,
+  filename: [32m'etl-service-1775235691969-0.8652657911420174.xlsx'[39m,
+  rowCount: [33m2[39m,
+  batchSize: [33m50[39m,
+  sheetName: [32m'Sheet1'[39m
+}
+[ETL] Processing batch {
+  uploadId: [32m'sftmdg5o006q61opmzb23dzs'[39m,
+  filename: [32m'etl-service-1775235691969-0.8652657911420174.xlsx'[39m,
+  batchIndex: [33m1[39m,
+  batchCount: [33m1[39m,
+  batchLength: [33m2[39m
+}
+[ETL] Batch completed {
+  uploadId: [32m'sftmdg5o006q61opmzb23dzs'[39m,
+  filename: [32m'etl-service-1775235691969-0.8652657911420174.xlsx'[39m,
+  batchIndex: [33m1[39m,
+  processedSoFar: [33m2[39m,
+  upserted: [33m2[39m,
+  flagged: [33m0[39m,
+  failed: [33m0[39m
+}
+[ETL] Upload finished {
+  uploadId: [32m'sftmdg5o006q61opmzb23dzs'[39m,
+  filename: [32m'etl-service-1775235691969-0.8652657911420174.xlsx'[39m,
+  status: [32m'completed'[39m,
+  processed: [33m2[39m,
+  upserted: [33m2[39m,
+  flagged: [33m0[39m,
+  failed: [33m0[39m
+}
+
+[90mstdout[2m | src/tests/etl.service.test.ts[2m > [22m[2mEtlService[2m > [22m[2mcreates flagged records for low-confidence rows without touching contacts[22m[39m
+[ETL] Upload registered {
+  uploadId: [32m'tgrfyuvaut2fg15d1d55hvq1'[39m,
+  filename: [32m'etl-service-1775235691998-0.28459194388662823.xlsx'[39m,
+  filePath: [32m'C:\\Users\\handr\\AppData\\Local\\Temp\\etl-service-1775235691998-0.28459194388662823.xlsx'[39m,
+  uploadedBy: [32m'user-1'[39m,
+  eventId: [1mnull[22m,
+  uploadSource: [32m'etl_import'[39m
+}
+[ETL] File parsed {
+  uploadId: [32m'tgrfyuvaut2fg15d1d55hvq1'[39m,
+  filename: [32m'etl-service-1775235691998-0.28459194388662823.xlsx'[39m,
+  rowCount: [33m1[39m,
+  batchSize: [33m50[39m,
+  sheetName: [32m'Sheet1'[39m
+}
+[ETL] Processing batch {
+  uploadId: [32m'tgrfyuvaut2fg15d1d55hvq1'[39m,
+  filename: [32m'etl-service-1775235691998-0.28459194388662823.xlsx'[39m,
+  batchIndex: [33m1[39m,
+  batchCount: [33m1[39m,
+  batchLength: [33m1[39m
+}
+[ETL] Batch completed {
+  uploadId: [32m'tgrfyuvaut2fg15d1d55hvq1'[39m,
+  filename: [32m'etl-service-1775235691998-0.28459194388662823.xlsx'[39m,
+  batchIndex: [33m1[39m,
+  processedSoFar: [33m1[39m,
+  upserted: [33m0[39m,
+  flagged: [33m1[39m,
+  failed: [33m0[39m
+}
+[ETL] Upload finished {
+  uploadId: [32m'tgrfyuvaut2fg15d1d55hvq1'[39m,
+  filename: [32m'etl-service-1775235691998-0.28459194388662823.xlsx'[39m,
+  status: [32m'completed'[39m,
+  processed: [33m1[39m,
+  upserted: [33m0[39m,
+  flagged: [33m1[39m,
+  failed: [33m0[39m
+}
+
+[90mstderr[2m | src/test
+s/etl.service.test.ts[2m 
+> [22m[2mEtlService[2m 
+> [22m[2mcreates 
+flagged records for 
+low-confidence rows 
+without touching 
+contacts[22m[39m
+[ETL] Row flagged {
+  uploadId: [32m'tgrfyuva
+ut2fg15d1d55hvq1'[39m,
+  filename: [32m'etl-serv
+ice-1775235691998-0.284591
+94388662823.xlsx'[39m,
+  batchIndex: [33m1[39m,
+  rowIndexInBatch: 
+[33m0[39m,
+  summary: {
+    name: [32m'Low 
+Confidence'[39m,
+    phone: [32m'+62812000
+00000'[39m,
+    email: [32m'john@exam
+ple.com'[39m,
+    confidence: 
+[33m0.4[39m,
+    flags: [ [32m'low_con
+fidence'[39m ],
+    city: 
+[32m'Jakarta'[39m,
+    company: [32m'PT 
+Test'[39m,
+    rawCity: 
+[1mnull[22m,
+    rawIndustry: 
+[1mnull[22m,
+    rawJobTitle: 
+[1mnull[22m,
+    eventDate: 
+[32m'2026-03-31'[39m,
+    dateParseFlag: 
+[1mnull[22m
+  }
+}
+
+[90mstdout[2m | src/tests/etl.service.test.ts[2m > [22m[2mEtlService[2m > [22m[2mhandles empty files gracefully[22m[39m
+[ETL] Upload registered {
+  uploadId: [32m'o64v0lu53jk0xnl2fnjhk9be'[39m,
+  filename: [32m'etl-service-1775235692020-0.75010165730625.xlsx'[39m,
+  filePath: [32m'C:\\Users\\handr\\AppData\\Local\\Temp\\etl-service-1775235692020-0.75010165730625.xlsx'[39m,
+  uploadedBy: [32m'user-1'[39m,
+  eventId: [1mnull[22m,
+  uploadSource: [32m'etl_import'[39m
+}
+
+[90mstdout[2m | src/tests/etl.service.test.ts[2m > [22m[2mEtlService[2m > [22m[2mhandles empty files gracefully[22m[39m
+[ETL] File parsed {
+  uploadId: [32m'o64v0lu53jk0xnl2fnjhk9be'[39m,
+  filename: [32m'etl-service-1775235692020-0.75010165730625.xlsx'[39m,
+  rowCount: [33m0[39m,
+  batchSize: [33m50[39m,
+  sheetName: [32m'Sheet1'[39m
+}
+[ETL] Upload finished {
+  uploadId: [32m'o64v0lu53jk0xnl2fnjhk9be'[39m,
+  filename: [32m'etl-service-1775235692020-0.75010165730625.xlsx'[39m,
+  status: [32m'completed'[39m,
+  processed: [33m0[39m,
+  upserted: [33m0[39m,
+  flagged: [33m0[39m,
+  failed: [33m0[39m
+}
+
+ [33mΓ¥»[39m src/tests/etl.service.test.ts [2m ([22m[2m3 tests[22m [2m|[22m [31m1 failed[39m[2m)[22m[90m 85[2mms[22m[39m
+[31m   [33mΓ¥»[31m src/tests/etl.service.test.ts[2m > [22mEtlService[2m > [22mcreates flagged records for low-confidence rows without touching contacts[39m
+[31m     ΓåÆ expected [ 'invalid_phone', 'missing_name' ] to include 'low_confidence'[39m
+(node:12232) [DEP0169] 
+DeprecationWarning: 
+`url.parse()` behavior is 
+not standardized and 
+prone to errors that have 
+security implications. 
+Use the WHATWG URL API 
+instead. CVEs are not 
+issued for `url.parse()` 
+vulnerabilities.
+(Use `node 
+--trace-deprecation ...` 
+to show where the warning 
+was created)
+ [33mΓ¥»[39m src/tests/erasure.service.test.ts [2m ([22m[2m7 tests[22m [2m|[22m [31m3 failed[39m[2m)[22m[90m 66[2mms[22m[39m
+[31m   [33mΓ¥»[31m src/tests/erasure.service.test.ts[2m > [22mErasureService[2m > [22manonymizes contact: name=ANONYMIZED, phone=sha256(original), email=null[39m
+[31m     ΓåÆ expected 'active' to be 'suppressed' // Object.is equality[39m
+[31m   [33mΓ¥»[31m src/tests/erasure.service.test.ts[2m > [22mErasureService[2m > [22madds contact to suppression list after erasure[39m
+[31m     ΓåÆ expected false to be true // Object.is equality[39m
+[31m   [33mΓ¥»[31m src/tests/erasure.service.test.ts[2m > [22mErasureService[2m > [22malready erased: second request throws ErasureError with httpStatus 409[39m
+[31m     ΓåÆ promise resolved "{ ΓÇª(3) }" instead of rejecting[39m
+
+[31mΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»
+[1m[7m Failed Tests 4 [
+27m[22mΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»
+ΓÄ»[39m
+
+[31m[1m[7m FAIL 
+[27m[22m[39m src/tests/
+erasure.service.test.ts[2
+m > 
+[22mErasureService[2m > 
+[22manonymizes contact: 
+name=ANONYMIZED, 
+phone=sha256(original), 
+email=null
+[31m[1mAssertionError[2
+2m: expected 'active' to 
+be 'suppressed' // 
+Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- suppressed[39m
+[31m+ active[39m
+
+[36m [2mΓ¥»[22m src/tes
+ts/erasure.service.test.ts
+:[2m54:36[22m[39m
+    [90m 52| [39m    [3
+4mexpect[39m(updated[33m
+?.[39mphone)[33m.[39m[
+34mtoBe[39m([34msha256[
+39m(originalPhone))
+    [90m 53| [39m    [3
+4mexpect[39m(updated[33m
+?.[39memail)[33m.[39m[
+34mtoBeNull[39m()
+    [90m 54| [39m    [3
+4mexpect[39m(updated[33m
+?.[39mconsentStatus)[33m
+.[39m[34mtoBe[39m([32m
+'suppressed'[39m)
+    [90m   | [39m       
+                          
+  [31m^[39m
+    [90m 55| [39m  })
+    [90m 56| [39m
+
+[31m[2mΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ
+»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»Γ
+Ä»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»
+ΓÄ»[1/4]ΓÄ»[22m[39m
+
+[31m[1m[7m FAIL 
+[27m[22m[39m src/tests/
+erasure.service.test.ts[2
+m > 
+[22mErasureService[2m > 
+[22madds contact to 
+suppression list after 
+erasure
+[31m[1mAssertionError[2
+2m: expected false to be 
+true // Object.is 
+equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2mΓ¥»[22m src/tes
+ts/erasure.service.test.ts
+:[2m64:26[22m[39m
+    [90m 62| [39m
+    [90m 63| [39m    
+[35mconst[39m 
+isSuppressed [33m=[39m 
+[35mawait[39m suppressio
+nRepo[33m.[39m[34misSup
+pressed[39m(contact[33m.
+[39mphΓÇª
+    [90m 64| [39m    [3
+4mexpect[39m(isSuppressed
+)[33m.[39m[34mtoBe[39m
+([35mtrue[39m)
+    [90m   | [39m       
+                  
+[31m^[39m
+    [90m 65| [39m  })
+    [90m 66| [39m
+
+[31m[2mΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ
+»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»Γ
+Ä»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»
+ΓÄ»[2/4]ΓÄ»[22m[39m
+
+[31m[1m[7m FAIL 
+[27m[22m[39m src/tests/
+erasure.service.test.ts[2
+m > 
+[22mErasureService[2m > 
+[22malready erased: 
+second request throws 
+ErasureError with 
+httpStatus 409
+[31m[1mAssertionError[2
+2m: promise resolved "{ 
+ΓÇª(3) }" instead of 
+rejecting[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- [Error: rejected 
+promise][39m
+[31m+ Object {[39m
+[31m+   "jobId": "erasure
+-bl4v4ttv4pdv0engbsqdpqwt"
+,[39m
+[31m+   "message": 
+"Permintaan penghapusan 
+diterima",[39m
+[31m+   "status": 
+"completed",[39m
+[31m+ }[39m
+
+[36m [2mΓ¥»[22m src/tes
+ts/erasure.service.test.ts
+:[2m111:5[22m[39m
+    [90m109| [39m    
+[35mawait[39m 
+[34mexpect[39m(
+    [90m110| [39m      s
+ervice[33m.[39m[34manon
+ymizeContact[39m({ 
+phone[33m:[39m contact[
+33m.[39mphone[33m,[39m 
+email[33m:[39m 
+contact[33m.[39mΓÇª
+    [90m111| [39m    )[
+33m.[39mrejects[33m.[39
+m[34mtoMatchObject[39m({
+ code[33m:[39m [32m'ALR
+EADY_ERASED'[39m[33m,[3
+9m httpStatus[33m:[39m 
+[34m409[39m ΓÇª
+    [90m   | [39m    
+[31m^[39m
+    [90m112| [39m
+    [90m113| [39m    
+[90m// Verify hash is 
+stored[39m
+
+[31m[2mΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ
+»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»Γ
+Ä»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»
+ΓÄ»[3/4]ΓÄ»[22m[39m
+
+[31m[1m[7m FAIL 
+[27m[22m[39m src/tests/
+etl.service.test.ts[2m > 
+[22mEtlService[2m > 
+[22mcreates flagged 
+records for 
+low-confidence rows 
+without touching contacts
+[31m[1mAssertionError[2
+2m: expected [ 
+'invalid_phone', 
+'missing_name' ] to 
+include 
+'low_confidence'[39m
+[36m [2mΓ¥»[22m src/tes
+ts/etl.service.test.ts:[2
+m136:35[22m[39m
+    [90m134| [39m
+    [90m135| [39m    
+[35mconst[39m flagged 
+[33m=[39m 
+[35mawait[39m flaggedRep
+o[33m.[39m[34mfindAll[
+39m({ page[33m:[39m 
+[34m1[39m[33m,[39m 
+pageSize[33m:[39m 
+[34m10[39m ΓÇª
+    [90m136| [39m    [3
+4mexpect[39m(flagged[33m
+.[39mdata[[34m0[39m][3
+3m.[39mflags)[33m.[39m
+[34mtoContain[39m([32m'l
+ow_confidence'[39m)
+    [90m   | [39m       
+                          
+ [31m^[39m
+    [90m137| [39m  })
+    [90m138| [39m
+
+[31m[2mΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ
+»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»Γ
+Ä»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»
+ΓÄ»[4/4]ΓÄ»[22m[39m
+
+[2m Test Files [22m [1m[31m2 failed[39m[22m[90m (2)[39m
+[2m      Tests [22m [1m[31m4 failed[39m[22m[2m | [22m[1m[32m6 passed[39m[22m[90m (10)[39m
+[2m   Start at [22m 00:01:30
+[2m   Duration [22m 2.44s[2m (transform 559ms, setup 0ms, collect 1.69s, tests 151ms, environment 0ms, prepare 253ms)[22m
+

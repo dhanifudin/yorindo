@@ -10,16 +10,6 @@ ALTER TABLE events ADD COLUMN IF NOT EXISTS is_paid             BOOL DEFAULT FAL
 ALTER TABLE events ADD COLUMN IF NOT EXISTS price               DECIMAL(12,2);
 ALTER TABLE events ADD COLUMN IF NOT EXISTS payment_method      VARCHAR(50);
 ALTER TABLE events ADD COLUMN IF NOT EXISTS registration_closed BOOL DEFAULT FALSE;
-ALTER TABLE events ADD COLUMN IF NOT EXISTS post_survey_enabled BOOL DEFAULT FALSE;
-ALTER TABLE events ADD COLUMN IF NOT EXISTS post_survey_schema  JSONB;
-
--- rename survey_schema → registration_survey_schema (safe: column preserved, data intact)
-DO $$ BEGIN
-  ALTER TABLE events RENAME COLUMN survey_schema TO registration_survey_schema;
-EXCEPTION WHEN undefined_column THEN
-  -- already renamed in a previous run — idempotent
-  NULL;
-END $$;
 
 -- ─────────────────────────────────────────────
 -- registrations table: simplified status + attendance dimension
@@ -56,9 +46,11 @@ CREATE TABLE IF NOT EXISTS survey_responses (
   id              TEXT PRIMARY KEY,
   event_id        TEXT NOT NULL REFERENCES events(id),
   registration_id TEXT NOT NULL REFERENCES registrations(id),
-  survey_type     VARCHAR(20) NOT NULL CHECK (survey_type IN ('registration', 'post_event')),
-  responses       JSONB NOT NULL,
-  submitted_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  survey_type     TEXT NOT NULL DEFAULT 'registration'
+    CHECK (survey_type IN ('registration', 'post-event')),
+  answers         JSONB NOT NULL DEFAULT '{}',
+  submitted_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- ─────────────────────────────────────────────

@@ -89,7 +89,7 @@ function toRegistrationWithContactDto(registration: Registration, contact: Conta
 }
 
 async function getSurveyAnswers(registration: Registration) {
-  const responses = await surveyRepository.getResponsesByEvent(registration.eventId)
+  const { responses } = await surveyRepository.getResponsesByEvent(registration.eventId, 'registration')
   return responses.find((response) => response.registrationId === registration.id)?.answers ?? {}
 }
 
@@ -150,11 +150,16 @@ export const registrationsRoutes: FastifyPluginAsync = async (fastify) => {
           name: payload.name,
           phone: payload.phone,
           email: payload.email,
-          industryId: null,
-          jobTitleId: null,
+          serviceType: null,
+          jobTitle: null,
           city: null,
+          provinceCode: null,
+          provinceName: null,
+          cityCode: null,
+          cityName: null,
           company: null,
-          companySize: null,
+          department: null,
+          eventDate: null,
           source: 'form',
           completenessScore: 0.55,
           consentStatus: 'active',
@@ -174,7 +179,7 @@ export const registrationsRoutes: FastifyPluginAsync = async (fastify) => {
     })
 
     if (payload.surveyAnswers && Object.keys(payload.surveyAnswers).length > 0) {
-      await surveyRepository.saveResponse(registration.id, payload.surveyAnswers)
+      await surveyRepository.saveResponse(registration.id, registration.eventId, 'registration', payload.surveyAnswers)
     }
 
     const responseBody = toRegistrationDto(registration, payload.surveyAnswers ?? {})
@@ -330,7 +335,7 @@ export const registrationsRoutes: FastifyPluginAsync = async (fastify) => {
       })
     } else {
       await whatsAppService.send({
-        to: contact.phone,
+        to: contact.phone ?? '',
         templateName: 'ticket_resend',
         body: `Tiket untuk ${event.name} telah dikirim ulang kepada ${contact.name}.`,
         variables: {

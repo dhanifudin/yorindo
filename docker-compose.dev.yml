@@ -4,6 +4,10 @@
 #
 # App:  http://localhost:5173  (Next.js + MSW mocks)
 # API:  http://localhost:3000  (Fastify, hot-reload via tsx)
+#
+# Override postgres password:
+#   POSTGRES_PASSWORD=secret docker compose -f docker-compose.dev.yml up
+#   — or set POSTGRES_PASSWORD in a .env file at the repo root
 
 services:
   api:
@@ -14,6 +18,7 @@ services:
     environment:
       NODE_ENV: development
       PORT: "3000"
+      DATABASE_URL: "postgresql://yorindo:${POSTGRES_PASSWORD:-yorindo}@postgres:5432/yorindo"
       REDIS_URL: "redis://redis:6379"
       ETL_AI_PROVIDER: "disabled"
       TSX_LEGACY_WATCH: "true"   # required for WSL2 / Docker Desktop file watching
@@ -23,6 +28,7 @@ services:
     ports:
       - "3000:3000"
     depends_on:
+      - postgres
       - redis
 
   app:
@@ -44,6 +50,17 @@ services:
     depends_on:
       - api
 
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: yorindo
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-yorindo}
+      POSTGRES_DB: yorindo
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+
   redis:
     image: redis:7-alpine
     ports:
@@ -52,3 +69,4 @@ services:
 volumes:
   api_node_modules:
   app_node_modules:
+  postgres_dev_data:

@@ -28,6 +28,18 @@ import { InMemorySurveyRepository } from './repositories/memory/SurveyRepository
 import { InMemoryUserRepository } from './repositories/memory/UserRepository.js'
 import { InMemoryVendorRepository } from './repositories/memory/VendorRepository.js'
 import { InMemoryEventSponsorRepository } from './repositories/memory/EventSponsorRepository.js'
+import { getPool } from './repositories/postgres/pool.js'
+import { PostgresContactRepository } from './repositories/postgres/ContactRepository.js'
+import { PostgresEventRepository } from './repositories/postgres/EventRepository.js'
+import { PostgresRegistrationRepository } from './repositories/postgres/RegistrationRepository.js'
+import { PostgresUserRepository } from './repositories/postgres/UserRepository.js'
+import { PostgresFlaggedRecordsRepository } from './repositories/postgres/FlaggedRecordsRepository.js'
+import { PostgresRawUploadRepository } from './repositories/postgres/RawUploadRepository.js'
+import { PostgresAuditLogRepository } from './repositories/postgres/AuditLogRepository.js'
+import { PostgresSuppressionRepository } from './repositories/postgres/SuppressionRepository.js'
+import { PostgresSurveyRepository } from './repositories/postgres/SurveyRepository.js'
+import { PostgresVendorRepository } from './repositories/postgres/VendorRepository.js'
+import { PostgresEventSponsorRepository } from './repositories/postgres/EventSponsorRepository.js'
 import { FuzzyDeduplicationService } from './services/FuzzyDeduplicationService.js'
 import { MockEmailService } from './services/adapters/mock/EmailService.js'
 import { MockEtlNormalizationService } from './services/adapters/mock/EtlNormalizationService.js'
@@ -71,7 +83,20 @@ function resolveRepositories(): {
   }
 
   if (config.repositoryImpl === 'postgres') {
-    throw new Error('Postgres repositories not yet implemented')
+    const pool = getPool()
+    return {
+      contactRepository: new PostgresContactRepository(pool),
+      eventRepository: new PostgresEventRepository(pool),
+      registrationRepository: new PostgresRegistrationRepository(pool),
+      userRepository: new PostgresUserRepository(pool),
+      surveyRepository: new PostgresSurveyRepository(pool),
+      flaggedRecordsRepository: new PostgresFlaggedRecordsRepository(pool),
+      suppressionRepository: new PostgresSuppressionRepository(pool),
+      rawUploadRepository: new PostgresRawUploadRepository(pool),
+      auditLogRepository: new PostgresAuditLogRepository(pool),
+      vendorRepository: new PostgresVendorRepository(pool),
+      eventSponsorRepository: new PostgresEventSponsorRepository(pool),
+    }
   }
 
   throw new Error(`Unknown REPOSITORY_IMPL: ${config.repositoryImpl}`)
