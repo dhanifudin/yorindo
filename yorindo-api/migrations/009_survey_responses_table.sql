@@ -10,9 +10,9 @@
 -- ─── Survey Responses Table ───────────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS survey_responses (
-  id VARCHAR(24) PRIMARY KEY,
-  event_id VARCHAR(24) NOT NULL REFERENCES events(id) ON DELETE CASCADE,
-  registration_id VARCHAR(24) NOT NULL REFERENCES registrations(id) ON DELETE CASCADE,
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  registration_id UUID NOT NULL REFERENCES registrations(id) ON DELETE CASCADE,
   survey_type VARCHAR(20) NOT NULL DEFAULT 'registration',  -- 'registration' | 'post-event'
   answers JSONB NOT NULL DEFAULT '{}',
   submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
