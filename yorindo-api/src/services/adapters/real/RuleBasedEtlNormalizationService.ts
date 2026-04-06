@@ -1,64 +1,128 @@
-import wilayahData from '../../../data/wilayah-static.json' with { type: 'json' }
 import type { IEtlNormalizationService, NormalizedRow, RawContactRow } from '../../../interfaces/services/IEtlNormalizationService.js'
+import WILAYAH_RAW from '../../../data/wilayah-static.json' with { type: 'json' }
 
-type WilayahCity = {
+interface WilayahEntry {
   provinceCode: string
   provinceName: string
   cityCode: string
   cityName: string
-  aliases?: string[]
+  aliases: string[]
 }
 
-const COMPANY_SIZE_MAP: Array<{ keywords: string[]; value: '<50' | '50-200' | '200-1000' | '>1000' }> = [
-  { keywords: ['small', 'kecil', '<50', '1-49'], value: '<50' },
-  { keywords: ['medium', 'menengah', '50-200'], value: '50-200' },
-  { keywords: ['large', 'besar', '200-1000'], value: '200-1000' },
-  { keywords: ['enterprise', '>1000', '1000+'], value: '>1000' },
-]
-
-const INDUSTRY_KEYWORD_MAP: Array<{ keywords: string[]; slug: string }> = [
-  { keywords: ['teknologi', 'teknologi informasi', 'software', 'digital', 'it '], slug: 'teknologi' },
-  { keywords: ['kesehatan', 'rumah sakit', 'klinik', 'medis', 'farmasi'], slug: 'kesehatan' },
-  { keywords: ['keuangan', 'bank', 'perbankan', 'asuransi', 'finansial'], slug: 'keuangan' },
-  { keywords: ['pendidikan', 'universitas', 'sekolah', 'kampus'], slug: 'pendidikan' },
-  { keywords: ['manufaktur', 'manufacturing', 'pabrik', 'garment', 'garmen'], slug: 'manufaktur' },
-  { keywords: ['retail', 'ritel', 'distribusi', 'perdagangan'], slug: 'retail' },
-  { keywords: ['properti', 'property', 'konstruksi', 'bangunan'], slug: 'properti' },
-]
-
-const JOB_TITLE_KEYWORD_MAP: Array<{ keywords: string[]; slug: string }> = [
-  { keywords: ['direktur', 'director'], slug: 'direktur' },
-  { keywords: ['manager', 'manajer', 'mgr'], slug: 'manajer' },
-  { keywords: ['supervisor', 'spv'], slug: 'supervisor' },
-  { keywords: ['staff', 'staf', 'admin'], slug: 'staf' },
-  { keywords: ['engineer', 'developer'], slug: 'engineer' },
-  { keywords: ['analyst', 'analis'], slug: 'analis' },
-  { keywords: ['consultant', 'konsultan'], slug: 'konsultan' },
-  { keywords: ['owner', 'founder', 'wirausaha'], slug: 'wirausaha' },
-]
-
-const CITY_ALIAS_MAP: Record<string, { provinceCode: string; cityCode: string | null }> = {
-  jkt: { provinceCode: '31', cityCode: '31.71' },
-  jakarta: { provinceCode: '31', cityCode: null },
-  surabaya: { provinceCode: '35', cityCode: '35.78' },
-  purwakarta: { provinceCode: '32', cityCode: '32.14' },
+interface CityMatch {
+  provinceCode: string
+  provinceName: string
+  cityCode: string
+  cityName: string
 }
 
-function normalizeText(value: string | null | undefined): string {
-  return String(value ?? '')
-    .toLowerCase()
-    .replace(/\./g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
+const WILAYAH = WILAYAH_RAW as WilayahEntry[]
+
+// Keyword alias map for very common abbreviations that fuzzy matching may miss
+const KEYWORD_MAP: Record<string, CityMatch> = {
+  jkt: { provinceCode: '31', provinceName: 'DKI Jakarta', cityCode: '31.71', cityName: 'Jakarta Pusat' },
+  jakarta: { provinceCode: '31', provinceName: 'DKI Jakarta', cityCode: '31.71', cityName: 'Jakarta Pusat' },
+  sby: { provinceCode: '35', provinceName: 'Jawa Timur', cityCode: '35.78', cityName: 'Kota Surabaya' },
+  surabaya: { provinceCode: '35', provinceName: 'Jawa Timur', cityCode: '35.78', cityName: 'Kota Surabaya' },
+  bdg: { provinceCode: '32', provinceName: 'Jawa Barat', cityCode: '32.73', cityName: 'Kota Bandung' },
+  bandung: { provinceCode: '32', provinceName: 'Jawa Barat', cityCode: '32.73', cityName: 'Kota Bandung' },
+  medan: { provinceCode: '12', provinceName: 'Sumatera Utara', cityCode: '12.71', cityName: 'Kota Medan' },
+  semarang: { provinceCode: '33', provinceName: 'Jawa Tengah', cityCode: '33.74', cityName: 'Kota Semarang' },
+  yogyakarta: { provinceCode: '34', provinceName: 'DI Yogyakarta', cityCode: '34.71', cityName: 'Kota Yogyakarta' },
+  jogja: { provinceCode: '34', provinceName: 'DI Yogyakarta', cityCode: '34.71', cityName: 'Kota Yogyakarta' },
+  makassar: { provinceCode: '73', provinceName: 'Sulawesi Selatan', cityCode: '73.71', cityName: 'Kota Makassar' },
+  palembang: { provinceCode: '16', provinceName: 'Sumatera Selatan', cityCode: '16.71', cityName: 'Kota Palembang' },
+  balikpapan: { provinceCode: '64', provinceName: 'Kalimantan Timur', cityCode: '64.71', cityName: 'Kota Balikpapan' },
+  denpasar: { provinceCode: '51', provinceName: 'Bali', cityCode: '51.71', cityName: 'Kota Denpasar' },
+  bali: { provinceCode: '51', provinceName: 'Bali', cityCode: '51.71', cityName: 'Kota Denpasar' },
 }
 
-function normalizePhone(value: string | null | undefined): string {
+function jaroWinkler(s1: string, s2: string): number {
+  if (s1 === s2) return 1
+  const len1 = s1.length
+  const len2 = s2.length
+  const matchDist = Math.floor(Math.max(len1, len2) / 2) - 1
+  if (matchDist < 0) return 0
+
+  const s1Matches = new Array(len1).fill(false)
+  const s2Matches = new Array(len2).fill(false)
+  let matches = 0
+  let transpositions = 0
+
+  for (let i = 0; i < len1; i++) {
+    const start = Math.max(0, i - matchDist)
+    const end = Math.min(i + matchDist + 1, len2)
+    for (let j = start; j < end; j++) {
+      if (s2Matches[j] || s1[i] !== s2[j]) continue
+      s1Matches[i] = true
+      s2Matches[j] = true
+      matches++
+      break
+    }
+  }
+
+  if (matches === 0) return 0
+
+  let k = 0
+  for (let i = 0; i < len1; i++) {
+    if (!s1Matches[i]) continue
+    while (!s2Matches[k]) k++
+    if (s1[i] !== s2[k]) transpositions++
+    k++
+  }
+
+  const jaro = (matches / len1 + matches / len2 + (matches - transpositions / 2) / matches) / 3
+  const prefix = [...s1].findIndex((c, i) => c !== s2[i])
+  const prefixLen = Math.min(prefix === -1 ? Math.min(len1, len2) : prefix, 4)
+  return jaro + prefixLen * 0.1 * (1 - jaro)
+}
+
+function stripLocationPrefix(raw: string): string {
+  return raw.replace(/^(kota|kabupaten|kab\.?|kot\.?)\s+/i, '').trim()
+}
+
+function mapCityToCode(rawCity: string | null): CityMatch | null {
+  if (!rawCity) return null
+  const normalized = rawCity.toLowerCase().trim()
+  const stripped = stripLocationPrefix(normalized)
+
+  // 1. Exact match against cityName or aliases
+  for (const entry of WILAYAH) {
+    const entryName = entry.cityName.toLowerCase()
+    if (entryName === normalized || entryName === stripped) {
+      return entry
+    }
+    if (entry.aliases.some((a) => a === normalized || a === stripped)) {
+      return entry
+    }
+  }
+
+  // 2. Keyword alias map
+  const keyword = KEYWORD_MAP[normalized] ?? KEYWORD_MAP[stripped]
+  if (keyword) return keyword
+
+  // 3. Jaro-Winkler fuzzy match (threshold 0.85) against cityName
+  let bestScore = 0
+  let bestMatch: CityMatch | null = null
+  for (const entry of WILAYAH) {
+    const score = jaroWinkler(stripped, stripLocationPrefix(entry.cityName.toLowerCase()))
+    if (score > bestScore) {
+      bestScore = score
+      bestMatch = entry
+    }
+  }
+  if (bestScore >= 0.85 && bestMatch) return bestMatch
+
+  return null
+}
+
+function normalizePhone(value: string | null | undefined): string | null {
   const digits = String(value ?? '').replace(/\D/g, '')
-  if (!digits) return '+620000000000'
+  if (!digits) return null
   if (digits.startsWith('0')) return `+62${digits.slice(1)}`
   if (digits.startsWith('62')) return `+${digits}`
   if (digits.startsWith('8')) return `+62${digits}`
-  return '+620000000000'
+  return null
 }
 
 function normalizeEmail(value: string | null | undefined): string | null {
@@ -67,146 +131,43 @@ function normalizeEmail(value: string | null | undefined): string | null {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : null
 }
 
-function matchByKeywords(value: string, map: Array<{ keywords: string[]; slug?: string; value?: string }>): string | null {
-  for (const item of map) {
-    if (item.keywords.some((keyword) => value.includes(keyword))) {
-      return item.slug ?? item.value ?? null
-    }
-  }
-  return null
-}
-
-function jaroWinkler(left: string, right: string): number {
-  if (left === right) return 1
-  if (!left || !right) return 0
-
-  const matchDistance = Math.floor(Math.max(left.length, right.length) / 2) - 1
-  const leftMatches = new Array<boolean>(left.length).fill(false)
-  const rightMatches = new Array<boolean>(right.length).fill(false)
-
-  let matches = 0
-  for (let i = 0; i < left.length; i++) {
-    const start = Math.max(0, i - matchDistance)
-    const end = Math.min(i + matchDistance + 1, right.length)
-    for (let j = start; j < end; j++) {
-      if (rightMatches[j] || left[i] !== right[j]) continue
-      leftMatches[i] = true
-      rightMatches[j] = true
-      matches++
-      break
-    }
-  }
-
-  if (matches === 0) return 0
-
-  let transpositions = 0
-  let rightIndex = 0
-  for (let i = 0; i < left.length; i++) {
-    if (!leftMatches[i]) continue
-    while (!rightMatches[rightIndex]) rightIndex++
-    if (left[i] !== right[rightIndex]) transpositions++
-    rightIndex++
-  }
-
-  const jaro = (
-    matches / left.length +
-    matches / right.length +
-    (matches - transpositions / 2) / matches
-  ) / 3
-
-  let prefix = 0
-  while (prefix < 4 && left[prefix] === right[prefix]) prefix++
-  return jaro + prefix * 0.1 * (1 - jaro)
-}
-
 export class RuleBasedEtlNormalizationService implements IEtlNormalizationService {
-  private wilayah = wilayahData as WilayahCity[]
-
-  mapCityToCode(rawCity: string | null | undefined): Pick<NormalizedRow, 'provinceCode' | 'provinceName' | 'cityCode' | 'cityName'> & { confidence: number | null } {
-    const normalizedCity = normalizeText(rawCity)
-      .replace(/^kota\s+/, '')
-      .replace(/^kabupaten\s+/, '')
-      .replace(/^kab\s+/, '')
-
-    if (!normalizedCity) {
-      return { provinceCode: null, provinceName: null, cityCode: null, cityName: null, confidence: null }
-    }
-
-    const exactMatch = this.wilayah.find((entry) => {
-      const candidates = [entry.cityName, ...(entry.aliases ?? [])].map((value) => normalizeText(value))
-      return candidates.includes(normalizedCity)
-    })
-    if (exactMatch) {
-      return {
-        provinceCode: exactMatch.provinceCode,
-        provinceName: exactMatch.provinceName,
-        cityCode: exactMatch.cityCode,
-        cityName: exactMatch.cityName,
-        confidence: 1,
-      }
-    }
-
-    let bestMatch: WilayahCity | null = null
-    let bestScore = 0
-    for (const entry of this.wilayah) {
-      const candidates = [entry.cityName, ...(entry.aliases ?? [])]
-      for (const candidate of candidates) {
-        const score = jaroWinkler(normalizeText(candidate), normalizedCity)
-        if (score > bestScore) {
-          bestScore = score
-          bestMatch = entry
-        }
-      }
-    }
-    if (bestMatch && bestScore >= 0.85) {
-      return {
-        provinceCode: bestMatch.provinceCode,
-        provinceName: bestMatch.provinceName,
-        cityCode: bestMatch.cityCode,
-        cityName: bestMatch.cityName,
-        confidence: 0.8,
-      }
-    }
-
-    const alias = CITY_ALIAS_MAP[normalizedCity]
-    if (alias) {
-      const matchedCity = alias.cityCode
-        ? this.wilayah.find((entry) => entry.cityCode === alias.cityCode) ?? null
-        : this.wilayah.find((entry) => entry.provinceCode === alias.provinceCode) ?? null
-
-      return {
-        provinceCode: alias.provinceCode,
-        provinceName: matchedCity?.provinceName ?? null,
-        cityCode: alias.cityCode,
-        cityName: matchedCity?.cityName ?? null,
-        confidence: 0.7,
-      }
-    }
-
-    return { provinceCode: null, provinceName: null, cityCode: null, cityName: null, confidence: null }
+  private toTitleCase(str: string): string {
+    const trimmed = str.trim()
+    if (!trimmed) return ''
+    return trimmed
+      .split(/\s+/)
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ')
   }
 
   async normalizeBatch(rows: RawContactRow[]): Promise<NormalizedRow[]> {
+    return this.normalizeRow(rows)
+  }
+
+  normalizeRow(rows: RawContactRow[]): NormalizedRow[] {
     return rows.map((row) => {
-      const name = String(row.name ?? '').trim()
+      const name = this.toTitleCase(String(row.name ?? ''))
       const phone = normalizePhone(String(row.phone ?? ''))
       const email = normalizeEmail(row.email ? String(row.email) : null)
-      const city = row.city ? String(row.city).trim() : null
-      const company = row.company ? String(row.company).trim() : null
-      const department = row.department ? String(row.department).trim() : null
-      const industryRaw = normalizeText(String(row.industryRaw ?? row.industry ?? ''))
-      const jobTitleRaw = normalizeText(String(row.jobTitleRaw ?? row.jobTitle ?? ''))
-      const companySizeRaw = normalizeText(String(row.companySizeRaw ?? row.companySize ?? ''))
+      const city = row.city ? this.toTitleCase(String(row.city)) : null
+      const company = row.company ? this.toTitleCase(String(row.company)) : null
+      const department = row.department ? this.toTitleCase(String(row.department)) : null
+      const serviceType = row.industryRaw || row.industry ? this.toTitleCase(String(row.industryRaw ?? row.industry)) : null
+      const jobTitle = row.jobTitleRaw || row.jobTitle ? this.toTitleCase(String(row.jobTitleRaw ?? row.jobTitle)) : null
+
+      const locationMatch = mapCityToCode(city)
+
       const flags: string[] = []
       let confidence = 0.95
 
-      if (!name) {
+      if (!name || name === 'Unknown') {
         flags.push('missing_name')
         confidence = Math.min(confidence, 0.4)
       }
 
-      if (phone === '+620000000000') {
-        flags.push('invalid_phone')
+      if (phone === null) {
+        flags.push('missing_phone')
         confidence = Math.min(confidence, 0.4)
       }
 
@@ -215,32 +176,25 @@ export class RuleBasedEtlNormalizationService implements IEtlNormalizationServic
         confidence = Math.min(confidence, 0.6)
       }
 
-      const industrySlug = matchByKeywords(industryRaw, INDUSTRY_KEYWORD_MAP) as string | null
-      if (!industrySlug && industryRaw) {
-        flags.push('unknown_industry')
-        confidence = Math.min(confidence, 0.75)
+      if (confidence < 0.8) {
+        flags.push('low_confidence')
       }
-
-      const jobTitleSlug = matchByKeywords(jobTitleRaw, JOB_TITLE_KEYWORD_MAP) as string | null
-      const companySize = matchByKeywords(companySizeRaw, COMPANY_SIZE_MAP) as NormalizedRow['companySize']
-      const cityMapping = this.mapCityToCode(city)
 
       return {
         name: name || 'Unknown',
         phone,
         email,
         city,
+        provinceCode: locationMatch?.provinceCode ?? null,
+        provinceName: locationMatch?.provinceName ?? null,
+        cityCode: locationMatch?.cityCode ?? null,
+        cityName: locationMatch?.cityName ?? null,
         company,
         department,
-        companySize: companySize ?? null,
-        industrySlug,
-        jobTitleSlug,
+        serviceType,
+        jobTitle,
         confidence,
         flags,
-        provinceCode: cityMapping.provinceCode,
-        provinceName: cityMapping.provinceName,
-        cityCode: cityMapping.cityCode,
-        cityName: cityMapping.cityName,
         eventDate: row.eventDate ? String(row.eventDate) : null,
         eventNameRaw: row.eventNameRaw ? String(row.eventNameRaw) : null,
       }

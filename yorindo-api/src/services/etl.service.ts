@@ -14,22 +14,20 @@ import type { CompanySize, ContactSource } from '../types/domain.js'
 
 export const NormalizedRowSchema = z.object({
   name: z.string().trim().min(1),
-  phone: z.string().regex(/^\+62\d{8,13}$/),
-  email: z.string().email().nullable(),
+  phone: z.string().nullable(),
+  email: z.string().nullable(),
   city: z.string().trim().nullable(),
+  provinceCode: z.string().nullable(),
+  provinceName: z.string().nullable(),
+  cityCode: z.string().nullable(),
+  cityName: z.string().nullable(),
   company: z.string().trim().nullable(),
   department: z.string().trim().nullable(),
-  companySize: z.enum(['<50', '50-200', '200-1000', '>1000']).nullable(),
-  industrySlug: z.string().trim().nullable(),
-  jobTitleSlug: z.string().trim().nullable(),
+  serviceType: z.string().trim().nullable(),
+  jobTitle: z.string().trim().nullable(),
   confidence: z.number().min(0).max(1),
   flags: z.array(z.string()),
-  provinceCode: z.string().trim().nullable(),
-  provinceName: z.string().trim().nullable(),
-  cityCode: z.string().trim().nullable(),
-  cityName: z.string().trim().nullable(),
-  eventDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
-  eventNameRaw: z.string().trim().nullable(),
+  eventDate: z.string().nullable(),
 })
 
 type ValidatedNormalizedRow = z.infer<typeof NormalizedRowSchema>
@@ -130,11 +128,9 @@ function summarizeInvalidRow(row: NormalizedRow, rawRow: PreparedRawRow, issues:
       city: row.city,
       company: row.company,
       department: row.department,
-      companySize: row.companySize,
-      industrySlug: row.industrySlug,
-      jobTitleSlug: row.jobTitleSlug,
+      serviceType: row.serviceType,
+      jobTitle: row.jobTitle,
       eventDate: row.eventDate,
-      eventNameRaw: row.eventNameRaw,
       confidence: row.confidence,
       flags: row.flags,
     },
@@ -212,16 +208,25 @@ function chunk<T>(items: T[], size: number): T[][] {
   return batches
 }
 
-function computeCompletenessScore(row: ValidatedNormalizedRow): number {
+function computeCompletenessScore(row: {
+  name: string
+  phone: string | null
+  email: string | null
+  company: string | null
+  serviceType: string | null
+  jobTitle: string | null
+  city: string | null
+  department: string | null
+}): number {
   const fields = [
     row.name,
     row.phone,
     row.email,
     row.company,
-    row.industrySlug,
-    row.jobTitleSlug,
+    row.serviceType,
+    row.jobTitle,
     row.city,
-    row.companySize,
+    row.department,
   ]
   const nonNull = fields.filter((field) => field !== null && field !== undefined && field !== '').length
   return Math.round((nonNull / fields.length) * 1000) / 1000
@@ -249,7 +254,6 @@ function sanitizeNormalizedRow(row: NormalizedRow, fallback: PreparedRawRow): No
   let confidence = row.confidence
   const normalizedName = normalizeText(row.name ?? fallback.name)
   const normalizedEventDate = parseEventDate(row.eventDate ?? fallback.eventDate)
-  const normalizedCompanySize = toCompanySize(row.companySize ?? fallback.companySizeRaw)
 
   if (!sanitizedPhone) {
     mergedFlags.push('invalid_phone')
@@ -257,39 +261,33 @@ function sanitizeNormalizedRow(row: NormalizedRow, fallback: PreparedRawRow): No
   }
 
   if ((row.email ?? fallback.email) && !sanitizedEmail) {
-    mergedFlags.push('invalid_email')
+    if (!mergedFlags.includes('invalid_email')) mergedFlags.push('invalid_email')
   }
 
-  if (!normalizedName) {
-    mergedFlags.push('missing_name')
+  if (!normalizedName || normalizedName === 'Unknown') {
+    if (!mergedFlags.includes('missing_name')) mergedFlags.push('missing_name')
     confidence = Math.min(confidence, 0.4)
   }
 
   if ((row.eventDate ?? fallback.eventDate) && !normalizedEventDate) {
-    mergedFlags.push('invalid_event_date')
-  }
-
-  if ((row.companySize ?? fallback.companySizeRaw) && !normalizedCompanySize) {
-    mergedFlags.push('invalid_company_size')
+    if (!mergedFlags.includes('invalid_event_date')) mergedFlags.push('invalid_event_date')
   }
 
   return {
     ...row,
-    name: normalizedName ?? '',
-    phone: sanitizedPhone ?? '+620000000000',
+    name: normalizedName ?? 'Unknown',
+    phone: sanitizedPhone,
     email: sanitizedEmail,
     city: normalizeText(row.city ?? fallback.city),
+    provinceCode: row.provinceCode ?? null,
+    provinceName: row.provinceName ?? null,
+    cityCode: row.cityCode ?? null,
+    cityName: row.cityName ?? null,
     company: normalizeText(row.company ?? fallback.company),
     department: normalizeText(row.department ?? fallback.department),
-    industrySlug: normalizeText(row.industrySlug),
-    jobTitleSlug: normalizeText(row.jobTitleSlug),
-    provinceCode: normalizeText(row.provinceCode),
-    provinceName: normalizeText(row.provinceName),
-    cityCode: normalizeText(row.cityCode),
-    cityName: normalizeText(row.cityName),
+    serviceType: normalizeText(row.serviceType),
+    jobTitle: normalizeText(row.jobTitle),
     eventDate: normalizedEventDate,
-    eventNameRaw: normalizeText(row.eventNameRaw ?? fallback.eventNameRaw),
-    companySize: normalizedCompanySize,
     confidence,
     flags: mergedFlags,
   }
@@ -331,23 +329,8 @@ function toContactSource(uploadSource: UploadSource): ContactSource {
   return uploadSource === 'onsite_import' ? 'manual' : 'excel_upload'
 }
 
-function toIndustryId(industrySlug: string | null): string | null {
-  if (!industrySlug) return null
-  return INDONESIAN_INDUSTRIES.find((industry) => industry.slug === industrySlug)?.id ?? industrySlug
-}
+// Legacy ID mapping removed
 
-function toJobTitleId(jobTitleSlug: string | null): string | null {
-  if (!jobTitleSlug) return null
-  return INDONESIAN_JOB_TITLES.find((jobTitle) => jobTitle.slug === jobTitleSlug)?.id ?? jobTitleSlug
-}
-
-function toCompanySize(companySize: string | null): CompanySize | null {
-  if (!companySize) return null
-  if (['<50', '50-200', '200-1000', '>1000'].includes(companySize)) {
-    return companySize as CompanySize
-  }
-  return null
-}
 
 export class EtlService {
   constructor(
@@ -460,12 +443,16 @@ export class EtlService {
                 name: validatedRow.name,
                 phone: validatedRow.phone,
                 email: validatedRow.email,
-                industryId: toIndustryId(validatedRow.industrySlug),
-                jobTitleId: toJobTitleId(validatedRow.jobTitleSlug),
+                serviceType: validatedRow.serviceType,
+                jobTitle: validatedRow.jobTitle,
                 city: validatedRow.city,
+                provinceCode: validatedRow.provinceCode,
+                provinceName: validatedRow.provinceName,
+                cityCode: validatedRow.cityCode,
+                cityName: validatedRow.cityName,
                 company: validatedRow.company,
                 department: validatedRow.department,
-                companySize: toCompanySize(validatedRow.companySize),
+                eventDate: validatedRow.eventDate,
                 source: toContactSource(uploadSource),
                 completenessScore: computeCompletenessScore(validatedRow),
                 consentStatus: 'legacy_unverified',
@@ -485,7 +472,6 @@ export class EtlService {
                   attendedAt: validatedRow.eventDate ? `${validatedRow.eventDate}T00:00:00.000Z` : new Date().toISOString(),
                   uploadSource,
                   eventDate: validatedRow.eventDate,
-                  eventNameRaw: validatedRow.eventNameRaw,
                 })
               }
 

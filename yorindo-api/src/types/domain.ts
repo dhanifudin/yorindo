@@ -53,14 +53,18 @@ export type ContactSource = 'excel_upload' | 'form' | 'manual'
 export interface Contact {
   id: EntityId
   name: string
-  phone: string                    // normalized: +62XXXXXXXXXX
+  phone: string | null                // normalized: +62XXXXXXXXXX or null if missing
   email: string | null
-  industryId: EntityId | null
-  jobTitleId: EntityId | null
+  serviceType: string | null
+  jobTitle: string | null
   city: string | null
+  provinceCode: string | null
+  provinceName: string | null
+  cityCode: string | null
+  cityName: string | null
   company: string | null
-  department?: string | null
-  companySize: CompanySize | null
+  department: string | null
+  eventDate: string | null
   source: ContactSource | null
   completenessScore: number        // 0.000 to 1.000
   consentStatus: ConsentStatus
@@ -277,7 +281,7 @@ export interface SurveyResponseRecord {
 export interface SuppressionRecord {
   id: EntityId
   contactId: EntityId
-  phone: string
+  phone: string | null
   email: string | null
   name: string | null
   reason: string
@@ -287,9 +291,8 @@ export interface SuppressionRecord {
 // ─── Facet Results (for filter UI) ───────────────────────────────────────────
 
 export interface FacetResult {
-  industries: Array<{ id: string; name: string; count: number }>
-  cities: Array<{ city: string; count: number }>
-  companySizes: Array<{ size: string; count: number }>
+  serviceType: Array<{ slug: string; label: string; count: number }>
+  city: Array<{ slug: string; label: string; count: number }>
 }
 
 export type DuplicateMatchReason = 'same_phone' | 'same_email' | 'similar_name'

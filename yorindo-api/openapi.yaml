@@ -155,7 +155,7 @@ components:
     # ─── Contact ───────────────────────────────────────────────────────────────
     Contact:
       type: object
-      required: [id, name, phone, completenessScore, consentStatus, createdAt, updatedAt]
+      required: [id, name, completenessScore, consentStatus, createdAt, updatedAt]
       properties:
         id:
           type: string
@@ -165,22 +165,23 @@ components:
           example: Budi Santoso
         phone:
           type: string
+          nullable: true
           example: "+6281234567890"
         email:
           type: string
           format: email
           nullable: true
           example: budi@example.com
-        industryId:
+        serviceType:
           type: string
           nullable: true
-          example: teknologi
-          description: Industry id from industries lookup table
-        jobTitleId:
+          example: Konsultasi
+          description: Raw service type from uploaded data
+        jobTitle:
           type: string
           nullable: true
-          example: direktur
-          description: Id from job_titles lookup table
+          example: Manajer
+          description: Raw job title from uploaded data
         city:
           type: string
           nullable: true
@@ -189,11 +190,15 @@ components:
           type: string
           nullable: true
           example: PT Teknologi Maju
-        companySize:
+        department:
           type: string
           nullable: true
-          enum: [small, medium, large, enterprise, '', null]
-          example: medium
+          example: Sales
+        eventDate:
+          type: string
+          nullable: true
+          example: '2026-03-31'
+          description: Date of the event the contact attended
         source:
           type: string
           nullable: true
@@ -1424,17 +1429,13 @@ components:
 
     ContactFacets:
       type: object
-      required: [industry, city, companySize]
+      required: [serviceType, city]
       properties:
-        industry:
+        serviceType:
           type: array
           items:
             $ref: '#/components/schemas/FacetItem'
         city:
-          type: array
-          items:
-            $ref: '#/components/schemas/FacetItem'
-        companySize:
           type: array
           items:
             $ref: '#/components/schemas/FacetItem'
@@ -2133,22 +2134,16 @@ paths:
         - $ref: '#/components/parameters/PageSizeParam'
         - $ref: '#/components/parameters/SortByParam'
         - $ref: '#/components/parameters/SortDirParam'
-        - name: industry
+        - name: serviceType
           in: query
           schema:
             type: string
-          description: Filter by industry slug
+          description: Filter by serviceType
         - name: city
           in: query
           schema:
             type: string
           description: Filter by city name
-        - name: companySize
-          in: query
-          schema:
-            type: string
-            enum: [micro, small, medium, large, enterprise]
-          description: Filter by company size
         - name: flagFilter
           in: query
           schema:
@@ -2770,6 +2765,79 @@ paths:
                 $ref: '#/components/schemas/ApiError'
         '404':
           description: Duplicate pair not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /contacts/blast:
+    post:
+      summary: Initiate a blast to a set of contacts or a contact segment
+      operationId: blastContacts
+      tags: [Contacts]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  required: [contactIds, eventLink]
+                  properties:
+                    contactIds:
+                      type: array
+                      items:
+                        type: string
+                        minLength: 1
+                      description: Explicit list of contact IDs to blast
+                    eventLink:
+                      type: string
+                      format: uri
+                      description: Event landing page URL included in the blast
+                - type: object
+                  required: [segmentParams, eventLink, total]
+                  properties:
+                    segmentParams:
+                      type: object
+                      additionalProperties:
+                        type: string
+                      description: Filter parameters defining the target segment
+                    eventLink:
+                      type: string
+                      format: uri
+                      description: Event landing page URL included in the blast
+                    total:
+                      type: integer
+                      minimum: 1
+                      description: Expected recipient count for the segment
+      responses:
+        '202':
+          description: Blast queued successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, eventLink, recipientCount]
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  eventLink:
+                    type: string
+                    format: uri
+                  recipientCount:
+                    type: integer
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
           content:
             application/json:
               schema:
