@@ -150,9 +150,6 @@ setup-dev:
 	@echo "⏳ Waiting for postgres..."
 	@until $(DEV_COMPOSE) exec -T postgres pg_isready -U yorindo -d yorindo > /dev/null 2>&1; do printf "."; sleep 1; done
 	@echo ""
-	@echo "⏳ Waiting for api npm install..."
-	@until $(DEV_COMPOSE) exec -T api sh -c "[ -f /app/node_modules/.bin/tsx ]" > /dev/null 2>&1; do printf "."; sleep 2; done
-	@echo ""
 	@echo "🔄 Running migrations..."
 	$(DEV_COMPOSE) exec api npx tsx scripts/migrate.ts
 	@echo "🌱 Running seed..."
