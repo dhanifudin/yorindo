@@ -30,8 +30,8 @@ interface ContactSheetRegistration {
   flagOverride: boolean
   status: Registration['status']
   createdAt: string
-  // New: Survey data from the form the user filled
-  surveyResponses: SurveyResponse[]
+  // Survey data from the form the user filled; optional because some rows may not include it yet
+  surveyResponses?: SurveyResponse[]
 }
 
 interface ContactSheetProps {
