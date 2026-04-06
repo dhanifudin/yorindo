@@ -21,7 +21,7 @@ interface Props {
 }
 
 export function TemplatePreview({ body, type, channel, logoUrl, imageType = 'header', bgOpacity = 40, subject }: Props) {
-  let previewHtml = body.replace(/\{\{(\w+)\}\}/g, (_, key) => SAMPLE_VALUES[key] ?? `{{${key}}}`)
+  const previewHtml = body.replace(/\{\{(\w+)\}\}/g, (_, key) => SAMPLE_VALUES[key] ?? `{{${key}}}`)
 
   if (channel === 'email') {
     return (

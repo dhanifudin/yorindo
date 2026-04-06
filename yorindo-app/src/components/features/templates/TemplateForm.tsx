@@ -9,8 +9,7 @@ import { TemplatePreview } from './TemplatePreview'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Upload, X } from 'lucide-react'
+import { Upload } from 'lucide-react'
 import { TiptapEditor } from '@/components/ui/tiptap-editor'
 
 const schema = z.object({
@@ -36,7 +35,15 @@ const VARIABLES = [
   { label: 'Link Konfirmasi', value: '{{confirm_url}}' },
 ]
 
-export default function TemplateForm({ template, onSuccess, onCancel }: any) {
+export default function TemplateForm({
+  template,
+  onSuccess,
+  onCancel,
+}: {
+  template?: Template
+  onSuccess: () => void
+  onCancel: () => void
+}) {
   const { mutate: create, isPending: isCreating } = useCreateTemplate()
   const { mutate: update, isPending: isUpdating } = useUpdateTemplate()
   const isPending = isCreating || isUpdating
@@ -60,7 +67,12 @@ export default function TemplateForm({ template, onSuccess, onCancel }: any) {
           imageType: template.imageType ?? 'header',
           bgOpacity: template.bgOpacity ?? 40,
         }
-      : { type: 'invitation', channel: 'whatsapp', imageType: 'header', bgOpacity: 40 },
+      : {
+          type: 'invitation',
+          channel: 'whatsapp',
+          imageType: 'header',
+          bgOpacity: 40,
+        },
   })
 
   const type = watch('type')
@@ -71,13 +83,13 @@ export default function TemplateForm({ template, onSuccess, onCancel }: any) {
   const bgOpacity = watch('bgOpacity')
   const subject = watch('subject') ?? ''
 
-  const [logoPreview, setLogoPreview] = useState(logoUrl)
+  const [logoPreview, setLogoPreview] = useState<string>(logoUrl)
 
-  // Auto default template
+  // Auto default template when type or channel changes
   useEffect(() => {
     if (template) return
-    // DEFAULT_TEMPLATES logic (bisa ditambah lagi kalau perlu)
-  }, [type, channel, setValue])
+    // You can add DEFAULT_TEMPLATES logic here if needed
+  }, [type, channel, template])
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -96,7 +108,6 @@ export default function TemplateForm({ template, onSuccess, onCancel }: any) {
     setValue('logoUrl', '')
   }
 
-  // Drag & Drop Variable
   const handleDragStart = (e: React.DragEvent, variable: string) => {
     e.dataTransfer.setData('text/plain', variable)
   }
@@ -109,14 +120,8 @@ export default function TemplateForm({ template, onSuccess, onCancel }: any) {
     const editor = document.querySelector('.ProseMirror') as HTMLElement
     if (editor) {
       editor.focus()
-      const selection = window.getSelection()
-      if (selection) {
-        selection.deleteFromDocument()
-      }
       document.execCommand('insertText', false, variable)
     }
-
-    // Fallback update form value
     setValue('body', bodyValue + ' ' + variable)
   }
 
@@ -125,43 +130,69 @@ export default function TemplateForm({ template, onSuccess, onCancel }: any) {
   }
 
   const onSubmit: SubmitHandler<FormValues> = (values) => {
-    const payload = { ...values }
+    console.log('✅ Form submitted:', values)   // Debug
+
+    const payload = {
+      name: values.name,
+      subject: values.subject || undefined,
+      type: values.type,
+      channel: values.channel,
+      body: values.body,
+      logoUrl: values.logoUrl,
+      imageType: values.imageType,
+      bgOpacity: values.bgOpacity,
+    }
+
     if (template) {
-      update({ id: template.id, ...payload }, { onSuccess })
+      update({ id: template.id, ...payload }, { 
+        onSuccess: () => {
+          console.log('✅ Update berhasil')
+          onSuccess()
+        },
+        onError: (err) => console.error('❌ Update gagal:', err)
+      })
     } else {
-      create(payload, { onSuccess })
+      create(payload, { 
+        onSuccess: () => {
+          console.log('✅ Template baru berhasil dibuat')
+          onSuccess()
+        },
+        onError: (err) => console.error('❌ Create gagal:', err)
+      })
     }
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-8">
+    <form 
+      onSubmit={handleSubmit(onSubmit)} 
+      noValidate 
+      className="space-y-8"
+    >
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
 
-        {/* LEFT COLUMN - FORM */}
+        {/* Form Section */}
         <div className="space-y-6">
           <div>
             <Label>Nama Template <span className="text-destructive">*</span></Label>
             <Input {...register('name')} placeholder="Contoh: Undangan ERP Summit" />
+            {errors.name && <p className="text-destructive text-xs mt-1">{errors.name.message}</p>}
           </div>
 
-          {/* SUBJECT - JELAS DAN MENONjol */}
           {channel === 'email' && (
             <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl">
               <Label className="text-blue-700 font-medium">Subject Email</Label>
               <Input
                 {...register('subject')}
-                placeholder="Konfirmasi Kehadiran - ERP Summit Jakarta 2026"
+                placeholder="Konfirmasi Kehadiran - ERP Summit 2026"
                 className="mt-2"
               />
-              <p className="text-xs text-blue-600 mt-1">Subject ini akan muncul di inbox email penerima</p>
             </div>
           )}
 
-          {/* Tipe & Channel */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label>Tipe Pesan</Label>
-              <select {...register('type')} className="w-full h-11 border rounded-lg px-4">
+              <select {...register('type')} className="w-full h-11 border rounded-lg px-4 text-sm">
                 <option value="invitation">Undangan</option>
                 <option value="confirmation">Konfirmasi</option>
                 <option value="rejection">Penolakan</option>
@@ -170,7 +201,7 @@ export default function TemplateForm({ template, onSuccess, onCancel }: any) {
             </div>
             <div>
               <Label>Channel</Label>
-              <select {...register('channel')} className="w-full h-11 border rounded-lg px-4">
+              <select {...register('channel')} className="w-full h-11 border rounded-lg px-4 text-sm">
                 <option value="whatsapp">WhatsApp</option>
                 <option value="email">Email</option>
               </select>
@@ -180,81 +211,50 @@ export default function TemplateForm({ template, onSuccess, onCancel }: any) {
           {/* Upload Gambar */}
           <div>
             <Label>Upload Gambar</Label>
-            <div className="flex gap-4 mt-2">
-              <label className="cursor-pointer flex-1 border-2 border-dashed rounded-2xl p-8 text-center hover:border-primary">
-                <Upload className="mx-auto mb-3" />
-                <p>Klik untuk upload</p>
+            <div className="flex gap-4 mt-2 items-start">
+              <label className="cursor-pointer flex-1 border-2 border-dashed border-input hover:border-primary rounded-2xl p-8 text-center">
+                <Upload className="mx-auto mb-3 w-8 h-8" />
+                <p className="text-sm">Klik untuk upload gambar</p>
                 <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
               </label>
+
               {logoPreview && (
-                <div>
-                  <img src={logoPreview} alt="preview" className="h-20 w-20 object-contain border rounded" />
-                  <Button type="button" variant="destructive" size="sm" className="mt-2 w-full" onClick={removeLogo}>
+                <div className="flex flex-col items-center gap-2">
+                  <img src={logoPreview} alt="preview" className="h-20 w-20 object-contain border rounded-xl" />
+                  <Button type="button" variant="destructive" size="sm" onClick={removeLogo}>
                     Hapus
                   </Button>
                 </div>
               )}
             </div>
-            {/* Radio Header / Background */}
-            {logoPreview && (
-              <div className="mt-4">
-                <RadioGroup value={imageType} onValueChange={(v) => setValue('imageType', v as any)}>
-                  <div className="flex gap-6">
-                    <div className="flex items-center gap-2">
-                      <RadioGroupItem value="header" />
-                      <Label>Header</Label>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <RadioGroupItem value="background" />
-                      <Label>Background</Label>
-                    </div>
-                  </div>
-                </RadioGroup>
-
-                {imageType === 'background' && (
-                  <div className="mt-4">
-                    <Label>Opacity Background: {bgOpacity}%</Label>
-                    <input
-                      type="range"
-                      min={10}
-                      max={70}
-                      step={5}
-                      value={bgOpacity}
-                      onChange={(e) => setValue('bgOpacity', Number(e.target.value))}
-                      className="w-full mt-3"
-                    />
-                  </div>
-                )}
-              </div>
-            )}
           </div>
 
-          {/* DRAG & DROP VARIABLE */}
+          {/* Variable Drag & Drop */}
           <div>
             <Label className="mb-3 block">Variable (Tarik ke editor)</Label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               {VARIABLES.map((v) => (
                 <div
                   key={v.value}
                   draggable
                   onDragStart={(e) => handleDragStart(e, v.value)}
-                  className="bg-white border border-gray-300 hover:border-blue-500 rounded-lg px-2 py-2 text-[11px] leading-snug cursor-grab active:cursor-grabbing transition break-words"
+                  className="bg-white border border-gray-300 hover:border-blue-500 rounded-lg px-4 py-3 text-sm cursor-grab active:cursor-grabbing"
                 >
                   {v.label}
                 </div>
               ))}
             </div>
-            <p className="text-[11px] text-muted-foreground mt-2">Tarik variable ke area editor di sebelah kanan</p>
           </div>
 
-          {/* Editor */}
+          {/* Tiptap Editor */}
           <div onDrop={handleDrop} onDragOver={handleDragOver}>
             <Label>Isi Pesan <span className="text-destructive">*</span></Label>
             <TiptapEditor value={bodyValue} onChange={(html) => setValue('body', html)} />
+            {errors.body && <p className="text-destructive text-xs mt-1">{errors.body.message}</p>}
           </div>
         </div>
 
-        {/* RIGHT COLUMN - PREVIEW */}
+        {/* Preview */}
         <div className="sticky top-6">
           <p className="font-medium mb-3">Preview Langsung</p>
           <TemplatePreview
@@ -270,8 +270,10 @@ export default function TemplateForm({ template, onSuccess, onCancel }: any) {
       </div>
 
       <div className="flex justify-end gap-4 pt-6 border-t">
-        <Button type="button" variant="outline" onClick={onCancel}>Batal</Button>
-        <Button type="submit" disabled={isPending}>
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Batal
+        </Button>
+        <Button type="submit" disabled={isPending} size="lg">
           {isPending ? 'Menyimpan...' : template ? 'Simpan Perubahan' : 'Buat Template'}
         </Button>
       </div>
