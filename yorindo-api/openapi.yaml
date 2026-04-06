@@ -2770,6 +2770,79 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
 
+  /contacts/blast:
+    post:
+      summary: Initiate a blast to a set of contacts or a contact segment
+      operationId: blastContacts
+      tags: [Contacts]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  required: [contactIds, eventLink]
+                  properties:
+                    contactIds:
+                      type: array
+                      items:
+                        type: string
+                        minLength: 1
+                      description: Explicit list of contact IDs to blast
+                    eventLink:
+                      type: string
+                      format: uri
+                      description: Event landing page URL included in the blast
+                - type: object
+                  required: [segmentParams, eventLink, total]
+                  properties:
+                    segmentParams:
+                      type: object
+                      additionalProperties:
+                        type: string
+                      description: Filter parameters defining the target segment
+                    eventLink:
+                      type: string
+                      format: uri
+                      description: Event landing page URL included in the blast
+                    total:
+                      type: integer
+                      minimum: 1
+                      description: Expected recipient count for the segment
+      responses:
+        '202':
+          description: Blast queued successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, eventLink, recipientCount]
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  eventLink:
+                    type: string
+                    format: uri
+                  recipientCount:
+                    type: integer
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
   # ─────────────────────────────────────────────────────────────────────────────
   # VENDORS
   # ─────────────────────────────────────────────────────────────────────────────
