@@ -950,7 +950,7 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
   })
 
   // ── POST /api/contacts/blast ──────────────────────────────────────
-  const BlastBodySchema = z.discriminatedUnion('contactIds' extends string ? 'contactIds' : 'segmentParams', [
+  const BlastBodySchema = z.union([
     z.object({
       contactIds: z.array(z.string().trim().min(1)),
       eventLink: z.string().trim().url(),
