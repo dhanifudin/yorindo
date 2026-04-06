@@ -4,11 +4,11 @@
 
 Three CD workflows deploy to different targets:
 
-| Workflow | Trigger | Target | Env template |
-|----------|---------|--------|--------------|
-| `cd.yml` | Tag push `v*.*.*` | Full demo stack at `demo.yorindo.app` | `env.demo.template` |
-| `cd-api.yml` | Push to `main` (api changes) | API-only at `api.dhanifudin.com` | `env.api.template` |
-| `cd-app.yml` | Push to `main` (app changes) | App preview at `app.dhanifudin.com` | `env.app.template` |
+| Workflow     | Trigger                      | Target                                   | Env template        |
+| ------------ | ---------------------------- | ---------------------------------------- | ------------------- |
+| `cd.yml`     | Tag push `v*.*.*`            | Full demo stack at `demo.dhanifudin.com` | `env.demo.template` |
+| `cd-api.yml` | Push to `main` (api changes) | API-only at `api.dhanifudin.com`         | `env.api.template`  |
+| `cd-app.yml` | Push to `main` (app changes) | App preview at `app.dhanifudin.com`      | `env.app.template`  |
 
 Each workflow reads the corresponding template from the repo, replaces `CHANGE_ME_*` placeholders with individual GitHub secrets, and SCPs the resulting `.env` to the VPS.
 
@@ -20,35 +20,35 @@ Configure these secrets in **GitHub → Settings → Secrets and variables → A
 
 ### Infrastructure (all workflows)
 
-| Secret | Purpose | How to obtain |
-|--------|---------|---------------|
-| `VPS_SSH_KEY` | SSH private key (PEM) for VPS access | `ssh-keygen -t ed25519 -C "github-ci"`; add public key to VPS `~/.ssh/authorized_keys` |
-| `VPS_HOST` | VPS IP address or hostname | From your VPS provider dashboard |
-| `VPS_USER` | SSH username on VPS | e.g. `ubuntu`, `deploy` |
-| `DOCKERHUB_USERNAME` | DockerHub username | Your DockerHub account |
-| `DOCKERHUB_TOKEN` | DockerHub access token | DockerHub → Account Settings → Security → Access Tokens |
+| Secret               | Purpose                              | How to obtain                                                                          |
+| -------------------- | ------------------------------------ | -------------------------------------------------------------------------------------- |
+| `VPS_SSH_KEY`        | SSH private key (PEM) for VPS access | `ssh-keygen -t ed25519 -C "github-ci"`; add public key to VPS `~/.ssh/authorized_keys` |
+| `VPS_HOST`           | VPS IP address or hostname           | From your VPS provider dashboard                                                       |
+| `VPS_USER`           | SSH username on VPS                  | e.g. `ubuntu`, `deploy`                                                                |
+| `DOCKERHUB_USERNAME` | DockerHub username                   | Your DockerHub account                                                                 |
+| `DOCKERHUB_TOKEN`    | DockerHub access token               | DockerHub → Account Settings → Security → Access Tokens                                |
 
 ### Application secrets (cd.yml + cd-api.yml)
 
-| Secret | Placeholder replaced | Required |
-|--------|---------------------|----------|
-| `POSTGRES_PASSWORD` | `CHANGE_ME_min_16_chars` | Yes — min 16 characters |
-| `JWT_SECRET` | `CHANGE_ME_min_32_chars_xxxxxxxxxxxxxxxx` | Yes — min 32 characters |
-| `JWT_REFRESH_SECRET` | `CHANGE_ME_different_min_32_chars_xxxx` | Yes — different from JWT_SECRET |
+| Secret               | Placeholder replaced                      | Required                        |
+| -------------------- | ----------------------------------------- | ------------------------------- |
+| `POSTGRES_PASSWORD`  | `CHANGE_ME_min_16_chars`                  | Yes — min 16 characters         |
+| `JWT_SECRET`         | `CHANGE_ME_min_32_chars_xxxxxxxxxxxxxxxx` | Yes — min 32 characters         |
+| `JWT_REFRESH_SECRET` | `CHANGE_ME_different_min_32_chars_xxxx`   | Yes — different from JWT_SECRET |
 
 ### Provider secrets (cd-api.yml only)
 
-| Secret | Placeholder replaced | Required |
-|--------|---------------------|----------|
-| `BREVO_API_KEY` | `CHANGE_ME_BREVO_API_KEY` | Required when `EMAIL_PROVIDER=brevo` |
-| `EVERPRO_API_KEY` | `CHANGE_ME_EVERPRO_API_KEY` | Required when `WHATSAPP_PROVIDER=everpro` |
-| `OPENAI_API_KEY` | `CHANGE_ME_OPENAI_API_KEY` | Required when `AI_PROVIDER=openai` |
-| `ANTHROPIC_API_KEY` | `CHANGE_ME_ANTHROPIC_API_KEY` | Required when `AI_PROVIDER=anthropic` |
+| Secret              | Placeholder replaced          | Required                                  |
+| ------------------- | ----------------------------- | ----------------------------------------- |
+| `BREVO_API_KEY`     | `CHANGE_ME_BREVO_API_KEY`     | Required when `EMAIL_PROVIDER=brevo`      |
+| `EVERPRO_API_KEY`   | `CHANGE_ME_EVERPRO_API_KEY`   | Required when `WHATSAPP_PROVIDER=everpro` |
+| `OPENAI_API_KEY`    | `CHANGE_ME_OPENAI_API_KEY`    | Required when `AI_PROVIDER=openai`        |
+| `ANTHROPIC_API_KEY` | `CHANGE_ME_ANTHROPIC_API_KEY` | Required when `AI_PROVIDER=anthropic`     |
 
 ### App-specific (cd-app.yml only)
 
-| Secret | Purpose | Required |
-|--------|---------|----------|
+| Secret           | Purpose                     | Required                                            |
+| ---------------- | --------------------------- | --------------------------------------------------- |
 | `APP_SENTRY_DSN` | Sentry error monitoring DSN | No — Sentry DSN lines remain commented out if unset |
 
 ---
@@ -57,11 +57,11 @@ Configure these secrets in **GitHub → Settings → Secrets and variables → A
 
 The three template files live at the repo root and are committed to version control:
 
-| File | Deployed as | Used by |
-|------|-------------|---------|
-| `env.demo.template` | `/var/www/yorindo/.env` | `cd.yml` |
-| `env.api.template` | `/var/www/yorindo-api/.env` | `cd-api.yml` |
-| `env.app.template` | `/var/www/yorindo-app/.env` | `cd-app.yml` |
+| File                | Deployed as                 | Used by      |
+| ------------------- | --------------------------- | ------------ |
+| `env.demo.template` | `/var/www/yorindo/.env`     | `cd.yml`     |
+| `env.api.template`  | `/var/www/yorindo-api/.env` | `cd-api.yml` |
+| `env.app.template`  | `/var/www/yorindo-app/.env` | `cd-app.yml` |
 
 To update a default (non-secret) value (e.g. `BASE_URL`, `EMAIL_PROVIDER`), edit the template directly and commit. Secrets stay in GitHub and are never committed.
 
@@ -222,9 +222,9 @@ Triggered automatically when `yorindo-app/**` changes land on `main`. Builds wit
 
 ## Docker Image Naming
 
-| Image | Tags |
-|-------|------|
-| `DOCKERHUB_USERNAME/yorindo-api` | `{tag}` / `latest` (cd.yml), `{sha8}` / `latest` (cd-api.yml) |
+| Image                            | Tags                                                                   |
+| -------------------------------- | ---------------------------------------------------------------------- |
+| `DOCKERHUB_USERNAME/yorindo-api` | `{tag}` / `latest` (cd.yml), `{sha8}` / `latest` (cd-api.yml)          |
 | `DOCKERHUB_USERNAME/yorindo-app` | `{tag}` / `latest` (cd.yml), `preview-{sha8}` / `preview` (cd-app.yml) |
 
 ---
