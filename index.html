@@ -3,33 +3,133 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Contribution Reports</title>
+  <title>Contribution Reports — Yorindo</title>
   <style>
-    :root { --bg: #0d1117; --surface: #161b22; --border: #30363d; --text: #c9d1d9; --accent: #58a6ff; }
+    :root {
+      --bg: #0d1117; --surface: #161b22; --surface-hover: #1c2128;
+      --border: #30363d; --text: #c9d1d9; --text-muted: #8b949e;
+      --accent: #58a6ff; --green: #3fb950; --red: #f85149; --yellow: #d29922;
+    }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-    .container { text-align: center; }
-    h1 { margin-bottom: 2rem; font-size: 2rem; }
-    .cards { display: flex; gap: 2rem; justify-content: center; flex-wrap: wrap; }
-    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 2rem 3rem; text-decoration: none; color: var(--text); transition: border-color 0.2s, transform 0.2s; min-width: 250px; }
-    .card:hover { border-color: var(--accent); transform: translateY(-2px); }
-    .card h2 { color: var(--accent); margin-bottom: 0.5rem; }
-    .card p { color: var(--text-muted); font-size: 0.9rem; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      background: var(--bg); color: var(--text); padding: 2rem; max-width: 900px; margin: 0 auto;
+    }
+    header { margin-bottom: 2rem; }
+    h1 { font-size: 1.75rem; margin-bottom: 0.25rem; }
+    h1 a { color: var(--accent); text-decoration: none; }
+    h1 a:hover { text-decoration: underline; }
+    .subtitle { color: var(--text-muted); font-size: 0.9rem; }
+    .filters {
+      display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;
+      margin-bottom: 1.5rem; padding: 1rem; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 8px;
+    }
+    .filters label { font-size: 0.85rem; color: var(--text-muted); }
+    .filters input[type="date"] {
+      background: var(--bg); color: var(--text); border: 1px solid var(--border);
+      border-radius: 6px; padding: 0.4rem 0.6rem; font-size: 0.85rem;
+    }
+    .filters button {
+      background: var(--accent); color: #fff; border: none; border-radius: 6px;
+      padding: 0.4rem 1rem; font-size: 0.85rem; cursor: pointer; font-weight: 500;
+    }
+    .filters button:hover { opacity: 0.9; }
+    .filters .clear-btn { background: transparent; border: 1px solid var(--border); color: var(--text-muted); }
+    .filters .clear-btn:hover { border-color: var(--text-muted); color: var(--text); }
+    .summary {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 0.75rem; margin-bottom: 1.5rem;
+    }
+    .summary-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+      padding: 0.75rem; text-align: center;
+    }
+    .summary-card .number { font-size: 1.5rem; font-weight: 700; color: var(--accent); }
+    .summary-card .label { color: var(--text-muted); font-size: 0.8rem; margin-top: 0.15rem; }
+    table { width: 100%; border-collapse: collapse; background: var(--surface); border-radius: 6px; overflow: hidden; }
+    th, td { padding: 0.6rem 1rem; text-align: left; border-bottom: 1px solid var(--border); }
+    th { background: #1c2128; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+    td a { color: var(--accent); text-decoration: none; font-weight: 500; }
+    td a:hover { text-decoration: underline; }
+    td code { font-size: 0.75rem; color: var(--text-muted); }
+    tr.hidden { display: none; }
+    tr:hover { background: var(--surface-hover); }
+    .footer { margin-top: 2rem; color: var(--text-muted); font-size: 0.75rem; text-align: center; }
+    @media (max-width: 600px) {
+      body { padding: 1rem; }
+      .filters { flex-direction: column; align-items: stretch; }
+      table { font-size: 0.85rem; }
+      th, td { padding: 0.5rem; }
+    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Contribution Reports</h1>
-    <div class="cards">
-      <a href="reposense/index.html" class="card">
-        <h2>Code Contributions</h2>
-        <p>RepoSense — commits, lines changed, files touched</p>
-      </a>
-      <a href="contribution-api/index.html" class="card">
-        <h2>GitHub Activity</h2>
-        <p>Issues, PRs, comments, and reviews</p>
-      </a>
+  <header>
+    <h1><a href="https://yorindo.dhanifudin.com">Contribution Reports</a></h1>
+    <p class="subtitle">Generated on 4/6/2026, 10:01:22 AM WIB (UTC+7)</p>
+  </header>
+
+  <div class="summary">
+    <div class="summary-card">
+      <div class="number">1</div>
+      <div class="label">Total Reports</div>
+    </div>
+    <div class="summary-card">
+      <div class="number">Mon</div>
+      <div class="label">Latest Report</div>
+    </div>
+    <div class="summary-card">
+      <div class="number">Mon</div>
+      <div class="label">First Report</div>
     </div>
   </div>
+
+  <div class="filters">
+    <label>From: <input type="date" id="date-from"></label>
+    <label>To: <input type="date" id="date-to"></label>
+    <button onclick="applyFilter()">Filter</button>
+    <button class="clear-btn" onclick="clearFilter()">Clear</button>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Date (WIB)</th>
+        <th>Trigger</th>
+        <th>Run ID</th>
+      </tr>
+    </thead>
+    <tbody id="report-table">
+      
+    <tr class="report-row" data-date="2026-04-06">
+      <td><a href="reports/2026-04-06/index.html">Mon, Apr 6, 2026</a></td>
+      <td>🖐️ Manual</td>
+      <td><code>24016885951</code></td>
+    </tr>
+    </tbody>
+  </table>
+
+  <p class="footer">Powered by RepoSense + GitHub API · All times in WIB (UTC+7)</p>
+
+  <script>
+    function applyFilter() {
+      const from = document.getElementById('date-from').value;
+      const to = document.getElementById('date-to').value;
+      const rows = document.querySelectorAll('#report-table .report-row');
+      rows.forEach(row => {
+        const date = row.getAttribute('data-date');
+        let show = true;
+        if (from && date < from) show = false;
+        if (to && date > to) show = false;
+        row.classList.toggle('hidden', !show);
+      });
+    }
+    function clearFilter() {
+      document.getElementById('date-from').value = '';
+      document.getElementById('date-to').value = '';
+      document.querySelectorAll('#report-table .report-row').forEach(r => r.classList.remove('hidden'));
+    }
+  </script>
 </body>
 </html>

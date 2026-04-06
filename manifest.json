@@ -1,0 +1,6 @@
+{
+  "timezone": "Asia/Jakarta",
+  "reports": [
+    { "date": "2026-04-06", "runId": "24016885951", "trigger": "manual" }
+  ]
+}
