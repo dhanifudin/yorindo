@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useTemplates, useDeleteTemplate, type Template } from '@/hooks/useTemplates'
-import { TemplateForm } from '@/components/features/templates/TemplateForm'
+import TemplateForm from '@/components/features/templates/TemplateForm'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
