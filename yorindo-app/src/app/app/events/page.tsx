@@ -48,7 +48,6 @@ interface DeletedEvent extends Event {
 
 export default function EventsPage() {
   const [showForm, setShowForm] = useState(false)
-  const [showDeleted, setShowDeleted] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Event | null>(null)
   const [detailEvent, setDetailEvent] = useState<Event | null>(null)
   const [editEvent, setEditEvent] = useState<Event | null>(null)
@@ -66,6 +65,7 @@ export default function EventsPage() {
   const searchQuery = searchParams.get('search') || ''
   const startDate = searchParams.get('startDate') || ''
   const endDate = searchParams.get('endDate') || ''
+  const isDeletedView = searchParams.get('deleted') === 'true'
 
   const updateParams = useCallback(
     (updates: Record<string, string | null>) => {
@@ -149,7 +149,7 @@ export default function EventsPage() {
   const { data: deletedData } = useQuery<{ data: DeletedEvent[] }>({
     queryKey: ['events-deleted'],
     queryFn: () => fetch('/api/events?deleted=true').then((r) => r.json()),
-    enabled: showDeleted,
+    enabled: isDeletedView,
   })
 
   const deleteMutation = useMutation({
@@ -168,7 +168,7 @@ export default function EventsPage() {
 
   const restoreMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`/api/events/${id}/restore`, { method: 'POST' })
+      const res = await fetch(`/api/events/${id}/restore`, { method: 'PATCH' })
       if (!res.ok) throw new Error('Restore gagal')
       return res.json()
     },
@@ -188,14 +188,14 @@ export default function EventsPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Manajemen Event</h1>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => setShowDeleted((v) => !v)}>
-            {showDeleted ? 'Aktif' : 'Terhapus'} ({deletedData?.data.length ?? 0})
+          <Button variant="outline" size="sm" onClick={() => updateParams({ deleted: isDeletedView ? null : 'true' })}>
+            {isDeletedView ? 'Aktif' : 'Terhapus'} ({deletedData?.data.length ?? 0})
           </Button>
-          {!showDeleted && <Button onClick={() => setShowForm(true)}>+ Event Baru</Button>}
+          {!isDeletedView && <Button onClick={() => setShowForm(true)}>+ Event Baru</Button>}
         </div>
       </div>
 
-      {showForm && !showDeleted && (
+      {showForm && !isDeletedView && (
         <Card className="mb-6">
           <CardContent className="pt-6">
             <h2 className="text-lg font-semibold mb-4">Buat Event Baru</h2>
@@ -395,21 +395,19 @@ export default function EventsPage() {
                 Edit
               </Button>
             )}
-            {detailEvent?.status === 'draft' && (
-              <Button
-                size="sm"
-                variant="ghost"
-                className="text-destructive hover:text-destructive"
-                onClick={() => { if (detailEvent) setDeleteTarget(detailEvent); setDetailEvent(null) }}
-              >
-                Hapus
-              </Button>
-            )}
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-destructive hover:text-destructive"
+              onClick={() => { if (detailEvent) setDeleteTarget(detailEvent); setDetailEvent(null) }}
+            >
+              Hapus
+            </Button>
           </SheetFooter>
         </SheetContent>
       </Sheet>
 
-      {showDeleted ? (
+      {isDeletedView ? (
         <div>
           <h2 className="text-lg font-semibold mb-4">Event Terhapus</h2>
           {!deletedData?.data.length ? (
@@ -556,16 +554,14 @@ export default function EventsPage() {
                             {event.venue && ` · ${event.venue}`}
                             {event.capacity != null && ` · Kapasitas: ${event.capacity}`}
                           </div>
-                          {event.status === 'draft' && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-destructive hover:text-destructive -mr-2 h-7 px-2"
-                              onClick={(e) => { e.stopPropagation(); setDeleteTarget(event) }}
-                            >
-                              Hapus
-                            </Button>
-                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive -mr-2 h-7 px-2"
+                            onClick={(e) => { e.stopPropagation(); setDeleteTarget(event) }}
+                          >
+                            Hapus
+                          </Button>
                         </div>
                       </div>
                     </div>
@@ -626,19 +622,17 @@ export default function EventsPage() {
                           </TableCell>
                           <TableCell onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center gap-1">
-                              {EDITABLE_STATUSES.includes(event.status) && (
+                               {EDITABLE_STATUSES.includes(event.status) && (
                                 <Button variant="outline" size="sm" onClick={() => setEditEvent(event)}>Edit</Button>
                               )}
-                              {event.status === 'draft' && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-destructive hover:text-destructive"
-                                  onClick={() => setDeleteTarget(event)}
-                                >
-                                  Hapus
-                                </Button>
-                              )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-destructive hover:text-destructive"
+                                onClick={() => setDeleteTarget(event)}
+                              >
+                                Hapus
+                              </Button>
                             </div>
                           </TableCell>
                         </TableRow>
