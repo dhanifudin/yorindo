@@ -127,27 +127,30 @@ logs-dev:
 ## Run migrations inside dev api container
 migrate-dev:
 	@echo "🔄 Running migrations in dev..."
-	@until $(DEV_COMPOSE) exec -T postgres pg_isready -U yorindo -d yorindo > /dev/null 2>&1; do printf "."; sleep 1; done
-	@echo ""
-	$(DEV_API_TTY) npx tsx scripts/migrate.ts
+	$(DEV_COMPOSE) exec api npx tsx scripts/migrate.ts
 
 ## Run basic dev seed (10 contacts, 3 events)
 seed-dev:
 	@echo "🌱 Running dev seed..."
-	$(DEV_API_TTY) npx tsx scripts/seed.ts
+	$(DEV_COMPOSE) exec api npx tsx scripts/seed.ts
 
 ## Migrate + seed in one step (first-time local setup)
 setup-dev:
 	@echo "═══════════════════════════════════════════"
 	@echo "⚙️  Setting up Local Dev Database"
 	@echo "═══════════════════════════════════════════"
-	@echo "⏳ Waiting for postgres to be ready..."
+	@echo "🔌 Starting services..."
+	$(DEV_COMPOSE) up -d
+	@echo "⏳ Waiting for postgres..."
 	@until $(DEV_COMPOSE) exec -T postgres pg_isready -U yorindo -d yorindo > /dev/null 2>&1; do printf "."; sleep 1; done
 	@echo ""
+	@echo "⏳ Waiting for api npm install..."
+	@until $(DEV_COMPOSE) exec -T api sh -c "[ -f /app/node_modules/.bin/tsx ]" > /dev/null 2>&1; do printf "."; sleep 2; done
+	@echo ""
 	@echo "🔄 Running migrations..."
-	$(DEV_API_TTY) npx tsx scripts/migrate.ts
+	$(DEV_COMPOSE) exec api npx tsx scripts/migrate.ts
 	@echo "🌱 Running seed..."
-	$(DEV_API_TTY) npx tsx scripts/seed.ts
+	$(DEV_COMPOSE) exec api npx tsx scripts/seed.ts
 	@echo ""
 	@echo "✅ Dev database ready."
 
