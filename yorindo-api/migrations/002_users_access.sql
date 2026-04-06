@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash VARCHAR(255) NOT NULL,
   role          VARCHAR(20) NOT NULL,  -- 'super_admin', 'event_admin', 'staff', 'vendor_client', 'participant'
   name          VARCHAR(200),
+  deleted_at    TIMESTAMPTZ,
   created_at    TIMESTAMPTZ DEFAULT NOW(),
   updated_at    TIMESTAMPTZ DEFAULT NOW()
 );
