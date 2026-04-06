@@ -18,9 +18,12 @@ WORKDIR /app
 RUN addgroup -g 1001 -S nodejs && adduser -S yorindo -u 1001
 RUN mkdir -p /app/uploads && chown -R yorindo:nodejs /app/uploads
 
-COPY --from=deps /app/node_modules ./node_modules
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/openapi.yaml ./openapi.yaml
+COPY --from=builder /app/scripts ./scripts
+COPY --from=builder /app/migrations ./migrations
+COPY --from=builder /app/tsconfig.json ./tsconfig.json
 COPY --chown=yorindo:nodejs uploads/.gitignore ./uploads/.gitignore
 
 USER yorindo
