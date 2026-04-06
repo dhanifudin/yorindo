@@ -56,9 +56,11 @@ CREATE TABLE IF NOT EXISTS survey_responses (
   id              TEXT PRIMARY KEY,
   event_id        TEXT NOT NULL REFERENCES events(id),
   registration_id TEXT NOT NULL REFERENCES registrations(id),
-  survey_type     VARCHAR(20) NOT NULL CHECK (survey_type IN ('registration', 'post_event')),
-  responses       JSONB NOT NULL,
-  submitted_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  survey_type     TEXT NOT NULL DEFAULT 'registration'
+    CHECK (survey_type IN ('registration', 'post-event')),
+  answers         JSONB NOT NULL DEFAULT '{}',
+  submitted_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- ─────────────────────────────────────────────

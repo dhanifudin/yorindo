@@ -1,24 +1,22 @@
 -- Migration 001: Core Schema
--- Enable UUID generation
-CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- Industries lookup
 CREATE TABLE IF NOT EXISTS industries (
-  id    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id    TEXT PRIMARY KEY,
   slug  VARCHAR(100) UNIQUE NOT NULL,
   name  VARCHAR(200) NOT NULL
 );
 
 -- Job Titles lookup
 CREATE TABLE IF NOT EXISTS job_titles (
-  id    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id    TEXT PRIMARY KEY,
   slug  VARCHAR(100) UNIQUE NOT NULL,
   name  VARCHAR(200) NOT NULL
 );
 
 -- Vendors
 CREATE TABLE IF NOT EXISTS vendors (
-  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id         TEXT PRIMARY KEY,
   name       VARCHAR(200) NOT NULL,
   contact    VARCHAR(200),
   phone      VARCHAR(20),
@@ -28,12 +26,12 @@ CREATE TABLE IF NOT EXISTS vendors (
 
 -- Contacts
 CREATE TABLE IF NOT EXISTS contacts (
-  id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id                 TEXT PRIMARY KEY,
   name               VARCHAR(200) NOT NULL,
   phone              VARCHAR(20) UNIQUE NOT NULL,  -- normalized: +62XXXXXXXXXX
   email              VARCHAR(200) UNIQUE,
-  industry_id        UUID REFERENCES industries(id),
-  job_title_id       UUID REFERENCES job_titles(id),
+  industry_id        TEXT REFERENCES industries(id),
+  job_title_id       TEXT REFERENCES job_titles(id),
   city               VARCHAR(100),
   company            VARCHAR(200),
   company_size       VARCHAR(20),                  -- '<50', '50-200', '200-1000', '>1000'
@@ -53,7 +51,7 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- Events
 CREATE TABLE IF NOT EXISTS events (
-  id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id                   TEXT PRIMARY KEY,
   name                 VARCHAR(300) NOT NULL,
   slug                 VARCHAR(150) UNIQUE NOT NULL,
   date                 TIMESTAMPTZ NOT NULL,
@@ -67,8 +65,8 @@ CREATE TABLE IF NOT EXISTS events (
   notification_channel VARCHAR(20) DEFAULT 'email',    -- 'email', 'whatsapp'
   scan_format          VARCHAR(20) DEFAULT 'qr',       -- 'qr'
   target_criteria      JSONB,
-  survey_schema_id     TEXT,                           -- MongoDB ObjectId as string
-  vendor_id            UUID REFERENCES vendors(id),
+  survey_schema_id     TEXT,
+  vendor_id            TEXT REFERENCES vendors(id),
   status               event_status NOT NULL DEFAULT 'draft',
   deleted_at           TIMESTAMPTZ,
   created_at           TIMESTAMPTZ DEFAULT NOW(),
@@ -82,9 +80,9 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- Registrations
 CREATE TABLE IF NOT EXISTS registrations (
-  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  contact_id    UUID REFERENCES contacts(id) ON DELETE CASCADE,
-  event_id      UUID REFERENCES events(id) ON DELETE CASCADE,
+  id            TEXT PRIMARY KEY,
+  contact_id    TEXT REFERENCES contacts(id) ON DELETE CASCADE,
+  event_id      TEXT REFERENCES events(id) ON DELETE CASCADE,
   status        reg_status NOT NULL DEFAULT 'pending',
   ticket_token  TEXT,
   ai_score      NUMERIC(4,3),
