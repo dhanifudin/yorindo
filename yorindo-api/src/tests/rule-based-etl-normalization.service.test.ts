@@ -9,10 +9,29 @@ describe('RuleBasedEtlNormalizationService', () => {
       { name: 'john doe', city: 'jakarta pusat', company: 'pt teknology utama' }
     ]
     const results = await service.normalizeBatch(rows)
-    
+
     expect(results[0].name).toBe('John Doe')
     expect(results[0].city).toBe('Jakarta Pusat')
     expect(results[0].company).toBe('Pt Teknology Utama')
+  })
+
+  it('maps known city names to wilayah codes', async () => {
+    const rows = [
+      { name: 'John', city: 'Jakarta Pusat' },
+      { name: 'Jane', city: 'surabaya' },
+      { name: 'Bob', city: 'unknown-city-xyz' },
+    ]
+    const results = await service.normalizeBatch(rows)
+
+    expect(results[0].provinceCode).toBe('31')
+    expect(results[0].cityCode).toBe('31.71')
+    expect(results[0].provinceName).toBe('DKI Jakarta')
+
+    expect(results[1].provinceCode).toBe('35')
+    expect(results[1].cityCode).toBe('35.78')
+
+    expect(results[2].provinceCode).toBe(null)
+    expect(results[2].cityCode).toBe(null)
   })
 
   it('correctly normalizes phone numbers', async () => {

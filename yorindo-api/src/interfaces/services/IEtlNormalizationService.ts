@@ -7,6 +7,10 @@ export interface NormalizedRow {
   phone: string | null
   email: string | null
   city: string | null
+  provinceCode: string | null
+  provinceName: string | null
+  cityCode: string | null
+  cityName: string | null
   company: string | null
   department: string | null
   serviceType: string | null

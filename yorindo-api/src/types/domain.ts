@@ -58,6 +58,10 @@ export interface Contact {
   serviceType: string | null
   jobTitle: string | null
   city: string | null
+  provinceCode: string | null
+  provinceName: string | null
+  cityCode: string | null
+  cityName: string | null
   company: string | null
   department: string | null
   eventDate: string | null
