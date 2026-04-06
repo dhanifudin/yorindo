@@ -9,8 +9,6 @@
 #   POSTGRES_PASSWORD=secret docker compose -f docker-compose.dev.yml up
 #   — or set POSTGRES_PASSWORD in a .env file at the repo root
 
-x-postgres-password: &postgres-password ${POSTGRES_PASSWORD:-dev123}
-
 services:
   api:
     image: node:24-alpine
@@ -20,7 +18,7 @@ services:
     environment:
       NODE_ENV: development
       PORT: "3000"
-      DATABASE_URL: "postgresql://yorindo:${POSTGRES_PASSWORD:-dev123}@postgres:5432/yorindo"
+      DATABASE_URL: "postgresql://yorindo:${POSTGRES_PASSWORD:-yorindo}@postgres:5432/yorindo"
       REDIS_URL: "redis://redis:6379"
       ETL_AI_PROVIDER: "disabled"
       TSX_LEGACY_WATCH: "true"   # required for WSL2 / Docker Desktop file watching
@@ -56,7 +54,7 @@ services:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: yorindo
-      POSTGRES_PASSWORD: *postgres-password
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-yorindo}
       POSTGRES_DB: yorindo
     ports:
       - "5432:5432"
