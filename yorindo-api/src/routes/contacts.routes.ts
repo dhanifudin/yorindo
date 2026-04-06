@@ -948,4 +948,111 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
     validateOpenApiResponse({ path: '/contacts/flagged/{id}', method: 'patch', status: 200, body: responseBody })
     return reply.status(200).send(responseBody)
   })
+
+  // ── POST /api/contacts/blast ──────────────────────────────────────
+  const BlastBodySchema = z.discriminatedUnion('contactIds' extends string ? 'contactIds' : 'segmentParams', [
+    z.object({
+      contactIds: z.array(z.string().trim().min(1)),
+      eventLink: z.string().trim().url(),
+    }),
+    z.object({
+      segmentParams: z.record(z.string()),
+      eventLink: z.string().trim().url(),
+      total: z.number().int().min(1),
+    }),
+  ])
+
+  fastify.post('/api/contacts/blast', adminOnly, async (request, reply) => {
+    const bodyResult = BlastBodySchema.safeParse(request.body)
+    if (!bodyResult.success) {
+      return reply.status(400).send({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Invalid blast payload',
+          details: bodyResult.error.issues,
+        },
+      })
+    }
+
+    validateOpenApiRequest({ path: '/contacts/blast', method: 'post', body: bodyResult.data })
+
+    const actor = request.user as JwtPayload
+    const payload = bodyResult.data
+    const blastTarget = 'contactIds' in payload
+      ? { type: 'contacts' as const, count: payload.contactIds.length, contactIds: payload.contactIds }
+      : { type: 'segment' as const, count: payload.total, segmentParams: payload.segmentParams }
+
+    // Persist blast to audit log; actual dispatch handled by notification worker
+    await auditLogRepository.create({
+      action: 'contact.blast_initiated',
+      actorId: actor.sub,
+      actorRole: actor.role,
+      eventId: null,
+      targetId: `blast-${Date.now()}`,
+      targetType: 'contact_blast',
+      metadata: {
+        target: blastTarget,
+        eventLink: payload.eventLink,
+        channel: 'email',
+        status: 'queued',
+      },
+    })
+
+    const responseBody = {
+      success: true,
+      message: `Blast queued for ${blastTarget.count} contacts`,
+      eventLink: payload.eventLink,
+      recipientCount: blastTarget.count,
+    }
+    validateOpenApiResponse({ path: '/contacts/blast', method: 'post', status: 202, body: responseBody })
+    return reply.status(202).send(responseBody)
+  })
+
+  // ── PUT /api/contacts/bulk-flag ───────────────────────────────────
+  const BulkFlagBodySchema = z.object({
+    ids: z.array(z.string().trim().min(1)),
+    flagCategory: z.enum(['invalid-data', 'duplicate']).nullable(),
+  })
+
+  fastify.put('/api/contacts/bulk-flag', adminOnly, async (request, reply) => {
+    const bodyResult = BulkFlagBodySchema.safeParse(request.body)
+    if (!bodyResult.success) {
+      return reply.status(400).send({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Invalid bulk flag payload',
+          details: bodyResult.error.issues,
+        },
+      })
+    }
+
+    validateOpenApiRequest({ path: '/contacts/bulk-flag', method: 'put', body: bodyResult.data })
+
+    const { ids, flagCategory } = bodyResult.data
+    let updated = 0
+    for (const id of ids) {
+      const result = await contactRepository.update(id, { flagCategory })
+      if (result) updated++
+    }
+
+    const actor = request.user as JwtPayload
+    await auditLogRepository.create({
+      action: 'contact.bulk_flagged',
+      actorId: actor.sub,
+      actorRole: actor.role,
+      eventId: null,
+      targetId: `bulk-flag-${Date.now()}`,
+      targetType: 'contact',
+      metadata: { ids, flagCategory, updated },
+    })
+
+    const responseBody = {
+      success: true,
+      updated,
+      requested: ids.length,
+      flagCategory,
+    }
+    validateOpenApiResponse({ path: '/contacts/bulk-flag', method: 'put', status: 200, body: responseBody })
+    return reply.status(200).send(responseBody)
+  })
 }
