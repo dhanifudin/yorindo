@@ -109,6 +109,7 @@ export interface Event {
   isPaid: boolean
   price: number | null
   paymentMethod: string | null
+  postSurveyEnabled?: boolean      // Phase 2: dual survey toggle
   deletedAt: ISODateString | null
   createdAt: ISODateString
   updatedAt: ISODateString
@@ -202,20 +203,32 @@ export interface FlaggedRecord {
 
 // ─── Survey (document-style shape) ─────────────────────────────────────────────
 
+export type SurveyFieldType =
+  | 'text' | 'textarea' | 'radio' | 'select' | 'checkboxes'
+  | 'range' | 'grid_radio' | 'grid_checkbox' | 'date' | 'time' | 'section'
+
 export interface SurveyField {
   key: string
   label: string
-  type: 'text' | 'select' | 'radio' | 'checkbox' | 'number'
+  type: 'text' | 'select' | 'radio' | 'checkbox' | 'number' | SurveyFieldType
   required: boolean
   options?: string[]
+  minimum?: number    // for range
+  maximum?: number    // for range
+  rows?: string[]     // for grid types
+  columns?: string[]  // for grid types
+  description?: string // for section
 }
+
+export type SurveyType = 'registration' | 'post-event'
 
 export interface SurveySchema {
   id: string              // opaque survey schema id
   eventId: EntityId
+  type?: SurveyType       // 'registration' | 'post-event' (Phase 2)
   fields: SurveyField[]
-  schema?: Record<string, unknown>
-  uiSchema?: Record<string, unknown>
+  schema?: Record<string, unknown>   // rjsf JSON Schema
+  uiSchema?: Record<string, unknown> // rjsf UI Schema
   createdAt: ISODateString
   updatedAt: ISODateString
 }
@@ -224,8 +237,39 @@ export interface SurveyResponse {
   id: string
   eventId: EntityId
   registrationId: EntityId
+  surveyType?: SurveyType
   answers: Record<string, unknown>
   submittedAt: ISODateString
+}
+
+export interface SurveyResponseAggregate {
+  questionId: string
+  questionLabel: string
+  fieldType: SurveyFieldType
+  // For radio/select/checkboxes:
+  optionCounts?: Array<{ label: string; count: number; percentage: number }>
+  // For range/grid:
+  average?: number
+  distribution?: Array<{ label: string; count: number }>
+  // For text/textarea:
+  totalCount?: number
+  samples?: string[]
+}
+
+export interface SurveyResponsesApiResponse {
+  total: number
+  aggregates: SurveyResponseAggregate[]
+  responses: SurveyResponseRecord[]
+  pagination: { page: number; pageSize: number; totalPages: number }
+}
+
+export interface SurveyResponseRecord {
+  id: string
+  registrationId: string
+  contactName: string
+  contactPhone: string
+  submittedAt: string
+  answers: Record<string, unknown>
 }
 
 // ─── Suppression ─────────────────────────────────────────────────────────────
