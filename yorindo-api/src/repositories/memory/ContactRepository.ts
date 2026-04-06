@@ -215,11 +215,13 @@ export class InMemoryContactRepository implements IContactRepository {
     const otherId = pair.primaryId === primaryId ? pair.duplicateId : pair.primaryId
     const other = this.contacts.get(otherId)
     
+    const MERGEABLE_FIELDS = ['name', 'email', 'phone', 'city', 'company', 'department', 'serviceType', 'jobTitle', 'eventDate'] as const
+    type MergeableField = typeof MERGEABLE_FIELDS[number]
+
     if (other && fieldSelections) {
-      for (const [field, choice] of Object.entries(fieldSelections)) {
-        if (choice === 'duplicate') {
-          // @ts-ignore
-          primary[field] = other[field]
+      for (const field of MERGEABLE_FIELDS) {
+        if (fieldSelections[field] === 'duplicate') {
+          (primary as Record<MergeableField, unknown>)[field] = other[field]
         }
       }
     }

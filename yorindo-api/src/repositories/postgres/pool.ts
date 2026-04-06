@@ -6,7 +6,7 @@ let _pool: Pool | null = null
 export function getPool(): Pool {
   if (!_pool) {
     if (!config.databaseUrl) {
-      throw new Error('DATABASE_URL is required when REPOSITORY_IMPL=postgres')
+      throw new Error('REPOSITORY_IMPL=postgres requires POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB, and POSTGRES_HOST to be set')
     }
     _pool = new Pool({ connectionString: config.databaseUrl })
   }

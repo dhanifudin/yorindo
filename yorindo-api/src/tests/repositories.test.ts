@@ -274,8 +274,8 @@ describe('InMemorySuppressionRepository', () => {
   })
 
   it('suppress makes phone suppressed', async () => {
-    await repo.suppress('contact-id-1', 'user_request')
-    const result = await repo.isSuppressed('contact-id-1')
+    await repo.suppress('contact-id-1', 'user_request', { phone: '+628123456789' })
+    const result = await repo.isSuppressed({ phone: '+628123456789' })
     expect(result).toBe(true)
   })
 
@@ -289,11 +289,12 @@ describe('InMemorySuppressionRepository', () => {
     expect(await repo.isSuppressed({ email: 'blocked@example.com' })).toBe(false)
   })
 
-  it('recognizes seeded suppressed contact phones', async () => {
+  it('recognizes seeded suppressed contact emails', async () => {
     const contactRepo = new InMemoryContactRepository()
     const contact = await contactRepo.findById(SEED_CONTACT_IDS[115]!)
     expect(contact).not.toBeNull()
-    expect(await repo.isSuppressed(contact!.phone!)).toBe(true)
+    // Seeded suppression records use email, not phone
+    expect(await repo.isSuppressed({ email: 'suppressed-0@example.com' })).toBe(true)
   })
 })
 
