@@ -3507,6 +3507,59 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
 
+  /events/{id}/overview:
+    get:
+      summary: Get overview metrics for an event
+      operationId: getEventOverview
+      tags: [Events]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Event overview metrics
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [blastCount, registrationCount, approvedCount, attendedCount, pendingApprovals, seatsRemaining, daysUntilEvent, lastBlastAt]
+                properties:
+                  blastCount:
+                    type: integer
+                  registrationCount:
+                    type: integer
+                  approvedCount:
+                    type: integer
+                  attendedCount:
+                    type: integer
+                  pendingApprovals:
+                    type: integer
+                  seatsRemaining:
+                    type: integer
+                  daysUntilEvent:
+                    type: integer
+                  lastBlastAt:
+                    type: string
+                    format: date-time
+                    nullable: true
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
   /events/{id}/sponsors:
     get:
       summary: List sponsors attached to an event
