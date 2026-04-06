@@ -63,13 +63,21 @@ jobs:
 
       - name: Prepare deploy env file
         env:
-          VPS_ENV_FILE: ${{ secrets.VPS_ENV_FILE }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
         run: |
           python - <<'PY'
           from pathlib import Path
           import os
 
-          Path('.deploy.env').write_text(os.environ['VPS_ENV_FILE'], encoding='utf-8')
+          template = Path('env.demo.template').read_text()
+          result = (template
+              .replace('CHANGE_ME_min_16_chars', os.environ['POSTGRES_PASSWORD'])
+              .replace('CHANGE_ME_min_32_chars_xxxxxxxxxxxxxxxx', os.environ['JWT_SECRET'])
+              .replace('CHANGE_ME_different_min_32_chars_xxxx', os.environ['JWT_REFRESH_SECRET'])
+          )
+          Path('.deploy.env').write_text(result)
           PY
           echo "IMAGE_TAG=${{ needs.build-and-push.outputs.image_tag }}" >> .deploy.env
       - name: Ensure VPS directories exist

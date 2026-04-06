@@ -1,20 +1,69 @@
 # Secrets & Deployment Setup
 
+## Overview
+
+Three CD workflows deploy to different targets:
+
+| Workflow | Trigger | Target | Env template |
+|----------|---------|--------|--------------|
+| `cd.yml` | Tag push `v*.*.*` | Full demo stack at `demo.yorindo.app` | `env.demo.template` |
+| `cd-api.yml` | Push to `main` (api changes) | API-only at `api.dhanifudin.com` | `env.api.template` |
+| `cd-app.yml` | Push to `main` (app changes) | App preview at `app.dhanifudin.com` | `env.app.template` |
+
+Each workflow reads the corresponding template from the repo, replaces `CHANGE_ME_*` placeholders with individual GitHub secrets, and SCPs the resulting `.env` to the VPS.
+
+---
+
 ## GitHub Actions Secrets
 
-Configure these 5 required secrets in **GitHub → Settings → Secrets and variables → Actions**:
+Configure these secrets in **GitHub → Settings → Secrets and variables → Actions**:
+
+### Infrastructure (all workflows)
 
 | Secret | Purpose | How to obtain |
 |--------|---------|---------------|
-| `VPS_SSH_KEY` | SSH private key (PEM format) for VPS access | Generate with `ssh-keygen -t ed25519 -C "github-ci"`; add public key to VPS `~/.ssh/authorized_keys` |
+| `VPS_SSH_KEY` | SSH private key (PEM) for VPS access | `ssh-keygen -t ed25519 -C "github-ci"`; add public key to VPS `~/.ssh/authorized_keys` |
 | `VPS_HOST` | VPS IP address or hostname | From your VPS provider dashboard |
-| `VPS_USER` | SSH username on VPS | e.g., `ubuntu`, `deploy`, `root` |
-| `VPS_ENV_FILE` | Full multiline contents of `/var/www/yorindo/.env` | Copy from the repository root `.env.example`, then replace all placeholder values |
-| `GHCR_TOKEN` | GitHub Container Registry token | Personal access token or fine-grained token with package write access |
+| `VPS_USER` | SSH username on VPS | e.g. `ubuntu`, `deploy` |
+| `DOCKERHUB_USERNAME` | DockerHub username | Your DockerHub account |
+| `DOCKERHUB_TOKEN` | DockerHub access token | DockerHub → Account Settings → Security → Access Tokens |
 
-`VPS_ENV_FILE` should be stored as a **multiline secret**. Start from the repository root `.env.example`, then paste the final production values into the secret.
+### Application secrets (cd.yml + cd-api.yml)
 
-For the current Phase 1 demo deployment, the `.env.example` defaults intentionally keep `REPOSITORY_IMPL=memory`, `SERVICE_IMPL=mock`, and the AI providers on `mock`. Change those only when the VPS is ready for the real database and integrations.
+| Secret | Placeholder replaced | Required |
+|--------|---------------------|----------|
+| `POSTGRES_PASSWORD` | `CHANGE_ME_min_16_chars` | Yes — min 16 characters |
+| `JWT_SECRET` | `CHANGE_ME_min_32_chars_xxxxxxxxxxxxxxxx` | Yes — min 32 characters |
+| `JWT_REFRESH_SECRET` | `CHANGE_ME_different_min_32_chars_xxxx` | Yes — different from JWT_SECRET |
+
+### Provider secrets (cd-api.yml only)
+
+| Secret | Placeholder replaced | Required |
+|--------|---------------------|----------|
+| `BREVO_API_KEY` | `CHANGE_ME_BREVO_API_KEY` | Required when `EMAIL_PROVIDER=brevo` |
+| `EVERPRO_API_KEY` | `CHANGE_ME_EVERPRO_API_KEY` | Required when `WHATSAPP_PROVIDER=everpro` |
+| `OPENAI_API_KEY` | `CHANGE_ME_OPENAI_API_KEY` | Required when `AI_PROVIDER=openai` |
+| `ANTHROPIC_API_KEY` | `CHANGE_ME_ANTHROPIC_API_KEY` | Required when `AI_PROVIDER=anthropic` |
+
+### App-specific (cd-app.yml only)
+
+| Secret | Purpose | Required |
+|--------|---------|----------|
+| `APP_SENTRY_DSN` | Sentry error monitoring DSN | No — Sentry DSN lines remain commented out if unset |
+
+---
+
+## Env Templates
+
+The three template files live at the repo root and are committed to version control:
+
+| File | Deployed as | Used by |
+|------|-------------|---------|
+| `env.demo.template` | `/var/www/yorindo/.env` | `cd.yml` |
+| `env.api.template` | `/var/www/yorindo-api/.env` | `cd-api.yml` |
+| `env.app.template` | `/var/www/yorindo-app/.env` | `cd-app.yml` |
+
+To update a default (non-secret) value (e.g. `BASE_URL`, `EMAIL_PROVIDER`), edit the template directly and commit. Secrets stay in GitHub and are never committed.
 
 ---
 
@@ -28,28 +77,9 @@ To enforce the CI test gate on pull requests:
 4. Add required checks: `lint-typecheck (yorindo-app)` and `test (yorindo-app)`
 5. Enable **Require branches to be up to date before merging**
 
-> The CI workflow runs on **all PRs regardless of target branch** — the protection rule above enforces the merge gate for `main`. To protect additional long-lived branches (e.g. `develop`), add a separate rule with the same check names.
-
----
-
-## Deployment Triggers
-
-| Workflow | Trigger | Target |
-|----------|---------|--------|
-| `ci.yml` | Every PR + every push | Runs lint, typecheck, tests — blocks PR merge |
-| `cd.yml` | Push to `main` | Builds Docker images → GHCR → VPS at `demo.dhanifudin.com` |
-| `deploy.yml` | same tag push | GitHub Pages static export → `yorindo.dhanifudin.com` (FE + MSW mocks) |
-
-To deploy the containerized stack:
-```bash
-git push origin main
-```
-
 ---
 
 ## VPS One-Time Setup
-
-Before CI/CD can deploy successfully, complete these steps on the VPS:
 
 ### 1. Install Docker & Docker Compose
 
@@ -59,51 +89,42 @@ sudo usermod -aG docker $USER
 # Re-login for group change to take effect
 ```
 
-### 2. Create deployment directory
+### 2. Create deployment directories
 
 ```bash
+# Full demo stack
 sudo mkdir -p /var/www/yorindo/nginx
 sudo chown -R $USER:$USER /var/www/yorindo
-cd /var/www/yorindo
+
+# API-only preview
+sudo mkdir -p /var/www/yorindo-api
+sudo chown -R $USER:$USER /var/www/yorindo-api
+
+# App-only preview
+sudo mkdir -p /var/www/yorindo-app
+sudo chown -R $USER:$USER /var/www/yorindo-app
 ```
 
-### 3. Copy production files to VPS
+### 3. Authenticate Docker with DockerHub
 
 ```bash
-# One-time bootstrap only; later tag releases sync docker-compose.yml automatically.
-scp docker-compose.yml user@VPS_HOST:/var/www/yorindo/
-scp nginx/nginx.conf user@VPS_HOST:/var/www/yorindo/nginx/nginx.conf
+docker login -u YOUR_DOCKERHUB_USERNAME
+# Enter your DockerHub access token when prompted
 ```
 
-### 4. Create deployment env secret
+### 4. Configure VPS nginx reverse proxy
 
-```bash
-# On your local machine:
-cp .env.example /tmp/yorindo-vps.env
-nano /tmp/yorindo-vps.env  # fill in all real values
-# Paste the final contents into the GitHub Actions secret: VPS_ENV_FILE
-```
+Each deployment target requires an nginx site config. The Docker services bind only to localhost.
 
-The CD workflow writes `VPS_ENV_FILE` to `/var/www/yorindo/.env` on every deploy, so the server stays in sync with the release config.
-
-### 5. Configure VPS nginx reverse proxy
-
-`nginx/nginx.conf` is now a VPS site config snippet, not a full `/etc/nginx/nginx.conf` replacement. Install it as a site config, for example:
-
-```bash
-sudo cp /var/www/yorindo/nginx/nginx.conf /etc/nginx/sites-available/yorindo.conf
-sudo ln -sf /etc/nginx/sites-available/yorindo.conf /etc/nginx/sites-enabled/yorindo.conf
-```
-
-The Docker services bind only to localhost, so VPS nginx must proxy to `127.0.0.1:5000` and `127.0.0.1:5001`:
+**Demo stack** (`demo.yorindo.app`) — proxies both app and API:
 
 ```nginx
 server {
   listen 80;
-  server_name demo.dhanifudin.com;
+  server_name demo.yorindo.app;
 
   location /api/ {
-    proxy_pass http://127.0.0.1:5001;
+    proxy_pass http://127.0.0.1:8081;
     proxy_http_version 1.1;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
@@ -112,7 +133,7 @@ server {
   }
 
   location / {
-    proxy_pass http://127.0.0.1:5000;
+    proxy_pass http://127.0.0.1:8080;
     proxy_http_version 1.1;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
@@ -122,47 +143,97 @@ server {
 }
 ```
 
-After installing the site config:
+**API preview** (`api.dhanifudin.com`) — port `6666`:
+
+```nginx
+server {
+  listen 80;
+  server_name api.dhanifudin.com;
+
+  location / {
+    proxy_pass http://127.0.0.1:6666;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+}
+```
+
+**App preview** (`app.dhanifudin.com`) — port `5173`:
+
+```nginx
+server {
+  listen 80;
+  server_name app.dhanifudin.com;
+
+  location / {
+    proxy_pass http://127.0.0.1:5173;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+}
+```
+
+Install and enable each config:
 
 ```bash
+sudo cp /path/to/config /etc/nginx/sites-available/yorindo-demo.conf
+sudo ln -sf /etc/nginx/sites-available/yorindo-demo.conf /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-### 6. Configure SSL certificate (Let's Encrypt)
+### 5. Configure SSL (Let's Encrypt)
 
 ```bash
-sudo apt install certbot
-sudo certbot --nginx -d demo.dhanifudin.com
+sudo apt install certbot python3-certbot-nginx
+sudo certbot --nginx -d demo.yorindo.app
+sudo certbot --nginx -d api.dhanifudin.com
+sudo certbot --nginx -d app.dhanifudin.com
 ```
-
-### 7. Authenticate Docker with GHCR
-
-```bash
-echo $GHCR_TOKEN | docker login ghcr.io -u GITHUB_USERNAME --password-stdin
-```
-
-### 8. Initial deploy
-
-```bash
-git push origin main
-```
-
-After the push reaches `main`, GitHub Actions builds/pushes GHCR images, uploads `docker-compose.yml`, refreshes `.env`, copies the latest nginx site config to `/var/www/yorindo/nginx/nginx.conf`, then runs the remote `docker compose pull && docker compose up -d` sequence for you. The VPS nginx service reverse-proxies traffic to app port `5000` and API port `5001`.
 
 ---
 
-## GHCR Image Naming
+## Deployment Triggers
 
-- API: `ghcr.io/dhanifudin/yorindo-api:{sha}` and `:latest`
-- App: `ghcr.io/dhanifudin/yorindo-app:{sha}` and `:latest`
+### Demo stack (tagged release)
+
+```bash
+git tag v1.2.3
+git push origin v1.2.3
+```
+
+`cd.yml` builds both API and App images tagged `v1.2.3`, SCPs `docker-compose.yml` + env to `/var/www/yorindo`, and runs `docker compose up -d` with health check against `https://demo.yorindo.app/api/health`.
+
+### API preview (on every merge to main)
+
+Triggered automatically when `yorindo-api/**` changes land on `main`. Deploys to `/var/www/yorindo-api` using `docker-compose.api.yml`, health checks `https://api.dhanifudin.com/api/health`.
+
+### App preview (on every merge to main)
+
+Triggered automatically when `yorindo-app/**` changes land on `main`. Builds with `NEXT_PUBLIC_ENABLE_MOCKS=true`. Deploys to `/var/www/yorindo-app` using `docker-compose.app.yml`, health checks `https://app.dhanifudin.com`.
+
+---
+
+## Docker Image Naming
+
+| Image | Tags |
+|-------|------|
+| `DOCKERHUB_USERNAME/yorindo-api` | `{tag}` / `latest` (cd.yml), `{sha8}` / `latest` (cd-api.yml) |
+| `DOCKERHUB_USERNAME/yorindo-app` | `{tag}` / `latest` (cd.yml), `preview-{sha8}` / `preview` (cd-app.yml) |
 
 ---
 
 ## Security Rules
 
-- **DO NOT** commit `.env` — only `.env.example` is committed
-- **DO NOT** publish Docker containers on ports `80` or `443` on the VPS — system nginx owns those ports
-- **DO** bind app/api only to localhost ports (`127.0.0.1:5000` and `127.0.0.1:5001`) so VPS nginx remains the only public ingress
-- **DO NOT** hardcode any secrets in workflow files — all from `secrets.*`
-- **DO** rotate `VPS_ENV_FILE` values in GitHub whenever production secrets change, then trigger the next tagged deploy so `/var/www/yorindo/.env` is refreshed on the VPS
+- **DO NOT** commit `.env` — only `*.template` files are committed
+- **DO NOT** put raw secret values in workflow files — use `secrets.*` only
+- **DO** bind Docker services to localhost ports — VPS nginx is the only public ingress
+- **DO** use distinct, randomly generated values for `JWT_SECRET` and `JWT_REFRESH_SECRET`
+- **DO** use a `POSTGRES_PASSWORD` of at least 16 characters
+- To rotate a secret: update the GitHub secret value, then re-trigger the relevant workflow — the VPS `.env` is refreshed on every deploy
