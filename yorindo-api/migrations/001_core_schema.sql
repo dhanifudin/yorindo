@@ -65,7 +65,9 @@ CREATE TABLE IF NOT EXISTS events (
   notification_channel VARCHAR(20) DEFAULT 'email',    -- 'email', 'whatsapp'
   scan_format          VARCHAR(20) DEFAULT 'qr',       -- 'qr'
   target_criteria      JSONB,
-  survey_schema_id     TEXT,
+  registration_survey_schema JSONB,
+  post_survey_schema         JSONB,
+  post_survey_enabled        BOOLEAN DEFAULT FALSE,
   vendor_id            TEXT REFERENCES vendors(id),
   status               event_status NOT NULL DEFAULT 'draft',
   deleted_at           TIMESTAMPTZ,
