@@ -47,11 +47,11 @@ export function setupFetchInterceptor(): void {
 
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
-    const request = new Request(
-      typeof input === 'string' && input.startsWith('/') ? new URL(input, window.location.origin) : input,
-      init,
-    )
-    const headers = new Headers(request.headers)
+    // Do NOT copy headers from `new Request(url, init)` — for FormData/Blob bodies the browser
+    // auto-generates a Content-Type with a boundary when the Request is constructed, but the
+    // boundary may differ from the one used when fetch actually serializes the body, breaking
+    // multipart parsing on the server. Start from init.headers so the browser sets Content-Type itself.
+    const headers = new Headers(init?.headers)
 
     // Add auth header for API requests if token exists (read from localStorage directly)
     // Match both relative (/api/...) and same-origin absolute (http://localhost/api/...) URLs
