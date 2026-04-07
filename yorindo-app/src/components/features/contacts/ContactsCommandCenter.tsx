@@ -15,8 +15,6 @@ import { ContactsPagination } from './ContactsPagination'
 import { ActionToolbar } from './ActionToolbar'
 import { BlastModal } from './BlastModal'
 
-const FILTER_KEYS = ['serviceType', 'city', 'jobTitle', 'q', 'missingEmail', 'missingPhone', 'flagFilter']
-
 export function ContactsCommandCenter() {
   const [triageMode, setTriageMode] = useState<'flagged' | 'duplicates' | null>(null)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -31,9 +29,7 @@ export function ContactsCommandCenter() {
   const { setFilter } = useFilterStore()
   const { data: contacts } = useContacts()
 
-  const hasFilters = FILTER_KEYS.some((k) => !!searchParams.get(k))
-
-  // Handle selection dari table (ids + names)
+  // Reset selection saat ganti halaman
   const handleSelectionChange = useCallback((ids: string[], names: string[]) => {
     setSelectedIds(ids)
     setSelectedNames(names)
@@ -124,7 +120,7 @@ export function ContactsCommandCenter() {
 
       <ActionToolbar
         total={contacts?.pagination.total ?? 0}
-        isVisible={hasFilters || selectedIds.length > 0}
+        isVisible={true}
         selectedIds={selectedIds}
         selectedNames={selectedNames}
         onClearSelection={handleClearSelection}
