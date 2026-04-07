@@ -1,5 +1,11 @@
 import { useAuthStore } from '@/store/authStore'
 
+declare global {
+  interface Window {
+    __FETCH_INTERCEPTOR_SETUP?: boolean
+  }
+}
+
 /**
  * Read the auth token directly from localStorage where zustand persist stores it.
  * This works synchronously before zustand has finished hydrating.
@@ -21,8 +27,8 @@ function getStoredToken(): string | null {
  */
 export function setupFetchInterceptor(): void {
   // Prevent double-setup
-  if ((window as any).__FETCH_INTERCEPTOR_SETUP) return
-  ;(window as any).__FETCH_INTERCEPTOR_SETUP = true
+  if (window.__FETCH_INTERCEPTOR_SETUP) return
+  window.__FETCH_INTERCEPTOR_SETUP = true
 
   const originalFetch = window.fetch.bind(window)
   let refreshPromise: Promise<string | null> | null = null
