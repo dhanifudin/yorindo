@@ -57,7 +57,7 @@ type BlastFormValues = z.infer<typeof blastSchema>
 interface EventItem {
   id: string
   name: string
-  date: string
+  date: string | null | undefined
 }
 
 interface TemplateItem {
@@ -71,8 +71,8 @@ interface TemplateItem {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function formatDate(date: string) {
-  // Parse date-only strings as local time to avoid UTC off-by-one
+function formatDate(date: string | null | undefined): string {
+  if (!date) return ''
   const [y, m, d] = date.slice(0, 10).split('-').map(Number)
   return new Date(y!, m! - 1, d!).toLocaleDateString('id-ID', {
     day: 'numeric',
@@ -157,7 +157,7 @@ export function BlastModal({
   })
 
   const sortedEvents = [...(eventsData?.data ?? [])].sort(
-    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+    (a, b) => new Date(a.date ?? 0).getTime() - new Date(b.date ?? 0).getTime(),
   )
 
   const filteredTemplates = (allTemplates ?? []).filter((t) => t.channel === channel)
