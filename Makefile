@@ -29,7 +29,7 @@ deploy-demo:
 	@echo "📂 Starting api and app..."
 	$(DEMO_COMPOSE) up -d api app nginx
 	@echo "⏳ Waiting for api to be ready..."
-	@until $(API_EXEC) curl -sf http://localhost:3000/api/health > /dev/null 2>&1; do printf "."; sleep 2; done
+	@until $(API_EXEC) wget -qO- http://localhost:3000/api/health > /dev/null 2>&1; do printf "."; sleep 2; done
 	@echo ""
 	@echo "🔄 Running migrations..."
 	$(API_EXEC_TTY) npx tsx scripts/migrate.ts
@@ -61,7 +61,7 @@ reset-demo:
 	@echo "📂 Starting api and app..."
 	$(DEMO_COMPOSE) up -d api app nginx
 	@echo "⏳ Waiting for api to be ready..."
-	@until $(API_EXEC) curl -sf http://localhost:3000/api/health > /dev/null 2>&1; do printf "."; sleep 2; done
+	@until $(API_EXEC) wget -qO- http://localhost:3000/api/health > /dev/null 2>&1; do printf "."; sleep 2; done
 	@echo ""
 	@echo "🔄 Running migrations..."
 	$(API_EXEC_TTY) npx tsx scripts/migrate.ts

@@ -298,8 +298,8 @@ export async function seedDemo(pool: Pool): Promise<void> {
 
       for (const reg of regRows.rows) {
         await client.query(`
-          INSERT INTO survey_responses (id, event_id, registration_id, survey_type, responses)
-          VALUES ($1, $2, $3, 'post_event', $4)
+          INSERT INTO survey_responses (id, event_id, registration_id, survey_type, answers)
+          VALUES ($1, $2, $3, 'post-event', $4)
         `, [
           createId(), eventId, reg.id,
           JSON.stringify({
