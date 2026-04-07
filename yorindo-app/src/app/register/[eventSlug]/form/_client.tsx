@@ -78,6 +78,12 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
     enabled: !!event?.id && step === 1,
   })
 
+  const { data: citiesData } = useQuery<{ data: { value: string; label: string }[] }>({
+    queryKey: ['locations-cities'],
+    queryFn: () => fetch('/api/locations/cities').then((r) => r.json()),
+    staleTime: 24 * 60 * 60 * 1000,
+  })
+
   // Phone lookup removed per updated acceptance criteria (dedup handled server-side)
 
   const submitMutation = useMutation({
@@ -359,11 +365,13 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
                   <Label htmlFor="location">
                     Lokasi Kantor/Pabrik <span className="text-muted-foreground text-xs">(opsional)</span>
                   </Label>
-                  <Input
-                    id="location"
+                  <Combobox
+                    options={citiesData?.data ?? []}
                     value={form.location}
-                    onChange={(e) => setForm((p) => ({ ...p, location: e.target.value }))}
-                    placeholder="Kota atau lokasi kantor"
+                    onValueChange={(v) => setForm((p) => ({ ...p, location: v }))}
+                    placeholder="Cari kota..."
+                    searchPlaceholder="Ketik nama kota..."
+                    emptyText="Kota tidak ditemukan."
                   />
                 </div>
               </div>

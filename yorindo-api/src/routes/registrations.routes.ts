@@ -1,5 +1,7 @@
 import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
 import {
   auditLogRepository,
   contactRepository,
@@ -128,6 +130,26 @@ async function handleStatusUpdate(request: any, reply: FastifyReply, method: 'po
 }
 
 export const registrationsRoutes: FastifyPluginAsync = async (fastify) => {
+
+  // ── GET /api/locations/cities (unauthenticated — used by registration form)
+  fastify.get('/api/locations/cities', async (_request, reply) => {
+    const raw = readFileSync(path.resolve(process.cwd(), 'src/data/wilayah-static.json'), 'utf8')
+    const data = JSON.parse(raw) as Array<{
+      provinceCode: string
+      provinceName: string
+      cityCode: string
+      cityName: string
+    }>
+    const cities = data.map((c) => ({
+      value: c.cityName,
+      label: `${c.cityName}, ${c.provinceName}`,
+      provinceCode: c.provinceCode,
+      cityCode: c.cityCode,
+    }))
+    validateOpenApiResponse({ path: '/locations/cities', method: 'get', status: 200, body: { data: cities } })
+    return reply.status(200).send({ data: cities })
+  })
+
   fastify.post('/api/registrations', {
     config: {
       rateLimit: {

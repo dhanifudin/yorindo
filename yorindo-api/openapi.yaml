@@ -2578,6 +2578,38 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/IndustrySuggestionsResponse'
+
+  /locations/cities:
+    get:
+      summary: Get list of Indonesian cities for location dropdown
+      operationId: getCities
+      tags: [Locations]
+      security: []
+      responses:
+        '200':
+          description: List of cities with province info
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        value:
+                          type: string
+                          example: "Bandung"
+                        label:
+                          type: string
+                          example: "Bandung, Jawa Barat"
+                        provinceCode:
+                          type: string
+                          example: "32"
+                        cityCode:
+                          type: string
+                          example: "32.73"
         '400':
           description: Validation error
           content:
