@@ -1,6 +1,6 @@
-'use client'
+ 'use client'
 
-import { use, useState, useRef } from 'react'
+import { use, useState } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import Form from '@rjsf/core'
 import validator from '@rjsf/validator-ajv8'
@@ -37,7 +37,7 @@ interface FormData {
   consent: boolean
 }
 
-const STEPS = ['Informasi Kontak', 'Survei', 'Konfirmasi']
+const STEPS = ['Informasi Kontak', 'Survei', 'Checkout', 'Selesai']
 
 export default function RegistrationFormPage({ params }: RegistrationFormPageProps) {
   const { eventSlug } = use(params)
@@ -47,7 +47,6 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
   const [regId, setRegId] = useState<string | null>(null)
   const [ssoFilled, setSsoFilled] = useState(false)
   const [showSsoDialog, setShowSsoDialog] = useState(false)
-  const phoneDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const { data: event } = useQuery<Event>({
     queryKey: ['public-event-form', eventSlug],
@@ -60,37 +59,26 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
     enabled: !!event?.id && step === 1,
   })
 
-  const lookupMutation = useMutation({
-    mutationFn: async (phone: string) => {
-      const res = await fetch(`/api/contacts/lookup?phone=${encodeURIComponent(phone)}`)
-      if (!res.ok) return null
-      return res.json() as Promise<Contact | null>
-    },
-    onSuccess: (contact) => {
-      if (contact && !ssoFilled) {
-        setForm((p) => ({
-          ...p,
-          name: contact.name || p.name,
-          email: contact.email || p.email,
-        }))
-        toast.info('Data Anda ditemukan dan sudah diisi otomatis')
-      }
-    },
-  })
+  // Phone lookup removed per updated acceptance criteria (dedup handled server-side)
 
   const submitMutation = useMutation({
     mutationFn: async () => {
       if (!event) throw new Error('Event not found')
+      const body: Record<string, unknown> = {
+        eventId: event.id,
+        name: form.name,
+        email: form.email,
+        phone: form.phone,
+        surveyAnswers: form.surveyAnswers,
+      }
+      if (event.is_paid === false) {
+        body.order = { subtotal: 0, discount: 0, total: 0, currency: 'IDR', payment_method: null }
+      }
+
       const res = await fetch('/api/registrations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          eventId: event.id,
-          name: form.name,
-          email: form.email,
-          phone: form.phone,
-          surveyAnswers: form.surveyAnswers,
-        }),
+        body: JSON.stringify(body),
       })
       if (!res.ok) {
         const body = await res.json()
@@ -105,11 +93,7 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
     onError: (err) => toast.error(err instanceof Error ? err.message : 'Pendaftaran gagal'),
   })
 
-  const handlePhoneBlur = () => {
-    if (!form.phone || form.phone.length < 8) return
-    if (phoneDebounceRef.current) clearTimeout(phoneDebounceRef.current)
-    phoneDebounceRef.current = setTimeout(() => lookupMutation.mutate(form.phone), 300)
-  }
+  // phone blur/lookup removed
 
   // Build Google Calendar deep link
   const calendarLink = event
@@ -251,40 +235,7 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
                 <span className="text-xs text-muted-foreground">atau isi manual</span>
                 <div className="flex-1 h-px bg-border" />
               </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="phone">
-                  Nomor Telepon <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  value={form.phone}
-                  onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
-                  onBlur={handlePhoneBlur}
-                  placeholder="+628..."
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="name">
-                  Nama Lengkap <span className="text-destructive">*</span>
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="name"
-                    value={form.name}
-                    onChange={(e) => !ssoFilled && setForm((p) => ({ ...p, name: e.target.value }))}
-                    placeholder="Nama lengkap Anda"
-                    readOnly={ssoFilled}
-                    className={ssoFilled ? 'pr-20 bg-muted/40' : ''}
-                  />
-                  {ssoFilled && (
-                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-green-600 font-medium">
-                      ✓ Terisi dari Google
-                    </span>
-                  )}
-                </div>
-              </div>
+              {/* Reordered fixed fields: email -> name -> phone */}
               <div className="space-y-1.5">
                 <Label htmlFor="email">
                   Email <span className="text-destructive">*</span>
@@ -305,6 +256,40 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
                     </span>
                   )}
                 </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="name">
+                  Nama Lengkap <span className="text-destructive">*</span>
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="name"
+                    value={form.name}
+                    onChange={(e) => !ssoFilled && setForm((p) => ({ ...p, name: e.target.value }))}
+                    placeholder="Nama lengkap Anda"
+                    readOnly={ssoFilled}
+                    className={ssoFilled ? 'pr-20 bg-muted/40' : ''}
+                  />
+                  {ssoFilled && (
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-green-600 font-medium">
+                      ✓ Terisi dari Google
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="phone">
+                  Nomor Telepon <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  value={form.phone}
+                  onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
+                  placeholder="+628..."
+                />
               </div>
               <Button
                 className="w-full h-11"
@@ -356,6 +341,55 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
 
           {step === 2 && (
             <div className="space-y-4">
+              <h2 className="text-lg font-semibold">Checkout</h2>
+              <div className="rounded-lg bg-muted/50 p-4 space-y-2 text-sm">
+                {/* Event banner */}
+                <div className="w-full aspect-video rounded overflow-hidden bg-gradient-to-br from-primary/10 via-muted to-primary/5">
+                  {event?.bannerUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={event.bannerUrl} alt={event?.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-primary-foreground/50 font-medium">{event?.name?.split(' ').slice(0,2).map(s => s[0]).join('')}</div>
+                  )}
+                </div>
+
+                <p className="font-medium">{event?.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {event && new Date(event.eventDate).toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: event.timezone })}
+                </p>
+
+                <div className="rounded-lg bg-white p-3 shadow-sm">
+                  <p className="text-xs text-muted-foreground">Peserta</p>
+                  <p className="font-medium">{form.name} • {form.email} • {form.phone}</p>
+                </div>
+
+                {/* Price handling */}
+                {event?.is_paid ? (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Subtotal</span>
+                    <span className="font-medium">Rp {event.price?.toLocaleString('id-ID')}</span>
+                  </div>
+                ) : (
+                  <div>
+                    <span className="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Gratis</span>
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setStep(1)}>← Kembali</Button>
+                  <Button
+                    className="flex-1 h-11"
+                    onClick={() => setStep(3)}
+                  >
+                    {event?.is_paid ? 'Bayar Sekarang' : 'Daftar Sekarang'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="space-y-4">
               <h2 className="text-lg font-semibold">Konfirmasi</h2>
               <div className="rounded-lg bg-muted/50 p-4 space-y-2 text-sm">
                 <p><span className="text-muted-foreground">Nama:</span> {form.name}</p>
@@ -375,7 +409,7 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
                 </span>
               </label>
               <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setStep(1)}>← Kembali</Button>
+                <Button variant="outline" onClick={() => setStep(2)}>← Kembali</Button>
                 <Button
                   className="flex-1 h-11"
                   onClick={() => submitMutation.mutate()}
