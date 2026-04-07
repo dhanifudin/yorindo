@@ -1,4 +1,5 @@
 import type { Pool, QueryResultRow } from 'pg'
+import { createId } from '@paralleldrive/cuid2'
 import type { IEventRepository, EventFilters } from '../../interfaces/repositories/IEventRepository.js'
 import type { PaginationParams } from '../../interfaces/repositories/IContactRepository.js'
 import type { Event, EventOverviewMetrics, UpcomingUncontactedResult, EntityId } from '../../types/domain.js'
@@ -150,14 +151,15 @@ export class PostgresEventRepository
   async create(data: Omit<Event, 'id' | 'createdAt' | 'updatedAt'>): Promise<Event> {
     const { rows } = await this.query<EventRow>(
       `INSERT INTO events (
-         name, slug, date, start_time, end_date, end_time, timezone,
+         id, name, slug, date, start_time, end_date, end_time, timezone,
          city, venue, description, capacity, waitlist_buffer,
          approval_mode, notification_channel, scan_format,
          target_criteria, registration_survey_schema, vendor_id, status,
          is_paid, price, payment_method, deleted_at
-       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
+       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)
        RETURNING *`,
       [
+        createId(),
         data.name,
         data.slug,
         data.startDate,

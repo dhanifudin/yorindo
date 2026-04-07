@@ -1,3 +1,4 @@
+import { createId } from '@paralleldrive/cuid2'
 import type { Pool, QueryResultRow } from 'pg'
 import type {
   IRegistrationRepository,
@@ -120,12 +121,13 @@ export class PostgresRegistrationRepository
   async create(data: Omit<Registration, 'id' | 'createdAt'>): Promise<Registration> {
     const { rows } = await this.query<RegistrationRow>(
       `INSERT INTO registrations (
-         contact_id, event_id, status, ticket_token, ai_score,
+         id, contact_id, event_id, status, ticket_token, ai_score,
          flag_override, approved_at, attended_at,
          upload_source, event_date, event_name_raw
-       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
        RETURNING *`,
       [
+        createId(),
         data.contactId,
         data.eventId,
         data.status,

@@ -1,5 +1,11 @@
 import { useAuthStore } from '@/store/authStore'
 
+declare global {
+  interface Window {
+    __FETCH_INTERCEPTOR_SETUP?: boolean
+  }
+}
+
 /**
  * Read the auth token directly from localStorage where zustand persist stores it.
  * This works synchronously before zustand has finished hydrating.
@@ -21,8 +27,8 @@ function getStoredToken(): string | null {
  */
 export function setupFetchInterceptor(): void {
   // Prevent double-setup
-  if ((window as any).__FETCH_INTERCEPTOR_SETUP) return
-  ;(window as any).__FETCH_INTERCEPTOR_SETUP = true
+  if (window.__FETCH_INTERCEPTOR_SETUP) return
+  window.__FETCH_INTERCEPTOR_SETUP = true
 
   const originalFetch = window.fetch.bind(window)
   let refreshPromise: Promise<string | null> | null = null
@@ -47,11 +53,11 @@ export function setupFetchInterceptor(): void {
 
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
-    const request = new Request(
-      typeof input === 'string' && input.startsWith('/') ? new URL(input, window.location.origin) : input,
-      init,
-    )
-    const headers = new Headers(request.headers)
+    // Do NOT copy headers from `new Request(url, init)` — for FormData/Blob bodies the browser
+    // auto-generates a Content-Type with a boundary when the Request is constructed, but the
+    // boundary may differ from the one used when fetch actually serializes the body, breaking
+    // multipart parsing on the server. Start from init.headers so the browser sets Content-Type itself.
+    const headers = new Headers(init?.headers)
 
     // Add auth header for API requests if token exists (read from localStorage directly)
     // Match both relative (/api/...) and same-origin absolute (http://localhost/api/...) URLs

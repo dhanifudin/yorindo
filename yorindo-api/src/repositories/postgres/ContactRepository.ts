@@ -1,3 +1,4 @@
+import { createId } from '@paralleldrive/cuid2'
 import type { Pool, QueryResultRow } from 'pg'
 import type {
   IContactRepository,
@@ -141,6 +142,12 @@ export class PostgresContactRepository
     }
     if (filters?.missingPhone) {
       conditions.push('phone IS NULL')
+    }
+    if (filters?.hasEmail) {
+      conditions.push('email IS NOT NULL AND email <> \'\'')
+    }
+    if (filters?.hasPhone) {
+      conditions.push('phone IS NOT NULL AND phone <> \'\'')
     }
     if (filters?.lastAttendedBefore) {
       conditions.push(`event_date < $${idx}`)
@@ -301,7 +308,6 @@ export class PostgresContactRepository
   }
 
   async createDuplicatePair(data: Omit<DuplicatePair, 'id' | 'resolvedAt'>): Promise<void> {
-    const { createId } = await import('@paralleldrive/cuid2')
     await this.query(
       `INSERT INTO duplicate_pairs (id, primary_id, duplicate_id, match_score, match_reasons)
        VALUES ($1, $2, $3, $4, $5)
@@ -319,11 +325,11 @@ export class PostgresContactRepository
   async upsert(data: Omit<Contact, 'id' | 'createdAt' | 'updatedAt'>): Promise<Contact> {
     const { rows } = await this.query<ContactRow>(
       `INSERT INTO contacts (
-         name, phone, email, service_type, job_title,
+         id, name, phone, email, service_type, job_title,
          city, province_code, province_name, city_code, city_name,
          company, department, event_date, source,
          completeness_score, consent_status, flag_category, deleted_at
-       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
        ON CONFLICT (phone) DO UPDATE SET
          name              = EXCLUDED.name,
          email             = COALESCE(EXCLUDED.email, contacts.email),
@@ -342,6 +348,7 @@ export class PostgresContactRepository
          updated_at        = NOW()
        RETURNING *`,
       [
+        createId(),
         data.name,
         data.phone,
         data.email,

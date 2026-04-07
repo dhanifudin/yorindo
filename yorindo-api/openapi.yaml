@@ -169,7 +169,6 @@ components:
           example: "+6281234567890"
         email:
           type: string
-          format: email
           nullable: true
           example: budi@example.com
         serviceType:
@@ -502,7 +501,6 @@ components:
               example: PT Maju Jaya
             contactEmail:
               type: string
-              format: email
               nullable: true
               example: budi@example.com
             contactPhone:
@@ -594,7 +592,6 @@ components:
           type: string
         email:
           type: string
-          format: email
         phone:
           type: string
           example: "+6281234567890"
@@ -734,7 +731,6 @@ components:
           type: string
         email:
           type: string
-          format: email
           example: admin@yorindo.id
         name:
           type: string
@@ -756,7 +752,6 @@ components:
       properties:
         email:
           type: string
-          format: email
         name:
           type: string
         role:
@@ -808,7 +803,6 @@ components:
       properties:
         email:
           type: string
-          format: email
           example: admin@yorindo.id
         password:
           type: string
@@ -1007,7 +1001,6 @@ components:
           type: string
         email:
           type: string
-          format: email
         phone:
           type: string
         industryId:
@@ -1101,7 +1094,6 @@ components:
           example: Alibaba Cloud
         contact_email:
           type: string
-          format: email
           example: sponsor@alibabacloud.com
         industry:
           type: string
@@ -1138,7 +1130,6 @@ components:
           type: string
         contact_email:
           type: string
-          format: email
         industry:
           type: string
         logo_url:
@@ -1159,7 +1150,6 @@ components:
           type: string
         contact_email:
           type: string
-          format: email
         industry:
           type: string
         logo_url:
@@ -1437,17 +1427,13 @@ components:
 
     ContactFacets:
       type: object
-      required: [industry, city, companySize]
+      required: [serviceType, city]
       properties:
-        industry:
+        serviceType:
           type: array
           items:
             $ref: '#/components/schemas/FacetItem'
         city:
-          type: array
-          items:
-            $ref: '#/components/schemas/FacetItem'
-        companySize:
           type: array
           items:
             $ref: '#/components/schemas/FacetItem'
@@ -1499,7 +1485,6 @@ components:
           example: Budi Santoso
         email:
           type: string
-          format: email
           nullable: true
           example: budi@example.com
         phone:
@@ -1530,7 +1515,6 @@ components:
       properties:
         email:
           type: string
-          format: email
           nullable: true
         phone:
           type: string
@@ -1723,7 +1707,6 @@ components:
           type: string
         contactEmail:
           type: string
-          format: email
           example: sponsor@alibabacloud.com
         expiresAt:
           type: string
@@ -2354,7 +2337,6 @@ paths:
                       type: string
                     email:
                       type: string
-                      format: email
                       nullable: true
                     city:
                       type: string
@@ -3066,6 +3048,31 @@ paths:
   # ─────────────────────────────────────────────────────────────────────────────
   # EVENTS
   # ─────────────────────────────────────────────────────────────────────────────
+  /events/public/{slug}:
+    get:
+      summary: Get a public event by slug (unauthenticated)
+      operationId: getPublicEventBySlug
+      tags: [Events]
+      security: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Event details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '404':
+          description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
   /events/check-slug:
     get:
       summary: Check if a slug is available
@@ -5146,7 +5153,6 @@ paths:
                   minLength: 8
                 email:
                   type: string
-                  format: email
       responses:
         '202':
           description: Erasure request accepted

@@ -40,11 +40,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
 
-  // Show nothing while hydrating — prevents flash redirect to /login
-  if (!hydrated) return null
+  const mocksEnabled = process.env.NEXT_PUBLIC_ENABLE_MOCKS === 'true'
 
   // Clear stale dev-token when MSW mocks are disabled
-  const mocksEnabled = process.env.NEXT_PUBLIC_ENABLE_MOCKS === 'true'
   if (accessToken === 'dev-token' && !mocksEnabled) {
     clearAuth()
   }
@@ -77,10 +75,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       router.replace('/app/scan')
       return
     }
-}, [accessToken, user, router, pathname, isAuthorized])
+  }, [accessToken, user, router, pathname, isAuthorized])
+
+  // Show nothing while hydrating — prevents flash redirect to /login
+  if (!hydrated) return null
 
   if (!accessToken || !user) return null
-
 
   if (!isAuthorized) return null
 
