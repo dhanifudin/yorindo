@@ -1,39 +1,47 @@
 import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { AiScoreBadge } from './AiScoreBadge'
 
 describe('AiScoreBadge', () => {
-  it('shows green ✓ for score ≥ 80', () => {
+  it('shows green ✓ for score ≥ 80', async () => {
     render(<AiScoreBadge score={92} />)
-    const badge = screen.getByText(/✓/)
-    expect(badge.className).toContain('text-green-700')
+    await waitFor(() => {
+      const badge = screen.getByText(/✓/)
+      expect(badge.className).toContain('text-green-700')
+    })
   })
 
-  it('shows amber ~ for score 50–79', () => {
+  it('shows amber ~ for score 50–79', async () => {
     render(<AiScoreBadge score={61} />)
-    const badge = screen.getByText(/~/)
-    expect(badge.className).toContain('text-amber-700')
+    await waitFor(() => {
+      const badge = screen.getByText(/~/)
+      expect(badge.className).toContain('text-amber-700')
+    })
   })
 
-  it('shows red ✗ for score < 50', () => {
+  it('shows red ✗ for score < 50', async () => {
     render(<AiScoreBadge score={34} />)
-    const badge = screen.getByText(/✗/)
-    expect(badge.className).toContain('text-red-700')
+    await waitFor(() => {
+      const badge = screen.getByText(/✗/)
+      expect(badge.className).toContain('text-red-700')
+    })
   })
 
-  it('shows loading state for in-progress', () => {
+  it('shows loading state for in-progress', async () => {
     render(<AiScoreBadge score={0} status="in-progress" />)
-    expect(screen.getByText(/Menilai/)).toBeTruthy()
+    await waitFor(() => expect(screen.getByText(/Menilai/)).toBeTruthy())
   })
 
-  it('shows failed state', () => {
+  it('shows failed state', async () => {
     render(<AiScoreBadge score={0} status="failed" />)
-    expect(screen.getByText(/Gagal/)).toBeTruthy()
+    await waitFor(() => expect(screen.getByText(/Gagal/)).toBeTruthy())
   })
 
-  it('has aria-label with score and level', () => {
+  it('has aria-label with score and level', async () => {
     render(<AiScoreBadge score={85} />)
-    const badge = screen.getByLabelText(/Skor AI: 85/)
-    expect(badge).toBeTruthy()
+    await waitFor(() => {
+      const badge = screen.getByLabelText(/Skor AI: 85/)
+      expect(badge).toBeTruthy()
+    })
   })
 })

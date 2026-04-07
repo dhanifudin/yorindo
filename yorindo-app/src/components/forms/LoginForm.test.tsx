@@ -19,6 +19,10 @@ describe('LoginForm', () => {
   it('shows validation errors on empty submit', async () => {
     const user = userEvent.setup()
     render(<LoginForm />)
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /masuk/i })).toBeTruthy()
+    })
     await user.click(screen.getByRole('button', { name: /masuk/i }))
 
     await waitFor(() => {
@@ -32,6 +36,10 @@ describe('LoginForm', () => {
     const user = userEvent.setup()
     render(<LoginForm />)
 
+    await waitFor(() => {
+      expect(screen.getByLabelText('Email')).toBeTruthy()
+      expect(screen.getByLabelText('Password')).toBeTruthy()
+    })
     await user.type(screen.getByLabelText('Email'), 'notanemail')
     await user.type(screen.getByLabelText('Password'), 'Password123!')
     await user.click(screen.getByRole('button', { name: /masuk/i }))
@@ -45,6 +53,10 @@ describe('LoginForm', () => {
     const user = userEvent.setup()
     render(<LoginForm />)
 
+    await waitFor(() => {
+      expect(screen.getByLabelText('Email')).toBeTruthy()
+      expect(screen.getByLabelText('Password')).toBeTruthy()
+    })
     await user.type(screen.getByLabelText('Email'), 'admin@yorindo.id')
     await user.type(screen.getByLabelText('Password'), 'Password123!')
     await user.click(screen.getByRole('button', { name: /masuk/i }))
@@ -63,6 +75,10 @@ describe('LoginForm', () => {
     const user = userEvent.setup()
     render(<LoginForm />)
 
+    await waitFor(() => {
+      expect(screen.getByLabelText('Email')).toBeTruthy()
+      expect(screen.getByLabelText('Password')).toBeTruthy()
+    })
     await user.type(screen.getByLabelText('Email'), 'admin@yorindo.id')
     await user.type(screen.getByLabelText('Password'), 'Password123!')
 
