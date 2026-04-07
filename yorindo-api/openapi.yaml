@@ -3053,6 +3053,7 @@ paths:
       summary: Get a public event by slug (unauthenticated)
       operationId: getPublicEventBySlug
       tags: [Events]
+      security: []
       parameters:
         - name: slug
           in: path
