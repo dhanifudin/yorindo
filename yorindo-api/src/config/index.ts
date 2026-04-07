@@ -49,6 +49,7 @@ export const config = {
   openaiApiKey: optional('OPENAI_API_KEY'),
   anthropicApiKey: optional('ANTHROPIC_API_KEY'),
   brevoApiKey: optional('BREVO_API_KEY'),
+  mailtrapApiKey: optional('MAILTRAP_API_KEY'),
   everproApiKey: optional('EVERPRO_API_KEY'),
   brevoSenderEmail: optional('BREVO_SENDER_EMAIL', 'no-reply@yorindo.app'),
 

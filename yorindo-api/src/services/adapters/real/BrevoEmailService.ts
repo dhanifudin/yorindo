@@ -1,22 +1,6 @@
 import type { IEmailService, EmailPayload } from '../../../interfaces/services/IEmailService.js'
 import { config } from '../../../config/index.js'
-import { appendFileSync, mkdirSync, existsSync } from 'node:fs'
-import { join, dirname } from 'node:path'
-import { fileURLToPath } from 'node:url'
-
-const __dirname = dirname(fileURLToPath(import.meta.url))
-const LOG_DIR = join(__dirname, '..', '..', '..', 'logs')
-const LOG_FILE = join(LOG_DIR, 'email-delivery.log')
-
-function ensureLogDir() {
-  if (!existsSync(LOG_DIR)) mkdirSync(LOG_DIR, { recursive: true })
-}
-
-function logDelivery(entry: { messageId: string; to: string; subject: string; status: string; error?: string }) {
-  ensureLogDir()
-  const line = JSON.stringify({ ...entry, timestamp: new Date().toISOString() })
-  appendFileSync(LOG_FILE, line + '\n')
-}
+import { logEmailDelivery } from '../../../lib/email-delivery-logger.js'
 
 export class BrevoEmailService implements IEmailService {
   private readonly BASE_URL = 'https://api.brevo.com/v3'
@@ -38,12 +22,12 @@ export class BrevoEmailService implements IEmailService {
     })
     if (!response.ok) {
       const errorText = await response.text()
-      logDelivery({ messageId: 'unknown', to: payload.to, subject: payload.subject, status: 'failed', error: `Brevo API error: ${response.status}` })
+      logEmailDelivery({ messageId: 'unknown', to: payload.to, subject: payload.subject, status: 'failed', error: `Brevo API error: ${response.status}`, provider: 'brevo' })
       throw new Error(`Brevo API error: ${response.status} ${errorText}`)
     }
     const data = await response.json() as { messageId?: string }
     const messageId = data.messageId ?? `brevo-${Date.now()}`
-    logDelivery({ messageId, to: payload.to, subject: payload.subject, status: 'sent' })
+    logEmailDelivery({ messageId, to: payload.to, subject: payload.subject, status: 'sent', provider: 'brevo' })
     return { messageId }
   }
 
@@ -55,7 +39,7 @@ export class BrevoEmailService implements IEmailService {
         await this.send(payload)
         sent++
       } catch (err) {
-        logDelivery({ messageId: 'unknown', to: payload.to, subject: payload.subject, status: 'failed', error: String(err) })
+        logEmailDelivery({ messageId: 'unknown', to: payload.to, subject: payload.subject, status: 'failed', error: String(err), provider: 'brevo' })
         failed++
       }
     }

@@ -48,6 +48,7 @@ import { MockQueueService } from './services/adapters/mock/QueueService.js'
 import { MockWhatsAppService } from './services/adapters/mock/WhatsAppService.js'
 import { MockYoriMindService } from './services/adapters/mock/YoriMindService.js'
 import { BrevoEmailService } from './services/adapters/real/BrevoEmailService.js'
+import { MailtrapEmailService } from './services/adapters/real/MailtrapEmailService.js'
 import { BullQueueService } from './services/adapters/real/BullQueueService.js'
 import { EverproWhatsAppService } from './services/adapters/real/EverproWhatsAppService.js'
 import { OpenAiEtlNormalizationService } from './services/adapters/real/OpenAiEtlNormalizationService.js'
@@ -117,6 +118,17 @@ function resolveEtlNormalizationService(): IEtlNormalizationService {
   }
 }
 
+function resolveEmailService(): IEmailService {
+  switch (config.emailProvider) {
+    case 'brevo':
+      return new BrevoEmailService()
+    case 'mailtrap':
+      return new MailtrapEmailService()
+    default:
+      return new MockEmailService()
+  }
+}
+
 function resolveServices(): {
   emailService: IEmailService
   whatsAppService: IWhatsAppService
@@ -132,9 +144,11 @@ function resolveServices(): {
   const etlNormalizationService = resolveEtlNormalizationService()
   const deduplicationService = new FuzzyDeduplicationService(repos.contactRepository)
 
+  const emailService = resolveEmailService()
+
   if (config.serviceImpl === 'mock') {
     return {
-      emailService: new MockEmailService(),
+      emailService,
       whatsAppService: new MockWhatsAppService(),
       etlNormalizationService,
       yoriMindService: new MockYoriMindService(),
@@ -146,7 +160,7 @@ function resolveServices(): {
 
   if (config.serviceImpl === 'real') {
     return {
-      emailService: new BrevoEmailService(),
+      emailService,
       whatsAppService: new EverproWhatsAppService(),
       etlNormalizationService,
       yoriMindService: new MockYoriMindService(),
