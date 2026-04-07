@@ -10,9 +10,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
-// Select no longer needed — RJSF renders survey inputs
-import type { Event, Contact } from '@/types/api'
+import type { Event } from '@/types/api'
 import { MockGoogleAuthDialog } from '@/components/auth/MockGoogleAuthDialog'
 import { GoogleIcon } from '@/components/icons/GoogleIcon'
 import { surveyCustomWidgets } from '@/components/features/surveys/widgets'
@@ -25,6 +25,20 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
   webinar: 'Webinar',
 }
 
+const INDUSTRIES = [
+  'Otomotif & Suku Cadang (Auto Parts)',
+  'Elektronik & Peralatan Rumah Tangga',
+  'Fast-Moving Consumer Goods (FMCG)',
+  'Makanan & Minuman (F&B)',
+  'Farmasi & Alat Kesehatan',
+  'Plastik & Kemasan (Packaging)',
+  'Fabrikasi Logam & Mesin Presisi',
+  'Bahan Kimia Industri',
+  'Alat Berat & Karoseri',
+  'Tekstil & Garmen',
+  'Yang lain',
+]
+
 interface RegistrationFormPageProps {
   params: Promise<{ eventSlug: string }>
 }
@@ -32,7 +46,12 @@ interface RegistrationFormPageProps {
 interface FormData {
   name: string
   email: string
+  secondaryEmail: string
   phone: string
+  company: string
+  industry: string
+  title: string
+  location: string
   surveyAnswers: Record<string, string>
   consent: boolean
 }
@@ -42,7 +61,7 @@ const STEPS = ['Informasi Kontak', 'Survei', 'Checkout', 'Selesai']
 export default function RegistrationFormPage({ params }: RegistrationFormPageProps) {
   const { eventSlug } = use(params)
   const [step, setStep] = useState(0)
-  const [form, setForm] = useState<FormData>({ name: '', email: '', phone: '', surveyAnswers: {}, consent: false })
+  const [form, setForm] = useState<FormData>({ name: '', email: '', secondaryEmail: '', phone: '', company: '', industry: '', title: '', location: '', surveyAnswers: {}, consent: false })
   const [submitted, setSubmitted] = useState(false)
   const [regId, setRegId] = useState<string | null>(null)
   const [ssoFilled, setSsoFilled] = useState(false)
@@ -68,7 +87,12 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
         eventId: event.id,
         name: form.name,
         email: form.email,
+        secondaryEmail: form.secondaryEmail || undefined,
         phone: form.phone,
+        company: form.company || undefined,
+        industry: form.industry || undefined,
+        title: form.title || undefined,
+        location: form.location || undefined,
         surveyAnswers: form.surveyAnswers,
       }
       if (event.is_paid === false) {
@@ -241,7 +265,41 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
                 <span className="text-xs text-muted-foreground">atau isi manual</span>
                 <div className="flex-1 h-px bg-border" />
               </div>
-              {/* Reordered fixed fields: email -> name -> phone */}
+
+              {/* Required fields */}
+              <div className="space-y-1.5">
+                <Label htmlFor="name">
+                  Nama Lengkap <span className="text-destructive">*</span>
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="name"
+                    value={form.name}
+                    onChange={(e) => !ssoFilled && setForm((p) => ({ ...p, name: e.target.value }))}
+                    placeholder="Nama lengkap Anda"
+                    readOnly={ssoFilled}
+                    className={ssoFilled ? 'pr-20 bg-muted/40' : ''}
+                  />
+                  {ssoFilled && (
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-green-600 font-medium">
+                      ✓ Terisi dari Google
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="company">
+                  Nama Perusahaan/Instansi <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="company"
+                  value={form.company}
+                  onChange={(e) => setForm((p) => ({ ...p, company: e.target.value }))}
+                  placeholder="Perusahaan atau instansi"
+                />
+              </div>
+
               <div className="space-y-1.5">
                 <Label htmlFor="email">
                   Email <span className="text-destructive">*</span>
@@ -265,29 +323,21 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="name">
-                  Nama Lengkap <span className="text-destructive">*</span>
+                <Label htmlFor="secondaryEmail">
+                  Email Perusahaan <span className="text-muted-foreground text-xs">(opsional)</span>
                 </Label>
-                <div className="relative">
-                  <Input
-                    id="name"
-                    value={form.name}
-                    onChange={(e) => !ssoFilled && setForm((p) => ({ ...p, name: e.target.value }))}
-                    placeholder="Nama lengkap Anda"
-                    readOnly={ssoFilled}
-                    className={ssoFilled ? 'pr-20 bg-muted/40' : ''}
-                  />
-                  {ssoFilled && (
-                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-green-600 font-medium">
-                      ✓ Terisi dari Google
-                    </span>
-                  )}
-                </div>
+                <Input
+                  id="secondaryEmail"
+                  type="email"
+                  value={form.secondaryEmail}
+                  onChange={(e) => setForm((p) => ({ ...p, secondaryEmail: e.target.value }))}
+                  placeholder="email@perusahaan.com"
+                />
               </div>
 
               <div className="space-y-1.5">
                 <Label htmlFor="phone">
-                  Nomor Telepon <span className="text-destructive">*</span>
+                  No. Handphone (WA) <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="phone"
@@ -297,10 +347,52 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
                   placeholder="+628..."
                 />
               </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="industry">
+                  Jenis Industri Manufaktur <span className="text-destructive">*</span>
+                </Label>
+                <Select value={form.industry} onValueChange={(v) => setForm((p) => ({ ...p, industry: v }))}>
+                  <SelectTrigger id="industry">
+                    <SelectValue placeholder="Pilih industri" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {INDUSTRIES.map((ind) => (
+                      <SelectItem key={ind} value={ind}>{ind}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Optional fields */}
+              <div className="space-y-1.5">
+                <Label htmlFor="title">
+                  Jabatan <span className="text-muted-foreground text-xs">(opsional)</span>
+                </Label>
+                <Input
+                  id="title"
+                  value={form.title}
+                  onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
+                  placeholder="Jabatan Anda"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="location">
+                  Lokasi Kantor/Pabrik <span className="text-muted-foreground text-xs">(opsional)</span>
+                </Label>
+                <Input
+                  id="location"
+                  value={form.location}
+                  onChange={(e) => setForm((p) => ({ ...p, location: e.target.value }))}
+                  placeholder="Kota atau lokasi kantor"
+                />
+              </div>
+
               <Button
                 className="w-full h-11"
                 onClick={() => setStep(1)}
-                disabled={!form.name || !form.email || !form.phone}
+                disabled={!form.name || !form.email || !form.phone || !form.company || !form.industry}
               >
                 Lanjut →
               </Button>
@@ -364,9 +456,12 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
                   {event && new Date(event.eventDate).toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: event.timezone })}
                 </p>
 
-                <div className="rounded-lg bg-white p-3 shadow-sm">
+                <div className="rounded-lg bg-white p-3 shadow-sm space-y-1">
                   <p className="text-xs text-muted-foreground">Peserta</p>
-                  <p className="font-medium">{form.name} • {form.email} • {form.phone}</p>
+                  <p className="font-medium">{form.name}</p>
+                  <p className="text-xs text-muted-foreground">{form.company}{form.industry ? ` · ${form.industry}` : ''}</p>
+                  <p className="text-xs text-muted-foreground">{form.email}{form.secondaryEmail ? ` · ${form.secondaryEmail}` : ''}</p>
+                  <p className="text-xs text-muted-foreground">{form.phone}</p>
                 </div>
 
                 {/* Price handling */}
@@ -387,7 +482,7 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
                     className="flex-1 h-11"
                     onClick={() => setStep(3)}
                   >
-                    {event?.is_paid ? 'Bayar Sekarang' : 'Daftar Sekarang'}
+                    Lanjut ke Konfirmasi →
                   </Button>
                 </div>
               </div>
@@ -399,8 +494,12 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
               <h2 className="text-lg font-semibold">Konfirmasi</h2>
               <div className="rounded-lg bg-muted/50 p-4 space-y-2 text-sm">
                 <p><span className="text-muted-foreground">Nama:</span> {form.name}</p>
-                <p><span className="text-muted-foreground">Email:</span> {form.email}</p>
+                <p><span className="text-muted-foreground">Perusahaan:</span> {form.company || '-'}</p>
+                <p><span className="text-muted-foreground">Industri:</span> {form.industry || '-'}</p>
+                <p><span className="text-muted-foreground">Email:</span> {form.email}{form.secondaryEmail ? `, ${form.secondaryEmail}` : ''}</p>
                 <p><span className="text-muted-foreground">Telepon:</span> {form.phone}</p>
+                {form.title && <p><span className="text-muted-foreground">Jabatan:</span> {form.title}</p>}
+                {form.location && <p><span className="text-muted-foreground">Lokasi:</span> {form.location}</p>}
                 <p><span className="text-muted-foreground">Event:</span> {event?.name}</p>
               </div>
               <label className="flex items-start gap-3 cursor-pointer">
@@ -421,7 +520,7 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
                   onClick={() => submitMutation.mutate()}
                   disabled={!form.consent || submitMutation.isPending}
                 >
-                  {submitMutation.isPending ? 'Mendaftar…' : 'Daftar Sekarang'}
+                  {submitMutation.isPending ? 'Mengirim…' : 'Selesai'}
                 </Button>
               </div>
             </div>

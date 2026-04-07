@@ -30,7 +30,12 @@ const CreateRegistrationBodySchema = z.object({
   eventId: z.string().trim().min(1),
   name: z.string().trim().min(1),
   email: z.string().email(),
+  secondaryEmail: z.string().email().optional(),
   phone: z.string().trim().min(8),
+  company: z.string().trim().optional(),
+  industry: z.string().trim().optional(),
+  title: z.string().trim().optional(),
+  location: z.string().trim().optional(),
   surveyAnswers: z.record(z.string(), z.unknown()).optional(),
 })
 
