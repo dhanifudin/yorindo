@@ -1437,13 +1437,17 @@ components:
 
     ContactFacets:
       type: object
-      required: [serviceType, city]
+      required: [industry, city, companySize]
       properties:
-        serviceType:
+        industry:
           type: array
           items:
             $ref: '#/components/schemas/FacetItem'
         city:
+          type: array
+          items:
+            $ref: '#/components/schemas/FacetItem'
+        companySize:
           type: array
           items:
             $ref: '#/components/schemas/FacetItem'
@@ -5494,6 +5498,33 @@ paths:
                 $ref: '#/components/schemas/ApiError'
         '409':
           description: Assignment already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /users/me:
+    get:
+      summary: Get current authenticated user profile
+      operationId: getCurrentUser
+      tags: [Users]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: User not found
           content:
             application/json:
               schema:

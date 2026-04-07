@@ -18,18 +18,18 @@ async function fetchContacts(params: {
   missingPhone: boolean
   q: string
 }): Promise<PaginatedResponse<Contact>> {
-  const url = new URL('/api/contacts', window.location.origin)
-  url.searchParams.set('page', String(params.page))
-  url.searchParams.set('pageSize', String(params.pageSize))
-  if (params.industry) url.searchParams.set('industry', params.industry)
-  if (params.city) url.searchParams.set('city', params.city)
-  if (params.companySize) url.searchParams.set('companySize', params.companySize)
-  if (params.flagFilter) url.searchParams.set('flagFilter', params.flagFilter)
-  if (params.missingEmail) url.searchParams.set('missingEmail', 'true')
-  if (params.missingPhone) url.searchParams.set('missingPhone', 'true')
-  if (params.q) url.searchParams.set('q', params.q)
+  const qs = new URLSearchParams()
+  qs.set('page', String(params.page))
+  qs.set('pageSize', String(params.pageSize))
+  if (params.industry) qs.set('industry', params.industry)
+  if (params.city) qs.set('city', params.city)
+  if (params.companySize) qs.set('companySize', params.companySize)
+  if (params.flagFilter) qs.set('flagFilter', params.flagFilter)
+  if (params.missingEmail) qs.set('missingEmail', 'true')
+  if (params.missingPhone) qs.set('missingPhone', 'true')
+  if (params.q) qs.set('q', params.q)
 
-  const res = await fetch(url.toString())
+  const res = await fetch(`/api/contacts?${qs.toString()}`)
   if (!res.ok) throw new Error('Failed to fetch contacts')
   return res.json()
 }

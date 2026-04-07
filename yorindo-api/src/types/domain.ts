@@ -291,8 +291,9 @@ export interface SuppressionRecord {
 // ─── Facet Results (for filter UI) ───────────────────────────────────────────
 
 export interface FacetResult {
-  serviceType: Array<{ slug: string; label: string; count: number }>
+  industry: Array<{ slug: string; label: string; count: number }>
   city: Array<{ slug: string; label: string; count: number }>
+  companySize: Array<{ slug: string; label: string; count: number }>
 }
 
 export type DuplicateMatchReason = 'same_phone' | 'same_email' | 'similar_name'

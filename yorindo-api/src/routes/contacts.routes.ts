@@ -155,12 +155,17 @@ function toFlagFilter(flagFilter?: 'flagged' | 'unflagged') {
  */
 function toFacetsDto(facets: Awaited<ReturnType<typeof contactRepository.findFacets>>) {
   return {
-    serviceType: facets.serviceType.map((item) => ({
+    industry: facets.industry.map((item) => ({
       slug: item.slug,
       label: item.label,
       count: item.count,
     })),
     city: facets.city.map((item) => ({
+      slug: item.slug,
+      label: item.label,
+      count: item.count,
+    })),
+    companySize: facets.companySize.map((item) => ({
       slug: item.slug,
       label: item.label,
       count: item.count,

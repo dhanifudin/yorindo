@@ -174,13 +174,13 @@ export function ContactsFilterBar() {
   }
 
   const getIndustryCount = (slug: string) => {
-    if (!facets) return null
+    if (!facets || !facets.industry) return null
     const f = facets.industry.find((i) => i.slug === slug)
     return f?.count ?? null
   }
 
   const getCompanySizeCount = (slug: string) => {
-    if (!facets) return null
+    if (!facets || !facets.companySize) return null
     const f = facets.companySize.find((s) => s.slug === slug)
     return f?.count ?? null
   }

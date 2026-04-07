@@ -30,6 +30,19 @@ const AssignEventBody = z.object({ eventId: z.string().min(1) })
 export const usersRoutes: FastifyPluginAsync = async (fastify) => {
   const adminOnly = { preHandler: [requireAuth, requireAdmin] }
 
+  // ─── GET /api/users/me ────────────────────────────────────────────────────
+  fastify.get('/api/users/me', { preHandler: requireAuth }, async (request, reply) => {
+    const payload = request.user as JwtPayload
+    const user = await userRepository.findById(payload.sub)
+    if (!user) {
+      return reply.status(404).send({
+        error: { code: 'NOT_FOUND', message: 'User not found', details: [] },
+      })
+    }
+    const { passwordHash: _hash, ...safeUser } = user
+    return reply.status(200).send(safeUser)
+  })
+
   fastify.get('/api/users/me/assigned-events', { preHandler: requireAuth }, async (request, reply) => {
     const payload = request.user as JwtPayload
     if (payload.role === 'admin') {
