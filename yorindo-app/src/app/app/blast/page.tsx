@@ -48,10 +48,9 @@ export default function BlastPage() {
   const [selectedEvent, setSelectedEvent] = useState(() => prefilledAudience?.eventId ?? qEventId ?? '')
   const [templateId, setTemplateId] = useState('')
   const [channel, setChannel] = useState('whatsapp')
-  const [filters, setFilters] = useState({ 
-    industry: qSegment || '', 
-    city: '', 
-    companySize: '' 
+  const [filters, setFilters] = useState({
+    serviceType: qSegment || '',
+    city: '',
   })
   const [previewCount, setPreviewCount] = useState<number | null>(null)
   const [scheduleEnabled, setScheduleEnabled] = useState(false)
@@ -75,9 +74,8 @@ export default function BlastPage() {
     mutationFn: async () => {
       if (!selectedEvent) return { count: 0 }
       const body: Record<string, string> = {}
-      if (filters.industry) body.industry = filters.industry
+      if (filters.serviceType) body.serviceType = filters.serviceType
       if (filters.city) body.city = filters.city
-      if (filters.companySize) body.companySize = filters.companySize
       const res = await fetch(`/api/events/${selectedEvent}/audience-preview`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -224,12 +222,12 @@ export default function BlastPage() {
             ) : (
               <>
                 <p className="text-sm font-medium mb-3">Filter Audience</p>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs text-muted-foreground mb-1">Industri</label>
                     <select
-                      value={filters.industry}
-                      onChange={(e) => setFilters((p) => ({ ...p, industry: e.target.value }))}
+                      value={filters.serviceType}
+                      onChange={(e) => setFilters((p) => ({ ...p, serviceType: e.target.value }))}
                       className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
                     >
                       <option value="">Semua</option>
@@ -246,20 +244,6 @@ export default function BlastPage() {
                       placeholder="Semua kota"
                       className="h-9"
                     />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-muted-foreground mb-1">Ukuran Perusahaan</label>
-                    <select
-                      value={filters.companySize}
-                      onChange={(e) => setFilters((p) => ({ ...p, companySize: e.target.value }))}
-                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
-                    >
-                      <option value="">Semua</option>
-                      <option value="small">Small</option>
-                      <option value="medium">Medium</option>
-                      <option value="large">Large</option>
-                      <option value="enterprise">Enterprise</option>
-                    </select>
                   </div>
                 </div>
 

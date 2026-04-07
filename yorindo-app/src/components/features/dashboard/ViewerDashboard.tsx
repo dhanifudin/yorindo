@@ -64,7 +64,7 @@ export function ViewerDashboard() {
     if (!demoData?.data) return []
     const counts: Record<string, number> = {}
     for (const c of demoData.data) {
-      const industry = c.industryId || 'Lainnya'
+      const industry = c.serviceType || 'Lainnya'
       counts[industry] = (counts[industry] || 0) + 1
     }
     return Object.entries(counts)

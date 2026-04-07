@@ -1,12 +1,13 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { useAuthStore } from '@/store/authStore'
+import { useQueryClient } from '@tanstack/react-query'
 import { MOCK_USER_IDS } from '@/mocks/handlers/users'
 
 const MOCK_USERS = {
-  admin:       { id: MOCK_USER_IDS.devAdmin,  role: 'admin'  as const },
-  staff:       { id: MOCK_USER_IDS.devStaff,  role: 'staff'  as const },
-  viewer:      { id: MOCK_USER_IDS.devViewer, role: 'viewer' as const },
+  admin:       { id: MOCK_USER_IDS.devAdmin,  role: 'admin'  as const, email: 'admin@yorindo.id' },
+  staff:       { id: MOCK_USER_IDS.devStaff,  role: 'staff'  as const, email: 'staff@yorindo.id' },
+  viewer:      { id: MOCK_USER_IDS.devViewer, role: 'viewer' as const, email: 'viewer@yorindo.id' },
   participant: { id: 'cuid2devparticipant00001', role: 'participant' as const, name: 'Budi Peserta', email: 'budi.peserta@gmail.com' },
 }
 
@@ -25,6 +26,7 @@ function triggerInstallPrompt() {
 
 export function DevToolbar() {
   const { user, setAuth } = useAuthStore()
+  const queryClient = useQueryClient()
   const [isExpanded, setIsExpanded] = useState(false)
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -37,6 +39,29 @@ export function DevToolbar() {
       return () => document.removeEventListener('keydown', handleKeyDown)
     }
   }, [isExpanded, handleKeyDown])
+
+  const loginAs = async (role: keyof typeof MOCK_USERS) => {
+    const mockUser = MOCK_USERS[role]
+    // Try real API login first (uses seeded demo users)
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: mockUser.email, password: 'Password123!' }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setAuth(data.accessToken, data.user, data.eventKeys ?? {})
+        // Invalidate all queries so they re-fetch with the new token
+        queryClient.invalidateQueries()
+        return
+      }
+    } catch { /* fallback to mock login */ }
+
+    // Fallback: set mock token for MSW handlers
+    setAuth('dev-token', mockUser)
+    queryClient.invalidateQueries()
+  }
 
   if (!MOCKS_ENABLED) return null
 
@@ -70,7 +95,7 @@ export function DevToolbar() {
               ? 'bg-yellow-400 font-bold text-yellow-900'
               : 'bg-white text-gray-700 hover:bg-yellow-50'
           }`}
-          onClick={() => setAuth('dev-token', MOCK_USERS[role])}
+          onClick={() => loginAs(role)}
         >
           {role}
         </button>

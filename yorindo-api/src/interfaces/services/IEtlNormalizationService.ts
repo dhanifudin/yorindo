@@ -4,22 +4,20 @@ export interface RawContactRow {
 
 export interface NormalizedRow {
   name: string
-  phone: string
+  phone: string | null
   email: string | null
   city: string | null
-  company: string | null
-  department: string | null
-  companySize: string | null
-  industrySlug: string | null
-  jobTitleSlug: string | null
-  confidence: number
-  flags: string[]
   provinceCode: string | null
   provinceName: string | null
   cityCode: string | null
   cityName: string | null
+  company: string | null
+  department: string | null
+  serviceType: string | null
+  jobTitle: string | null
+  confidence: number
+  flags: string[]
   eventDate: string | null
-  eventNameRaw: string | null
 }
 
 export interface IEtlNormalizationService {

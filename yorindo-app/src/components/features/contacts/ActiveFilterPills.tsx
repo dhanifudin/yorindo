@@ -8,15 +8,15 @@ import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
 import { useFilterStore } from '@/store/filterStore'
 
 const FILTER_LABELS: Record<string, string> = {
-  industry: 'Industri',
+  serviceType: 'Industri',
   city: 'Kota',
-  companySize: 'Ukuran',
+  jobTitle: 'Jabatan',
   q: 'Pencarian',
   missingEmail: 'Email Kosong',
   missingPhone: 'Telepon Kosong',
 }
 
-const FILTER_KEYS = ['industry', 'city', 'companySize', 'q', 'missingEmail', 'missingPhone']
+const FILTER_KEYS = ['serviceType', 'city', 'jobTitle', 'q', 'missingEmail', 'missingPhone']
 
 interface ActiveFilterPillsProps {
   total?: number

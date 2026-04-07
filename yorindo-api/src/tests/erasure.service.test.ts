@@ -31,9 +31,10 @@ describe('ErasureService', () => {
 
   it('happy path: returns 202 with jobId and queued status', async () => {
     const { data: contacts } = await contactRepo.findAll({ page: 1, pageSize: 1 })
-    const contact = contacts[0]
+    const contact = contacts[0]!
+    const phone = contact.phone!
 
-    const result = await service.anonymizeContact({ phone: contact.phone, email: contact.email ?? '' })
+    const result = await service.anonymizeContact({ phone, email: contact.email ?? '' })
 
     expect(result.jobId).toBeTruthy()
     expect(result.status).toBe('completed')
@@ -43,12 +44,12 @@ describe('ErasureService', () => {
   it('anonymizes contact: name=ANONYMIZED, phone=sha256(original), email=null', async () => {
     const { data: contacts } = await contactRepo.findAll({ page: 1, pageSize: 10 })
     const contact = contacts.find(c => c.email !== null)!
-    const originalPhone = contact.phone
+    const originalPhone = contact.phone!
 
     await service.anonymizeContact({ phone: originalPhone, email: contact.email! })
 
     const updated = await contactRepo.findById(contact.id)
-    expect(updated?.name).toBe('ANONYMIZED')
+    expect(updated?.name).toBe('Anonymized')
     expect(updated?.phone).toBe(sha256(originalPhone))
     expect(updated?.email).toBeNull()
     expect(updated?.consentStatus).toBe('suppressed')
@@ -56,19 +57,21 @@ describe('ErasureService', () => {
 
   it('adds contact to suppression list after erasure', async () => {
     const { data: contacts } = await contactRepo.findAll({ page: 1, pageSize: 1 })
-    const contact = contacts[0]
+    const contact = contacts[0]!
+    const originalPhone = contact.phone!
 
-    await service.anonymizeContact({ phone: contact.phone, email: contact.email ?? '' })
+    await service.anonymizeContact({ phone: originalPhone, email: contact.email ?? '' })
 
-    const isSuppressed = await suppressionRepo.isSuppressed(contact.phone)
+    const isSuppressed = await suppressionRepo.isSuppressed(originalPhone)
     expect(isSuppressed).toBe(true)
   })
 
   it('writes participant.data-erased audit entry with no PII', async () => {
     const { data: contacts } = await contactRepo.findAll({ page: 1, pageSize: 1 })
-    const contact = contacts[0]
+    const contact = contacts[0]!
+    const originalPhone = contact.phone!
 
-    await service.anonymizeContact({ phone: contact.phone, email: contact.email ?? '' })
+    await service.anonymizeContact({ phone: originalPhone, email: contact.email ?? '' })
 
     const auditEntry = auditLogger.entries.find(e => e.action === 'participant.data-erased')
     expect(auditEntry).toBeTruthy()
@@ -81,13 +84,14 @@ describe('ErasureService', () => {
   it('identity mismatch: wrong email throws ErasureError with httpStatus 422', async () => {
     const { data: contacts } = await contactRepo.findAll({ page: 1, pageSize: 10 })
     const contact = contacts.find(c => c.email !== null)!
+    const phone = contact.phone!
 
     await expect(
-      service.anonymizeContact({ phone: contact.phone, email: 'wrong@example.com' })
+      service.anonymizeContact({ phone, email: 'wrong@example.com' })
     ).rejects.toThrow(ErasureError)
 
     await expect(
-      service.anonymizeContact({ phone: contact.phone, email: 'wrong@example.com' })
+      service.anonymizeContact({ phone, email: 'wrong@example.com' })
     ).rejects.toMatchObject({ code: 'IDENTITY_MISMATCH', httpStatus: 422 })
   })
 
@@ -99,18 +103,19 @@ describe('ErasureService', () => {
 
   it('already erased: second request throws ErasureError with httpStatus 409', async () => {
     const { data: contacts } = await contactRepo.findAll({ page: 1, pageSize: 1 })
-    const contact = contacts[0]
+    const contact = contacts[0]!
+    const originalPhone = contact.phone!
+    const originalEmail = contact.email ?? ''
 
-    await service.anonymizeContact({ phone: contact.phone, email: contact.email ?? '' })
+    await service.anonymizeContact({ phone: originalPhone, email: originalEmail })
 
-    // Second request: phone is now stored as hash; original phone no longer exists
-    // but existsByPhoneHash(sha256(phone)) returns true
-    const hashedPhone = sha256(contact.phone)
+    // Second request
     await expect(
-      service.anonymizeContact({ phone: contact.phone, email: contact.email ?? '' })
+      service.anonymizeContact({ phone: originalPhone, email: originalEmail })
     ).rejects.toMatchObject({ code: 'ALREADY_ERASED', httpStatus: 409 })
 
     // Verify hash is stored
+    const hashedPhone = sha256(originalPhone)
     const exists = await contactRepo.existsByPhoneHash(hashedPhone)
     expect(exists).toBe(true)
   })

@@ -31,6 +31,7 @@ const migrations = [
   '005_sprint_changes_2026_03_28.sql',
   '006_location_fields.sql',
   '007_demo_support_tables.sql',
+  '008_phase2_schema_gaps.sql',
 ]
 
 async function migrate(): Promise<void> {

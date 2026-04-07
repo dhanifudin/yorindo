@@ -603,8 +603,8 @@ export const eventHandlers = [
       .map((contact) => {
         const score = djb2(contact.id + eventId)
         const factors: string[] = []
-        if (event?.industryTags?.[0] && contact.industryId === event.industryTags[0]) {
-          factors.push(`industry:${contact.industryId}`)
+        if (event?.industryTags?.[0] && contact.serviceType === event.industryTags[0]) {
+          factors.push(`serviceType:${contact.serviceType}`)
         }
         if (contact.city === 'Jakarta') factors.push('location:jakarta')
         if (contact.completenessScore > 0.7) factors.push('completeness:high')
@@ -613,9 +613,8 @@ export const eventHandlers = [
           name: contact.name,
           email: contact.email,
           phone: contact.phone,
-          industryId: contact.industryId,
+          serviceType: contact.serviceType,
           city: contact.city,
-          companySize: contact.companySize,
           score,
           factors,
           reliabilityRate: (score % 10) / 10,
@@ -637,9 +636,8 @@ export const eventHandlers = [
     await delay(400)
     const body = await request.json() as Record<string, unknown>
     let count = 247
-    if (body.industry) count = Math.floor(count * 0.3)
+    if (body.serviceType) count = Math.floor(count * 0.3)
     if (body.city) count = Math.floor(count * 0.4)
-    if (body.companySize) count = Math.floor(count * 0.5)
     return HttpResponse.json({ count })
   }),
 

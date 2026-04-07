@@ -5,7 +5,11 @@ export interface Template {
   name: string
   type: 'invitation' | 'confirmation' | 'rejection' | 'cancellation'
   channel: 'email' | 'whatsapp'
+  subject?: string
   body: string
+  logoUrl?: string
+  imageType?: 'header' | 'background'
+  bgOpacity?: number
   createdAt: string
 }
 

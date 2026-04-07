@@ -36,6 +36,8 @@ interface BlastHistoryListProps {
 }
 
 export function BlastHistoryList({ blasts, isLoading, onKirimUndangan }: BlastHistoryListProps) {
+  const items = Array.isArray(blasts) ? blasts : []
+
   if (isLoading) {
     return (
       <div className="space-y-2">
@@ -46,7 +48,7 @@ export function BlastHistoryList({ blasts, isLoading, onKirimUndangan }: BlastHi
     )
   }
 
-  if (!blasts || blasts.length === 0) {
+  if (items.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center space-y-3">
         <p className="text-muted-foreground text-sm">
@@ -59,7 +61,7 @@ export function BlastHistoryList({ blasts, isLoading, onKirimUndangan }: BlastHi
 
   return (
     <div className="divide-y">
-      {blasts.map((blast) => (
+      {items.map((blast) => (
         <div key={blast.id} className="flex items-center gap-3 py-3">
           <div className="rounded-full bg-muted p-2 shrink-0">
             {blast.channel === 'whatsapp' ? (

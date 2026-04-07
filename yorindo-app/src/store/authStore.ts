@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 import type { User } from '@/types/api'
 
 type SessionUser = Pick<User, 'id' | 'role'> & { name?: string; email?: string }
@@ -12,10 +13,20 @@ interface AuthStore {
   clearAuth: () => void
 }
 
-export const useAuthStore = create<AuthStore>((set) => ({
-  accessToken: null,
-  user: null,
-  eventKeys: {},
-  setAuth: (accessToken, user, eventKeys = {}) => set({ accessToken, user, eventKeys }),
-  clearAuth: () => set({ accessToken: null, user: null, eventKeys: {} }),
-}))
+export const useAuthStore = create<AuthStore>()(
+  persist(
+    (set) => ({
+      accessToken: null,
+      user: null,
+      eventKeys: {},
+      setAuth: (accessToken, user, eventKeys = {}) => set({ accessToken, user, eventKeys }),
+      clearAuth: () => set({ accessToken: null, user: null, eventKeys: {} }),
+    }),
+    { name: 'yorindo-auth' },
+  ),
+)
+
+// Helper to check if the store has finished hydrating from localStorage
+export function useAuthHydrated(): boolean {
+  return useAuthStore.persist?.hasHydrated?.() ?? true
+}

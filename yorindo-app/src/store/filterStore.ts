@@ -1,9 +1,9 @@
 import { create } from 'zustand'
 
 interface FilterStore {
-  industry: string
+  serviceType: string
   city: string
-  companySize: string
+  jobTitle: string
   page: number
   flagFilter: '' | 'flagged' | 'unflagged'
   missingEmail: boolean
@@ -13,18 +13,18 @@ interface FilterStore {
 }
 
 export const useFilterStore = create<FilterStore>((set) => ({
-  industry: '',
+  serviceType: '',
   city: '',
-  companySize: '',
+  jobTitle: '',
   page: 1,
   flagFilter: '',
   missingEmail: false,
   missingPhone: false,
   setFilter: (f) => set((s) => ({ ...s, ...f })),
   resetFilter: () => set({
-    industry: '',
+    serviceType: '',
     city: '',
-    companySize: '',
+    jobTitle: '',
     page: 1,
     flagFilter: '',
     missingEmail: false,

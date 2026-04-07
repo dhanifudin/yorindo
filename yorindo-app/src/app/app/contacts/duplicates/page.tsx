@@ -31,8 +31,8 @@ const FIELDS: { key: keyof Contact; label: string }[] = [
   { key: 'phone', label: 'Telepon' },
   { key: 'email', label: 'Email' },
   { key: 'city', label: 'Kota' },
-  { key: 'industryId', label: 'Industri' },
-  { key: 'companySize', label: 'Ukuran Perusahaan' },
+  { key: 'serviceType', label: 'Industri' },
+  { key: 'jobTitle', label: 'Jabatan' },
 ]
 
 const MATCH_REASON_LABEL: Record<string, string> = {

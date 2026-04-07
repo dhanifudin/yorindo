@@ -53,14 +53,18 @@ export type ContactSource = 'excel_upload' | 'form' | 'manual'
 export interface Contact {
   id: EntityId
   name: string
-  phone: string                    // normalized: +62XXXXXXXXXX
+  phone: string | null                // normalized: +62XXXXXXXXXX or null if missing
   email: string | null
-  industryId: EntityId | null
-  jobTitleId: EntityId | null
+  serviceType: string | null
+  jobTitle: string | null
   city: string | null
+  provinceCode: string | null
+  provinceName: string | null
+  cityCode: string | null
+  cityName: string | null
   company: string | null
-  department?: string | null
-  companySize: CompanySize | null
+  department: string | null
+  eventDate: string | null
   source: ContactSource | null
   completenessScore: number        // 0.000 to 1.000
   consentStatus: ConsentStatus
@@ -77,9 +81,8 @@ export type ApprovalMode = 'auto' | 'manual' | 'hybrid'
 export type NotificationChannel = 'email' | 'whatsapp'
 
 export interface TargetCriteria {
-  industries?: string[]
+  serviceTypes?: string[]
   cities?: string[]
-  companySizes?: string[]
   jobTitles?: string[]
   behavior?: ('most_active' | 'low_attendance' | 'never_attended')[]
   lastAttendedBefore?: string
@@ -109,6 +112,7 @@ export interface Event {
   isPaid: boolean
   price: number | null
   paymentMethod: string | null
+  postSurveyEnabled?: boolean      // Phase 2: dual survey toggle
   deletedAt: ISODateString | null
   createdAt: ISODateString
   updatedAt: ISODateString
@@ -202,20 +206,32 @@ export interface FlaggedRecord {
 
 // ─── Survey (document-style shape) ─────────────────────────────────────────────
 
+export type SurveyFieldType =
+  | 'text' | 'textarea' | 'radio' | 'select' | 'checkboxes'
+  | 'range' | 'grid_radio' | 'grid_checkbox' | 'date' | 'time' | 'section'
+
 export interface SurveyField {
   key: string
   label: string
-  type: 'text' | 'select' | 'radio' | 'checkbox' | 'number'
+  type: 'text' | 'select' | 'radio' | 'checkbox' | 'number' | SurveyFieldType
   required: boolean
   options?: string[]
+  minimum?: number    // for range
+  maximum?: number    // for range
+  rows?: string[]     // for grid types
+  columns?: string[]  // for grid types
+  description?: string // for section
 }
+
+export type SurveyType = 'registration' | 'post-event'
 
 export interface SurveySchema {
   id: string              // opaque survey schema id
   eventId: EntityId
+  type?: SurveyType       // 'registration' | 'post-event' (Phase 2)
   fields: SurveyField[]
-  schema?: Record<string, unknown>
-  uiSchema?: Record<string, unknown>
+  schema?: Record<string, unknown>   // rjsf JSON Schema
+  uiSchema?: Record<string, unknown> // rjsf UI Schema
   createdAt: ISODateString
   updatedAt: ISODateString
 }
@@ -224,8 +240,39 @@ export interface SurveyResponse {
   id: string
   eventId: EntityId
   registrationId: EntityId
+  surveyType?: SurveyType
   answers: Record<string, unknown>
   submittedAt: ISODateString
+}
+
+export interface SurveyResponseAggregate {
+  questionId: string
+  questionLabel: string
+  fieldType: SurveyFieldType
+  // For radio/select/checkboxes:
+  optionCounts?: Array<{ label: string; count: number; percentage: number }>
+  // For range/grid:
+  average?: number
+  distribution?: Array<{ label: string; count: number }>
+  // For text/textarea:
+  totalCount?: number
+  samples?: string[]
+}
+
+export interface SurveyResponsesApiResponse {
+  total: number
+  aggregates: SurveyResponseAggregate[]
+  responses: SurveyResponseRecord[]
+  pagination: { page: number; pageSize: number; totalPages: number }
+}
+
+export interface SurveyResponseRecord {
+  id: string
+  registrationId: string
+  contactName: string
+  contactPhone: string
+  submittedAt: string
+  answers: Record<string, unknown>
 }
 
 // ─── Suppression ─────────────────────────────────────────────────────────────
@@ -233,7 +280,7 @@ export interface SurveyResponse {
 export interface SuppressionRecord {
   id: EntityId
   contactId: EntityId
-  phone: string
+  phone: string | null
   email: string | null
   name: string | null
   reason: string
@@ -243,9 +290,8 @@ export interface SuppressionRecord {
 // ─── Facet Results (for filter UI) ───────────────────────────────────────────
 
 export interface FacetResult {
-  industries: Array<{ id: string; name: string; count: number }>
-  cities: Array<{ city: string; count: number }>
-  companySizes: Array<{ size: string; count: number }>
+  serviceType: Array<{ slug: string; label: string; count: number }>
+  city: Array<{ slug: string; label: string; count: number }>
 }
 
 export type DuplicateMatchReason = 'same_phone' | 'same_email' | 'similar_name'

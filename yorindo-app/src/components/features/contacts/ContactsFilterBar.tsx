@@ -22,15 +22,6 @@ import {
 import { toast } from 'sonner'
 import type { ContactsFacets } from '@/types/api'
 
-const COMPANY_SIZES = [
-  { value: '', label: 'Semua Ukuran' },
-  { value: 'micro', label: 'Micro' },
-  { value: 'small', label: 'Small' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'large', label: 'Large' },
-  { value: 'enterprise', label: 'Enterprise' },
-]
-
 const INDUSTRIES = [
   { value: '', label: 'Semua Industri' },
   { value: 'teknologi', label: 'Teknologi' },
@@ -62,16 +53,20 @@ export function ContactsFilterBar() {
   const router = useRouter()
   const pathname = usePathname()
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const cityDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const jobTitleDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const industry = searchParams.get('industry') ?? ''
+  const serviceType = searchParams.get('serviceType') ?? ''
   const city = searchParams.get('city') ?? ''
-  const companySize = searchParams.get('companySize') ?? ''
+  const jobTitle = searchParams.get('jobTitle') ?? ''
   const q = searchParams.get('q') ?? ''
 
-  const hasActiveFilters = !!(industry || city || companySize || q)
+  const hasActiveFilters = !!(serviceType || city || jobTitle || q)
 
-  // ── State lokal untuk input nama (debounced ke URL param q) ──────────────
+  // ── State lokal untuk input nama, kota, jabatan (debounced ke URL param) ──
   const [nameQuery, setNameQuery] = useState(q)
+  const [cityQuery, setCityQuery] = useState(city)
+  const [jobTitleQuery, setJobTitleQuery] = useState(jobTitle)
 
   // Facets query
   const { data: facets } = useQuery<ContactsFacets>({
@@ -96,9 +91,14 @@ export function ContactsFilterBar() {
     router.push(`${pathname}?${params.toString()}`)
   }, [searchParams, router, pathname])
 
-  const debounce = useCallback((fn: () => void) => {
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(fn, 300)
+  const debounceCity = useCallback((fn: () => void) => {
+    if (cityDebounceRef.current) clearTimeout(cityDebounceRef.current)
+    cityDebounceRef.current = setTimeout(fn, 300)
+  }, [])
+
+  const debounceJobTitle = useCallback((fn: () => void) => {
+    if (jobTitleDebounceRef.current) clearTimeout(jobTitleDebounceRef.current)
+    jobTitleDebounceRef.current = setTimeout(fn, 350)
   }, [])
 
   // ── Handler search nama (debounce 350ms ke URL param q) ──────────────────
@@ -131,7 +131,7 @@ export function ContactsFilterBar() {
       } else {
         setAiStatus('matched')
         setMatchedSlug(data.matchedSlug)
-        updateParam('industry', data.matchedSlug)
+        updateParam('serviceType', data.matchedSlug)
       }
     } catch {
       setAiStatus('fallback')
@@ -150,7 +150,7 @@ export function ContactsFilterBar() {
     setAiStatus('idle')
     setMatchedSlug(null)
     setUseSmartMode(false)
-    updateParam('industry', '')
+    updateParam('serviceType', '')
   }
 
   const handleReset = () => {
@@ -160,6 +160,8 @@ export function ContactsFilterBar() {
     setMatchedSlug(null)
     setUseSmartMode(false)
     setNameQuery('')
+    setCityQuery('')
+    setJobTitleQuery('')
   }
 
   const handleSaveSegment = () => {
@@ -171,15 +173,9 @@ export function ContactsFilterBar() {
     setSegmentName('')
   }
 
-  const getIndustryCount = (slug: string) => {
-    if (!facets) return null
-    const f = facets.industry.find((i) => i.slug === slug)
-    return f?.count ?? null
-  }
-
-  const getCompanySizeCount = (slug: string) => {
-    if (!facets) return null
-    const f = facets.companySize.find((s) => s.slug === slug)
+  const getServiceTypeCount = (slug: string) => {
+    if (!facets || !facets.serviceType) return null
+    const f = facets.serviceType.find((i) => i.slug === slug)
     return f?.count ?? null
   }
 
@@ -188,7 +184,7 @@ export function ContactsFilterBar() {
   return (
     <div className="flex flex-wrap gap-3 mb-4 items-end">
 
-      {/* ── SEARCH NAMA — baru ───────────────────────────────────────────── */}
+      {/* ── SEARCH NAMA ──────────────────────────────────────────────────── */}
       <div>
         <label className="block text-xs text-muted-foreground mb-1">Cari Nama</label>
         <div className="relative w-48">
@@ -212,7 +208,7 @@ export function ContactsFilterBar() {
         </div>
       </div>
 
-      {/* Industry filter */}
+      {/* ── INDUSTRI filter ───────────────────────────────────────────────── */}
       <div className="space-y-1">
         <div className="flex items-center gap-2">
           <label className="block text-xs text-muted-foreground">Industri</label>
@@ -254,8 +250,8 @@ export function ContactsFilterBar() {
               <div className="mt-1">
                 <p className="text-xs text-muted-foreground">Tidak cocok — gunakan dropdown:</p>
                 <Select
-                  value={industry || 'all'}
-                  onValueChange={(val) => updateParam('industry', val === 'all' ? '' : val)}
+                  value={serviceType || 'all'}
+                  onValueChange={(val) => updateParam('serviceType', val === 'all' ? '' : val)}
                 >
                   <SelectTrigger className="w-48 mt-1 h-9">
                     <SelectValue placeholder="Semua Industri" />
@@ -263,7 +259,7 @@ export function ContactsFilterBar() {
                   <SelectContent>
                     <SelectItem value="all">Semua Industri</SelectItem>
                     {INDUSTRIES.slice(1).map((i) => {
-                      const count = getIndustryCount(i.value)
+                      const count = getServiceTypeCount(i.value)
                       return (
                         <SelectItem key={i.value} value={i.value}>
                           {i.label}{count !== null ? ` (${count})` : ''}
@@ -277,8 +273,8 @@ export function ContactsFilterBar() {
           </div>
         ) : (
           <Select
-            value={industry || 'all'}
-            onValueChange={(val) => updateParam('industry', val === 'all' ? '' : val)}
+            value={serviceType || 'all'}
+            onValueChange={(val) => updateParam('serviceType', val === 'all' ? '' : val)}
           >
             <SelectTrigger className="w-48 h-9">
               <SelectValue placeholder="Semua Industri" />
@@ -286,7 +282,7 @@ export function ContactsFilterBar() {
             <SelectContent>
               <SelectItem value="all">Semua Industri</SelectItem>
               {INDUSTRIES.slice(1).map((i) => {
-                const count = getIndustryCount(i.value)
+                const count = getServiceTypeCount(i.value)
                 return (
                   <SelectItem key={i.value} value={i.value}>
                     {i.label}{count !== null ? ` (${count})` : ''}
@@ -298,47 +294,55 @@ export function ContactsFilterBar() {
         )}
       </div>
 
-      {/* City filter */}
+      {/* ── KOTA filter ───────────────────────────────────────────────────── */}
       <div>
         <label className="block text-xs text-muted-foreground mb-1">Kota</label>
         <Input
           type="text"
           placeholder="Cari kota..."
-          defaultValue={city}
-          onChange={(e) => debounce(() => updateParam('city', e.target.value))}
+          value={cityQuery}
+          onChange={(e) => {
+            setCityQuery(e.target.value)
+            debounceCity(() => updateParam('city', e.target.value))
+          }}
           className="w-40"
         />
       </div>
 
-      {/* Company size filter */}
+      {/* ── JABATAN filter ────────────────────────────────────────────────── */}
       <div>
-        <label className="block text-xs text-muted-foreground mb-1">Ukuran Perusahaan</label>
-        <Select
-          value={companySize || 'all'}
-          onValueChange={(val) => updateParam('companySize', val === 'all' ? '' : val)}
-        >
-          <SelectTrigger className="w-40 h-9">
-            <SelectValue placeholder="Semua Ukuran" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Semua Ukuran</SelectItem>
-            {COMPANY_SIZES.slice(1).map((s) => {
-              const count = getCompanySizeCount(s.value)
-              return (
-                <SelectItem key={s.value} value={s.value}>
-                  {s.label}{count !== null ? ` (${count})` : ''}
-                </SelectItem>
-              )
-            })}
-          </SelectContent>
-        </Select>
+        <label className="block text-xs text-muted-foreground mb-1">Jabatan</label>
+        <div className="relative w-40">
+          <Input
+            type="text"
+            placeholder="Cari jabatan..."
+            value={jobTitleQuery}
+            onChange={(e) => {
+              setJobTitleQuery(e.target.value)
+              debounceJobTitle(() => updateParam('jobTitle', e.target.value))
+            }}
+            className="h-9 pr-7"
+          />
+          {jobTitleQuery && (
+            <button
+              type="button"
+              onClick={() => {
+                setJobTitleQuery('')
+                updateParam('jobTitle', '')
+              }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Action buttons */}
       <Button variant="outline" onClick={handleReset}>
         Reset Filter
       </Button>
-      
+
       {/* Save Segment popover */}
       {hasActiveFilters && (
         <Popover>

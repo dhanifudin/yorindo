@@ -298,13 +298,13 @@ describe('Events Routes API (Story 4.1 BE)', () => {
       expect(typeof json.breakdown).toBe('object')
     })
 
-    it('filters by industries and returns real breakdown', async () => {
+    it('filters by serviceTypes and returns real breakdown', async () => {
       const event = await createDraftEvent(app, adminToken)
       const res = await app.inject({
         method: 'POST',
         url: `/api/events/${event.id}/audience-preview`,
         headers: { authorization: `Bearer ${adminToken}` },
-        payload: { industries: ['teknologi'] },
+        payload: { serviceTypes: ['Konsultasi'] },
       })
       expect(res.statusCode).toBe(200)
       const json = res.json()
@@ -403,9 +403,8 @@ describe('Events Routes API (Story 4.1 BE)', () => {
         url: `/api/events/${event.id}/audience-preview`,
         headers: { authorization: `Bearer ${adminToken}` },
         payload: {
-          industries: ['teknologi'],
+          serviceTypes: ['Konsultasi'],
           cities: ['Jakarta'],
-          companySizes: ['medium'],
         },
       })
       expect(res.statusCode).toBe(200)
