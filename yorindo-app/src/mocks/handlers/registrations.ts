@@ -5,7 +5,7 @@ import { contactsPool } from './contacts'
 import { djb2 } from '@/lib/djb2'
 import { makeMockCuid2 } from './id'
 
-type StoredRegistration = Registration & { flagOverride: boolean }
+type StoredRegistration = Registration & { flagOverride: boolean; order?: Record<string, unknown> }
 
 // Distribute registrations across events for realistic mock data
 // event-001: published (upcoming, Apr 2026) — pending/approved/waitlist mix, not near capacity
@@ -149,18 +149,22 @@ export const registrationHandlers = [
     return HttpResponse.json(response)
   }),
 
-  http.post('/api/registrations', async () => {
+  http.post('/api/registrations', async ({ request }) => {
     await delay(400)
+    // Read incoming payload and persist order object if provided
+    // Note: the real API validates payloads; MSW mock accepts flexible shape for tests
+    const payload = await request.json().catch(() => ({})) as Record<string, unknown>
     const newReg: StoredRegistration = {
       id: makeMockCuid2(),
       contactId: contactsPool[registrationsStore.length % contactsPool.length].id,
-      eventId: 'event-001',
+      eventId: (payload.eventId as string) ?? 'event-001',
       status: 'pending',
       ticketToken: null,
-      surveyAnswers: {},
+      surveyAnswers: (payload.surveyAnswers as Record<string, unknown>) ?? {},
       attendedAt: null,
       createdAt: new Date().toISOString(),
       flagOverride: false,
+      order: payload.order as Record<string, unknown> | undefined,
     }
     registrationsStore.push(newReg)
     return HttpResponse.json(newReg, { status: 201 })
@@ -213,6 +217,7 @@ export const registrationHandlers = [
         status: 'pending',
         eventName: 'Seminar ERP Jakarta',
         eventSlug: 'seminar-erp-jakarta',
+        eventDate: '2026-05-15T02:00:00.000Z',
         participantName: 'Budi Santoso',
         contactId: makeMockCuid2(),
         participantEmail: 'budi.santoso@email.com',

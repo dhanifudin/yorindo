@@ -19,10 +19,12 @@ beforeEach(() => {
 })
 
 describe('LoginPage', () => {
-  it('renders the login form when not authenticated', () => {
+  it('renders the login form when not authenticated', async () => {
     render(<LoginPage />)
-    expect(screen.getByTestId('login-form')).toBeTruthy()
-    expect(screen.getByText('Admin Portal')).toBeTruthy()
+    await waitFor(() => {
+      expect(screen.getByTestId('login-form')).toBeTruthy()
+      expect(screen.getByText('Admin Portal')).toBeTruthy()
+    })
   })
 
   it('redirects to /app when already authenticated', async () => {

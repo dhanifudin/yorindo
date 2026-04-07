@@ -51,10 +51,12 @@ export function ContactsCommandCenter() {
     if (!next) handleClearSelection()
   }, [selectMode, handleClearSelection])
 
+  const currentPage = searchParams.get('page')
+
   // Reset selection saat ganti halaman
   useEffect(() => {
     startTransition(() => { handleClearSelection() })
-  }, [searchParams.get('page'), handleClearSelection])
+  }, [currentPage, handleClearSelection])
 
   useEffect(() => {
     setFilter({

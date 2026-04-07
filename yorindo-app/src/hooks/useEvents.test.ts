@@ -42,6 +42,7 @@ describe('useCreateEvent', () => {
     const wrapper = makeWrapper()
     const { result } = renderHook(() => useCreateEvent(), { wrapper })
 
+    await waitFor(() => expect(result.current).not.toBeNull(), { timeout: 1000 })
     result.current.mutate({
       name: 'Test Event',
       eventDate: '2026-06-01T09:00:00.000Z',

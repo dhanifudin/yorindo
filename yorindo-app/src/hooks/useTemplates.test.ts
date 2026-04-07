@@ -42,6 +42,8 @@ describe('useCreateTemplate', () => {
     const wrapper = makeWrapper()
     const { result } = renderHook(() => useCreateTemplate(), { wrapper })
 
+    await waitFor(() => expect(result.current).not.toBeNull(), { timeout: 1000 })
+
     result.current.mutate({
       name: 'Test Template',
       type: 'invitation',

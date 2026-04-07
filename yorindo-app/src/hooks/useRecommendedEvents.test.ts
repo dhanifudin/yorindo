@@ -43,12 +43,13 @@ describe('useRecommendedEvents', () => {
     }
   })
 
-  it('does not fetch when enabled is false', () => {
+  it('does not fetch when enabled is false', async () => {
     const { result } = renderHook(
       () => useRecommendedEvents('some-contact-id', false),
       { wrapper: makeWrapper() },
     )
 
+    await waitFor(() => expect(result.current).not.toBeNull(), { timeout: 1000 })
     expect(result.current.isLoading).toBe(false)
     expect(result.current.isFetching).toBe(false)
     expect(result.current.data).toBeUndefined()

@@ -185,6 +185,7 @@ export function ContactsTable({
     },
   ]
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data: data?.data ?? [],
     columns,
@@ -203,12 +204,12 @@ export function ContactsTable({
   // Ambil selected IDs dan Names
   const derivedSelectedIds = useMemo(
     () => table.getSelectedRowModel().rows.map((r) => r.original.id),
-    [rowSelection]
+    [table]
   )
 
   const derivedSelectedNames = useMemo(
     () => table.getSelectedRowModel().rows.map((r) => r.original.name),
-    [rowSelection]
+    [table]
   )
 
   // Kirim ke parent component

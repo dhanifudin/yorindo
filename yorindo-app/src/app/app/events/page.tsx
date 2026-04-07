@@ -102,13 +102,12 @@ export default function EventsPage() {
 
   const activeFilterCount = [activeStatus, searchQuery, startDate, endDate].filter(Boolean).length
 
-  const allEvents = data?.data ?? []
-
   const { upcomingEvents, historyEvents } = useMemo(() => {
-    const upcoming = allEvents.filter((e) => UPCOMING_STATUSES.includes(e.status))
-    const history = allEvents.filter((e) => HISTORY_STATUSES.includes(e.status))
+    const all = data?.data ?? []
+    const upcoming = all.filter((e) => UPCOMING_STATUSES.includes(e.status))
+    const history = all.filter((e) => HISTORY_STATUSES.includes(e.status))
     return { upcomingEvents: upcoming, historyEvents: history }
-  }, [allEvents])
+  }, [data?.data])
 
   const tabStatuses = activeTab === 'upcoming' ? UPCOMING_STATUSES : HISTORY_STATUSES
   const tabEvents = activeTab === 'upcoming' ? upcomingEvents : historyEvents

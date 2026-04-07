@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ConfirmationTable, type ConfirmationRegistration } from './ConfirmationTable'
 
@@ -28,7 +28,7 @@ const sampleRegistrations: ConfirmationRegistration[] = [
 ]
 
 describe('ConfirmationTable', () => {
-  it('renders all registration rows', () => {
+  it('renders all registration rows', async () => {
     render(
       <ConfirmationTable
         registrations={sampleRegistrations}
@@ -37,12 +37,14 @@ describe('ConfirmationTable', () => {
         isPending={false}
       />
     )
-    expect(screen.getByText('Budi Santoso')).toBeTruthy()
-    expect(screen.getByText('Siti Rahma')).toBeTruthy()
-    expect(screen.getByText('Agus Hartono')).toBeTruthy()
+    await waitFor(() => {
+      expect(screen.getByText('Budi Santoso')).toBeTruthy()
+      expect(screen.getByText('Siti Rahma')).toBeTruthy()
+      expect(screen.getByText('Agus Hartono')).toBeTruthy()
+    })
   })
 
-  it('shows "Kirim Ulang Tiket" for confirmed and pending rows', () => {
+  it('shows "Kirim Ulang Tiket" for confirmed and pending rows', async () => {
     render(
       <ConfirmationTable
         registrations={sampleRegistrations}
@@ -51,11 +53,13 @@ describe('ConfirmationTable', () => {
         isPending={false}
       />
     )
-    const resendBtns = screen.getAllByText('Kirim Ulang Tiket')
-    expect(resendBtns.length).toBe(2) // confirmed + pending
+    await waitFor(() => {
+      const resendBtns = screen.getAllByText('Kirim Ulang Tiket')
+      expect(resendBtns.length).toBe(2) // confirmed + pending
+    })
   })
 
-  it('shows "Promosi ke Approved" only for waitlisted', () => {
+  it('shows "Promosi ke Approved" only for waitlisted', async () => {
     render(
       <ConfirmationTable
         registrations={sampleRegistrations}
@@ -64,7 +68,7 @@ describe('ConfirmationTable', () => {
         isPending={false}
       />
     )
-    expect(screen.getByText('Promosi ke Approved')).toBeTruthy()
+    await waitFor(() => expect(screen.getByText('Promosi ke Approved')).toBeTruthy())
   })
 
   it('calls onResend when button clicked', async () => {
@@ -78,8 +82,11 @@ describe('ConfirmationTable', () => {
         isPending={false}
       />
     )
+    await waitFor(() => {
+      expect(screen.getByText('Kirim Ulang Tiket')).toBeTruthy()
+    })
     await user.click(screen.getByText('Kirim Ulang Tiket'))
-    expect(onResend).toHaveBeenCalledWith('reg-1')
+    await waitFor(() => expect(onResend).toHaveBeenCalledWith('reg-1'))
   })
 
   it('calls onPromote when button clicked', async () => {
@@ -93,14 +100,17 @@ describe('ConfirmationTable', () => {
         isPending={false}
       />
     )
+    await waitFor(() => {
+      expect(screen.getByText('Promosi ke Approved')).toBeTruthy()
+    })
     await user.click(screen.getByText('Promosi ke Approved'))
-    expect(onPromote).toHaveBeenCalledWith('reg-3')
+    await waitFor(() => expect(onPromote).toHaveBeenCalledWith('reg-3'))
   })
 
-  it('shows empty state when no registrations', () => {
+  it('shows empty state when no registrations', async () => {
     render(
       <ConfirmationTable registrations={[]} onResend={vi.fn()} onPromote={vi.fn()} isPending={false} />
     )
-    expect(screen.getByText(/Belum ada data/)).toBeTruthy()
+    await waitFor(() => expect(screen.getByText(/Belum ada data/)).toBeTruthy())
   })
 })

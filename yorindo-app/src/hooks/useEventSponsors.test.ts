@@ -53,6 +53,8 @@ describe('useAttachSponsor', () => {
     const wrapper = makeWrapper()
     const { result } = renderHook(() => useAttachSponsor('event-002'), { wrapper })
 
+    await waitFor(() => expect(result.current).not.toBeNull())
+
     act(() => {
       result.current.mutate({ vendorId: 'vendor-002', tier: 'standard' })
     })

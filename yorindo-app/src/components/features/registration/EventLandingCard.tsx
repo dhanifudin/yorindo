@@ -1,6 +1,6 @@
 import type { Event, PublicEventSponsor } from '@/types/api'
 import Link from 'next/link'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { SponsorStrip } from '@/components/features/registration/SponsorStrip'
 import Image from 'next/image'
