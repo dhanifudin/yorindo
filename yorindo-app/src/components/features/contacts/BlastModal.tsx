@@ -161,7 +161,8 @@ export function BlastModal({
     (a, b) => new Date(a.date ?? 0).getTime() - new Date(b.date ?? 0).getTime(),
   )
 
-  const filteredTemplates = (allTemplates ?? []).filter((t) => t.channel === channel)
+  const filteredTemplates = (allTemplates ?? [])
+    .filter((t) => t.channel === channel && t.type === 'invitation')
   const selectedTemplate = filteredTemplates.find((t) => t.id === templateId)
 
   // ── Mutation ───────────────────────────────────────────────────────────────

@@ -32,9 +32,14 @@ export function ContactsCommandCenter() {
   const hasFilters = ['serviceType', 'city', 'jobTitle', 'q', 'missingEmail', 'missingPhone', 'flagFilter']
     .some((k) => !!searchParams.get(k))
 
-  // Merge current page's selection with existing cross-page selection
+  // Accumulate selections across pages - merge current page selection with existing
   const handleSelectionChange = useCallback((ids: string[], names: string[]) => {
-    setSelectedIds(ids)
+    setSelectedIds((prev) => {
+      // When ids is empty (deselect all on page), keep previous selections from other pages
+      if (ids.length === 0 && prev.length > 0) return prev
+      // Otherwise replace current page's selection, keep others
+      return [...ids]
+    })
     setSelectedNames(names)
   }, [])
 
