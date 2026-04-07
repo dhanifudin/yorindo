@@ -319,7 +319,12 @@ export const eventHandlers = [
         { status: 404 }
       )
     }
-    return HttpResponse.json(event)
+    const { registrationsStore } = await import('./registrations')
+    const registeredCount = registrationsStore.filter(
+      (r) => r.eventId === params.id && ['approved', 'confirmed', 'attended'].includes(r.status)
+    ).length
+
+    return HttpResponse.json({ ...event, registeredCount })
   }),
 
   http.patch('/api/events/:id', async ({ params, request }) => {
