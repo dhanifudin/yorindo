@@ -250,6 +250,42 @@ export function ContactsTable({
                       </Badge>
                     </div>
                   )}
+                  {detailContact?.flagCategory === 'duplicate' && (
+                    <div className="rounded-lg border border-orange-200 bg-orange-50 p-3 space-y-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-medium">Duplikat terdeteksi</span>
+                        {duplicatePartner && (
+                          <Badge className="bg-muted text-muted-foreground text-xs">
+                            {`Duplikat dari ${duplicatePartner.name}`}
+                          </Badge>
+                        )}
+                      </div>
+                      {duplicateLoading ? (
+                        <p className="text-sm text-muted-foreground">Memuat detail duplikat...</p>
+                      ) : duplicateGroup ? (
+                        <div className="flex flex-wrap gap-2">
+                          {duplicateGroup.matchReasons.map((reason) => (
+                            <Badge key={reason} className="bg-orange-100 text-orange-700 text-xs">
+                              {MATCH_REASON_LABEL[reason] ?? reason}
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">Tidak ada informasi grup duplikat.</p>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setKeepContactId(detailContact.id)
+                          setDuplicateSheetOpen(true)
+                        }}
+                        disabled={!duplicateGroup}
+                      >
+                        Kelola duplikat
+                      </Button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Flag actions */}
