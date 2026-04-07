@@ -129,15 +129,28 @@ export function ContactsCommandCenter() {
         onOpenBlastModal={() => setBlastModalOpen(true)}
       />
 
-      <BlastModal
-        open={blastModalOpen}
-        onClose={() => setBlastModalOpen(false)}
-        onBlastSuccess={handleClearSelection}
-        recipientCount={selectedIds.length > 0 ? selectedIds.length : (contacts?.pagination.total ?? 0)}
-        mode={selectedIds.length > 0 ? 'selection' : 'segment'}
-        selectedIds={selectedIds}
-        selectedNames={selectedNames}
-      />
+      {(() => {
+        // For selection mode, only blast contacts that have both phone and email
+        const blastableContacts = selectedIds.length > 0
+          ? (contacts?.data ?? []).filter(
+              (c) => selectedIds.includes(c.id) && !!c.phone && !!c.email
+            )
+          : []
+        const blastableIds = blastableContacts.map((c) => c.id)
+        const blastableNames = blastableContacts.map((c) => c.name)
+        const isSelection = selectedIds.length > 0
+        return (
+          <BlastModal
+            open={blastModalOpen}
+            onClose={() => setBlastModalOpen(false)}
+            onBlastSuccess={handleClearSelection}
+            recipientCount={isSelection ? blastableIds.length : (contacts?.pagination.total ?? 0)}
+            mode={isSelection ? 'selection' : 'segment'}
+            selectedIds={isSelection ? blastableIds : []}
+            selectedNames={isSelection ? blastableNames : []}
+          />
+        )
+      })()}
     </div>
   )
 }
