@@ -3095,6 +3095,37 @@ paths:
                 properties:
                   available:
                     type: boolean
+        '404':
+          description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /events/public/{slug}:
+    get:
+      summary: Get public event by slug (unauthenticated)
+      operationId: getPublicEventBySlug
+      tags: [Events]
+      security: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Public event detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '404':
+          description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
         '400':
           description: Validation error
           content:
