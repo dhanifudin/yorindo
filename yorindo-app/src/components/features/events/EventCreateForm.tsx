@@ -5,7 +5,6 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Check, ChevronsUpDown, X, Upload, ImageIcon, Loader2 } from 'lucide-react'
-import Image from 'next/image'
 import { useCreateEvent, useUpdateEvent } from '@/hooks/useEvents'
 import { useVendors } from '@/hooks/useVendors'
 import { useEventSponsors } from '@/hooks/useEventSponsors'
@@ -77,10 +76,7 @@ const schema = z.object({
   capacity: z.string().optional(),
   venue: z.string().optional(),
   eventType: z.string().optional(),
-  bannerUrl: z.string().url('URL tidak valid').optional().or(z.literal('')),
   topicTagsRaw: z.string().optional(),
-  is_paid: z.boolean().optional(),
-  price: z.string().optional(),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -146,6 +142,276 @@ async function mockUploadImage(file: File): Promise<string> {
   return URL.createObjectURL(file)
 }
 
+// ─── BannerUpload Component ───────────────────────────────────────────────────
+
+function BannerUpload({ value, onChange }: BannerUploadProps) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
+  const [urlMode, setUrlMode] = useState(false)
+  const [urlInput, setUrlInput] = useState('')
+
+  // Sync saat edit mode — value dari props sudah ada (URL permanen dari server)
+  useEffect(() => {
+    if (value?.startsWith('http')) {
+      setUrlMode(true)
+      setUrlInput(value)
+    }
+  }, [value])
+
+  // ── Upload handler ──────────────────────────────────────────────────────────
+  const handleFile = useCallback(
+    async (file: File) => {
+      const validationError = validateImageFile(file)
+      if (validationError) {
+        toast.error(validationError)
+        return
+      }
+
+      setIsUploading(true)
+      try {
+        const url = await mockUploadImage(file)
+        onChange(url)
+        toast.success('Gambar berhasil diupload')
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Upload gagal, silakan coba lagi')
+      } finally {
+        setIsUploading(false)
+      }
+    },
+    [onChange]
+  )
+
+  // ── Drag & Drop ─────────────────────────────────────────────────────────────
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    // Cegah flickering saat pointer melewati child element di dalam dropzone
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setIsDragging(false)
+    }
+  }
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault()
+      setIsDragging(false)
+      const file = e.dataTransfer.files[0]
+      if (!file) return
+      // Validasi sebelum upload — error muncul langsung tanpa delay spinner
+      const validationError = validateImageFile(file)
+      if (validationError) {
+        toast.error(validationError)
+        return
+      }
+      handleFile(file)
+    },
+    [handleFile]
+  )
+
+  // ── File input change ───────────────────────────────────────────────────────
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = '' // reset supaya file yang sama bisa dipilih ulang setelah dihapus
+    handleFile(file)
+  }
+
+  // ── URL apply ───────────────────────────────────────────────────────────────
+  const handleUrlApply = () => {
+    const trimmed = urlInput.trim()
+    if (!trimmed) {
+      toast.error('URL tidak boleh kosong')
+      return
+    }
+    const urlError = validateImageUrl(trimmed)
+    if (urlError) {
+      toast.error(urlError)
+      return
+    }
+    onChange(trimmed)
+    toast.success('Banner berhasil diterapkan')
+  }
+
+  // ── Clear / ganti foto ──────────────────────────────────────────────────────
+  const clearBanner = () => {
+    // Revoke blob URL supaya tidak memory leak
+    if (value?.startsWith('blob:')) {
+      URL.revokeObjectURL(value)
+    }
+    onChange('')
+    setUrlInput('')
+    setUrlMode(false)
+    if (inputRef.current) inputRef.current.value = ''
+  }
+
+  // ── Render: sudah ada gambar → tampilkan preview ────────────────────────────
+  if (value) {
+    return (
+      <div className="space-y-2">
+        <div className="relative rounded-lg overflow-hidden border border-border bg-muted">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={value}
+            alt="Banner preview"
+            className="w-full h-40 object-cover"
+            onError={(e) => {
+              ;(e.target as HTMLImageElement).style.opacity = '0.3'
+            }}
+          />
+          {/* Tombol X di pojok kanan atas */}
+          <button
+            type="button"
+            onClick={clearBanner}
+            className="absolute top-2 right-2 rounded-full bg-black/60 hover:bg-black/80 text-white p-1.5 transition-colors"
+            aria-label="Hapus banner"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        {/* Label nama file / URL */}
+        <p className="text-xs text-muted-foreground truncate max-w-full">
+          {value.startsWith('blob:')
+            ? '⚠ Preview lokal — belum tersimpan ke server'
+            : value}
+        </p>
+
+        {/* Tombol ganti foto — lebih mudah ditemukan di mobile */}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={clearBanner}
+          className="w-full sm:w-auto text-xs"
+        >
+          Ganti Foto
+        </Button>
+      </div>
+    )
+  }
+  
+  // ── Render: belum ada gambar → upload UI ────────────────────────────────────
+  return (
+    <div className="space-y-3">
+      {/* Toggle Upload File | Pakai URL */}
+      <div className="flex gap-1 p-0.5 bg-muted rounded-md w-fit">
+        <button
+          type="button"
+          onClick={() => setUrlMode(false)}
+          className={cn(
+            'px-3 py-1 rounded text-xs font-medium transition-colors',
+            !urlMode
+              ? 'bg-background text-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground'
+          )}
+        >
+          Upload File
+        </button>
+        <button
+          type="button"
+          onClick={() => setUrlMode(true)}
+          className={cn(
+            'px-3 py-1 rounded text-xs font-medium transition-colors',
+            urlMode
+              ? 'bg-background text-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground'
+          )}
+        >
+          Pakai URL
+        </button>
+      </div>
+
+      {urlMode ? (
+        // ── Mode URL ──────────────────────────────────────────────────────────
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Input
+            type="url"
+            placeholder="https://example.com/banner.jpg"
+            value={urlInput}
+            onChange={(e) => setUrlInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                handleUrlApply()
+              }
+            }}
+            className="flex-1"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleUrlApply}
+            className="shrink-0"
+          >
+            Terapkan
+          </Button>
+        </div>
+      ) : (
+        // ── Mode Upload File dengan Drag & Drop ───────────────────────────────
+        <div
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={() => !isUploading && inputRef.current?.click()}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if ((e.key === 'Enter' || e.key === ' ') && !isUploading) {
+              e.preventDefault()
+              inputRef.current?.click()
+            }
+          }}
+          aria-label="Upload gambar banner"
+          className={cn(
+            'relative flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-4 py-8 text-center cursor-pointer select-none transition-colors',
+            isDragging
+              ? 'border-primary bg-primary/5'
+              : 'border-border hover:border-primary/50 hover:bg-muted/40',
+            isUploading && 'pointer-events-none opacity-60 cursor-not-allowed'
+          )}
+        >
+          {/* Input hanya terima tipe gambar yang diizinkan — Excel/PDF tidak muncul di dialog */}
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/jpeg,image/jpg,image/png,image/webp,image/gif,image/avif,image/svg+xml"
+            className="hidden"
+            onChange={handleFileInputChange}
+            aria-hidden="true"
+          />
+
+          {isUploading ? (
+            <>
+              <Loader2 className="w-8 h-8 text-muted-foreground animate-spin" />
+              <p className="text-sm text-muted-foreground">Mengupload gambar...</p>
+            </>
+          ) : isDragging ? (
+            <>
+              <ImageIcon className="w-8 h-8 text-primary" />
+              <p className="text-sm font-medium text-primary">Lepas untuk upload</p>
+            </>
+          ) : (
+            <>
+              <Upload className="w-8 h-8 text-muted-foreground" />
+              <div>
+                <p className="text-sm font-medium">Drag &amp; drop atau klik untuk pilih</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  JPG, PNG, WebP, GIF, AVIF — maks 5MB
+                </p>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Main Form ────────────────────────────────────────────────────────────────
 
 export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormProps) {
@@ -164,11 +430,11 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
   const { data: vendorsData, isLoading: isLoadingVendors } = useVendors()
   const { data: existingSponsors } = useEventSponsors(event?.id ?? '')
 
+  const [bannerUrl, setBannerUrl] = useState(event?.bannerUrl ?? '')
   const [blastTemplateId, setBlastTemplateId] = useState('')
   const [confirmationTemplateId, setConfirmationTemplateId] = useState('')
   const [rejectionTemplateId, setRejectionTemplateId] = useState('')
   const [industryTags, setIndustryTags] = useState<string[]>(event?.industryTags ?? [])
-
   const [selectedVendorIds, setSelectedVendorIds] = useState<string[]>([])
   const [vendorPopoverOpen, setVendorPopoverOpen] = useState(false)
 
@@ -184,7 +450,6 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
   const {
     register,
     handleSubmit,
-    watch,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -194,33 +459,12 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
       eventDateOnly: event?.eventDate ? event.eventDate.slice(0, 10) : '',
       eventTime: event?.eventDate ? event.eventDate.slice(11, 16) : '',
       timezone: event?.timezone ?? 'Asia/Jakarta',
-      is_paid: event?.is_paid ?? false,
-      price: event?.price ? String(event.price) : '',
-      bannerUrl: event?.bannerUrl ?? '',
       capacity: event?.capacity != null ? String(event.capacity) : '',
       venue: event?.venue ?? '',
       eventType: event?.eventType ?? '',
       topicTagsRaw: event?.topicTags?.join(', ') ?? '',
     },
   })
-
-  const isPaidWatched = watch('is_paid')
-  const bannerUrlWatched = watch('bannerUrl')
-
-
-  const loadedRef = useRef<string>('')
-
-  useEffect(() => {
-    if (!existingSponsors) return
-
-    const key = existingSponsors.map((s: { vendor_id: string }) => s.vendor_id).sort().join()
-
-    if (key && key !== loadedRef.current) {
-      loadedRef.current = key
-      setSelectedVendorIds(existingSponsors.map((s: { vendor_id: string }) => s.vendor_id))
-    }
-  }, [existingSponsors])
-
 
   const allVendors = vendorsData?.data ?? []
   const selectedVendors = allVendors.filter((v) => selectedVendorIds.includes(v.id))
@@ -316,11 +560,8 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
       description: values.description,
       eventDate: new Date(`${values.eventDateOnly}T${values.eventTime}`).toISOString(),
       timezone: values.timezone,
-      bannerUrl: values.bannerUrl,
-      industryTags,
-      is_paid: values.is_paid ?? false,
-      price: values.price ? Number(values.price) : 0,
       ...(capacity !== undefined && { capacity }),
+      ...(bannerUrl && { bannerUrl }),
       ...(values.venue && { venue: values.venue }),
       ...(eventType && { eventType }),
       ...(industryTags.length && { industryTags }),
@@ -329,8 +570,6 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
       ...(confirmationTemplateId && { confirmationTemplateId }),
       ...(rejectionTemplateId && { rejectionTemplateId }),
     }
-
-
 
     if (isEdit) {
       updateEvent(body, {
@@ -354,41 +593,6 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
-      <div>
-        <Label>Banner Event (URL)</Label>
-        <div className="space-y-2">
-          <Input
-            placeholder="https://example.com/banner.jpg"
-            {...register('bannerUrl')}
-          />
-          <div className="relative aspect-video w-full overflow-hidden rounded-lg border bg-muted flex items-center justify-center">
-            {bannerUrlWatched ? (
-              <Image
-                src={bannerUrlWatched}
-                alt="Preview Banner"
-                fill
-                unoptimized
-                className="object-cover"
-                onError={() => {
-                  // Fallback to placeholder if image fails to load
-                }}
-              />
-            ) : (
-
-              <div className="flex flex-col items-center text-muted-foreground">
-                <ImageIcon className="h-8 w-8 mb-1" />
-                <span className="text-xs">Pratinjau Banner (16:9)</span>
-              </div>
-            )}
-          </div>
-          <p className="text-[10px] text-muted-foreground">
-            Masukkan URL gambar. Rekomendasi rasio 16:9.
-          </p>
-          {errors.bannerUrl && <p className="text-red-500 text-sm">{errors.bannerUrl.message}</p>}
-        </div>
-
-      </div>
-
       {/* Nama Event */}
       <div>
         <Label htmlFor="name">
@@ -622,8 +826,15 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
         </div>
       </div>
 
-      {/* Templates → Diubah menjadi CARD (minimal 2 card per kategori) */}
+      {/* Banner Upload */}
+      <div>
+        <Label>Banner Event (Opsional)</Label>
+        <div className="mt-1.5">
+          <BannerUpload value={bannerUrl} onChange={setBannerUrl} />
+        </div>
+      </div>
 
+      {/* Templates → Diubah menjadi CARD (minimal 2 card per kategori) */}
       <fieldset className="space-y-6 border border-border rounded-lg p-4">
         <legend className="text-sm font-medium text-foreground px-1">Template (Opsional)</legend>
 
