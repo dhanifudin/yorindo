@@ -141,7 +141,7 @@ export function BlastEventDialog({
           <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={isBlasting}>
             Batal
           </Button>
-          <Button onClick={handleBlast} disabled={isBlasting} className="gap-2">
+          <Button onClick={handleBlast} disabled={isBlasting || selectedContacts.length === 0} className="gap-2">
             <Send className="w-3.5 h-3.5" />
             {isBlasting ? 'Mengirim…' : `Blast ${selectedContacts.length} Kontak`}
           </Button>

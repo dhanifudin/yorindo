@@ -89,7 +89,7 @@ export class BlastService {
 
   private async isSuppressed(contact: Contact): Promise<boolean> {
     if (contact.consentStatus === 'suppressed') return true
-    return this.suppressionRepository.isSuppressed(contact.phone)
+    return this.suppressionRepository.isSuppressed({ phone: contact.phone, email: contact.email })
   }
 
   private async writeAuditLog(
@@ -234,7 +234,7 @@ export class BlastService {
         }
 
         await this.whatsAppService.send({
-          to: contact.phone,
+          to: contact.phone ?? '',
           templateName: template.name,
           body: personalizedBody,
           variables,

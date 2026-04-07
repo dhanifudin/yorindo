@@ -262,7 +262,7 @@ So that I know exactly how many qualified participants are in the database befor
 **Given** the target criteria section on the event form,
 **When** I add criteria,
 **Then** I can stack multiple criteria simultaneously — supported criteria types:
-- `industry` — filter by one or more industry categories
+- `serviceType` — filter by one or more service type categories (matches `contacts.service_type`)
 - `city` / `location` — filter by city or region
 - `job_title` — filter by position/jabatan keywords
 - `most_active` — contacts with the highest past event attendance count

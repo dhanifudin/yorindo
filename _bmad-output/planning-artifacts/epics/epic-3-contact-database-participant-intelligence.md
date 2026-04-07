@@ -10,8 +10,10 @@ Admin can build and maintain a clean, qualified participant database by importin
 ## Story 3.1: Contact List with Server-Side Pagination & Filtering
 
 As an admin,
-I want to browse the contact database with pagination, sorting, and filtering by industry, city, and company size,
+I want to browse the contact database with pagination, sorting, and filtering by serviceType (industri), city (kota), and jobTitle (jabatan),
 So that I can find and review specific participant segments efficiently.
+
+> **Updated 2026-04-07 (SCP-2026-04-07):** `companySize` filter removed (field dropped from schema). `industry` URL param → `serviceType`. `jobTitle` (Jabatan) filter added — debounced text, ILIKE partial match.
 
 **Acceptance Criteria:**
 
@@ -19,13 +21,13 @@ So that I can find and review specific participant segments efficiently.
 **When** `GET /api/contacts?page=1&pageSize=50` is called,
 **Then** it returns `{ data: Contact[], pagination: { page, pageSize, total, totalPages } }` with HTTP 200, results within 500ms
 
-**Given** a filter param `?industry=kesehatan&city=Jakarta`,
+**Given** filter params `?serviceType=kesehatan&city=Jakarta&jobTitle=manajer`,
 **When** the contacts endpoint is called,
-**Then** only contacts matching both filters are returned
+**Then** only contacts matching all provided filters are returned
 
 **Given** the contacts page in the admin dashboard,
 **When** it renders,
-**Then** TanStack Table v8 in manual (server-side) mode displays the paginated data with sortable columns (name, industry, city, company, created_at)
+**Then** TanStack Table v8 in manual (server-side) mode displays the paginated data with sortable columns (name, serviceType, jobTitle, city, company, created_at)
 
 **Given** the page or sort params change,
 **When** React Query re-fetches,
@@ -80,7 +82,7 @@ So that raw imported data becomes clean, standardized participant records automa
 
 **Given** 50 rows are sent to the AI normalization service (`IEtlNormalizationService`) with the standard system prompt,
 **When** the response is received,
-**Then** each row has `{ name, phone, email, industry_slug, job_title_slug, city, company_size, confidence, flags[] }` and passes Zod schema validation
+**Then** each row has `{ name, phone, email, service_type, job_title, city, confidence, flags[] }` and passes Zod schema validation
 
 **Given** a row with all field confidence ≥ 0.7,
 **When** the upsert runs,
@@ -97,7 +99,7 @@ So that raw imported data becomes clean, standardized participant records automa
 **Testing Strategy (Quinn):** Real AI provider calls are never made in CI tests. The `etl.worker.ts` must accept a configurable `IEtlNormalizationService` implementation (default: resolved from `container.ts` via `ETL_AI_PROVIDER` env var; test override: `MockEtlNormalizationService` — deterministic stub returning pre-defined normalized rows). Vitest tests cover: valid batch upsert path, low-confidence flagging path, retry logic with simulated JSON parse failure. No real AI API calls in test suite.
 
 **Given** the ETL upsert runs for a contact row,
-**Then** `contacts.completeness_score` is computed as the integer percentage of non-null profile fields (`name`, `phone`, `email`, `company`, `industry_id`, `job_title_id`, `city`, `company_size`) and persisted alongside the upsert (FR12)
+**Then** `contacts.completeness_score` is computed as the integer percentage of non-null profile fields (`name`, `phone`, `email`, `company`, `service_type`, `job_title`, `city`) and persisted alongside the upsert (FR12)
 
 **Given** the ETL job completes,
 **Then** a `raw_uploads` record is persisted with `{ filename, uploaded_by, row_count, status: 'completed', flagged_rows }` and a `contact.imported` audit entry is written
@@ -236,11 +238,13 @@ So that I know segment size before applying a filter, can share or restore filte
 
 **Given** the FilterBar renders,
 **When** `GET /api/contacts/facets` has resolved,
-**Then** each `SelectItem` in Industry, City, Company Size, and Company Name dropdowns shows a count suffix — e.g., "Teknologi (47)" or "PT Infomedia (12)"
+**Then** each `SelectItem` in the Industri dropdown shows a count suffix — e.g., "Teknologi (47)"
+
+> **Updated 2026-04-07 (SCP-2026-04-07):** Company Size dropdown removed. Jabatan (jobTitle) text filter added. Facets: `{ serviceType, city }` only.
 
 **Given** `GET /api/contacts/facets` is called,
 **When** the MSW handler responds,
-**Then** it returns `{ industry: [{ slug, label, count }], city: [{ slug, label, count }], companySize: [{ slug, label, count }], company: [{ name, count }] }` with HTTP 200; `company` returns top 20 companies by contact count; counts reflect the total contacts matching each facet value
+**Then** it returns `{ serviceType: [{ slug, label, count }], city: [{ slug, label, count }] }` with HTTP 200; counts reflect the total contacts matching each facet value
 
 **Given** I select a company from the Company Name dropdown,
 **When** the Select onChange fires,
@@ -252,11 +256,11 @@ So that I know segment size before applying a filter, can share or restore filte
 
 **Given** I select a filter value from a dropdown,
 **When** the Select onChange fires,
-**Then** the URL is updated via `router.push` (Next.js `useRouter`) adding the corresponding query param (e.g., `?industry=teknologi`) without a full page reload; React Query re-fetches contacts with the updated params
+**Then** the URL is updated via `router.push` (Next.js `useRouter`) adding the corresponding query param (e.g., `?serviceType=teknologi`) without a full page reload; React Query re-fetches contacts with the updated params
 
-**Given** the page loads with query params in the URL (e.g., `?industry=teknologi&city=jakarta`),
+**Given** the page loads with query params in the URL (e.g., `?serviceType=teknologi&city=jakarta&jobTitle=manajer`),
 **When** the FilterBar mounts,
-**Then** the dropdowns are pre-selected to match the URL state using `useSearchParams`
+**Then** the dropdowns and text inputs are pre-selected/pre-filled to match the URL state using `useSearchParams`
 
 **Given** one or more filters are active,
 **When** the `ActiveFilterPills` component renders,
@@ -276,7 +280,7 @@ So that I know segment size before applying a filter, can share or restore filte
 
 **Given** AI search is active and I clear the AI search input,
 **When** the input value is cleared,
-**Then** only the `q` URL query param is removed; all instant filter params (industry, city, companySize, company) remain unchanged
+**Then** only the `q` URL query param is removed; all instant filter params (`serviceType`, `city`, `jobTitle`) remain unchanged
 
 **Given** filters are active and I click "Simpan Segmen" in the FilterBar,
 **When** the `Popover` opens,

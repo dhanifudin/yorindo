@@ -13,6 +13,12 @@ export default defineConfig({
       // Prevent dotenv from loading redis://redis:6379 from .env during tests.
       // getRedisOptional() returns null when REDIS_URL is empty → blacklist is a no-op.
       REDIS_URL: '',
+      // Use in-memory implementations for tests (override host env which may be set to 'postgres')
+      REPOSITORY_IMPL: 'memory',
+      SERVICE_IMPL: 'mock',
+      EMAIL_PROVIDER: 'mock',
+      WHATSAPP_PROVIDER: 'mock',
+      ETL_AI_PROVIDER: 'disabled',
     },
     coverage: {
       provider: 'v8',

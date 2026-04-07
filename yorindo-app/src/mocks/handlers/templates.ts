@@ -6,7 +6,11 @@ interface Template {
   name: string
   type: 'invitation' | 'confirmation' | 'rejection' | 'cancellation'
   channel: 'email' | 'whatsapp'
+  subject?: string
   body: string
+  logoUrl?: string
+  imageType?: 'header' | 'background'
+  bgOpacity?: number
   createdAt: string
 }
 
@@ -51,7 +55,11 @@ export const templateHandlers = [
       name: body.name ?? 'Unnamed',
       type: body.type ?? 'invitation',
       channel: body.channel ?? 'email',
+      subject: body.subject,
       body: body.body ?? '',
+      logoUrl: body.logoUrl,
+      imageType: body.imageType,
+      bgOpacity: body.bgOpacity,
       createdAt: new Date().toISOString(),
     }
     templatesStore.push(newTemplate)
@@ -68,7 +76,14 @@ export const templateHandlers = [
         { status: 404 }
       )
     }
-    templatesStore[idx] = { ...templatesStore[idx], ...body }
+    templatesStore[idx] = {
+      ...templatesStore[idx],
+      ...body,
+      subject: body.subject ?? templatesStore[idx].subject,
+      logoUrl: body.logoUrl ?? templatesStore[idx].logoUrl,
+      imageType: body.imageType ?? templatesStore[idx].imageType,
+      bgOpacity: body.bgOpacity ?? templatesStore[idx].bgOpacity,
+    }
     return HttpResponse.json(templatesStore[idx])
   }),
 

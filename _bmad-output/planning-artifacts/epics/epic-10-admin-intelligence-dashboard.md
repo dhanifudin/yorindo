@@ -25,8 +25,8 @@ So that I can instantly see participant composition, event-vendor breakdown, and
 **Then** four top metric cards appear: "Total Kontak", "Total Event", "Total Perusahaan", "Registrasi Pending" — each showing live data; skeleton placeholders show during loading
 
 **Given** the Participant Quick Filter panel renders,
-**When** I select values from the Event, Job Title, Industry, or City dropdowns,
-**Then** `GET /api/contacts?event_id=&job_title=&industry=&city=&pageSize=1` is called with the selected values; a counter below the filters shows "N kontak cocok" updating on each filter change; an "Lihat Kontak →" link navigates to `/app/contacts` pre-filled with the same filter params
+**When** I select values from the Event, Job Title, Service Type, or City dropdowns,
+**Then** `GET /api/contacts?event_id=&job_title=&serviceType=&city=&pageSize=1` is called with the selected values; a counter below the filters shows "N kontak cocok" updating on each filter change; an "Lihat Kontak →" link navigates to `/app/contacts` pre-filled with the same filter params
 
 **Given** the Vendor-Event breakdown widget renders,
 **When** `GET /api/dashboard/stats` resolves,
@@ -61,15 +61,15 @@ So that I can identify which organizations have the most engaged participants an
 
 **Given** I am authenticated as `admin` and navigate to `/app/contacts/companies`,
 **When** the page renders,
-**Then** a TanStack Table v8 (manual/server-side mode) shows companies with columns: Company Name, Industry, Contact Count, Events Attended (distinct events where ≥1 contact from the company registered), City (most common city among contacts)
+**Then** a TanStack Table v8 (manual/server-side mode) shows companies with columns: Company Name, Service Type, Contact Count, Events Attended (distinct events where ≥1 contact from the company registered), City (most common city among contacts)
 
 **Given** `GET /api/contacts/companies?page=1&pageSize=50` is called,
 **When** the MSW handler responds,
-**Then** it returns `{ data: [{ company, industry, contactCount, eventsAttended, primaryCity }], pagination: { page, pageSize, total, totalPages } }` with HTTP 200; at least 20 deterministic company rows seeded for visible testing
+**Then** it returns `{ data: [{ company, serviceType, contactCount, eventsAttended, primaryCity }], pagination: { page, pageSize, total, totalPages } }` with HTTP 200; at least 20 deterministic company rows seeded for visible testing
 
 **Given** a filter is applied (industry or city),
-**When** the table re-fetches with `?industry=teknologi&city=Jakarta`,
-**Then** only companies matching the filter are shown; the filter bar above the table uses the same `industry` and `city` dropdowns as the contacts page (reuse existing shadcn `Select` pattern)
+**When** the table re-fetches with `?serviceType=teknologi&city=Jakarta`,
+**Then** only companies matching the filter are shown; the filter bar above the table uses the same `serviceType` and `city` dropdowns as the contacts page (reuse existing shadcn `Select` pattern)
 
 **Given** I click a company row,
 **When** the row is clicked,

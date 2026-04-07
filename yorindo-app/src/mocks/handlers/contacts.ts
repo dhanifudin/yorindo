@@ -15,7 +15,6 @@ const INDUSTRIES = [
   'teknologi', 'kesehatan', 'manufaktur', 'keuangan', 'pendidikan',
   'retail', 'properti', 'otomotif', 'energi', 'telekomunikasi',
 ]
-const COMPANY_SIZES = ['micro', 'small', 'medium', 'large', 'enterprise'] as const
 const JOB_TITLES = ['direktur', 'manajer', 'supervisor', 'staff', 'koordinator']
 const FLAG_CATEGORIES: FlagCategory[] = ['invalid-data', 'duplicate']
 
@@ -25,13 +24,16 @@ export const contactsPool: Contact[] = Array.from({ length: 247 }, (_, i) => ({
   name: faker.person.fullName(),
   phone: i % 9 === 0 ? '' : `+62${faker.string.numeric(10)}`,
   email: i % 5 === 0 ? '' : faker.internet.email(),
-  industryId: faker.helpers.arrayElement(INDUSTRIES),
-  jobTitleId: faker.helpers.arrayElement(JOB_TITLES),
+  serviceType: i % 5 === 0 ? null : faker.helpers.arrayElement(INDUSTRIES),
+  jobTitle: i % 7 === 0 ? null : faker.helpers.arrayElement(JOB_TITLES),
   city: faker.helpers.arrayElement(INDONESIAN_CITIES),
-  companySize: faker.helpers.arrayElement(COMPANY_SIZES),
+  company: faker.company.name(),
+  department: faker.helpers.arrayElement(['Engineering', 'Marketing', 'Sales', null]),
   completenessScore: parseFloat((faker.number.float({ min: 0.4, max: 1.0 })).toFixed(2)),
+  consentStatus: 'active',
   // Pre-flag first 5 contacts with various categories
   flagCategory: i < 5 ? FLAG_CATEGORIES[i % FLAG_CATEGORIES.length] : null,
+  eventDate: i % 10 === 0 ? faker.date.past().toISOString().split('T')[0]! : null,
   createdAt: faker.date.past().toISOString(),
   updatedAt: faker.date.recent().toISOString(),
 }))
@@ -51,22 +53,17 @@ export const contactHandlers = [
 
   http.get('/api/contacts/facets', async () => {
     await delay(200)
-    const industry = INDUSTRIES.map((slug) => ({
+    const serviceType = INDUSTRIES.map((slug) => ({
       slug,
       label: slug.charAt(0).toUpperCase() + slug.slice(1),
-      count: contactsPool.filter((c) => c.industryId === slug).length,
+      count: contactsPool.filter((c) => c.serviceType === slug).length,
     }))
     const city = INDONESIAN_CITIES.map((cityName) => ({
       slug: cityName.toLowerCase(),
       label: cityName,
       count: contactsPool.filter((c) => c.city === cityName).length,
     }))
-    const companySize = (COMPANY_SIZES as readonly string[]).map((size) => ({
-      slug: size,
-      label: size.charAt(0).toUpperCase() + size.slice(1),
-      count: contactsPool.filter((c) => c.companySize === size).length,
-    }))
-    return HttpResponse.json({ industry, city, companySize })
+    return HttpResponse.json({ serviceType, city })
   }),
 
   http.get('/api/contacts', async ({ request }) => {
@@ -74,18 +71,18 @@ export const contactHandlers = [
     const url = new URL(request.url)
     const page = parseInt(url.searchParams.get('page') ?? '1', 10)
     const pageSize = parseInt(url.searchParams.get('pageSize') ?? '20', 10)
-    const industry = url.searchParams.get('industry') ?? ''
+    const serviceType = url.searchParams.get('serviceType') ?? ''
     const city = url.searchParams.get('city') ?? ''
-    const companySize = url.searchParams.get('companySize') ?? ''
+    const jobTitle = url.searchParams.get('jobTitle') ?? ''
     const flagFilter = url.searchParams.get('flagFilter') ?? ''
     const missingEmail = url.searchParams.get('missingEmail') === 'true'
     const missingPhone = url.searchParams.get('missingPhone') === 'true'
     const q = url.searchParams.get('q') ?? ''
 
     let filtered = contactsPool
-    if (industry) filtered = filtered.filter((c) => c.industryId === industry)
-    if (city) filtered = filtered.filter((c) => c.city.toLowerCase() === city.toLowerCase())
-    if (companySize) filtered = filtered.filter((c) => c.companySize === companySize)
+    if (serviceType) filtered = filtered.filter((c) => c.serviceType === serviceType)
+    if (city) filtered = filtered.filter((c) => c.city.toLowerCase().includes(city.toLowerCase()))
+    if (jobTitle) filtered = filtered.filter((c) => (c.jobTitle ?? '').toLowerCase().includes(jobTitle.toLowerCase()))
     if (flagFilter === 'flagged') filtered = filtered.filter((c) => c.flagCategory !== null)
     if (flagFilter === 'unflagged') filtered = filtered.filter((c) => c.flagCategory === null)
     if (missingEmail) filtered = filtered.filter((c) => !c.email)
@@ -220,10 +217,10 @@ export const contactHandlers = [
   http.get('/api/contacts/count', async ({ request }) => {
     await delay(300)
     const url = new URL(request.url)
-    const industry = url.searchParams.get('industry')
+    const serviceType = url.searchParams.get('serviceType')
     const city = url.searchParams.get('city')
     let count = contactsPool.length
-    if (industry) count = Math.floor(count * 0.3)
+    if (serviceType) count = Math.floor(count * 0.3)
     if (city) count = Math.floor(count * 0.4)
     return HttpResponse.json({ count })
   }),

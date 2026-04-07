@@ -406,7 +406,7 @@ src/
   store/
     authStore.ts          ← { accessToken, user: {id, role}, setAccessToken, clearAuth }
     eventStore.ts         ← { selectedEventId, setSelectedEvent }
-    filterStore.ts        ← { industry, city, companySize, page, setFilter, resetFilter }
+    filterStore.ts        ← { serviceType, city, page, setFilter, resetFilter }
   lib/
     auth/                 ← JWT decode, token storage (Zustand), role checks
     offline/
@@ -533,15 +533,14 @@ id          TEXT PRIMARY KEY
 name        VARCHAR(200) NOT NULL
 phone       VARCHAR(20) UNIQUE NOT NULL  -- normalized: +62XXXXXXXXXX
 email       VARCHAR(200) UNIQUE
-industry_id TEXT REFERENCES industries(id)
-job_title_id TEXT REFERENCES job_titles(id)
+service_type TEXT
+job_title   TEXT
 city        VARCHAR(100)
 company     VARCHAR(200)
-company_size VARCHAR(20)  -- '<50', '50-200', '200-1000', '>1000'
 source      VARCHAR(50)   -- 'excel_upload', 'form', 'manual'
 created_at  TIMESTAMPTZ DEFAULT NOW()
 updated_at  TIMESTAMPTZ DEFAULT NOW()
--- INDEX: industry_id, job_title_id, city
+-- INDEX: service_type, city
 
 -- events
 id          TEXT PRIMARY KEY
@@ -663,8 +662,7 @@ const surveyResponses = await surveyRepo.findByRegistrationIds(     // PostgreSQ
 
 **Indexes (PostgreSQL — required for NFR-SC1 ≤500ms):**
 ```sql
-CREATE INDEX ON contacts(industry_id);
-CREATE INDEX ON contacts(job_title_id);
+CREATE INDEX ON contacts(service_type);
 CREATE INDEX ON contacts(city);
 CREATE INDEX ON registrations(event_id, status);
 CREATE INDEX ON registrations(contact_id);
@@ -909,10 +907,10 @@ Polling every 5 seconds from client. Dashboard at `/app/events/[id]/check-in` po
 
 **ETL GPT-4o system prompt (do not change without architectural review):**
 - Role: "Kamu adalah data cleaning agent untuk Yorindo Communication."
-- Output: JSON array, each item `{ original_index, name, phone, email, industry_slug, job_title_slug, city, company_size, confidence, flags[] }`
+- Output: JSON array, each item `{ original_index, name, phone, email, service_type, job_title, city, confidence, flags[] }`
 - Confidence: 0.0–1.0 per field; if < 0.7 anywhere, add to `flags[]`
 - Phone: normalize to `+62XXXXXXXXXX`; if unable → flag `'invalid_phone'`
-- Industry: map to one slug from current `industries` lookup table; if no match → `'unknown'`, confidence 0
+- Service type: normalize to a consistent label (e.g. "Teknologi", "Properti"); if unable to determine → `null`, confidence 0
 - **Strict JSON output — no text outside JSON, no markdown code blocks**
 
 ---
@@ -1187,8 +1185,8 @@ function toContact(row: ContactRow): Contact {
     id: row.id,
     name: row.name,
     phone: row.phone,
-    industryId: row.industry_id,    // snake → camel
-    jobTitleId: row.job_title_id,   // snake → camel
+    serviceType: row.service_type,  // snake → camel
+    jobTitle: row.job_title,        // snake → camel
     createdAt: row.created_at,      // snake → camel
   }
 }
@@ -1251,7 +1249,7 @@ export class RegistrationRepository {
 
   async upsert(data: UpsertContactData): Promise<Contact> {
     const { rows } = await pool.query<ContactRow>(
-      `INSERT INTO contacts (name, phone, email, industry_id, ...) VALUES ($1, $2, ...)
+      `INSERT INTO contacts (name, phone, email, service_type, ...) VALUES ($1, $2, ...)
        ON CONFLICT (phone) DO UPDATE SET name = EXCLUDED.name, ...
        RETURNING *`,
       [data.name, data.phone, ...]

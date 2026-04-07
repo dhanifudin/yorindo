@@ -78,7 +78,7 @@ export function ContactsTable({
 }: ContactsTableProps) {
   const searchParams = useSearchParams()
   const { flagFilter, setFilter } = useFilterStore()
-  const page = parseInt(searchParams.get('page') ?? '1', 10)
+  const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10) || 1)
   const { data, isLoading, isError } = useContacts()
   const [detailContact, setDetailContact] = useState<Contact | null>(null)
   const [eventsExpanded, setEventsExpanded] = useState(false)
@@ -153,7 +153,7 @@ export function ContactsTable({
       },
     },
     { accessorKey: 'phone', header: 'Telepon' },
-    { accessorKey: 'industryId', header: 'Industri' },
+    { accessorKey: 'serviceType', header: 'Industri' },
     { accessorKey: 'city', header: 'Kota' },
     {
       accessorKey: 'completenessScore',
@@ -231,9 +231,9 @@ export function ContactsTable({
                 <div className="space-y-3 text-sm">
                   <div><span className="text-muted-foreground">Email: </span>{detailContact?.email || '—'}</div>
                   <div><span className="text-muted-foreground">Telepon: </span>{detailContact?.phone}</div>
-                  <div><span className="text-muted-foreground">Industri: </span>{detailContact?.industryId}</div>
+                  <div><span className="text-muted-foreground">Industri: </span>{detailContact?.serviceType || '—'}</div>
+                  <div><span className="text-muted-foreground">Jabatan: </span>{detailContact?.jobTitle || '—'}</div>
                   <div><span className="text-muted-foreground">Kota: </span>{detailContact?.city}</div>
-                  <div><span className="text-muted-foreground">Ukuran Perusahaan: </span>{detailContact?.companySize}</div>
                   <div>
                     <span className="text-muted-foreground">Kelengkapan: </span>
                     {detailContact && `${Math.round(detailContact.completenessScore * 100)}%`}
@@ -383,15 +383,15 @@ export function ContactsTable({
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <p className="text-xs text-muted-foreground font-medium uppercase">Industri</p>
-                    <p className="mt-0.5">{detailContact?.industryId || '—'}</p>
+                    <p className="mt-0.5">{detailContact?.serviceType || '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground font-medium uppercase">Jabatan</p>
+                    <p className="mt-0.5">{detailContact?.jobTitle || '—'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground font-medium uppercase">Kota</p>
                     <p className="mt-0.5">{detailContact?.city || '—'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground font-medium uppercase">Ukuran Perusahaan</p>
-                    <p className="mt-0.5">{detailContact?.companySize || '—'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground font-medium uppercase">Kelengkapan</p>
@@ -504,8 +504,8 @@ export function ContactsTable({
                       )}
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">
-                      {contact.industryId && <span>{contact.industryId}</span>}
-                      {contact.industryId && contact.phone && <span> · </span>}
+                      {contact.serviceType && <span>{contact.serviceType}</span>}
+                      {contact.serviceType && contact.phone && <span> · </span>}
                       {contact.phone && <span>{contact.phone}</span>}
                     </div>
                   </div>
@@ -552,7 +552,13 @@ export function ContactsTable({
                 <TableRow
                   key={row.id}
                   className={`cursor-pointer ${row.getIsSelected() ? 'bg-muted/30' : ''}`}
-                  onClick={() => setDetailContact(row.original)}
+                  onClick={() => {
+                    if (selectMode) {
+                      row.toggleSelected()
+                    } else {
+                      setDetailContact(row.original)
+                    }
+                  }}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id} className="whitespace-nowrap">

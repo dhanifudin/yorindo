@@ -55,13 +55,23 @@ jobs:
 
       - name: Prepare deploy env file
         env:
-          VPS_APP_ENV_FILE: ${{ secrets.VPS_APP_ENV_FILE }}
+          SENTRY_DSN: ${{ secrets.APP_SENTRY_DSN }}
         run: |
           python - <<'PY'
           from pathlib import Path
           import os
 
-          Path('.deploy.env').write_text(os.environ['VPS_APP_ENV_FILE'], encoding='utf-8')
+          template = Path('env.app.template').read_text()
+          sentry_dsn = os.environ.get('SENTRY_DSN', '')
+          if sentry_dsn:
+              template = template.replace(
+                  '# NEXT_PUBLIC_SENTRY_DSN=https://<key>@o<org>.ingest.sentry.io/<project>',
+                  f'NEXT_PUBLIC_SENTRY_DSN={sentry_dsn}'
+              ).replace(
+                  '# SENTRY_DSN=https://<key>@o<org>.ingest.sentry.io/<project>',
+                  f'SENTRY_DSN={sentry_dsn}'
+              )
+          Path('.deploy.env').write_text(template)
           PY
           echo "IMAGE_TAG=${{ needs.build-and-push.outputs.image_tag }}" >> .deploy.env
 

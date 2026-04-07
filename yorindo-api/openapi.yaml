@@ -155,7 +155,7 @@ components:
     # ─── Contact ───────────────────────────────────────────────────────────────
     Contact:
       type: object
-      required: [id, name, phone, completenessScore, consentStatus, createdAt, updatedAt]
+      required: [id, name, completenessScore, consentStatus, createdAt, updatedAt]
       properties:
         id:
           type: string
@@ -165,22 +165,23 @@ components:
           example: Budi Santoso
         phone:
           type: string
+          nullable: true
           example: "+6281234567890"
         email:
           type: string
           format: email
           nullable: true
           example: budi@example.com
-        industryId:
+        serviceType:
           type: string
           nullable: true
-          example: teknologi
-          description: Industry id from industries lookup table
-        jobTitleId:
+          example: Konsultasi
+          description: Raw service type from uploaded data
+        jobTitle:
           type: string
           nullable: true
-          example: direktur
-          description: Id from job_titles lookup table
+          example: Manajer
+          description: Raw job title from uploaded data
         city:
           type: string
           nullable: true
@@ -189,11 +190,15 @@ components:
           type: string
           nullable: true
           example: PT Teknologi Maju
-        companySize:
+        department:
           type: string
           nullable: true
-          enum: [small, medium, large, enterprise, '', null]
-          example: medium
+          example: Sales
+        eventDate:
+          type: string
+          nullable: true
+          example: '2026-03-31'
+          description: Date of the event the contact attended
         source:
           type: string
           nullable: true
@@ -357,6 +362,10 @@ components:
           type: string
           format: date-time
           example: "2026-03-19T10:30:00.000Z"
+        postSurveyEnabled:
+          type: boolean
+          example: false
+          description: Whether post-event survey is enabled
 
     CreateEventBody:
       type: object
@@ -416,6 +425,9 @@ components:
         targetCriteria:
           type: object
           additionalProperties: true
+        postSurveyEnabled:
+          type: boolean
+          description: Toggle post-event survey enablement
 
     PaginatedEvents:
       type: object
@@ -1270,6 +1282,127 @@ components:
           items:
             type: string
 
+    # ─── Survey Schemas ────────────────────────────────────────────────────────
+    SurveySchemaInput:
+      type: object
+      required: [schema]
+      properties:
+        schema:
+          type: object
+          required: [type, properties]
+          additionalProperties: true
+          properties:
+            type:
+              type: string
+              enum: [object]
+            properties:
+              type: object
+              additionalProperties: true
+        uiSchema:
+          type: object
+          additionalProperties: true
+          default: {}
+
+    SurveySchemaResponse:
+      type: object
+      required: [schema, uiSchema]
+      properties:
+        schema:
+          type: object
+          additionalProperties: true
+        uiSchema:
+          type: object
+          additionalProperties: true
+        enabled:
+          type: boolean
+          description: Only present for post-event type
+
+    SurveyResponseAggregate:
+      type: object
+      required: [questionId, questionLabel, fieldType]
+      properties:
+        questionId:
+          type: string
+        questionLabel:
+          type: string
+        fieldType:
+          type: string
+          enum: [text, textarea, radio, select, checkboxes, range, grid_radio, grid_checkbox, date, time, section]
+        optionCounts:
+          type: array
+          items:
+            type: object
+            properties:
+              label:
+                type: string
+              count:
+                type: integer
+              percentage:
+                type: integer
+        average:
+          type: number
+          description: For range questions
+        distribution:
+          type: array
+          items:
+            type: object
+            properties:
+              label:
+                type: string
+              count:
+                type: integer
+        totalCount:
+          type: integer
+          description: For text questions
+        samples:
+          type: array
+          items:
+            type: string
+          description: Up to 3 sample responses for text questions
+
+    SurveyResponseRecord:
+      type: object
+      required: [id, registrationId, contactName, contactPhone, submittedAt, answers]
+      properties:
+        id:
+          type: string
+        registrationId:
+          type: string
+        contactName:
+          type: string
+        contactPhone:
+          type: string
+        submittedAt:
+          type: string
+          format: date-time
+        answers:
+          type: object
+          additionalProperties: true
+
+    SurveyResponsesApiResponse:
+      type: object
+      required: [total, aggregates, responses, pagination]
+      properties:
+        total:
+          type: integer
+        aggregates:
+          type: array
+          items:
+            $ref: '#/components/schemas/SurveyResponseAggregate'
+        responses:
+          type: array
+          items:
+            $ref: '#/components/schemas/SurveyResponseRecord'
+        pagination:
+          type: object
+          properties:
+            page:
+              type: integer
+            pageSize:
+              type: integer
+            totalPages:
+              type: integer
+
     # ─── Contact Health & Facets ────────────────────────────────────────────────
     ContactHealth:
       type: object
@@ -2013,22 +2146,21 @@ paths:
         - $ref: '#/components/parameters/PageSizeParam'
         - $ref: '#/components/parameters/SortByParam'
         - $ref: '#/components/parameters/SortDirParam'
-        - name: industry
+        - name: serviceType
           in: query
           schema:
             type: string
-          description: Filter by industry slug
+          description: Filter by serviceType
         - name: city
           in: query
           schema:
             type: string
           description: Filter by city name
-        - name: companySize
+        - name: jobTitle
           in: query
           schema:
             type: string
-            enum: [micro, small, medium, large, enterprise]
-          description: Filter by company size
+          description: Filter by job title (partial match)
         - name: flagFilter
           in: query
           schema:
@@ -2650,6 +2782,79 @@ paths:
                 $ref: '#/components/schemas/ApiError'
         '404':
           description: Duplicate pair not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /contacts/blast:
+    post:
+      summary: Initiate a blast to a set of contacts or a contact segment
+      operationId: blastContacts
+      tags: [Contacts]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  required: [contactIds, eventLink]
+                  properties:
+                    contactIds:
+                      type: array
+                      items:
+                        type: string
+                        minLength: 1
+                      description: Explicit list of contact IDs to blast
+                    eventLink:
+                      type: string
+                      format: uri
+                      description: Event landing page URL included in the blast
+                - type: object
+                  required: [segmentParams, eventLink, total]
+                  properties:
+                    segmentParams:
+                      type: object
+                      additionalProperties:
+                        type: string
+                      description: Filter parameters defining the target segment
+                    eventLink:
+                      type: string
+                      format: uri
+                      description: Event landing page URL included in the blast
+                    total:
+                      type: integer
+                      minimum: 1
+                      description: Expected recipient count for the segment
+      responses:
+        '202':
+          description: Blast queued successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, eventLink, recipientCount]
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  eventLink:
+                    type: string
+                    format: uri
+                  recipientCount:
+                    type: integer
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
           content:
             application/json:
               schema:
@@ -3319,6 +3524,59 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
 
+  /events/{id}/overview:
+    get:
+      summary: Get overview metrics for an event
+      operationId: getEventOverview
+      tags: [Events]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Event overview metrics
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [blastCount, registrationCount, approvedCount, attendedCount, pendingApprovals, seatsRemaining, daysUntilEvent, lastBlastAt]
+                properties:
+                  blastCount:
+                    type: integer
+                  registrationCount:
+                    type: integer
+                  approvedCount:
+                    type: integer
+                  attendedCount:
+                    type: integer
+                  pendingApprovals:
+                    type: integer
+                  seatsRemaining:
+                    type: integer
+                  daysUntilEvent:
+                    type: integer
+                  lastBlastAt:
+                    type: string
+                    format: date-time
+                    nullable: true
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
   /events/{id}/sponsors:
     get:
       summary: List sponsors attached to an event
@@ -3925,11 +4183,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
 
-  /events/{id}/survey:
+  /events/{id}/survey/{type}:
     get:
-      summary: Get survey schema for event
-      operationId: getSurveySchema
-      tags: [Events]
+      summary: Get survey schema for event by type (registration or post-event)
+      operationId: getSurveySchemaByType
+      tags: [Surveys]
       security:
         - BearerAuth: []
       parameters:
@@ -3938,16 +4196,28 @@ paths:
           required: true
           schema:
             type: string
+        - name: type
+          in: path
+          required: true
+          description: Survey type
+          schema:
+            type: string
+            enum: [registration, post-event]
       responses:
         '200':
           description: Survey schema (JSONB)
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: true
+                $ref: '#/components/schemas/SurveySchemaResponse'
         '401':
           description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Forbidden
           content:
             application/json:
               schema:
@@ -3959,9 +4229,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
     put:
-      summary: Update survey schema for event (admin only)
-      operationId: updateSurveySchema
-      tags: [Events]
+      summary: Update survey schema for event by type (admin only)
+      operationId: updateSurveySchemaByType
+      tags: [Surveys]
       security:
         - BearerAuth: []
       parameters:
@@ -3970,20 +4240,26 @@ paths:
           required: true
           schema:
             type: string
+        - name: type
+          in: path
+          required: true
+          description: Survey type
+          schema:
+            type: string
+            enum: [registration, post-event]
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: true
+              $ref: '#/components/schemas/SurveySchemaInput'
       responses:
         '200':
           description: Survey schema updated
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Event'
+                $ref: '#/components/schemas/SurveySchemaResponse'
         '400':
           description: Validation error
           content:
@@ -3998,6 +4274,112 @@ paths:
                 $ref: '#/components/schemas/ApiError'
         '403':
           description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /events/{id}/survey/responses:
+    get:
+      summary: Get survey responses with per-question aggregates (admin + viewer)
+      operationId: getSurveyResponses
+      tags: [Surveys]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [registration, post-event]
+            default: registration
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Survey responses with aggregates
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SurveyResponsesApiResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /events/{id}/survey/responses/download:
+    get:
+      summary: Export survey responses to CSV/XLSX (admin + viewer)
+      operationId: downloadSurveyResponses
+      tags: [Surveys]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [registration, post-event]
+            default: registration
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [xlsx]
+            default: xlsx
+      responses:
+        '200':
+          description: CSV/XLSX file download
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Forbidden
           content:
             application/json:
               schema:
@@ -5121,6 +5503,33 @@ paths:
                 $ref: '#/components/schemas/ApiError'
         '409':
           description: Assignment already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /users/me:
+    get:
+      summary: Get current authenticated user profile
+      operationId: getCurrentUser
+      tags: [Users]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: User not found
           content:
             application/json:
               schema:

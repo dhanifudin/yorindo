@@ -10,15 +10,18 @@ so that I know segment size before applying a filter, can share or restore filte
 
 ## Acceptance Criteria
 
-1. FilterBar dropdowns (Industry, City, Company Size) show count suffixes from `GET /api/contacts/facets` — e.g., "Teknologi (47)"
-2. MSW: `GET /api/contacts/facets` returns `{ industry: [{slug, label, count}], city: [{slug, label, count}], companySize: [{slug, label, count}] }` with HTTP 200
-3. Selecting a filter updates URL via `router.push` (Next.js `useRouter`) — e.g., `?industry=teknologi`; contacts table re-fetches from URL params
-4. Page loading with query params (e.g., `?industry=teknologi&city=jakarta`) pre-selects dropdowns via `useSearchParams`
+1. FilterBar dropdowns (Industri) and text inputs (Kota, Jabatan) show contact counts from `GET /api/contacts/facets` — e.g., "Teknologi (47)" in the Industri select
+
+> **Updated 2026-04-07 (SCP-2026-04-07):** Company Size filter removed. Jabatan (jobTitle) free-text filter added. Facets response shape: `{ serviceType, city }` only.
+
+2. MSW: `GET /api/contacts/facets` returns `{ serviceType: [{slug, label, count}], city: [{slug, label, count}] }` with HTTP 200
+3. Selecting a filter updates URL via `router.push` (Next.js `useRouter`) — e.g., `?serviceType=teknologi`; contacts table re-fetches from URL params
+4. Page loading with query params (e.g., `?serviceType=teknologi&city=jakarta`) pre-selects dropdowns via `useSearchParams`
 5. Active filters shown as `ScrollArea orientation="horizontal"` + `Badge variant="secondary"` with ghost × button; "Hapus semua" when ≥2 active; "N kontak ditemukan" count below pills
 6. `ActiveFilterPills` renders null when no filters active
 7. Clicking × on a pill removes that filter's URL param and table re-fetches
 8. AI search Input shows violet `Badge` "AI ✦" trailing slot; `Loader2` spinner while `isSearching=true`; `aria-busy={isSearching}` on results container
-9. Clearing AI search removes only `q` URL param; instant filter params preserved
+9. Clearing AI search removes only `q` URL param; instant filter params (`serviceType`, `city`, `jobTitle`) preserved
 10. "Simpan Segmen" `Button` visible only when filters active; opens `Popover` with autofocused `Input`; on submit saves to `localStorage` + Sonner toast
 11. Migrate filter state from Zustand `filterStore` to URL search params using Next.js `useSearchParams`/`useRouter` — existing `filterStore.ts` deprecated
 12. All existing FilterBar functionality (AI industry suggestions, reset) preserved
@@ -33,23 +36,23 @@ so that I know segment size before applying a filter, can share or restore filte
 - [ ] Add MSW handler for `GET /api/contacts/facets` (AC: 2)
   - [ ] Add to `src/mocks/handlers/contacts.ts` (before `GET /api/contacts` to avoid route order issues)
   - [ ] Compute counts from `contactsPool` at handler call time using Array.filter
-  - [ ] Response shape: `{ industry: INDUSTRIES.map(slug => ({ slug, label: slug[0].toUpperCase()+slug.slice(1), count: contactsPool.filter(c=>c.industryId===slug).length })), city: [...], companySize: [...] }`
+  - [ ] Response shape: `{ serviceType: INDUSTRIES.map(slug => ({ slug, label: slug[0].toUpperCase()+slug.slice(1), count: contactsPool.filter(c=>c.serviceType===slug).length })), city: [...] }`
   - [ ] `delay(200)` — facets feel fast
 - [ ] Add `ContactsFacets` type to `src/types/api.ts` (AC: 2)
   - [ ] `export interface FacetItem { slug: string; label: string; count: number }`
-  - [ ] `export interface ContactsFacets { industry: FacetItem[]; city: FacetItem[]; companySize: FacetItem[] }`
+  - [ ] `export interface ContactsFacets { serviceType: FacetItem[]; city: FacetItem[] }`
 - [ ] Migrate filter state from Zustand to URL params (AC: 3, 4, 11)
-  - [ ] **CRITICAL:** Current `filterStore.ts` (`src/store/filterStore.ts`) manages `industry`, `city`, `companySize`, `flagFilter`, `page` — all consumed by `useContacts` hook and `ContactsFilterBar`
+  - [ ] **CRITICAL:** Current `filterStore.ts` (`src/store/filterStore.ts`) manages `serviceType`, `city`, `jobTitle`, `flagFilter`, `missingEmail`, `missingPhone`, `page` — all consumed by `useContacts` hook and `ContactsFilterBar`
   - [ ] Replace `useFilterStore` calls in `ContactsFilterBar.tsx` with `useSearchParams()` + `useRouter()` from `next/navigation`
   - [ ] Update `useContacts` hook to accept params from URL or receive them as arguments — read from `useSearchParams` inside the hook (hook must be client-side)
-  - [ ] Keep `filterStore.ts` for `missingEmail` (Story 3.7) and `page` pagination state — OR migrate page to URL too (`?page=2`)
+  - [ ] Keep `filterStore.ts` for `missingEmail`/`missingPhone` (Story 3.7) and `page` pagination state
   - [ ] `ContactsPagination.tsx` must also update to read/write URL param `page`
-  - [ ] **Recommended approach:** Keep `filterStore.ts` only for pagination (`page`); migrate industry/city/companySize/q to URL params. `missingEmail` from Story 3.7 stays in filterStore temporarily.
+  - [ ] **Recommended approach:** Keep `filterStore.ts` for missingEmail/missingPhone/page; migrate serviceType/city/jobTitle/q to URL params.
 - [ ] Refactor `ContactsFilterBar.tsx` to use shadcn `Select` + URL state (AC: 1, 3, 4, 8, 9, 10, 12)
   - [ ] Replace native `<select>` elements with shadcn `Select` + `SelectTrigger` + `SelectContent` + `SelectItem`
   - [ ] Industry SelectItem labels: `{label} ({count})` — from `useQuery(['contacts-facets'], ...)`
-  - [ ] City: keep as text `Input` (no facets for free-text); OR convert to Select with city facets
-  - [ ] Company Size SelectItem labels: `{label} ({count})`
+  - [ ] City: keep as text `Input` (no facets for free-text)
+  - [ ] Jabatan: text `Input` (debounced 350ms, partial match) with clear button (×)
   - [ ] AI search: wrap existing AI Input with violet Badge "AI ✦" in trailing slot via `relative` + `absolute` positioning
   - [ ] Add `aria-busy={isSearching}` to results container
   - [ ] Clearing AI input (backspace to empty): remove only `q` param from URL, keep others
@@ -76,13 +79,13 @@ so that I know segment size before applying a filter, can share or restore filte
 </select>
 
 // After (shadcn Select)
-<Select value={industry} onValueChange={(val) => updateParam('industry', val)}>
+<Select value={serviceType} onValueChange={(val) => updateParam('serviceType', val)}>
   <SelectTrigger className="w-[160px]">
     <SelectValue placeholder="Semua Industri" />
   </SelectTrigger>
   <SelectContent>
     <SelectItem value="">Semua Industri</SelectItem>
-    {facets?.industry.map(f => (
+    {facets?.serviceType.map(f => (
       <SelectItem key={f.slug} value={f.slug}>{f.label} ({f.count})</SelectItem>
     ))}
   </SelectContent>
@@ -100,7 +103,8 @@ const searchParams = useSearchParams()
 const router = useRouter()
 const pathname = usePathname()
 
-const industry = searchParams.get('industry') ?? ''
+const serviceType = searchParams.get('serviceType') ?? ''
+const jobTitle = searchParams.get('jobTitle') ?? ''
 
 const updateParam = (key: string, value: string) => {
   const params = new URLSearchParams(searchParams.toString())
@@ -119,15 +123,16 @@ const removeParam = (key: string) => updateParam(key, '')
 // src/hooks/useContacts.ts — after migration
 export function useContacts() {
   const searchParams = useSearchParams()
-  const industry = searchParams.get('industry') ?? ''
-  const city = searchParams.get('city') ?? ''
-  const companySize = searchParams.get('companySize') ?? ''
-  const page = parseInt(searchParams.get('page') ?? '1', 10)
+  const { serviceType: storeServiceType, city: storeCity, jobTitle: storeJobTitle, page: storePage, flagFilter, missingEmail, missingPhone } = useFilterStore()
+  const serviceType = storeServiceType || searchParams.get('serviceType') || ''
+  const city = storeCity || searchParams.get('city') || ''
+  const jobTitle = storeJobTitle || searchParams.get('jobTitle') || ''
+  const page = storePage || parseInt(searchParams.get('page') ?? '1', 10)
   const q = searchParams.get('q') ?? ''
 
   return useQuery({
-    queryKey: ['contacts', { industry, city, companySize, page, q }],
-    queryFn: () => fetchContacts({ industry, city, companySize, page, pageSize: 20, q }),
+    queryKey: ['contacts', { serviceType, city, jobTitle, page, q, flagFilter, missingEmail, missingPhone }],
+    queryFn: () => fetchContacts({ serviceType, city, jobTitle, page, pageSize: 20, q, flagFilter, missingEmail, missingPhone }),
   })
 }
 ```
@@ -182,7 +187,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 
 ### filterStore.ts Future
 
-After Story 3.8, `filterStore.ts` retains only `missingEmail: boolean` and `page` (if not moved to URL). Story 3.9's ActionToolbar reads filter state from URL directly. Do NOT delete `filterStore.ts` yet.
+After Story 3.8, `filterStore.ts` retains `serviceType`, `city`, `jobTitle`, `missingEmail`, `missingPhone`, `flagFilter`, and `page`. Story 3.9's ActionToolbar reads filter state from URL directly. Do NOT delete `filterStore.ts` — it bridges URL params and `useContacts`.
 
 ### Files to Create / Modify
 

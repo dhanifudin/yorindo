@@ -1,6 +1,6 @@
 # Story 3.13: Inline Blast Modal — Contact-Page Blast Composer
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -22,11 +22,11 @@ so that I can configure and send an event blast without leaving the contacts wor
 
 ## Tasks / Subtasks
 
-- [ ] Install shadcn `RadioGroup` component (AC: 2)
-  - [ ] `npx shadcn@latest add radio-group` → `src/components/ui/radio-group.tsx`
-  - [ ] Verify: `import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'` resolves
+- [x] Install shadcn `RadioGroup` component (AC: 2)
+  - [x] `npx shadcn@latest add radio-group` → `src/components/ui/radio-group.tsx`
+  - [x] Verify: `import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'` resolves
 
-- [ ] Add `BlastModalFormValues` type to `src/types/api.ts` (AC: 6)
+- [x] Add `BlastModalFormValues` type to `src/types/api.ts` (AC: 6)
   ```typescript
   export interface BlastModalPayload {
     eventId: string
@@ -38,8 +38,8 @@ so that I can configure and send an event blast without leaving the contacts wor
   }
   ```
 
-- [ ] Create `src/components/features/contacts/BlastModal.tsx` (AC: 1–9)
-  - [ ] Props interface:
+- [x] Create `src/components/features/contacts/BlastModal.tsx` (AC: 1–9)
+  - [x] Props interface:
     ```tsx
     interface BlastModalProps {
       open: boolean
@@ -49,28 +49,28 @@ so that I can configure and send an event blast without leaving the contacts wor
       selectedIds: string[]
     }
     ```
-  - [ ] Zod schema + RHF setup (see Dev Notes)
-  - [ ] `useQuery` for events (`GET /api/events?status=published&pageSize=50`)
-  - [ ] `useQuery` for templates (`GET /api/templates`)
-  - [ ] `useMutation` for `POST /api/blast`
-  - [ ] Channel RadioGroup → filters templates list client-side on change
-  - [ ] Message type Tabs (controlled `activeTab` state — NOT `defaultValue`)
-  - [ ] Reset form on modal close (`reset()` in `onOpenChange` handler)
-  - [ ] Disable submit until `isValid` and `!isPending`
-  - [ ] Loader2 spinner in submit button while `isPending`
+  - [x] Zod schema + RHF setup (see Dev Notes)
+  - [x] `useQuery` for events (`GET /api/events?status=published&pageSize=50`)
+  - [x] `useQuery` for templates (`GET /api/templates`)
+  - [x] `useMutation` for `POST /api/blast`
+  - [x] Channel RadioGroup → filters templates list client-side on change
+  - [x] Message type Tabs (controlled `activeTab` state — NOT `defaultValue`)
+  - [x] Reset form on modal close (`reset()` in `onOpenChange` handler)
+  - [x] Disable submit until `isValid` and `!isPending`
+  - [x] Loader2 spinner in submit button while `isPending`
 
-- [ ] Modify `src/components/features/contacts/ActionToolbar.tsx` (AC: 1)
-  - [ ] Add `onOpenBlastModal: () => void` prop
-  - [ ] Remove `const router = useRouter()` import and usage (no more navigation)
-  - [ ] Remove `buildBlastUrl` function (no longer needed)
-  - [ ] Replace `handleBlast` → `onClick={onOpenBlastModal}` on the blast Button
-  - [ ] Update props interface to remove `searchParams` (no longer needed for URL building)
+- [x] Modify `src/components/features/contacts/ActionToolbar.tsx` (AC: 1)
+  - [x] Add `onOpenBlastModal: () => void` prop
+  - [x] Remove `const router = useRouter()` import and usage (no more navigation)
+  - [x] Remove `buildBlastUrl` function (no longer needed)
+  - [x] Replace `handleBlast` → `onClick={onOpenBlastModal}` on the blast Button
+  - [x] Update props interface to remove `searchParams` (no longer needed for URL building)
     > ⚠️ Check if `searchParams` is used anywhere else in ActionToolbar before removing. If only used in `buildBlastUrl`, remove it.
 
-- [ ] Modify `src/components/features/contacts/ContactsCommandCenter.tsx` (AC: 1, 6)
-  - [ ] Add `blastModalOpen` state: `const [blastModalOpen, setBlastModalOpen] = useState(false)`
-  - [ ] Pass `onOpenBlastModal={() => setBlastModalOpen(true)}` to `ActionToolbar`
-  - [ ] Render `<BlastModal>` at the end of the component:
+- [x] Modify `src/components/features/contacts/ContactsCommandCenter.tsx` (AC: 1, 6)
+  - [x] Add `blastModalOpen` state: `const [blastModalOpen, setBlastModalOpen] = useState(false)`
+  - [x] Pass `onOpenBlastModal={() => setBlastModalOpen(true)}` to `ActionToolbar`
+  - [x] Render `<BlastModal>` at the end of the component:
     ```tsx
     <BlastModal
       open={blastModalOpen}
@@ -80,7 +80,7 @@ so that I can configure and send an event blast without leaving the contacts wor
       selectedIds={selectedIds}
     />
     ```
-  - [ ] After successful blast (call `handleClearSelection` from `BlastModal.onClose` post-success):
+  - [x] After successful blast (call `handleClearSelection` from `BlastModal.onClose` post-success):
     Pass `onBlastSuccess={handleClearSelection}` prop to `BlastModal`
 
 ## Dev Notes
@@ -415,4 +415,14 @@ claude-sonnet-4-6
 
 ### Completion Notes List
 
+- Replaced embedded blast Dialog in `ActionToolbar.tsx` with `onOpenBlastModal` prop; removed all inline blast state/handlers
+- `BlastModal.tsx` created with Zod/RHF, controlled Tabs, event+template queries, `POST /api/blast` mutation
+- `z.enum` `required_error` option removed (not valid in Zod v4); channel validation relies on default enum error
+- `bulkFlagMutation` removed from `ActionToolbar` (was never wired to any UI element)
+
 ### File List
+
+- `src/components/features/contacts/BlastModal.tsx` (created)
+- `src/components/features/contacts/ActionToolbar.tsx` (modified — removed embedded Dialog, added `onOpenBlastModal` prop)
+- `src/components/features/contacts/ContactsCommandCenter.tsx` (modified — added `blastModalOpen` state, wired `<BlastModal>`)
+- `src/types/api.ts` (modified — added `BlastModalPayload` interface)

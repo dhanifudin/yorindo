@@ -1,5 +1,5 @@
 generated: 2026-03-19
-last_updated: 2026-04-04 (stories 13-1 + 13-6 → done after code review fixes)
+last_updated: 2026-04-06 (epic-3 all 15 stories → done after code review + patch fixes)
 project: yorindo
 project_key: NOKEY
 tracking_system: file-system
@@ -83,23 +83,23 @@ development_status:
   #               EventBanner, Contact history Sheet tab
   # Phase 2 (BE): Contacts API, BullMQ ETL worker, AI normalization (provider-agnostic), repositories
   # ─────────────────────────────────────────────
-  epic-3: in-progress
-  3-1-contact-list-with-server-side-pagination-filtering: review  # AC3/6 updated + AC7 added; Task 8: LocationPicker + wilayah-static.json (SCP-2026-03-28-D)
-  3-2-excelcsv-upload-etl-job-trigger: review
-  be-3-2-excelcsv-upload-etl-job-trigger: review
-  3-3-etl-processing-ai-normalization-database-upsert: review  # Pre-normalization step added; AI_PROVIDER single toggle (disabled|mock|openai|anthropic); FuzzyDeduplicationService post-upsert (SCP-2026-03-28-C); Task 6 added: city→code mapping via wilayah-static.json (SCP-2026-03-28-D)
-  3-4-flagged-records-review-resolution: review
-  3-5-duplicate-profile-detection-merge: review
-  3-6-smart-filter-ai-industry-autocomplete: review
-  3-7-healthbar-database-quality-pulse: review
-  3-8-filterbar-enhancements-facet-counts-url-state-activefilter-pills: review
-  3-9-actiontoolbar-segment-blast-entry-point: review
-  3-10-triagepanel-inline-flagged-and-duplicate-records: review
-  3-11-eventbanner-pre-event-blast-shortcut: review
-  3-12-contact-event-history-tab-in-sheet: review
-  3-13-inline-blast-modal-contact-page-blast-composer: ready-for-dev
-  be-3-13-inline-blast-modal: review
-  3-14-contact-api-jwt-enforcement: review
+  epic-3: done
+  3-1-contact-list-with-server-side-pagination-filtering: done  # AC3/6 updated + AC7 added; Task 8: LocationPicker + wilayah-static.json (SCP-2026-03-28-D)
+  3-2-excelcsv-upload-etl-job-trigger: done
+  be-3-2-excelcsv-upload-etl-job-trigger: done
+  3-3-etl-processing-ai-normalization-database-upsert: done  # Pre-normalization step added; AI_PROVIDER single toggle (disabled|mock|openai|anthropic); FuzzyDeduplicationService post-upsert (SCP-2026-03-28-C); Task 6 added: city→code mapping via wilayah-static.json (SCP-2026-03-28-D)
+  3-4-flagged-records-review-resolution: done
+  3-5-duplicate-profile-detection-merge: done
+  3-6-smart-filter-ai-industry-autocomplete: done
+  3-7-healthbar-database-quality-pulse: done
+  3-8-filterbar-enhancements-facet-counts-url-state-activefilter-pills: done
+  3-9-actiontoolbar-segment-blast-entry-point: done
+  3-10-triagepanel-inline-flagged-and-duplicate-records: done
+  3-11-eventbanner-pre-event-blast-shortcut: done
+  3-12-contact-event-history-tab-in-sheet: done
+  3-13-inline-blast-modal-contact-page-blast-composer: review
+  be-3-13-inline-blast-modal: done
+  3-14-contact-api-jwt-enforcement: done
   epic-3-retrospective: optional
 
   # ─────────────────────────────────────────────
@@ -120,6 +120,7 @@ development_status:
   4-3-event-clone: review
   be-4-3-event-clone: review
   4-4-survey-template-builder: ready-for-dev               # REOPENED 2026-03-28: dual survey + GForms parity + response dashboard
+  be-4-4-survey-storage-responses-export: ready-for-dev    # Phase 2 BE: dual survey JSONB, response aggregation, XLSX export
   4-5-event-capacity-target-criteria-with-audience-preview: review  # AC update needed: multi-criteria + AI recommendation
   be-4-5-audience-preview: done
   4-6-soft-delete-recovery-for-events-and-records: review
