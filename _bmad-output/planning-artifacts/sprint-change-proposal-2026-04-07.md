@@ -88,4 +88,44 @@ Add this as a step in the architecture ADR for any schema change.
 
 ---
 
-*Correct Course workflow complete, Dian!*
+---
+
+## Addendum — Jabatan (Job Title) Filter for `/app/contacts`
+
+**Date applied:** 2026-04-07 (same session)
+
+### Change Summary
+
+Added `jobTitle` as a first-class filter on the contacts page, completing the filter surface now that `companySize` was removed and `serviceType` replaced the FK-based industry field.
+
+### Artifact Impact
+
+| Layer | File | Change |
+|-------|------|--------|
+| BE interface | `IContactRepository.ts` | Added `jobTitle?: string` to `ContactFilters` |
+| BE route | `contacts.routes.ts` | Added `jobTitle` to `ContactsQuerySchema`; passes to `filters.jobTitle`; cleaned up unused `CompanySize`/`INDONESIAN_JOB_TITLES` imports |
+| BE repo (memory) | `memory/ContactRepository.ts` | Added `jobTitle` ILIKE (includes) filter |
+| BE repo (postgres) | `postgres/ContactRepository.ts` | Added `job_title ILIKE $n` to `buildContactWhere` |
+| API spec | `openapi.yaml` | Added `jobTitle` query param to `GET /contacts` |
+| FE store | `filterStore.ts` | `serviceType`+`jobTitle` replace stale `industry`+`companySize` |
+| FE hook | `useContacts.ts` | Params, query key, QS updated to `serviceType`+`jobTitle` |
+| FE types | `types/api.ts` | `Contact`, `AudienceRecommendation`, `BlastPayload`, `ContactsFacets` all updated |
+| FE filter bar | `ContactsFilterBar.tsx` | Added Jabatan text input (debounced 350ms, clear button); removed company size dropdown; fixed `industry`→`serviceType` URL param |
+| FE active pills | `ActiveFilterPills.tsx` | `FILTER_KEYS` + labels updated: `serviceType`+`jobTitle`, `companySize` removed |
+| FE table | `ContactsTable.tsx` | Detail panels show `serviceType`+`jobTitle`; mobile row uses `serviceType` |
+| FE command center | `ContactsCommandCenter.tsx` | `FILTER_KEYS` + `setFilter` call updated |
+| FE events | `AudiencePreview.tsx` | `companySize` filter removed from audience preview form |
+| FE blast | `blast/page.tsx` | Filter state: `serviceType` replaces `industry`; `companySize` removed |
+| FE dashboard | `ViewerDashboard.tsx` | Industry breakdown uses `c.serviceType` |
+| FE recommendations | `AudienceRecommendationsCard.tsx` | Display field: `rec.serviceType` |
+| FE duplicates | `duplicates/page.tsx` | Field comparison: `serviceType`+`jobTitle` replace stale FK fields |
+| MSW handlers | `contacts.ts`, `events.ts` | Pool fields, facets handler, filter logic, recommendations all updated |
+| Tests | `api.test.ts`, `useContacts.test.ts`, `handlers.test.ts` | Updated to match new Contact shape and filter params |
+
+### Planning Artifacts Updated
+
+- `epic-3`: Story 3.1 filter description + example params; Story 3.8 facets shape + filter pill params
+- `3-1-contact-list-*`: Story description, ACs, Dev Notes (filterStore shape, Contact type, MSW handler)
+- `3-8-filterbar-*`: ACs, tasks, Dev Notes code snippets, filterStore future state
+
+*Addendum complete.*
