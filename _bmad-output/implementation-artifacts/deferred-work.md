@@ -29,3 +29,6 @@
 
 - **Endpoint accessible on soft-deleted events**: `requireEventOr404` may return soft-deleted events depending on repository implementation. If `findById` doesn't filter `deletedAt`, deleted events can still be previewed. Pre-existing repository-level concern.
 - **No rate limiting or cost guard on audience-preview**: The endpoint fetches up to 1000 contacts per call with no debounce, cache, or rate limit. Pre-existing pattern across all endpoints — address when implementing production performance hardening.
+
+## BlastModal render memoization (deferred from spec-3-13-blast-modal-revamp)
+`sortedEvents` and `selectedTemplate` are recomputed on every render. Low priority — query results are stable references from React Query. Consider `useMemo` if the event list grows large or the component re-renders frequently due to parent state.

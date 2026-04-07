@@ -27,6 +27,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
+import { Skeleton } from '@/components/ui/skeleton'
+import { cn } from '@/lib/utils'
 
 // ─── Schema ──────────────────────────────────────────────────────────────────
 
@@ -49,6 +51,35 @@ const blastSchema = z.object({
 )
 
 type BlastFormValues = z.infer<typeof blastSchema>
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface EventItem {
+  id: string
+  name: string
+  date: string
+}
+
+interface TemplateItem {
+  id: string
+  name: string
+  channel: 'email' | 'whatsapp'
+  type: string
+  body: string
+  subject?: string
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function formatDate(date: string) {
+  // Parse date-only strings as local time to avoid UTC off-by-one
+  const [y, m, d] = date.slice(0, 10).split('-').map(Number)
+  return new Date(y!, m! - 1, d!).toLocaleDateString('id-ID', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  })
+}
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -87,6 +118,7 @@ export function BlastModal({
   })
 
   const channel = form.watch('channel')
+  const templateId = form.watch('templateId')
 
   useEffect(() => {
     form.setValue('templateId', '')
@@ -108,7 +140,7 @@ export function BlastModal({
     queryKey: ['events', 'published'],
     queryFn: async () => {
       const res = await fetch('/api/events?status=published&pageSize=50')
-      return res.json() as Promise<{ data: Array<{ id: string; name: string; date: string }> }>
+      return res.json() as Promise<{ data: EventItem[] }>
     },
     staleTime: 60_000,
     enabled: open,
@@ -118,13 +150,18 @@ export function BlastModal({
     queryKey: ['templates'],
     queryFn: async () => {
       const res = await fetch('/api/templates')
-      return res.json() as Promise<Array<{ id: string; name: string; channel: 'email' | 'whatsapp'; type: string }>>
+      return res.json() as Promise<TemplateItem[]>
     },
     staleTime: 60_000,
     enabled: open,
   })
 
+  const sortedEvents = [...(eventsData?.data ?? [])].sort(
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+  )
+
   const filteredTemplates = (allTemplates ?? []).filter((t) => t.channel === channel)
+  const selectedTemplate = filteredTemplates.find((t) => t.id === templateId)
 
   // ── Mutation ───────────────────────────────────────────────────────────────
 
@@ -158,11 +195,6 @@ export function BlastModal({
   })
 
   const onSubmit = (values: BlastFormValues) => sendBlast(values)
-
-  // Sort events by date ascending (upcoming first)
-  const sortedEvents = [...(eventsData?.data ?? [])].sort(
-    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
-  )
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -203,35 +235,43 @@ export function BlastModal({
             )}
           </div>
 
-          {/* Event selector */}
+          {/* Event card list */}
           <div className="space-y-1.5">
             <Label>Event *</Label>
             <Controller
               name="eventId"
               control={form.control}
               render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange} disabled={eventsLoading}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={eventsLoading ? 'Memuat event...' : 'Pilih event mendatang'} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {sortedEvents.map((e) => (
-                      <SelectItem key={e.id} value={e.id}>
-                        <span>{e.name}</span>
-                        {e.date && (
-                          <span className="ml-2 text-xs text-muted-foreground">
-                            {new Date(e.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
-                          </span>
+                <div className="max-h-48 overflow-y-auto space-y-2 rounded-md border p-2">
+                  {eventsLoading ? (
+                    <>
+                      <Skeleton className="h-14 w-full rounded-md" />
+                      <Skeleton className="h-14 w-full rounded-md" />
+                      <Skeleton className="h-14 w-full rounded-md" />
+                    </>
+                  ) : sortedEvents.length === 0 ? (
+                    <p className="py-6 text-center text-sm text-muted-foreground">
+                      Tidak ada event yang dipublikasikan
+                    </p>
+                  ) : (
+                    sortedEvents.map((e) => (
+                      <button
+                        key={e.id}
+                        type="button"
+                        onClick={() => field.onChange(e.id)}
+                        className={cn(
+                          'w-full text-left rounded-md border px-3 py-2.5 transition-all',
+                          field.value === e.id
+                            ? 'ring-2 ring-primary border-primary bg-primary/5'
+                            : 'hover:bg-muted/50',
                         )}
-                      </SelectItem>
-                    ))}
-                    {!eventsLoading && sortedEvents.length === 0 && (
-                      <div className="px-2 py-4 text-center text-sm text-muted-foreground">
-                        Tidak ada event yang dipublikasikan
-                      </div>
-                    )}
-                  </SelectContent>
-                </Select>
+                      >
+                        <p className="text-sm font-medium">{e.name}</p>
+                        <p className="text-xs text-muted-foreground">{formatDate(e.date)}</p>
+                      </button>
+                    ))
+                  )}
+                </div>
               )}
             />
             {form.formState.errors.eventId && (
@@ -260,14 +300,14 @@ export function BlastModal({
             />
           </div>
 
-          {/* Message type tabs */}
+          {/* Message tabs */}
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'template' | 'custom')}>
             <TabsList className="w-full">
               <TabsTrigger value="template" className="flex-1">Template Undangan</TabsTrigger>
               <TabsTrigger value="custom" className="flex-1">Pesan Kustom</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="template" className="mt-3">
+            <TabsContent value="template" className="mt-3 space-y-2">
               <Controller
                 name="templateId"
                 control={form.control}
@@ -292,8 +332,22 @@ export function BlastModal({
                   </Select>
                 )}
               />
+
+              {/* Template preview */}
+              {selectedTemplate && (
+                <div className="rounded-md border bg-muted/40 p-3 space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground">Preview</p>
+                  {selectedTemplate.subject && (
+                    <p className="text-xs text-muted-foreground">
+                      <span className="font-medium">Subjek:</span> {selectedTemplate.subject}
+                    </p>
+                  )}
+                  <p className="text-sm whitespace-pre-wrap">{selectedTemplate.body}</p>
+                </div>
+              )}
+
               {form.formState.errors.templateId && (
-                <p className="text-xs text-destructive mt-1">{form.formState.errors.templateId.message}</p>
+                <p className="text-xs text-destructive">{form.formState.errors.templateId.message}</p>
               )}
             </TabsContent>
 
