@@ -217,6 +217,7 @@ export const registrationHandlers = [
         status: 'pending',
         eventName: 'Seminar ERP Jakarta',
         eventSlug: 'seminar-erp-jakarta',
+        eventDate: '2026-05-15T02:00:00.000Z',
         participantName: 'Budi Santoso',
         contactId: makeMockCuid2(),
         participantEmail: 'budi.santoso@email.com',

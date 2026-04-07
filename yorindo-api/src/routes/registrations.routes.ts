@@ -192,6 +192,37 @@ export const registrationsRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(201).send(responseBody)
   })
 
+  // ── GET /api/registrations/confirm/:token (unauthenticated — email confirmation link)
+  fastify.get('/api/registrations/confirm/:token', async (request, reply) => {
+    const { token } = request.params as { token: string }
+    const registration = await registrationRepository.findByTicketToken(token)
+    if (!registration) {
+      return reply.status(400).send({
+        error: { code: 'INVALID_TOKEN', message: 'Token tidak valid atau sudah kadaluarsa', details: [] },
+      })
+    }
+    const event = await eventRepository.findById(registration.eventId)
+    if (!event) {
+      return reply.status(404).send({
+        error: { code: 'NOT_FOUND', message: 'Event not found', details: [] },
+      })
+    }
+    const contact = await contactRepository.findById(registration.contactId)
+    return reply.status(200).send({
+      message: 'Registrasi berhasil dikonfirmasi',
+      registration: {
+        id: registration.id,
+        status: registration.status,
+        eventName: event.name,
+        eventSlug: event.slug,
+        eventDate: event.startDate,
+        participantName: contact?.name ?? registration.contactId,
+        contactId: registration.contactId,
+        participantEmail: contact?.email ?? '',
+      },
+    })
+  })
+
   fastify.get('/api/registrations', { preHandler: requireAuth }, async (request, reply) => {
     const parsed = RegistrationListQuerySchema.safeParse(request.query)
     if (!parsed.success) return validationError(reply, parsed.error.issues, 'Invalid registration query')

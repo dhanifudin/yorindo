@@ -119,18 +119,8 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
 
   // phone blur/lookup removed
 
-  // Build Google Calendar deep link (guard against missing/invalid event date)
-  const calendarLink = (() => {
-    if (!event?.eventDate) return '#'
-    const startMs = Date.parse(event.eventDate)
-    if (isNaN(startMs)) return '#'
-    const start = new Date(startMs)
-    const end = new Date(startMs + 2 * 3600000) // default 2-hour duration
-    const fmt = (d: Date) => d.toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z'
-    const dates = `${encodeURIComponent(fmt(start))}/${encodeURIComponent(fmt(end))}`
-    const details = encodeURIComponent(event.description ?? '')
-    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(event.name)}&dates=${dates}&details=${details}`
-  })()
+  // Google Calendar deep link removed — shown only after email confirmation
+  // because registration still requires admin approval at this stage.
 
   if (submitted) {
     const shareUrl = `${window.location.origin}/register/${eventSlug}`
@@ -146,16 +136,6 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
               Terima kasih telah mendaftar. Tim kami akan meninjau pendaftaran Anda.
             </p>
             <Badge className="bg-muted text-muted-foreground">ID: {regId}</Badge>
-            <div>
-              <a
-                href={calendarLink}
-                target="_blank"
-                rel="noreferrer"
-                className="text-primary underline text-sm"
-              >
-                + Tambahkan ke Google Calendar
-              </a>
-            </div>
             <div className="pt-2 space-y-2">
               <p className="text-xs text-muted-foreground font-medium">Bagikan ke teman:</p>
               <div className="flex justify-center gap-2">
