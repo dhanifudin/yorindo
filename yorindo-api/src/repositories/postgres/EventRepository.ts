@@ -23,6 +23,7 @@ interface EventRow extends QueryResultRow {
   scan_format: string
   target_criteria: unknown
   registration_survey_schema: string | null
+  post_survey_enabled: boolean
   vendor_id: string | null
   status: string
   is_paid: boolean
@@ -61,6 +62,7 @@ export class PostgresEventRepository
       scanFormat: 'qr',
       targetCriteria: row.target_criteria ? (row.target_criteria as Event['targetCriteria']) : null,
       surveySchemaId: row.registration_survey_schema,
+      postSurveyEnabled: row.post_survey_enabled ?? false,
       vendorId: row.vendor_id,
       status: row.status as Event['status'],
       isPaid: row.is_paid ?? false,
@@ -205,6 +207,7 @@ export class PostgresEventRepository
       ['approvalMode', 'approval_mode'],
       ['notificationChannel', 'notification_channel'],
       ['surveySchemaId', 'registration_survey_schema'],
+      ['postSurveyEnabled', 'post_survey_enabled'],
       ['vendorId', 'vendor_id'],
       ['status', 'status'],
       ['isPaid', 'is_paid'],

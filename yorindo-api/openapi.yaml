@@ -362,6 +362,10 @@ components:
           type: string
           format: date-time
           example: "2026-03-19T10:30:00.000Z"
+        postSurveyEnabled:
+          type: boolean
+          example: false
+          description: Whether post-event survey is enabled
 
     CreateEventBody:
       type: object
@@ -421,6 +425,9 @@ components:
         targetCriteria:
           type: object
           additionalProperties: true
+        postSurveyEnabled:
+          type: boolean
+          description: Toggle post-event survey enablement
 
     PaginatedEvents:
       type: object
@@ -1283,6 +1290,7 @@ components:
         schema:
           type: object
           required: [type, properties]
+          additionalProperties: true
           properties:
             type:
               type: string

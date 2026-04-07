@@ -85,6 +85,7 @@ const EventUpdateBodySchema = z.object({
   isPaid: z.boolean().optional(),
   price: z.number().min(0).nullable().optional(),
   paymentMethod: z.string().nullable().optional(),
+  postSurveyEnabled: z.boolean().optional(),
 }).superRefine((val, ctx) => {
   const sDate = val.startDate ?? val.eventDate;
   const eDate = val.endDate ?? val.eventDate;
@@ -204,6 +205,7 @@ function toEventDto(event: Event, surveySchema?: unknown, registeredCount: numbe
     approvalMode: event.approvalMode,
     scanFormat: event.scanFormat,
     notificationChannel: event.notificationChannel,
+    postSurveyEnabled: event.postSurveyEnabled ?? false,
   }
 }
 
@@ -641,6 +643,9 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
         return replyInvalidTransition(reply, existing.status, body.data.status)
       }
       updateData.status = body.data.status
+    }
+    if (body.data.postSurveyEnabled !== undefined) {
+      updateData.postSurveyEnabled = body.data.postSurveyEnabled
     }
 
     if (Object.keys(updateData).length === 0) {

@@ -9,13 +9,13 @@ interface SurveyResponseRow extends QueryResultRow {
   event_id: string
   registration_id: string
   survey_type: string
-  responses: unknown
+  answers: unknown
   submitted_at: Date
 }
 
 const SURVEY_COL: Record<SurveyType, string> = {
   'registration': 'registration_survey_schema',
-  'post-event': 'post_event_survey_schema',
+  'post-event': 'post_survey_schema',
 }
 
 export class PostgresSurveyRepository
@@ -41,7 +41,10 @@ export class PostgresSurveyRepository
     if (!row?.schema_json) return null
 
     try {
-      const parsed = JSON.parse(row.schema_json) as SurveySchema
+      // pg auto-parses JSONB columns, so schema_json may already be an object
+      const parsed = typeof row.schema_json === 'string'
+        ? JSON.parse(row.schema_json) as SurveySchema
+        : row.schema_json as SurveySchema
       return {
         ...parsed,
         id: parsed.id ?? row.id,
@@ -71,7 +74,7 @@ export class PostgresSurveyRepository
     answers: Record<string, unknown>,
   ): Promise<void> {
     await this.query(
-      `INSERT INTO survey_responses (id, event_id, registration_id, survey_type, responses)
+      `INSERT INTO survey_responses (id, event_id, registration_id, survey_type, answers)
        VALUES ($1, $2, $3, $4, $5)
        ON CONFLICT DO NOTHING`,
       [createId(), eventId, registrationId, type, JSON.stringify(answers)],
@@ -109,7 +112,7 @@ export class PostgresSurveyRepository
     params.push(pageSize, offset)
 
     const { rows } = await this.query<SurveyResponseRow>(
-      `SELECT sr.id, sr.event_id, sr.registration_id, sr.survey_type, sr.responses, sr.submitted_at
+      `SELECT sr.id, sr.event_id, sr.registration_id, sr.survey_type, sr.answers, sr.submitted_at
        FROM survey_responses sr
        JOIN registrations r ON r.id = sr.registration_id
        ${searchJoin}
@@ -124,7 +127,7 @@ export class PostgresSurveyRepository
       eventId: r.event_id,
       registrationId: r.registration_id,
       surveyType: r.survey_type as SurveyType,
-      answers: r.responses as Record<string, unknown>,
+      answers: r.answers as Record<string, unknown>,
       submittedAt: this.toIso(r.submitted_at),
     }))
 
