@@ -15,7 +15,7 @@ import { ContactsPagination } from './ContactsPagination'
 import { ActionToolbar } from './ActionToolbar'
 import { BlastModal } from './BlastModal'
 
-const FILTER_KEYS = ['industry', 'city', 'companySize', 'q', 'missingEmail', 'missingPhone', 'flagFilter']
+const FILTER_KEYS = ['serviceType', 'city', 'jobTitle', 'q', 'missingEmail', 'missingPhone', 'flagFilter']
 
 export function ContactsCommandCenter() {
   const [triageMode, setTriageMode] = useState<'flagged' | 'duplicates' | null>(null)
@@ -58,9 +58,9 @@ export function ContactsCommandCenter() {
 
   useEffect(() => {
     setFilter({
-      industry: searchParams.get('industry') ?? '',
+      serviceType: searchParams.get('serviceType') ?? '',
       city: searchParams.get('city') ?? '',
-      companySize: searchParams.get('companySize') ?? '',
+      jobTitle: searchParams.get('jobTitle') ?? '',
       page: parseInt(searchParams.get('page') ?? '1', 10),
       flagFilter: (searchParams.get('flagFilter') ?? '') as '' | 'flagged' | 'unflagged',
       missingEmail: searchParams.get('missingEmail') === 'true',

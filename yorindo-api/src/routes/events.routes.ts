@@ -14,7 +14,7 @@ import {
 } from '../container.js'
 import { findTemplateById } from '../data/templates.js'
 import { requireAdmin, requireAuth, requireRoles, type JwtPayload } from '../middleware/auth.js'
-import type { Event, EventStatus, Registration } from '../types/domain.js'
+import type { Event, EventStatus, Registration, TargetCriteria } from '../types/domain.js'
 import { validateOpenApiRequest, validateOpenApiResponse } from '../lib/openapi-contract.js'
 import { INDONESIAN_INDUSTRIES } from '../repositories/memory/_seeds.js'
 
@@ -110,9 +110,8 @@ const BlastBodySchema = z.object({
   customMessage: z.string().trim().optional(),
   channel: z.enum(['email', 'whatsapp']),
   filters: z.object({
-    industries: z.array(z.string()).optional(),
+    serviceTypes: z.array(z.string()).optional(),
     cities: z.array(z.string()).optional(),
-    companySizes: z.array(z.string()).optional(),
     jobTitles: z.array(z.string()).optional(),
     behavior: z.array(z.enum(['most_active', 'low_attendance', 'never_attended'])).optional(),
     lastAttendedBefore: z.string().optional(),
@@ -193,7 +192,7 @@ function toEventDto(event: Event, surveySchema?: unknown, registeredCount: numbe
     targetCriteria: event.targetCriteria ?? {},
     surveySchema: surveySchema ?? {},
     venue: event.venue ?? '',
-    industryTags: event.targetCriteria?.industries ?? [],
+    industryTags: event.targetCriteria?.serviceTypes ?? [],
     eventType: 'conference',
     topicTags: [],
     deletedAt: event.deletedAt,
@@ -330,14 +329,8 @@ async function updateEventHandler(request: FastifyRequest, reply: FastifyReply) 
   return reply.status(200).send(responseBody)
 }
 
-/**
- * Mengubah daftar industry id event ke slug FE agar URL blast tetap bersih.
- */
 function toIndustryTags(event: Event | null): string[] {
-  return (event?.targetCriteria?.industries ?? []).map((industryId) => {
-    const found = INDONESIAN_INDUSTRIES.find((item) => item.id === industryId || item.slug === industryId)
-    return found?.slug ?? industryId
-  })
+  return event?.targetCriteria?.serviceTypes ?? []
 }
 
 async function requireEventOr404(reply: FastifyReply, eventId: string) {
@@ -535,7 +528,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       price: payload.price ?? null,
       paymentMethod: payload.paymentMethod ?? null,
       targetCriteria: payload.targetCriteria ? { ...payload.targetCriteria } : {
-        industries: payload.industryTags ?? [],
+        serviceTypes: payload.industryTags ?? [],
       },
       surveySchemaId: null,
       vendorId: null,
@@ -1098,10 +1091,9 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     if (!event) return
     validateOpenApiRequest({ path: '/events/{id}/blast', method: 'post', params: params.data, body: body.data })
     const payload = request.user as JwtPayload
-    const contactFilters: { industries?: string[]; cities?: string[]; companySizes?: string[]; jobTitles?: string[]; behavior?: string[]; lastAttendedBefore?: string } = {}
-    if (body.data.filters?.industries) contactFilters.industries = body.data.filters.industries
+    const contactFilters: TargetCriteria = {}
+    if (body.data.filters?.serviceTypes) contactFilters.serviceTypes = body.data.filters.serviceTypes
     if (body.data.filters?.cities) contactFilters.cities = body.data.filters.cities
-    if (body.data.filters?.companySizes) contactFilters.companySizes = body.data.filters.companySizes
     if (body.data.filters?.jobTitles) contactFilters.jobTitles = body.data.filters.jobTitles
     if (body.data.filters?.behavior) contactFilters.behavior = body.data.filters.behavior
     if (body.data.filters?.lastAttendedBefore) contactFilters.lastAttendedBefore = body.data.filters.lastAttendedBefore

@@ -81,9 +81,8 @@ export type ApprovalMode = 'auto' | 'manual' | 'hybrid'
 export type NotificationChannel = 'email' | 'whatsapp'
 
 export interface TargetCriteria {
-  industries?: string[]
+  serviceTypes?: string[]
   cities?: string[]
-  companySizes?: string[]
   jobTitles?: string[]
   behavior?: ('most_active' | 'low_attendance' | 'never_attended')[]
   lastAttendedBefore?: string
@@ -291,9 +290,8 @@ export interface SuppressionRecord {
 // ─── Facet Results (for filter UI) ───────────────────────────────────────────
 
 export interface FacetResult {
-  industry: Array<{ slug: string; label: string; count: number }>
+  serviceType: Array<{ slug: string; label: string; count: number }>
   city: Array<{ slug: string; label: string; count: number }>
-  companySize: Array<{ slug: string; label: string; count: number }>
 }
 
 export type DuplicateMatchReason = 'same_phone' | 'same_email' | 'similar_name'

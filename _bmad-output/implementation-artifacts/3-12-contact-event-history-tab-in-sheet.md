@@ -15,7 +15,7 @@ so that I can understand their event engagement before deciding to invite them t
 3. Status badge colors: approved → green, attended → primary, cancelled → destructive, pending → muted
 4. MSW: `GET /api/contacts/:id/history` returns `{ registrations: [{ eventId, eventName, eventDate, status }] }` — deterministically generated using djb2 hash of contact ID (same result for same ID across requests)
 5. Empty state when no registrations: "Belum ada riwayat event"
-6. "Segmen" tab shows: industryId, city, companySize, completenessScore (as %), flagCategory with badge
+6. "Segmen" tab shows: serviceType, city, completenessScore (as %), flagCategory with badge
 7. Sheet uses `SheetContent side="right" className="sm:max-w-lg w-full"` — no SSR-unsafe `isMobile` or `window.innerWidth` checks
 8. "Info" tab retains all existing contact field display (name, email, phone, company data)
 
@@ -49,7 +49,7 @@ so that I can understand their event engagement before deciding to invite them t
   - [ ] Current Sheet in `ContactsTable.tsx` shows contact detail inline (no tabs). Refactor to wrap content in `Tabs defaultValue="info"`
   - [ ] Tab "Info": existing name/email/phone/company/flagCategory fields
   - [ ] Tab "Riwayat": lazy-fetch `GET /api/contacts/:id/history` when this tab is selected (or always fetch when Sheet opens, using `enabled: !!selectedContact`)
-  - [ ] Tab "Segmen": industryId, city, companySize, completenessScore (as `Math.round(score * 100)%`), flagCategory Badge
+  - [ ] Tab "Segmen": serviceType, city, completenessScore (as `Math.round(score * 100)%`), flagCategory Badge
   - [ ] Sheet: `<SheetContent side="right" className="sm:max-w-lg w-full">` — confirm no `isMobile` or `window.innerWidth` in existing code
 - [ ] Implement "Riwayat" tab content (AC: 2, 3, 5)
   - [ ] `useQuery({ queryKey: ['contact-history', contactId], queryFn: () => fetch('/api/contacts/${contactId}/history').then(r => r.json()), enabled: !!contactId })`

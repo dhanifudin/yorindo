@@ -128,7 +128,7 @@ export function AudienceRecommendationsCard({ eventId }: AudienceRecommendations
                         </Badge>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        {rec.industryId} · {rec.city}
+                        {rec.serviceType} · {rec.city}
                       </p>
                       {rec.factors.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1">

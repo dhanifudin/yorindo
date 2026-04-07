@@ -25,9 +25,9 @@ function makeWrapper() {
 
 beforeEach(() => {
   // Reset URL params before each test
-  mockSearchParams.delete('industry')
+  mockSearchParams.delete('serviceType')
   mockSearchParams.delete('city')
-  mockSearchParams.delete('companySize')
+  mockSearchParams.delete('jobTitle')
   mockSearchParams.delete('page')
   mockSearchParams.delete('q')
   mockSearchParams.delete('missingEmail')
@@ -45,8 +45,8 @@ describe('useContacts', () => {
     expect(result.current.data?.pagination.pageSize).toBe(20)
   })
 
-  it('fetches with industry filter when set in URL params', async () => {
-    mockSearchParams.set('industry', 'teknologi')
+  it('fetches with serviceType filter when set in URL params', async () => {
+    mockSearchParams.set('serviceType', 'teknologi')
 
     const { result } = renderHook(() => useContacts(), { wrapper: makeWrapper() })
 
@@ -56,7 +56,7 @@ describe('useContacts', () => {
     expect(result.current.data?.pagination.total).toBeLessThan(247)
     // All returned contacts should match the industry filter
     result.current.data?.data.forEach((c) => {
-      expect(c.industryId).toBe('teknologi')
+      expect(c.serviceType).toBe('teknologi')
     })
   })
 

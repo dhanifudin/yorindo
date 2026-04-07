@@ -10,6 +10,7 @@ export interface PaginationParams {
 export interface ContactFilters {
   serviceType?: string
   city?: string
+  jobTitle?: string
   missingEmail?: boolean
   missingPhone?: boolean
   flagCategory?: string

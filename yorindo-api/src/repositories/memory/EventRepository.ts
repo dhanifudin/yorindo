@@ -80,9 +80,8 @@ export class InMemoryEventRepository implements IEventRepository {
         notificationChannel: i % 2 === 0 ? 'email' : 'whatsapp',
         scanFormat: 'qr',
         targetCriteria: {
-          industries: [INDONESIAN_INDUSTRIES[i % INDONESIAN_INDUSTRIES.length]!.id],
+          serviceTypes: [INDONESIAN_INDUSTRIES[i % INDONESIAN_INDUSTRIES.length]!.name],
           cities: [CITIES[i % CITIES.length]!],
-          companySizes: i % 2 === 0 ? ['200-1000', '>1000'] : ['<50', '50-200'],
         },
         surveySchemaId: i < 3 ? SURVEY_SCHEMA_IDS[i]! : null,
         vendorId: i < 3 ? SEED_VENDOR_IDS[i]! : null,

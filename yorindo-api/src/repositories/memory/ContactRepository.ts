@@ -150,6 +150,10 @@ export class InMemoryContactRepository implements IContactRepository {
       const cityQuery = filters.city.toLowerCase()
       data = data.filter(c => (c.city ?? '').toLowerCase().includes(cityQuery))
     }
+    if (filters?.jobTitle) {
+      const jt = filters.jobTitle.toLowerCase()
+      data = data.filter(c => (c.jobTitle ?? '').toLowerCase().includes(jt))
+    }
     if (filters?.flagCategory === 'ANY') data = data.filter(c => c.flagCategory !== null)
     else if (filters?.flagCategory === 'NONE') data = data.filter(c => c.flagCategory === null)
     else if (filters?.flagCategory) data = data.filter(c => c.flagCategory === filters.flagCategory)

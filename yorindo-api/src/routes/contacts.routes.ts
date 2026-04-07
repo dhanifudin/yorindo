@@ -2,8 +2,8 @@ import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
 import { auditLogRepository, contactRepository, eventRepository, flaggedRecordsRepository, registrationRepository, suppressionRepository } from '../container.js'
 import { requireAdmin, requireAuth, type JwtPayload } from '../middleware/auth.js'
-import type { CompanySize, Contact, DuplicatePair, FlaggedRecord, FlaggedRecordStatus, RegistrationStatus, SuppressionRecord } from '../types/domain.js'
-import { INDONESIAN_INDUSTRIES, INDONESIAN_JOB_TITLES } from '../repositories/memory/_seeds.js'
+import type { Contact, DuplicatePair, FlaggedRecord, FlaggedRecordStatus, RegistrationStatus, SuppressionRecord } from '../types/domain.js'
+import { INDONESIAN_INDUSTRIES } from '../repositories/memory/_seeds.js'
 import { validateOpenApiRequest, validateOpenApiResponse } from '../lib/openapi-contract.js'
 
 // Constants removed
@@ -13,6 +13,7 @@ const ContactsQuerySchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
   serviceType: z.string().trim().optional(),
   city: z.string().trim().optional(),
+  jobTitle: z.string().trim().optional(),
   flagFilter: z.enum(['flagged', 'unflagged']).optional(),
   missingEmail: z.coerce.boolean().optional(),
   missingPhone: z.coerce.boolean().optional(),
@@ -155,17 +156,12 @@ function toFlagFilter(flagFilter?: 'flagged' | 'unflagged') {
  */
 function toFacetsDto(facets: Awaited<ReturnType<typeof contactRepository.findFacets>>) {
   return {
-    industry: facets.industry.map((item) => ({
+    serviceType: facets.serviceType.map((item) => ({
       slug: item.slug,
       label: item.label,
       count: item.count,
     })),
     city: facets.city.map((item) => ({
-      slug: item.slug,
-      label: item.label,
-      count: item.count,
-    })),
-    companySize: facets.companySize.map((item) => ({
       slug: item.slug,
       label: item.label,
       count: item.count,
@@ -357,6 +353,7 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
     const filters = {} as {
       serviceType?: string
       city?: string
+      jobTitle?: string
       missingEmail?: boolean
       missingPhone?: boolean
       flagCategory?: string
@@ -369,6 +366,7 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
     if (query.sortDir) paginationParams.sortDir = query.sortDir
     if (query.serviceType) filters.serviceType = query.serviceType
     if (query.city) filters.city = query.city
+    if (query.jobTitle) filters.jobTitle = query.jobTitle
     if (query.missingEmail) filters.missingEmail = true
     if (query.missingPhone) filters.missingPhone = true
     if (query.q) filters.search = query.q

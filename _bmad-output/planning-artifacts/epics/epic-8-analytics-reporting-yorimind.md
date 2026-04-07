@@ -78,7 +78,7 @@ So that I can understand event performance and participant composition at a glan
 
 **Given** the analytics dashboard,
 **When** the demographic section renders,
-**Then** a Recharts pie/bar chart shows participant breakdown by industry, a city distribution map, and job title level breakdown
+**Then** a Recharts pie/bar chart shows participant breakdown by serviceType, a city distribution map, and job title level breakdown
 
 **Given** the analytics data,
 **When** `GET /api/events/:id/analytics` is called,
@@ -93,8 +93,8 @@ So that I can understand event performance and participant composition at a glan
 **Then** three metric summary cards are shown at the top: "Total Undangan" (blast recipient count), "Total Mendaftar" (total registrations submitted), "Total Peserta" (attended count); each card shows the absolute number and its conversion rate relative to the previous stage
 
 **Given** the analytics dashboard,
-**When** I apply a filter (position, industry, or location/area),
-**Then** `GET /api/events/:id/analytics?position={v}&industry={v}&location={v}` is called; all charts and the participant breakdown table update to reflect only the filtered subset; filter pills show the active filters with a clear (×) action
+**When** I apply a filter (position, serviceType, or location/area),
+**Then** `GET /api/events/:id/analytics?position={v}&serviceType={v}&location={v}` is called; all charts and the participant breakdown table update to reflect only the filtered subset; filter pills show the active filters with a clear (×) action
 
 **Given** the analytics response is cached,
 **When** the same filter combination is requested again within 5 minutes,

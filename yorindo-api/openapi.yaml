@@ -2156,6 +2156,11 @@ paths:
           schema:
             type: string
           description: Filter by city name
+        - name: jobTitle
+          in: query
+          schema:
+            type: string
+          description: Filter by job title (partial match)
         - name: flagFilter
           in: query
           schema:

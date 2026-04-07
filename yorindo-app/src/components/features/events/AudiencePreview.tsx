@@ -11,9 +11,8 @@ interface AudiencePreviewProps {
 }
 
 interface Criteria {
-  industry: string
+  serviceType: string
   city: string
-  companySize: string
 }
 
 const INDUSTRIES = [
@@ -26,15 +25,14 @@ const nativeSelectClass =
 
 export function AudiencePreview({ eventId }: AudiencePreviewProps) {
   const [isExpanded, setIsExpanded] = useState(false)
-  const [criteria, setCriteria] = useState<Criteria>({ industry: '', city: '', companySize: '' })
+  const [criteria, setCriteria] = useState<Criteria>({ serviceType: '', city: '' })
   const [previewCount, setPreviewCount] = useState<number | null>(null)
 
   const previewMutation = useMutation({
     mutationFn: async (crit: Criteria) => {
       const body: Record<string, string> = {}
-      if (crit.industry) body.industry = crit.industry
+      if (crit.serviceType) body.serviceType = crit.serviceType
       if (crit.city) body.city = crit.city
-      if (crit.companySize) body.companySize = crit.companySize
       const res = await fetch(`/api/events/${eventId}/audience-preview`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -59,12 +57,12 @@ export function AudiencePreview({ eventId }: AudiencePreviewProps) {
       </CardHeader>
       {isExpanded && (
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs text-muted-foreground mb-1">Industri</label>
               <select
-                value={criteria.industry}
-                onChange={(e) => setCriteria((p) => ({ ...p, industry: e.target.value }))}
+                value={criteria.serviceType}
+                onChange={(e) => setCriteria((p) => ({ ...p, serviceType: e.target.value }))}
                 className={nativeSelectClass}
               >
                 <option value="">Semua Industri</option>
@@ -81,21 +79,6 @@ export function AudiencePreview({ eventId }: AudiencePreviewProps) {
                 placeholder="Semua kota"
                 className="h-9"
               />
-            </div>
-            <div>
-              <label className="block text-xs text-muted-foreground mb-1">Ukuran Perusahaan</label>
-              <select
-                value={criteria.companySize}
-                onChange={(e) => setCriteria((p) => ({ ...p, companySize: e.target.value }))}
-                className={nativeSelectClass}
-              >
-                <option value="">Semua Ukuran</option>
-                <option value="micro">Micro</option>
-                <option value="small">Small</option>
-                <option value="medium">Medium</option>
-                <option value="large">Large</option>
-                <option value="enterprise">Enterprise</option>
-              </select>
             </div>
           </div>
 

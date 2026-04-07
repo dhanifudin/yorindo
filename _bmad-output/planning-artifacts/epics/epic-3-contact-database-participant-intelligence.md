@@ -80,7 +80,7 @@ So that raw imported data becomes clean, standardized participant records automa
 
 **Given** 50 rows are sent to the AI normalization service (`IEtlNormalizationService`) with the standard system prompt,
 **When** the response is received,
-**Then** each row has `{ name, phone, email, industry_slug, job_title_slug, city, company_size, confidence, flags[] }` and passes Zod schema validation
+**Then** each row has `{ name, phone, email, service_type, job_title, city, confidence, flags[] }` and passes Zod schema validation
 
 **Given** a row with all field confidence ≥ 0.7,
 **When** the upsert runs,
@@ -97,7 +97,7 @@ So that raw imported data becomes clean, standardized participant records automa
 **Testing Strategy (Quinn):** Real AI provider calls are never made in CI tests. The `etl.worker.ts` must accept a configurable `IEtlNormalizationService` implementation (default: resolved from `container.ts` via `ETL_AI_PROVIDER` env var; test override: `MockEtlNormalizationService` — deterministic stub returning pre-defined normalized rows). Vitest tests cover: valid batch upsert path, low-confidence flagging path, retry logic with simulated JSON parse failure. No real AI API calls in test suite.
 
 **Given** the ETL upsert runs for a contact row,
-**Then** `contacts.completeness_score` is computed as the integer percentage of non-null profile fields (`name`, `phone`, `email`, `company`, `industry_id`, `job_title_id`, `city`, `company_size`) and persisted alongside the upsert (FR12)
+**Then** `contacts.completeness_score` is computed as the integer percentage of non-null profile fields (`name`, `phone`, `email`, `company`, `service_type`, `job_title`, `city`) and persisted alongside the upsert (FR12)
 
 **Given** the ETL job completes,
 **Then** a `raw_uploads` record is persisted with `{ filename, uploaded_by, row_count, status: 'completed', flagged_rows }` and a `contact.imported` audit entry is written
@@ -240,7 +240,7 @@ So that I know segment size before applying a filter, can share or restore filte
 
 **Given** `GET /api/contacts/facets` is called,
 **When** the MSW handler responds,
-**Then** it returns `{ industry: [{ slug, label, count }], city: [{ slug, label, count }], companySize: [{ slug, label, count }], company: [{ name, count }] }` with HTTP 200; `company` returns top 20 companies by contact count; counts reflect the total contacts matching each facet value
+**Then** it returns `{ serviceType: [{ slug, label, count }], city: [{ slug, label, count }] }` with HTTP 200; counts reflect the total contacts matching each facet value
 
 **Given** I select a company from the Company Name dropdown,
 **When** the Select onChange fires,
@@ -252,7 +252,7 @@ So that I know segment size before applying a filter, can share or restore filte
 
 **Given** I select a filter value from a dropdown,
 **When** the Select onChange fires,
-**Then** the URL is updated via `router.push` (Next.js `useRouter`) adding the corresponding query param (e.g., `?industry=teknologi`) without a full page reload; React Query re-fetches contacts with the updated params
+**Then** the URL is updated via `router.push` (Next.js `useRouter`) adding the corresponding query param (e.g., `?serviceType=teknologi`) without a full page reload; React Query re-fetches contacts with the updated params
 
 **Given** the page loads with query params in the URL (e.g., `?industry=teknologi&city=jakarta`),
 **When** the FilterBar mounts,

@@ -107,11 +107,10 @@ CREATE TABLE IF NOT EXISTS contacts (
   name              VARCHAR(200) NOT NULL,
   phone             VARCHAR(20) UNIQUE NOT NULL,  -- normalized: +62XXXXXXXXXX
   email             VARCHAR(200) UNIQUE,
-  industry_id       TEXT REFERENCES industries(id),
-  job_title_id      TEXT REFERENCES job_titles(id),
+  service_type      TEXT,
+  job_title         TEXT,
   city              VARCHAR(100),
   company           VARCHAR(200),
-  company_size      VARCHAR(20),                  -- '<50', '50-200', '200-1000', '>1000'
   source            VARCHAR(50),                  -- 'excel_upload', 'form', 'manual'
   completeness_score NUMERIC(4,3) DEFAULT 0,       -- 0.000 to 1.000
   consent_status    VARCHAR(30) DEFAULT 'legacy_unverified', -- 'active', 'suppressed', 'legacy_unverified'

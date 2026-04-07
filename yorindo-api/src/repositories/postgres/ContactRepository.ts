@@ -116,6 +116,11 @@ export class PostgresContactRepository
       values.push(filters.cities)
       idx++
     }
+    if (filters?.jobTitle) {
+      conditions.push(`job_title ILIKE $${idx}`)
+      values.push(`%${filters.jobTitle}%`)
+      idx++
+    }
     if (filters?.jobTitles?.length) {
       conditions.push(`job_title = ANY($${idx}::text[])`)
       values.push(filters.jobTitles)
@@ -429,36 +434,25 @@ export class PostgresContactRepository
   }
 
   async findFacets(): Promise<FacetResult> {
-    const [industries, cities, companySizes] = await Promise.all([
+    const [serviceTypes, cities] = await Promise.all([
       this.query<{ slug: string; label: string; count: string }>(
-        `SELECT i.slug, i.name as label, COUNT(c.id) as count
-         FROM industries i
-         LEFT JOIN contacts c ON c.industry_id = i.id AND c.deleted_at IS NULL
-         GROUP BY i.slug, i.name ORDER BY count DESC`,
+        `SELECT LOWER(service_type) as slug, service_type as label, COUNT(*) as count
+         FROM contacts WHERE service_type IS NOT NULL AND deleted_at IS NULL
+         GROUP BY service_type ORDER BY count DESC`,
       ),
       this.query<{ slug: string; label: string; count: string }>(
         `SELECT LOWER(city) as slug, city as label, COUNT(*) as count
          FROM contacts WHERE city IS NOT NULL AND deleted_at IS NULL
          GROUP BY city ORDER BY count DESC LIMIT 50`,
       ),
-      this.query<{ slug: string; label: string; count: string }>(
-        `SELECT company_size as slug, company_size as label, COUNT(*) as count
-         FROM contacts WHERE company_size IS NOT NULL AND deleted_at IS NULL
-         GROUP BY company_size ORDER BY count DESC`,
-      ),
     ])
     return {
-      industry: industries.rows.map((r) => ({
+      serviceType: serviceTypes.rows.map((r) => ({
         slug: r.slug,
         label: r.label,
         count: parseInt(r.count, 10),
       })),
       city: cities.rows.map((r) => ({
-        slug: r.slug,
-        label: r.label,
-        count: parseInt(r.count, 10),
-      })),
-      companySize: companySizes.rows.map((r) => ({
         slug: r.slug,
         label: r.label,
         count: parseInt(r.count, 10),

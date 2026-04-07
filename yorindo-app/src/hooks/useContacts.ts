@@ -10,9 +10,9 @@ const PAGE_SIZE = 20
 async function fetchContacts(params: {
   page: number
   pageSize: number
-  industry: string
+  serviceType: string
   city: string
-  companySize: string
+  jobTitle: string
   flagFilter: string
   missingEmail: boolean
   missingPhone: boolean
@@ -21,9 +21,9 @@ async function fetchContacts(params: {
   const qs = new URLSearchParams()
   qs.set('page', String(params.page))
   qs.set('pageSize', String(params.pageSize))
-  if (params.industry) qs.set('industry', params.industry)
+  if (params.serviceType) qs.set('serviceType', params.serviceType)
   if (params.city) qs.set('city', params.city)
-  if (params.companySize) qs.set('companySize', params.companySize)
+  if (params.jobTitle) qs.set('jobTitle', params.jobTitle)
   if (params.flagFilter) qs.set('flagFilter', params.flagFilter)
   if (params.missingEmail) qs.set('missingEmail', 'true')
   if (params.missingPhone) qs.set('missingPhone', 'true')
@@ -36,17 +36,17 @@ async function fetchContacts(params: {
 
 export function useContacts() {
   const searchParams = useSearchParams()
-  const { industry: storeIndustry, city: storeCity, companySize: storeCompanySize, page: storePage, flagFilter, missingEmail, missingPhone } = useFilterStore()
+  const { serviceType: storeServiceType, city: storeCity, jobTitle: storeJobTitle, page: storePage, flagFilter, missingEmail, missingPhone } = useFilterStore()
 
-  const industry = storeIndustry || searchParams.get('industry') || ''
+  const serviceType = storeServiceType || searchParams.get('serviceType') || ''
   const city = storeCity || searchParams.get('city') || ''
-  const companySize = storeCompanySize || searchParams.get('companySize') || ''
+  const jobTitle = storeJobTitle || searchParams.get('jobTitle') || ''
   const page = storePage || parseInt(searchParams.get('page') ?? '1', 10)
   const q = searchParams.get('q') ?? ''
 
   return useQuery({
-    queryKey: ['contacts', { page, pageSize: PAGE_SIZE, industry, city, companySize, flagFilter, missingEmail, missingPhone, q }],
-    queryFn: () => fetchContacts({ page, pageSize: PAGE_SIZE, industry, city, companySize, flagFilter, missingEmail, missingPhone, q }),
+    queryKey: ['contacts', { page, pageSize: PAGE_SIZE, serviceType, city, jobTitle, flagFilter, missingEmail, missingPhone, q }],
+    queryFn: () => fetchContacts({ page, pageSize: PAGE_SIZE, serviceType, city, jobTitle, flagFilter, missingEmail, missingPhone, q }),
   })
 }
 
