@@ -12,9 +12,10 @@ import { etlHandlers } from './etl'
 import { blastHandlers } from './blast'
 import { vendorHandlers } from './vendors'
 import { uploadHandlers } from './uploads'
-import { surveysHandlers } from './surveys'
+import { locationHandlers } from './locations'
 
 export const handlers = [
+  ...locationHandlers,  // before others — /api/locations/* must be caught early
   ...blastHandlers,  // before eventHandlers — /api/blast/* must not be caught by event wildcard
   ...contactHandlers,
   ...eventHandlers,
