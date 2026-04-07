@@ -2,239 +2,1086 @@
   {
     "provinceCode": "11",
     "provinceName": "Aceh",
-    "cityCode": "11.71",
-    "cityName": "Banda Aceh",
+    "cityCode": "11.06",
+    "cityName": "Aceh Barat",
     "aliases": []
   },
   {
     "provinceCode": "11",
     "provinceName": "Aceh",
-    "cityCode": "11.73",
-    "cityName": "Lhokseumawe",
+    "cityCode": "11.12",
+    "cityName": "Aceh Barat Daya",
+    "aliases": []
+  },
+  {
+    "provinceCode": "11",
+    "provinceName": "Aceh",
+    "cityCode": "11.07",
+    "cityName": "Aceh Besar",
+    "aliases": []
+  },
+  {
+    "provinceCode": "11",
+    "provinceName": "Aceh",
+    "cityCode": "11.14",
+    "cityName": "Aceh Jaya",
+    "aliases": []
+  },
+  {
+    "provinceCode": "11",
+    "provinceName": "Aceh",
+    "cityCode": "11.01",
+    "cityName": "Aceh Selatan",
+    "aliases": []
+  },
+  {
+    "provinceCode": "11",
+    "provinceName": "Aceh",
+    "cityCode": "11.10",
+    "cityName": "Aceh Singkil",
+    "aliases": []
+  },
+  {
+    "provinceCode": "11",
+    "provinceName": "Aceh",
+    "cityCode": "11.16",
+    "cityName": "Aceh Tamiang",
+    "aliases": []
+  },
+  {
+    "provinceCode": "11",
+    "provinceName": "Aceh",
+    "cityCode": "11.04",
+    "cityName": "Aceh Tengah",
+    "aliases": []
+  },
+  {
+    "provinceCode": "11",
+    "provinceName": "Aceh",
+    "cityCode": "11.02",
+    "cityName": "Aceh Tenggara",
+    "aliases": []
+  },
+  {
+    "provinceCode": "11",
+    "provinceName": "Aceh",
+    "cityCode": "11.03",
+    "cityName": "Aceh Timur",
+    "aliases": []
+  },
+  {
+    "provinceCode": "11",
+    "provinceName": "Aceh",
+    "cityCode": "11.08",
+    "cityName": "Aceh Utara",
+    "aliases": []
+  },
+  {
+    "provinceCode": "11",
+    "provinceName": "Aceh",
+    "cityCode": "11.17",
+    "cityName": "Bener Meriah",
+    "aliases": []
+  },
+  {
+    "provinceCode": "11",
+    "provinceName": "Aceh",
+    "cityCode": "11.11",
+    "cityName": "Bireuen",
+    "aliases": []
+  },
+  {
+    "provinceCode": "11",
+    "provinceName": "Aceh",
+    "cityCode": "11.13",
+    "cityName": "Gayo Lues",
+    "aliases": []
+  },
+  {
+    "provinceCode": "11",
+    "provinceName": "Aceh",
+    "cityCode": "11.15",
+    "cityName": "Nagan Raya",
+    "aliases": []
+  },
+  {
+    "provinceCode": "11",
+    "provinceName": "Aceh",
+    "cityCode": "11.09",
+    "cityName": "Pidie",
+    "aliases": []
+  },
+  {
+    "provinceCode": "11",
+    "provinceName": "Aceh",
+    "cityCode": "11.18",
+    "cityName": "Pidie Jaya",
+    "aliases": []
+  },
+  {
+    "provinceCode": "11",
+    "provinceName": "Aceh",
+    "cityCode": "11.05",
+    "cityName": "Simeulue",
+    "aliases": []
+  },
+  {
+    "provinceCode": "11",
+    "provinceName": "Aceh",
+    "cityCode": "11.71",
+    "cityName": "Kota Banda Aceh",
     "aliases": []
   },
   {
     "provinceCode": "11",
     "provinceName": "Aceh",
     "cityCode": "11.74",
-    "cityName": "Langsa",
+    "cityName": "Kota Langsa",
+    "aliases": []
+  },
+  {
+    "provinceCode": "11",
+    "provinceName": "Aceh",
+    "cityCode": "11.73",
+    "cityName": "Kota Lhokseumawe",
     "aliases": []
   },
   {
     "provinceCode": "11",
     "provinceName": "Aceh",
     "cityCode": "11.72",
-    "cityName": "Sabang",
+    "cityName": "Kota Sabang",
     "aliases": []
   },
   {
     "provinceCode": "11",
     "provinceName": "Aceh",
     "cityCode": "11.75",
-    "cityName": "Subulussalam",
+    "cityName": "Kota Subulussalam",
     "aliases": []
   },
   {
     "provinceCode": "12",
     "provinceName": "Sumatera Utara",
-    "cityCode": "12.71",
-    "cityName": "Medan",
+    "cityCode": "12.09",
+    "cityName": "Asahan",
+    "aliases": []
+  },
+  {
+    "provinceCode": "12",
+    "provinceName": "Sumatera Utara",
+    "cityCode": "12.19",
+    "cityName": "Batubara",
+    "aliases": []
+  },
+  {
+    "provinceCode": "12",
+    "provinceName": "Sumatera Utara",
+    "cityCode": "12.11",
+    "cityName": "Dairi",
+    "aliases": []
+  },
+  {
+    "provinceCode": "12",
+    "provinceName": "Sumatera Utara",
+    "cityCode": "12.06",
+    "cityName": "Deli Serdang",
+    "aliases": []
+  },
+  {
+    "provinceCode": "12",
+    "provinceName": "Sumatera Utara",
+    "cityCode": "12.17",
+    "cityName": "Humbang Hasundutan",
+    "aliases": []
+  },
+  {
+    "provinceCode": "12",
+    "provinceName": "Sumatera Utara",
+    "cityCode": "12.07",
+    "cityName": "Karo",
+    "aliases": []
+  },
+  {
+    "provinceCode": "12",
+    "provinceName": "Sumatera Utara",
+    "cityCode": "12.10",
+    "cityName": "Labuhanbatu",
+    "aliases": []
+  },
+  {
+    "provinceCode": "12",
+    "provinceName": "Sumatera Utara",
+    "cityCode": "12.22",
+    "cityName": "Labuhanbatu Selatan",
+    "aliases": []
+  },
+  {
+    "provinceCode": "12",
+    "provinceName": "Sumatera Utara",
+    "cityCode": "12.23",
+    "cityName": "Labuhanbatu Utara",
+    "aliases": []
+  },
+  {
+    "provinceCode": "12",
+    "provinceName": "Sumatera Utara",
+    "cityCode": "12.05",
+    "cityName": "Langkat",
+    "aliases": []
+  },
+  {
+    "provinceCode": "12",
+    "provinceName": "Sumatera Utara",
+    "cityCode": "12.13",
+    "cityName": "Mandailing Natal",
+    "aliases": []
+  },
+  {
+    "provinceCode": "12",
+    "provinceName": "Sumatera Utara",
+    "cityCode": "12.04",
+    "cityName": "Nias",
+    "aliases": []
+  },
+  {
+    "provinceCode": "12",
+    "provinceName": "Sumatera Utara",
+    "cityCode": "12.25",
+    "cityName": "Nias Barat",
+    "aliases": []
+  },
+  {
+    "provinceCode": "12",
+    "provinceName": "Sumatera Utara",
+    "cityCode": "12.14",
+    "cityName": "Nias Selatan",
+    "aliases": []
+  },
+  {
+    "provinceCode": "12",
+    "provinceName": "Sumatera Utara",
+    "cityCode": "12.24",
+    "cityName": "Nias Utara",
+    "aliases": []
+  },
+  {
+    "provinceCode": "12",
+    "provinceName": "Sumatera Utara",
+    "cityCode": "12.21",
+    "cityName": "Padang Lawas",
+    "aliases": []
+  },
+  {
+    "provinceCode": "12",
+    "provinceName": "Sumatera Utara",
+    "cityCode": "12.20",
+    "cityName": "Padang Lawas Utara",
+    "aliases": []
+  },
+  {
+    "provinceCode": "12",
+    "provinceName": "Sumatera Utara",
+    "cityCode": "12.16",
+    "cityName": "Pakpak Bharat",
+    "aliases": []
+  },
+  {
+    "provinceCode": "12",
+    "provinceName": "Sumatera Utara",
+    "cityCode": "12.18",
+    "cityName": "Samosir",
+    "aliases": []
+  },
+  {
+    "provinceCode": "12",
+    "provinceName": "Sumatera Utara",
+    "cityCode": "12.15",
+    "cityName": "Serdang Bedagai",
+    "aliases": []
+  },
+  {
+    "provinceCode": "12",
+    "provinceName": "Sumatera Utara",
+    "cityCode": "12.08",
+    "cityName": "Simalungun",
+    "aliases": []
+  },
+  {
+    "provinceCode": "12",
+    "provinceName": "Sumatera Utara",
+    "cityCode": "12.03",
+    "cityName": "Tapanuli Selatan",
+    "aliases": []
+  },
+  {
+    "provinceCode": "12",
+    "provinceName": "Sumatera Utara",
+    "cityCode": "12.01",
+    "cityName": "Tapanuli Tengah",
+    "aliases": []
+  },
+  {
+    "provinceCode": "12",
+    "provinceName": "Sumatera Utara",
+    "cityCode": "12.02",
+    "cityName": "Tapanuli Utara",
+    "aliases": []
+  },
+  {
+    "provinceCode": "12",
+    "provinceName": "Sumatera Utara",
+    "cityCode": "12.12",
+    "cityName": "Toba",
     "aliases": []
   },
   {
     "provinceCode": "12",
     "provinceName": "Sumatera Utara",
     "cityCode": "12.72",
-    "cityName": "Binjai",
-    "aliases": []
-  },
-  {
-    "provinceCode": "12",
-    "provinceName": "Sumatera Utara",
-    "cityCode": "12.73",
-    "cityName": "Pematangsiantar",
-    "aliases": []
-  },
-  {
-    "provinceCode": "12",
-    "provinceName": "Sumatera Utara",
-    "cityCode": "12.74",
-    "cityName": "Tebing Tinggi",
-    "aliases": []
-  },
-  {
-    "provinceCode": "12",
-    "provinceName": "Sumatera Utara",
-    "cityCode": "12.75",
-    "cityName": "Tanjungbalai",
-    "aliases": []
-  },
-  {
-    "provinceCode": "12",
-    "provinceName": "Sumatera Utara",
-    "cityCode": "12.76",
-    "cityName": "Sibolga",
-    "aliases": []
-  },
-  {
-    "provinceCode": "12",
-    "provinceName": "Sumatera Utara",
-    "cityCode": "12.77",
-    "cityName": "Padangsidimpuan",
+    "cityName": "Kota Binjai",
     "aliases": []
   },
   {
     "provinceCode": "12",
     "provinceName": "Sumatera Utara",
     "cityCode": "12.78",
-    "cityName": "Gunungsitoli",
+    "cityName": "Kota Gunungsitoli",
+    "aliases": []
+  },
+  {
+    "provinceCode": "12",
+    "provinceName": "Sumatera Utara",
+    "cityCode": "12.71",
+    "cityName": "Kota Medan",
+    "aliases": []
+  },
+  {
+    "provinceCode": "12",
+    "provinceName": "Sumatera Utara",
+    "cityCode": "12.77",
+    "cityName": "Kota Padangsidimpuan",
+    "aliases": []
+  },
+  {
+    "provinceCode": "12",
+    "provinceName": "Sumatera Utara",
+    "cityCode": "12.73",
+    "cityName": "Kota Pematangsiantar",
+    "aliases": []
+  },
+  {
+    "provinceCode": "12",
+    "provinceName": "Sumatera Utara",
+    "cityCode": "12.76",
+    "cityName": "Kota Sibolga",
+    "aliases": []
+  },
+  {
+    "provinceCode": "12",
+    "provinceName": "Sumatera Utara",
+    "cityCode": "12.75",
+    "cityName": "Kota Tanjungbalai",
+    "aliases": []
+  },
+  {
+    "provinceCode": "12",
+    "provinceName": "Sumatera Utara",
+    "cityCode": "12.74",
+    "cityName": "Kota Tebing Tinggi",
     "aliases": []
   },
   {
     "provinceCode": "13",
     "provinceName": "Sumatera Barat",
-    "cityCode": "13.71",
-    "cityName": "Padang",
+    "cityCode": "13.06",
+    "cityName": "Agam",
     "aliases": []
   },
   {
     "provinceCode": "13",
     "provinceName": "Sumatera Barat",
-    "cityCode": "13.72",
+    "cityCode": "13.11",
+    "cityName": "Dharmasraya",
+    "aliases": []
+  },
+  {
+    "provinceCode": "13",
+    "provinceName": "Sumatera Barat",
+    "cityCode": "13.09",
+    "cityName": "Kepulauan Mentawai",
+    "aliases": []
+  },
+  {
+    "provinceCode": "13",
+    "provinceName": "Sumatera Barat",
+    "cityCode": "13.05",
+    "cityName": "Lima Puluh Kota",
+    "aliases": []
+  },
+  {
+    "provinceCode": "13",
+    "provinceName": "Sumatera Barat",
+    "cityCode": "13.07",
+    "cityName": "Padang Pariaman",
+    "aliases": []
+  },
+  {
+    "provinceCode": "13",
+    "provinceName": "Sumatera Barat",
+    "cityCode": "13.08",
+    "cityName": "Pasaman",
+    "aliases": []
+  },
+  {
+    "provinceCode": "13",
+    "provinceName": "Sumatera Barat",
+    "cityCode": "13.12",
+    "cityName": "Pasaman Barat",
+    "aliases": []
+  },
+  {
+    "provinceCode": "13",
+    "provinceName": "Sumatera Barat",
+    "cityCode": "13.01",
+    "cityName": "Pesisir Selatan",
+    "aliases": []
+  },
+  {
+    "provinceCode": "13",
+    "provinceName": "Sumatera Barat",
+    "cityCode": "13.03",
+    "cityName": "Sijunjung",
+    "aliases": []
+  },
+  {
+    "provinceCode": "13",
+    "provinceName": "Sumatera Barat",
+    "cityCode": "13.02",
     "cityName": "Solok",
     "aliases": []
   },
   {
     "provinceCode": "13",
     "provinceName": "Sumatera Barat",
-    "cityCode": "13.73",
-    "cityName": "Sawahlunto",
+    "cityCode": "13.10",
+    "cityName": "Solok Selatan",
     "aliases": []
   },
   {
     "provinceCode": "13",
     "provinceName": "Sumatera Barat",
-    "cityCode": "13.74",
-    "cityName": "Padangpanjang",
+    "cityCode": "13.04",
+    "cityName": "Tanah Datar",
     "aliases": []
   },
   {
     "provinceCode": "13",
     "provinceName": "Sumatera Barat",
     "cityCode": "13.75",
-    "cityName": "Bukittinggi",
+    "cityName": "Kota Bukittinggi",
     "aliases": []
   },
   {
     "provinceCode": "13",
     "provinceName": "Sumatera Barat",
-    "cityCode": "13.76",
-    "cityName": "Payakumbuh",
+    "cityCode": "13.71",
+    "cityName": "Kota Padang",
+    "aliases": []
+  },
+  {
+    "provinceCode": "13",
+    "provinceName": "Sumatera Barat",
+    "cityCode": "13.74",
+    "cityName": "Kota Padangpanjang",
     "aliases": []
   },
   {
     "provinceCode": "13",
     "provinceName": "Sumatera Barat",
     "cityCode": "13.77",
-    "cityName": "Pariaman",
+    "cityName": "Kota Pariaman",
+    "aliases": []
+  },
+  {
+    "provinceCode": "13",
+    "provinceName": "Sumatera Barat",
+    "cityCode": "13.76",
+    "cityName": "Kota Payakumbuh",
+    "aliases": []
+  },
+  {
+    "provinceCode": "13",
+    "provinceName": "Sumatera Barat",
+    "cityCode": "13.73",
+    "cityName": "Kota Sawahlunto",
+    "aliases": []
+  },
+  {
+    "provinceCode": "13",
+    "provinceName": "Sumatera Barat",
+    "cityCode": "13.72",
+    "cityName": "Kota Solok",
     "aliases": []
   },
   {
     "provinceCode": "14",
     "provinceName": "Riau",
-    "cityCode": "14.71",
-    "cityName": "Pekanbaru",
+    "cityCode": "14.03",
+    "cityName": "Bengkalis",
+    "aliases": []
+  },
+  {
+    "provinceCode": "14",
+    "provinceName": "Riau",
+    "cityCode": "14.04",
+    "cityName": "Indragiri Hilir",
+    "aliases": []
+  },
+  {
+    "provinceCode": "14",
+    "provinceName": "Riau",
+    "cityCode": "14.02",
+    "cityName": "Indragiri Hulu",
+    "aliases": []
+  },
+  {
+    "provinceCode": "14",
+    "provinceName": "Riau",
+    "cityCode": "14.01",
+    "cityName": "Kampar",
+    "aliases": []
+  },
+  {
+    "provinceCode": "14",
+    "provinceName": "Riau",
+    "cityCode": "14.10",
+    "cityName": "Kepulauan Meranti",
+    "aliases": []
+  },
+  {
+    "provinceCode": "14",
+    "provinceName": "Riau",
+    "cityCode": "14.09",
+    "cityName": "Kuantan Singingi",
+    "aliases": []
+  },
+  {
+    "provinceCode": "14",
+    "provinceName": "Riau",
+    "cityCode": "14.05",
+    "cityName": "Pelalawan",
+    "aliases": []
+  },
+  {
+    "provinceCode": "14",
+    "provinceName": "Riau",
+    "cityCode": "14.07",
+    "cityName": "Rokan Hilir",
+    "aliases": []
+  },
+  {
+    "provinceCode": "14",
+    "provinceName": "Riau",
+    "cityCode": "14.06",
+    "cityName": "Rokan Hulu",
+    "aliases": []
+  },
+  {
+    "provinceCode": "14",
+    "provinceName": "Riau",
+    "cityCode": "14.08",
+    "cityName": "Siak",
     "aliases": []
   },
   {
     "provinceCode": "14",
     "provinceName": "Riau",
     "cityCode": "14.72",
-    "cityName": "Dumai",
+    "cityName": "Kota Dumai",
+    "aliases": []
+  },
+  {
+    "provinceCode": "14",
+    "provinceName": "Riau",
+    "cityCode": "14.71",
+    "cityName": "Kota Pekanbaru",
+    "aliases": []
+  },
+  {
+    "provinceCode": "15",
+    "provinceName": "Jambi",
+    "cityCode": "15.03",
+    "cityName": "Batanghari",
+    "aliases": []
+  },
+  {
+    "provinceCode": "15",
+    "provinceName": "Jambi",
+    "cityCode": "15.08",
+    "cityName": "Bungo",
+    "aliases": []
+  },
+  {
+    "provinceCode": "15",
+    "provinceName": "Jambi",
+    "cityCode": "15.01",
+    "cityName": "Kerinci",
+    "aliases": []
+  },
+  {
+    "provinceCode": "15",
+    "provinceName": "Jambi",
+    "cityCode": "15.02",
+    "cityName": "Merangin",
+    "aliases": []
+  },
+  {
+    "provinceCode": "15",
+    "provinceName": "Jambi",
+    "cityCode": "15.05",
+    "cityName": "Muaro Jambi",
+    "aliases": []
+  },
+  {
+    "provinceCode": "15",
+    "provinceName": "Jambi",
+    "cityCode": "15.06",
+    "cityName": "Sarolangun",
+    "aliases": []
+  },
+  {
+    "provinceCode": "15",
+    "provinceName": "Jambi",
+    "cityCode": "15.07",
+    "cityName": "Tanjung Jabung Barat",
+    "aliases": []
+  },
+  {
+    "provinceCode": "15",
+    "provinceName": "Jambi",
+    "cityCode": "15.09",
+    "cityName": "Tanjung Jabung Timur",
+    "aliases": []
+  },
+  {
+    "provinceCode": "15",
+    "provinceName": "Jambi",
+    "cityCode": "15.10",
+    "cityName": "Tebo",
     "aliases": []
   },
   {
     "provinceCode": "15",
     "provinceName": "Jambi",
     "cityCode": "15.71",
-    "cityName": "Jambi",
+    "cityName": "Kota Jambi",
     "aliases": []
   },
   {
     "provinceCode": "15",
     "provinceName": "Jambi",
     "cityCode": "15.72",
-    "cityName": "Sungai Penuh",
+    "cityName": "Kota Sungai Penuh",
     "aliases": []
   },
   {
     "provinceCode": "16",
     "provinceName": "Sumatera Selatan",
-    "cityCode": "16.71",
-    "cityName": "Palembang",
+    "cityCode": "16.07",
+    "cityName": "Banyuasin",
     "aliases": []
   },
   {
     "provinceCode": "16",
     "provinceName": "Sumatera Selatan",
-    "cityCode": "16.72",
-    "cityName": "Prabumulih",
+    "cityCode": "16.13",
+    "cityName": "Empat Lawang",
     "aliases": []
   },
   {
     "provinceCode": "16",
     "provinceName": "Sumatera Selatan",
-    "cityCode": "16.73",
-    "cityName": "Pagaralam",
+    "cityCode": "16.04",
+    "cityName": "Lahat",
+    "aliases": []
+  },
+  {
+    "provinceCode": "16",
+    "provinceName": "Sumatera Selatan",
+    "cityCode": "16.02",
+    "cityName": "Muara Enim",
+    "aliases": []
+  },
+  {
+    "provinceCode": "16",
+    "provinceName": "Sumatera Selatan",
+    "cityCode": "16.06",
+    "cityName": "Musi Banyuasin",
+    "aliases": []
+  },
+  {
+    "provinceCode": "16",
+    "provinceName": "Sumatera Selatan",
+    "cityCode": "16.05",
+    "cityName": "Musi Rawas",
+    "aliases": []
+  },
+  {
+    "provinceCode": "16",
+    "provinceName": "Sumatera Selatan",
+    "cityCode": "16.14",
+    "cityName": "Musi Rawas Utara",
+    "aliases": []
+  },
+  {
+    "provinceCode": "16",
+    "provinceName": "Sumatera Selatan",
+    "cityCode": "16.10",
+    "cityName": "Ogan Ilir",
+    "aliases": []
+  },
+  {
+    "provinceCode": "16",
+    "provinceName": "Sumatera Selatan",
+    "cityCode": "16.03",
+    "cityName": "Ogan Komering Ilir",
+    "aliases": []
+  },
+  {
+    "provinceCode": "16",
+    "provinceName": "Sumatera Selatan",
+    "cityCode": "16.01",
+    "cityName": "Ogan Komering Ulu",
+    "aliases": []
+  },
+  {
+    "provinceCode": "16",
+    "provinceName": "Sumatera Selatan",
+    "cityCode": "16.09",
+    "cityName": "Ogan Komering Ulu Selatan",
+    "aliases": []
+  },
+  {
+    "provinceCode": "16",
+    "provinceName": "Sumatera Selatan",
+    "cityCode": "16.11",
+    "cityName": "Ogan Komering Ulu Timur",
+    "aliases": []
+  },
+  {
+    "provinceCode": "16",
+    "provinceName": "Sumatera Selatan",
+    "cityCode": "16.12",
+    "cityName": "Penukal Abab Lematang Ilir",
     "aliases": []
   },
   {
     "provinceCode": "16",
     "provinceName": "Sumatera Selatan",
     "cityCode": "16.74",
-    "cityName": "Lubuklinggau",
+    "cityName": "Kota Lubuklinggau",
+    "aliases": []
+  },
+  {
+    "provinceCode": "16",
+    "provinceName": "Sumatera Selatan",
+    "cityCode": "16.73",
+    "cityName": "Kota Pagaralam",
+    "aliases": []
+  },
+  {
+    "provinceCode": "16",
+    "provinceName": "Sumatera Selatan",
+    "cityCode": "16.71",
+    "cityName": "Kota Palembang",
+    "aliases": []
+  },
+  {
+    "provinceCode": "16",
+    "provinceName": "Sumatera Selatan",
+    "cityCode": "16.72",
+    "cityName": "Kota Prabumulih",
+    "aliases": []
+  },
+  {
+    "provinceCode": "17",
+    "provinceName": "Bengkulu",
+    "cityCode": "17.01",
+    "cityName": "Bengkulu Selatan",
+    "aliases": []
+  },
+  {
+    "provinceCode": "17",
+    "provinceName": "Bengkulu",
+    "cityCode": "17.09",
+    "cityName": "Bengkulu Tengah",
+    "aliases": []
+  },
+  {
+    "provinceCode": "17",
+    "provinceName": "Bengkulu",
+    "cityCode": "17.02",
+    "cityName": "Bengkulu Utara",
+    "aliases": []
+  },
+  {
+    "provinceCode": "17",
+    "provinceName": "Bengkulu",
+    "cityCode": "17.04",
+    "cityName": "Kaur",
+    "aliases": []
+  },
+  {
+    "provinceCode": "17",
+    "provinceName": "Bengkulu",
+    "cityCode": "17.08",
+    "cityName": "Kepahiang",
+    "aliases": []
+  },
+  {
+    "provinceCode": "17",
+    "provinceName": "Bengkulu",
+    "cityCode": "17.07",
+    "cityName": "Lebong",
+    "aliases": []
+  },
+  {
+    "provinceCode": "17",
+    "provinceName": "Bengkulu",
+    "cityCode": "17.06",
+    "cityName": "Mukomuko",
+    "aliases": []
+  },
+  {
+    "provinceCode": "17",
+    "provinceName": "Bengkulu",
+    "cityCode": "17.03",
+    "cityName": "Rejang Lebong",
+    "aliases": []
+  },
+  {
+    "provinceCode": "17",
+    "provinceName": "Bengkulu",
+    "cityCode": "17.05",
+    "cityName": "Seluma",
     "aliases": []
   },
   {
     "provinceCode": "17",
     "provinceName": "Bengkulu",
     "cityCode": "17.71",
-    "cityName": "Bengkulu",
+    "cityName": "Kota Bengkulu",
+    "aliases": []
+  },
+  {
+    "provinceCode": "18",
+    "provinceName": "Lampung",
+    "cityCode": "18.04",
+    "cityName": "Lampung Barat",
+    "aliases": []
+  },
+  {
+    "provinceCode": "18",
+    "provinceName": "Lampung",
+    "cityCode": "18.01",
+    "cityName": "Lampung Selatan",
+    "aliases": []
+  },
+  {
+    "provinceCode": "18",
+    "provinceName": "Lampung",
+    "cityCode": "18.02",
+    "cityName": "Lampung Tengah",
+    "aliases": []
+  },
+  {
+    "provinceCode": "18",
+    "provinceName": "Lampung",
+    "cityCode": "18.07",
+    "cityName": "Lampung Timur",
+    "aliases": []
+  },
+  {
+    "provinceCode": "18",
+    "provinceName": "Lampung",
+    "cityCode": "18.03",
+    "cityName": "Lampung Utara",
+    "aliases": []
+  },
+  {
+    "provinceCode": "18",
+    "provinceName": "Lampung",
+    "cityCode": "18.11",
+    "cityName": "Mesuji",
+    "aliases": []
+  },
+  {
+    "provinceCode": "18",
+    "provinceName": "Lampung",
+    "cityCode": "18.09",
+    "cityName": "Pesawaran",
+    "aliases": []
+  },
+  {
+    "provinceCode": "18",
+    "provinceName": "Lampung",
+    "cityCode": "18.12",
+    "cityName": "Pesisir Barat",
+    "aliases": []
+  },
+  {
+    "provinceCode": "18",
+    "provinceName": "Lampung",
+    "cityCode": "18.10",
+    "cityName": "Pringsewu",
+    "aliases": []
+  },
+  {
+    "provinceCode": "18",
+    "provinceName": "Lampung",
+    "cityCode": "18.06",
+    "cityName": "Tanggamus",
+    "aliases": []
+  },
+  {
+    "provinceCode": "18",
+    "provinceName": "Lampung",
+    "cityCode": "18.08",
+    "cityName": "Tulang Bawang",
+    "aliases": []
+  },
+  {
+    "provinceCode": "18",
+    "provinceName": "Lampung",
+    "cityCode": "18.13",
+    "cityName": "Tulang Bawang Barat",
+    "aliases": []
+  },
+  {
+    "provinceCode": "18",
+    "provinceName": "Lampung",
+    "cityCode": "18.05",
+    "cityName": "Way Kanan",
     "aliases": []
   },
   {
     "provinceCode": "18",
     "provinceName": "Lampung",
     "cityCode": "18.71",
-    "cityName": "Bandar Lampung",
+    "cityName": "Kota Bandar Lampung",
     "aliases": []
   },
   {
     "provinceCode": "18",
     "provinceName": "Lampung",
     "cityCode": "18.72",
-    "cityName": "Metro",
+    "cityName": "Kota Metro",
+    "aliases": []
+  },
+  {
+    "provinceCode": "19",
+    "provinceName": "Kepulauan Bangka Belitung",
+    "cityCode": "19.01",
+    "cityName": "Bangka",
+    "aliases": []
+  },
+  {
+    "provinceCode": "19",
+    "provinceName": "Kepulauan Bangka Belitung",
+    "cityCode": "19.05",
+    "cityName": "Bangka Barat",
+    "aliases": []
+  },
+  {
+    "provinceCode": "19",
+    "provinceName": "Kepulauan Bangka Belitung",
+    "cityCode": "19.02",
+    "cityName": "Bangka Selatan",
+    "aliases": []
+  },
+  {
+    "provinceCode": "19",
+    "provinceName": "Kepulauan Bangka Belitung",
+    "cityCode": "19.04",
+    "cityName": "Bangka Tengah",
+    "aliases": []
+  },
+  {
+    "provinceCode": "19",
+    "provinceName": "Kepulauan Bangka Belitung",
+    "cityCode": "19.03",
+    "cityName": "Belitung",
+    "aliases": []
+  },
+  {
+    "provinceCode": "19",
+    "provinceName": "Kepulauan Bangka Belitung",
+    "cityCode": "19.06",
+    "cityName": "Belitung Timur",
     "aliases": []
   },
   {
     "provinceCode": "19",
     "provinceName": "Kepulauan Bangka Belitung",
     "cityCode": "19.71",
-    "cityName": "Pangkalpinang",
+    "cityName": "Kota Pangkalpinang",
     "aliases": []
   },
   {
     "provinceCode": "21",
     "provinceName": "Kepulauan Riau",
-    "cityCode": "21.71",
-    "cityName": "Tanjungpinang",
+    "cityCode": "21.02",
+    "cityName": "Bintan",
+    "aliases": []
+  },
+  {
+    "provinceCode": "21",
+    "provinceName": "Kepulauan Riau",
+    "cityCode": "21.01",
+    "cityName": "Karimun",
+    "aliases": []
+  },
+  {
+    "provinceCode": "21",
+    "provinceName": "Kepulauan Riau",
+    "cityCode": "21.05",
+    "cityName": "Kepulauan Anambas",
+    "aliases": []
+  },
+  {
+    "provinceCode": "21",
+    "provinceName": "Kepulauan Riau",
+    "cityCode": "21.04",
+    "cityName": "Lingga",
+    "aliases": []
+  },
+  {
+    "provinceCode": "21",
+    "provinceName": "Kepulauan Riau",
+    "cityCode": "21.03",
+    "cityName": "Natuna",
     "aliases": []
   },
   {
     "provinceCode": "21",
     "provinceName": "Kepulauan Riau",
     "cityCode": "21.72",
-    "cityName": "Batam",
+    "cityName": "Kota Batam",
+    "aliases": []
+  },
+  {
+    "provinceCode": "21",
+    "provinceName": "Kepulauan Riau",
+    "cityCode": "21.71",
+    "cityName": "Kota Tanjungpinang",
+    "aliases": []
+  },
+  {
+    "provinceCode": "31",
+    "provinceName": "DKI Jakarta",
+    "cityCode": "31.01",
+    "cityName": "Kep. Seribu",
     "aliases": []
   },
   {
@@ -275,379 +1122,2003 @@
   {
     "provinceCode": "32",
     "provinceName": "Jawa Barat",
-    "cityCode": "32.73",
+    "cityCode": "32.04",
     "cityName": "Bandung",
     "aliases": []
   },
   {
     "provinceCode": "32",
     "provinceName": "Jawa Barat",
-    "cityCode": "32.71",
-    "cityName": "Bogor",
+    "cityCode": "32.17",
+    "cityName": "Bandung Barat",
     "aliases": []
   },
   {
     "provinceCode": "32",
     "provinceName": "Jawa Barat",
-    "cityCode": "32.75",
+    "cityCode": "32.16",
     "cityName": "Bekasi",
     "aliases": []
   },
   {
     "provinceCode": "32",
     "provinceName": "Jawa Barat",
-    "cityCode": "32.76",
-    "cityName": "Depok",
+    "cityCode": "32.01",
+    "cityName": "Bogor",
     "aliases": []
   },
   {
     "provinceCode": "32",
     "provinceName": "Jawa Barat",
-    "cityCode": "32.77",
-    "cityName": "Cimahi",
+    "cityCode": "32.07",
+    "cityName": "Ciamis",
     "aliases": []
   },
   {
     "provinceCode": "32",
     "provinceName": "Jawa Barat",
-    "cityCode": "32.78",
-    "cityName": "Tasikmalaya",
+    "cityCode": "32.03",
+    "cityName": "Cianjur",
     "aliases": []
   },
   {
     "provinceCode": "32",
     "provinceName": "Jawa Barat",
-    "cityCode": "32.74",
+    "cityCode": "32.09",
     "cityName": "Cirebon",
     "aliases": []
   },
   {
     "provinceCode": "32",
     "provinceName": "Jawa Barat",
-    "cityCode": "32.72",
+    "cityCode": "32.05",
+    "cityName": "Garut",
+    "aliases": []
+  },
+  {
+    "provinceCode": "32",
+    "provinceName": "Jawa Barat",
+    "cityCode": "32.12",
+    "cityName": "Indramayu",
+    "aliases": []
+  },
+  {
+    "provinceCode": "32",
+    "provinceName": "Jawa Barat",
+    "cityCode": "32.15",
+    "cityName": "Karawang",
+    "aliases": []
+  },
+  {
+    "provinceCode": "32",
+    "provinceName": "Jawa Barat",
+    "cityCode": "32.08",
+    "cityName": "Kuningan",
+    "aliases": []
+  },
+  {
+    "provinceCode": "32",
+    "provinceName": "Jawa Barat",
+    "cityCode": "32.10",
+    "cityName": "Majalengka",
+    "aliases": []
+  },
+  {
+    "provinceCode": "32",
+    "provinceName": "Jawa Barat",
+    "cityCode": "32.18",
+    "cityName": "Pangandaran",
+    "aliases": []
+  },
+  {
+    "provinceCode": "32",
+    "provinceName": "Jawa Barat",
+    "cityCode": "32.14",
+    "cityName": "Purwakarta",
+    "aliases": []
+  },
+  {
+    "provinceCode": "32",
+    "provinceName": "Jawa Barat",
+    "cityCode": "32.13",
+    "cityName": "Subang",
+    "aliases": []
+  },
+  {
+    "provinceCode": "32",
+    "provinceName": "Jawa Barat",
+    "cityCode": "32.02",
     "cityName": "Sukabumi",
     "aliases": []
   },
   {
     "provinceCode": "32",
     "provinceName": "Jawa Barat",
+    "cityCode": "32.11",
+    "cityName": "Sumedang",
+    "aliases": []
+  },
+  {
+    "provinceCode": "32",
+    "provinceName": "Jawa Barat",
+    "cityCode": "32.06",
+    "cityName": "Tasikmalaya",
+    "aliases": []
+  },
+  {
+    "provinceCode": "32",
+    "provinceName": "Jawa Barat",
     "cityCode": "32.79",
-    "cityName": "Banjar",
+    "cityName": "Kota Banjar",
+    "aliases": []
+  },
+  {
+    "provinceCode": "32",
+    "provinceName": "Jawa Barat",
+    "cityCode": "32.75",
+    "cityName": "Kota Bekasi",
+    "aliases": []
+  },
+  {
+    "provinceCode": "32",
+    "provinceName": "Jawa Barat",
+    "cityCode": "32.71",
+    "cityName": "Kota Bogor",
+    "aliases": []
+  },
+  {
+    "provinceCode": "32",
+    "provinceName": "Jawa Barat",
+    "cityCode": "32.77",
+    "cityName": "Kota Cimahi",
+    "aliases": []
+  },
+  {
+    "provinceCode": "32",
+    "provinceName": "Jawa Barat",
+    "cityCode": "32.74",
+    "cityName": "Kota Cirebon",
+    "aliases": []
+  },
+  {
+    "provinceCode": "32",
+    "provinceName": "Jawa Barat",
+    "cityCode": "32.76",
+    "cityName": "Kota Depok",
+    "aliases": []
+  },
+  {
+    "provinceCode": "32",
+    "provinceName": "Jawa Barat",
+    "cityCode": "32.72",
+    "cityName": "Kota Sukabumi",
+    "aliases": []
+  },
+  {
+    "provinceCode": "32",
+    "provinceName": "Jawa Barat",
+    "cityCode": "32.78",
+    "cityName": "Kota Tasikmalaya",
+    "aliases": []
+  },
+  {
+    "provinceCode": "32",
+    "provinceName": "Jawa Barat",
+    "cityCode": "32.73",
+    "cityName": "Kota Bandung",
     "aliases": []
   },
   {
     "provinceCode": "33",
     "provinceName": "Jawa Tengah",
-    "cityCode": "33.74",
-    "cityName": "Semarang",
+    "cityCode": "33.04",
+    "cityName": "Banjarnegara",
     "aliases": []
   },
   {
     "provinceCode": "33",
     "provinceName": "Jawa Tengah",
-    "cityCode": "33.72",
-    "cityName": "Surakarta",
+    "cityCode": "33.02",
+    "cityName": "Banyumas",
     "aliases": []
   },
   {
     "provinceCode": "33",
     "provinceName": "Jawa Tengah",
-    "cityCode": "33.73",
-    "cityName": "Salatiga",
+    "cityCode": "33.25",
+    "cityName": "Batang",
     "aliases": []
   },
   {
     "provinceCode": "33",
     "provinceName": "Jawa Tengah",
-    "cityCode": "33.71",
+    "cityCode": "33.16",
+    "cityName": "Blora",
+    "aliases": []
+  },
+  {
+    "provinceCode": "33",
+    "provinceName": "Jawa Tengah",
+    "cityCode": "33.09",
+    "cityName": "Boyolali",
+    "aliases": []
+  },
+  {
+    "provinceCode": "33",
+    "provinceName": "Jawa Tengah",
+    "cityCode": "33.29",
+    "cityName": "Brebes",
+    "aliases": []
+  },
+  {
+    "provinceCode": "33",
+    "provinceName": "Jawa Tengah",
+    "cityCode": "33.01",
+    "cityName": "Cilacap",
+    "aliases": []
+  },
+  {
+    "provinceCode": "33",
+    "provinceName": "Jawa Tengah",
+    "cityCode": "33.21",
+    "cityName": "Demak",
+    "aliases": []
+  },
+  {
+    "provinceCode": "33",
+    "provinceName": "Jawa Tengah",
+    "cityCode": "33.15",
+    "cityName": "Grobogan",
+    "aliases": []
+  },
+  {
+    "provinceCode": "33",
+    "provinceName": "Jawa Tengah",
+    "cityCode": "33.20",
+    "cityName": "Jepara",
+    "aliases": []
+  },
+  {
+    "provinceCode": "33",
+    "provinceName": "Jawa Tengah",
+    "cityCode": "33.13",
+    "cityName": "Karanganyar",
+    "aliases": []
+  },
+  {
+    "provinceCode": "33",
+    "provinceName": "Jawa Tengah",
+    "cityCode": "33.05",
+    "cityName": "Kebumen",
+    "aliases": []
+  },
+  {
+    "provinceCode": "33",
+    "provinceName": "Jawa Tengah",
+    "cityCode": "33.24",
+    "cityName": "Kendal",
+    "aliases": []
+  },
+  {
+    "provinceCode": "33",
+    "provinceName": "Jawa Tengah",
+    "cityCode": "33.10",
+    "cityName": "Klaten",
+    "aliases": []
+  },
+  {
+    "provinceCode": "33",
+    "provinceName": "Jawa Tengah",
+    "cityCode": "33.19",
+    "cityName": "Kudus",
+    "aliases": []
+  },
+  {
+    "provinceCode": "33",
+    "provinceName": "Jawa Tengah",
+    "cityCode": "33.07",
     "cityName": "Magelang",
     "aliases": []
   },
   {
     "provinceCode": "33",
     "provinceName": "Jawa Tengah",
-    "cityCode": "33.76",
+    "cityCode": "33.18",
+    "cityName": "Pati",
+    "aliases": []
+  },
+  {
+    "provinceCode": "33",
+    "provinceName": "Jawa Tengah",
+    "cityCode": "33.26",
+    "cityName": "Pekalongan",
+    "aliases": []
+  },
+  {
+    "provinceCode": "33",
+    "provinceName": "Jawa Tengah",
+    "cityCode": "33.27",
+    "cityName": "Pemalang",
+    "aliases": []
+  },
+  {
+    "provinceCode": "33",
+    "provinceName": "Jawa Tengah",
+    "cityCode": "33.03",
+    "cityName": "Purbalingga",
+    "aliases": []
+  },
+  {
+    "provinceCode": "33",
+    "provinceName": "Jawa Tengah",
+    "cityCode": "33.06",
+    "cityName": "Purworejo",
+    "aliases": []
+  },
+  {
+    "provinceCode": "33",
+    "provinceName": "Jawa Tengah",
+    "cityCode": "33.17",
+    "cityName": "Rembang",
+    "aliases": []
+  },
+  {
+    "provinceCode": "33",
+    "provinceName": "Jawa Tengah",
+    "cityCode": "33.22",
+    "cityName": "Semarang",
+    "aliases": []
+  },
+  {
+    "provinceCode": "33",
+    "provinceName": "Jawa Tengah",
+    "cityCode": "33.14",
+    "cityName": "Sragen",
+    "aliases": []
+  },
+  {
+    "provinceCode": "33",
+    "provinceName": "Jawa Tengah",
+    "cityCode": "33.11",
+    "cityName": "Sukoharjo",
+    "aliases": []
+  },
+  {
+    "provinceCode": "33",
+    "provinceName": "Jawa Tengah",
+    "cityCode": "33.28",
     "cityName": "Tegal",
     "aliases": []
   },
   {
     "provinceCode": "33",
     "provinceName": "Jawa Tengah",
+    "cityCode": "33.23",
+    "cityName": "Temanggung",
+    "aliases": []
+  },
+  {
+    "provinceCode": "33",
+    "provinceName": "Jawa Tengah",
+    "cityCode": "33.12",
+    "cityName": "Wonogiri",
+    "aliases": []
+  },
+  {
+    "provinceCode": "33",
+    "provinceName": "Jawa Tengah",
+    "cityCode": "33.08",
+    "cityName": "Wonosobo",
+    "aliases": []
+  },
+  {
+    "provinceCode": "33",
+    "provinceName": "Jawa Tengah",
+    "cityCode": "33.71",
+    "cityName": "Kota Magelang",
+    "aliases": []
+  },
+  {
+    "provinceCode": "33",
+    "provinceName": "Jawa Tengah",
     "cityCode": "33.75",
-    "cityName": "Pekalongan",
+    "cityName": "Kota Pekalongan",
+    "aliases": []
+  },
+  {
+    "provinceCode": "33",
+    "provinceName": "Jawa Tengah",
+    "cityCode": "33.73",
+    "cityName": "Kota Salatiga",
+    "aliases": []
+  },
+  {
+    "provinceCode": "33",
+    "provinceName": "Jawa Tengah",
+    "cityCode": "33.74",
+    "cityName": "Kota Semarang",
+    "aliases": []
+  },
+  {
+    "provinceCode": "33",
+    "provinceName": "Jawa Tengah",
+    "cityCode": "33.72",
+    "cityName": "Kota Surakarta",
+    "aliases": []
+  },
+  {
+    "provinceCode": "33",
+    "provinceName": "Jawa Tengah",
+    "cityCode": "33.76",
+    "cityName": "Kota Tegal",
+    "aliases": []
+  },
+  {
+    "provinceCode": "34",
+    "provinceName": "DI Yogyakarta",
+    "cityCode": "34.02",
+    "cityName": "Bantul",
+    "aliases": []
+  },
+  {
+    "provinceCode": "34",
+    "provinceName": "DI Yogyakarta",
+    "cityCode": "34.03",
+    "cityName": "Gunung Kidul",
+    "aliases": []
+  },
+  {
+    "provinceCode": "34",
+    "provinceName": "DI Yogyakarta",
+    "cityCode": "34.01",
+    "cityName": "Kulon Progo",
+    "aliases": []
+  },
+  {
+    "provinceCode": "34",
+    "provinceName": "DI Yogyakarta",
+    "cityCode": "34.04",
+    "cityName": "Sleman",
     "aliases": []
   },
   {
     "provinceCode": "34",
     "provinceName": "DI Yogyakarta",
     "cityCode": "34.71",
-    "cityName": "Yogyakarta",
+    "cityName": "Kota Yogyakarta",
     "aliases": []
   },
   {
     "provinceCode": "35",
     "provinceName": "Jawa Timur",
-    "cityCode": "35.78",
-    "cityName": "Surabaya",
+    "cityCode": "35.26",
+    "cityName": "Bangkalan",
     "aliases": []
   },
   {
     "provinceCode": "35",
     "provinceName": "Jawa Timur",
-    "cityCode": "35.73",
-    "cityName": "Malang",
+    "cityCode": "35.10",
+    "cityName": "Banyuwangi",
     "aliases": []
   },
   {
     "provinceCode": "35",
     "provinceName": "Jawa Timur",
-    "cityCode": "35.77",
-    "cityName": "Madiun",
-    "aliases": []
-  },
-  {
-    "provinceCode": "35",
-    "provinceName": "Jawa Timur",
-    "cityCode": "35.71",
-    "cityName": "Kediri",
-    "aliases": []
-  },
-  {
-    "provinceCode": "35",
-    "provinceName": "Jawa Timur",
-    "cityCode": "35.72",
+    "cityCode": "35.05",
     "cityName": "Blitar",
     "aliases": []
   },
   {
     "provinceCode": "35",
     "provinceName": "Jawa Timur",
-    "cityCode": "35.74",
-    "cityName": "Probolinggo",
+    "cityCode": "35.22",
+    "cityName": "Bojonegoro",
     "aliases": []
   },
   {
     "provinceCode": "35",
     "provinceName": "Jawa Timur",
-    "cityCode": "35.75",
-    "cityName": "Pasuruan",
+    "cityCode": "35.12",
+    "cityName": "Bondowoso",
     "aliases": []
   },
   {
     "provinceCode": "35",
     "provinceName": "Jawa Timur",
-    "cityCode": "35.76",
+    "cityCode": "35.25",
+    "cityName": "Gresik",
+    "aliases": []
+  },
+  {
+    "provinceCode": "35",
+    "provinceName": "Jawa Timur",
+    "cityCode": "35.09",
+    "cityName": "Jember",
+    "aliases": []
+  },
+  {
+    "provinceCode": "35",
+    "provinceName": "Jawa Timur",
+    "cityCode": "35.17",
+    "cityName": "Jombang",
+    "aliases": []
+  },
+  {
+    "provinceCode": "35",
+    "provinceName": "Jawa Timur",
+    "cityCode": "35.06",
+    "cityName": "Kediri",
+    "aliases": []
+  },
+  {
+    "provinceCode": "35",
+    "provinceName": "Jawa Timur",
+    "cityCode": "35.24",
+    "cityName": "Lamongan",
+    "aliases": []
+  },
+  {
+    "provinceCode": "35",
+    "provinceName": "Jawa Timur",
+    "cityCode": "35.08",
+    "cityName": "Lumajang",
+    "aliases": []
+  },
+  {
+    "provinceCode": "35",
+    "provinceName": "Jawa Timur",
+    "cityCode": "35.19",
+    "cityName": "Madiun",
+    "aliases": []
+  },
+  {
+    "provinceCode": "35",
+    "provinceName": "Jawa Timur",
+    "cityCode": "35.20",
+    "cityName": "Magetan",
+    "aliases": []
+  },
+  {
+    "provinceCode": "35",
+    "provinceName": "Jawa Timur",
+    "cityCode": "35.07",
+    "cityName": "Malang",
+    "aliases": []
+  },
+  {
+    "provinceCode": "35",
+    "provinceName": "Jawa Timur",
+    "cityCode": "35.16",
     "cityName": "Mojokerto",
     "aliases": []
   },
   {
     "provinceCode": "35",
     "provinceName": "Jawa Timur",
+    "cityCode": "35.18",
+    "cityName": "Nganjuk",
+    "aliases": []
+  },
+  {
+    "provinceCode": "35",
+    "provinceName": "Jawa Timur",
+    "cityCode": "35.21",
+    "cityName": "Ngawi",
+    "aliases": []
+  },
+  {
+    "provinceCode": "35",
+    "provinceName": "Jawa Timur",
+    "cityCode": "35.01",
+    "cityName": "Pacitan",
+    "aliases": []
+  },
+  {
+    "provinceCode": "35",
+    "provinceName": "Jawa Timur",
+    "cityCode": "35.27",
+    "cityName": "Pamekasan",
+    "aliases": []
+  },
+  {
+    "provinceCode": "35",
+    "provinceName": "Jawa Timur",
+    "cityCode": "35.14",
+    "cityName": "Pasuruan",
+    "aliases": []
+  },
+  {
+    "provinceCode": "35",
+    "provinceName": "Jawa Timur",
+    "cityCode": "35.02",
+    "cityName": "Ponorogo",
+    "aliases": []
+  },
+  {
+    "provinceCode": "35",
+    "provinceName": "Jawa Timur",
+    "cityCode": "35.13",
+    "cityName": "Probolinggo",
+    "aliases": []
+  },
+  {
+    "provinceCode": "35",
+    "provinceName": "Jawa Timur",
+    "cityCode": "35.28",
+    "cityName": "Sampang",
+    "aliases": []
+  },
+  {
+    "provinceCode": "35",
+    "provinceName": "Jawa Timur",
+    "cityCode": "35.15",
+    "cityName": "Sidoarjo",
+    "aliases": []
+  },
+  {
+    "provinceCode": "35",
+    "provinceName": "Jawa Timur",
+    "cityCode": "35.11",
+    "cityName": "Situbondo",
+    "aliases": []
+  },
+  {
+    "provinceCode": "35",
+    "provinceName": "Jawa Timur",
+    "cityCode": "35.29",
+    "cityName": "Sumenep",
+    "aliases": []
+  },
+  {
+    "provinceCode": "35",
+    "provinceName": "Jawa Timur",
+    "cityCode": "35.03",
+    "cityName": "Trenggalek",
+    "aliases": []
+  },
+  {
+    "provinceCode": "35",
+    "provinceName": "Jawa Timur",
+    "cityCode": "35.23",
+    "cityName": "Tuban",
+    "aliases": []
+  },
+  {
+    "provinceCode": "35",
+    "provinceName": "Jawa Timur",
+    "cityCode": "35.04",
+    "cityName": "Tulungagung",
+    "aliases": []
+  },
+  {
+    "provinceCode": "35",
+    "provinceName": "Jawa Timur",
     "cityCode": "35.79",
-    "cityName": "Batu",
+    "cityName": "Kota Batu",
+    "aliases": []
+  },
+  {
+    "provinceCode": "35",
+    "provinceName": "Jawa Timur",
+    "cityCode": "35.72",
+    "cityName": "Kota Blitar",
+    "aliases": []
+  },
+  {
+    "provinceCode": "35",
+    "provinceName": "Jawa Timur",
+    "cityCode": "35.71",
+    "cityName": "Kota Kediri",
+    "aliases": []
+  },
+  {
+    "provinceCode": "35",
+    "provinceName": "Jawa Timur",
+    "cityCode": "35.77",
+    "cityName": "Kota Madiun",
+    "aliases": []
+  },
+  {
+    "provinceCode": "35",
+    "provinceName": "Jawa Timur",
+    "cityCode": "35.73",
+    "cityName": "Kota Malang",
+    "aliases": []
+  },
+  {
+    "provinceCode": "35",
+    "provinceName": "Jawa Timur",
+    "cityCode": "35.76",
+    "cityName": "Kota Mojokerto",
+    "aliases": []
+  },
+  {
+    "provinceCode": "35",
+    "provinceName": "Jawa Timur",
+    "cityCode": "35.75",
+    "cityName": "Kota Pasuruan",
+    "aliases": []
+  },
+  {
+    "provinceCode": "35",
+    "provinceName": "Jawa Timur",
+    "cityCode": "35.74",
+    "cityName": "Kota Probolinggo",
+    "aliases": []
+  },
+  {
+    "provinceCode": "35",
+    "provinceName": "Jawa Timur",
+    "cityCode": "35.78",
+    "cityName": "Kota Surabaya",
     "aliases": []
   },
   {
     "provinceCode": "36",
     "provinceName": "Banten",
-    "cityCode": "36.73",
+    "cityCode": "36.02",
+    "cityName": "Lebak",
+    "aliases": []
+  },
+  {
+    "provinceCode": "36",
+    "provinceName": "Banten",
+    "cityCode": "36.01",
+    "cityName": "Pandeglang",
+    "aliases": []
+  },
+  {
+    "provinceCode": "36",
+    "provinceName": "Banten",
+    "cityCode": "36.04",
     "cityName": "Serang",
     "aliases": []
   },
   {
     "provinceCode": "36",
     "provinceName": "Banten",
-    "cityCode": "36.72",
-    "cityName": "Cilegon",
-    "aliases": []
-  },
-  {
-    "provinceCode": "36",
-    "provinceName": "Banten",
-    "cityCode": "36.71",
+    "cityCode": "36.03",
     "cityName": "Tangerang",
     "aliases": []
   },
   {
     "provinceCode": "36",
     "provinceName": "Banten",
+    "cityCode": "36.72",
+    "cityName": "Kota Cilegon",
+    "aliases": []
+  },
+  {
+    "provinceCode": "36",
+    "provinceName": "Banten",
+    "cityCode": "36.73",
+    "cityName": "Kota Serang",
+    "aliases": []
+  },
+  {
+    "provinceCode": "36",
+    "provinceName": "Banten",
+    "cityCode": "36.71",
+    "cityName": "Kota Tangerang",
+    "aliases": []
+  },
+  {
+    "provinceCode": "36",
+    "provinceName": "Banten",
     "cityCode": "36.74",
-    "cityName": "Tangerang Selatan",
+    "cityName": "Kota Tangerang Selatan",
+    "aliases": []
+  },
+  {
+    "provinceCode": "51",
+    "provinceName": "Bali",
+    "cityCode": "51.03",
+    "cityName": "Badung",
+    "aliases": []
+  },
+  {
+    "provinceCode": "51",
+    "provinceName": "Bali",
+    "cityCode": "51.06",
+    "cityName": "Bangli",
+    "aliases": []
+  },
+  {
+    "provinceCode": "51",
+    "provinceName": "Bali",
+    "cityCode": "51.08",
+    "cityName": "Buleleng",
+    "aliases": []
+  },
+  {
+    "provinceCode": "51",
+    "provinceName": "Bali",
+    "cityCode": "51.04",
+    "cityName": "Gianyar",
+    "aliases": []
+  },
+  {
+    "provinceCode": "51",
+    "provinceName": "Bali",
+    "cityCode": "51.01",
+    "cityName": "Jembrana",
+    "aliases": []
+  },
+  {
+    "provinceCode": "51",
+    "provinceName": "Bali",
+    "cityCode": "51.07",
+    "cityName": "Karangasem",
+    "aliases": []
+  },
+  {
+    "provinceCode": "51",
+    "provinceName": "Bali",
+    "cityCode": "51.05",
+    "cityName": "Klungkung",
+    "aliases": []
+  },
+  {
+    "provinceCode": "51",
+    "provinceName": "Bali",
+    "cityCode": "51.02",
+    "cityName": "Tabanan",
     "aliases": []
   },
   {
     "provinceCode": "51",
     "provinceName": "Bali",
     "cityCode": "51.71",
-    "cityName": "Denpasar",
+    "cityName": "Kota Denpasar",
     "aliases": []
   },
   {
     "provinceCode": "52",
     "provinceName": "Nusa Tenggara Barat",
-    "cityCode": "52.71",
-    "cityName": "Mataram",
+    "cityCode": "52.06",
+    "cityName": "Bima",
+    "aliases": []
+  },
+  {
+    "provinceCode": "52",
+    "provinceName": "Nusa Tenggara Barat",
+    "cityCode": "52.05",
+    "cityName": "Dompu",
+    "aliases": []
+  },
+  {
+    "provinceCode": "52",
+    "provinceName": "Nusa Tenggara Barat",
+    "cityCode": "52.01",
+    "cityName": "Lombok Barat",
+    "aliases": []
+  },
+  {
+    "provinceCode": "52",
+    "provinceName": "Nusa Tenggara Barat",
+    "cityCode": "52.02",
+    "cityName": "Lombok Tengah",
+    "aliases": []
+  },
+  {
+    "provinceCode": "52",
+    "provinceName": "Nusa Tenggara Barat",
+    "cityCode": "52.03",
+    "cityName": "Lombok Timur",
+    "aliases": []
+  },
+  {
+    "provinceCode": "52",
+    "provinceName": "Nusa Tenggara Barat",
+    "cityCode": "52.08",
+    "cityName": "Lombok Utara",
+    "aliases": []
+  },
+  {
+    "provinceCode": "52",
+    "provinceName": "Nusa Tenggara Barat",
+    "cityCode": "52.04",
+    "cityName": "Sumbawa",
+    "aliases": []
+  },
+  {
+    "provinceCode": "52",
+    "provinceName": "Nusa Tenggara Barat",
+    "cityCode": "52.07",
+    "cityName": "Sumbawa Barat",
     "aliases": []
   },
   {
     "provinceCode": "52",
     "provinceName": "Nusa Tenggara Barat",
     "cityCode": "52.72",
-    "cityName": "Bima",
+    "cityName": "Kota Bima",
+    "aliases": []
+  },
+  {
+    "provinceCode": "52",
+    "provinceName": "Nusa Tenggara Barat",
+    "cityCode": "52.71",
+    "cityName": "Kota Mataram",
+    "aliases": []
+  },
+  {
+    "provinceCode": "53",
+    "provinceName": "Nusa Tenggara Timur",
+    "cityCode": "53.05",
+    "cityName": "Alor",
+    "aliases": []
+  },
+  {
+    "provinceCode": "53",
+    "provinceName": "Nusa Tenggara Timur",
+    "cityCode": "53.04",
+    "cityName": "Belu",
+    "aliases": []
+  },
+  {
+    "provinceCode": "53",
+    "provinceName": "Nusa Tenggara Timur",
+    "cityCode": "53.10",
+    "cityName": "Ende",
+    "aliases": []
+  },
+  {
+    "provinceCode": "53",
+    "provinceName": "Nusa Tenggara Timur",
+    "cityCode": "53.06",
+    "cityName": "Flores Timur",
+    "aliases": []
+  },
+  {
+    "provinceCode": "53",
+    "provinceName": "Nusa Tenggara Timur",
+    "cityCode": "53.01",
+    "cityName": "Kupang",
+    "aliases": []
+  },
+  {
+    "provinceCode": "53",
+    "provinceName": "Nusa Tenggara Timur",
+    "cityCode": "53.13",
+    "cityName": "Lembata",
+    "aliases": []
+  },
+  {
+    "provinceCode": "53",
+    "provinceName": "Nusa Tenggara Timur",
+    "cityCode": "53.21",
+    "cityName": "Malaka",
+    "aliases": []
+  },
+  {
+    "provinceCode": "53",
+    "provinceName": "Nusa Tenggara Timur",
+    "cityCode": "53.08",
+    "cityName": "Manggarai",
+    "aliases": []
+  },
+  {
+    "provinceCode": "53",
+    "provinceName": "Nusa Tenggara Timur",
+    "cityCode": "53.16",
+    "cityName": "Manggarai Barat",
+    "aliases": []
+  },
+  {
+    "provinceCode": "53",
+    "provinceName": "Nusa Tenggara Timur",
+    "cityCode": "53.19",
+    "cityName": "Manggarai Timur",
+    "aliases": []
+  },
+  {
+    "provinceCode": "53",
+    "provinceName": "Nusa Tenggara Timur",
+    "cityCode": "53.18",
+    "cityName": "Nagekeo",
+    "aliases": []
+  },
+  {
+    "provinceCode": "53",
+    "provinceName": "Nusa Tenggara Timur",
+    "cityCode": "53.09",
+    "cityName": "Ngada",
+    "aliases": []
+  },
+  {
+    "provinceCode": "53",
+    "provinceName": "Nusa Tenggara Timur",
+    "cityCode": "53.15",
+    "cityName": "Rote Ndao",
+    "aliases": []
+  },
+  {
+    "provinceCode": "53",
+    "provinceName": "Nusa Tenggara Timur",
+    "cityCode": "53.20",
+    "cityName": "Sabu Raijua",
+    "aliases": []
+  },
+  {
+    "provinceCode": "53",
+    "provinceName": "Nusa Tenggara Timur",
+    "cityCode": "53.07",
+    "cityName": "Sikka",
+    "aliases": []
+  },
+  {
+    "provinceCode": "53",
+    "provinceName": "Nusa Tenggara Timur",
+    "cityCode": "53.11",
+    "cityName": "Sumba Barat",
+    "aliases": []
+  },
+  {
+    "provinceCode": "53",
+    "provinceName": "Nusa Tenggara Timur",
+    "cityCode": "53.17",
+    "cityName": "Sumba Barat Daya",
+    "aliases": []
+  },
+  {
+    "provinceCode": "53",
+    "provinceName": "Nusa Tenggara Timur",
+    "cityCode": "53.14",
+    "cityName": "Sumba Tengah",
+    "aliases": []
+  },
+  {
+    "provinceCode": "53",
+    "provinceName": "Nusa Tenggara Timur",
+    "cityCode": "53.03",
+    "cityName": "Sumba Timur",
+    "aliases": []
+  },
+  {
+    "provinceCode": "53",
+    "provinceName": "Nusa Tenggara Timur",
+    "cityCode": "53.02",
+    "cityName": "Timor Tengah Selatan",
     "aliases": []
   },
   {
     "provinceCode": "53",
     "provinceName": "Nusa Tenggara Timur",
     "cityCode": "53.71",
-    "cityName": "Kupang",
+    "cityName": "Kota Kupang",
     "aliases": []
   },
   {
     "provinceCode": "61",
     "provinceName": "Kalimantan Barat",
-    "cityCode": "61.71",
+    "cityCode": "61.07",
+    "cityName": "Bengkayang",
+    "aliases": []
+  },
+  {
+    "provinceCode": "61",
+    "provinceName": "Kalimantan Barat",
+    "cityCode": "61.05",
+    "cityName": "Kapuas Hulu",
+    "aliases": []
+  },
+  {
+    "provinceCode": "61",
+    "provinceName": "Kalimantan Barat",
+    "cityCode": "61.11",
+    "cityName": "Kayong Utara",
+    "aliases": []
+  },
+  {
+    "provinceCode": "61",
+    "provinceName": "Kalimantan Barat",
+    "cityCode": "61.04",
+    "cityName": "Ketapang",
+    "aliases": []
+  },
+  {
+    "provinceCode": "61",
+    "provinceName": "Kalimantan Barat",
+    "cityCode": "61.12",
+    "cityName": "Kubu Raya",
+    "aliases": []
+  },
+  {
+    "provinceCode": "61",
+    "provinceName": "Kalimantan Barat",
+    "cityCode": "61.10",
+    "cityName": "Landak",
+    "aliases": []
+  },
+  {
+    "provinceCode": "61",
+    "provinceName": "Kalimantan Barat",
+    "cityCode": "61.09",
+    "cityName": "Melawi",
+    "aliases": []
+  },
+  {
+    "provinceCode": "61",
+    "provinceName": "Kalimantan Barat",
+    "cityCode": "61.01",
     "cityName": "Pontianak",
     "aliases": []
   },
   {
     "provinceCode": "61",
     "provinceName": "Kalimantan Barat",
+    "cityCode": "61.02",
+    "cityName": "Sambas",
+    "aliases": []
+  },
+  {
+    "provinceCode": "61",
+    "provinceName": "Kalimantan Barat",
+    "cityCode": "61.03",
+    "cityName": "Sanggau",
+    "aliases": []
+  },
+  {
+    "provinceCode": "61",
+    "provinceName": "Kalimantan Barat",
+    "cityCode": "61.08",
+    "cityName": "Sekadau",
+    "aliases": []
+  },
+  {
+    "provinceCode": "61",
+    "provinceName": "Kalimantan Barat",
+    "cityCode": "61.06",
+    "cityName": "Sintang",
+    "aliases": []
+  },
+  {
+    "provinceCode": "61",
+    "provinceName": "Kalimantan Barat",
+    "cityCode": "61.71",
+    "cityName": "Kota Pontianak",
+    "aliases": []
+  },
+  {
+    "provinceCode": "61",
+    "provinceName": "Kalimantan Barat",
     "cityCode": "61.72",
-    "cityName": "Singkawang",
+    "cityName": "Kota Singkawang",
+    "aliases": []
+  },
+  {
+    "provinceCode": "62",
+    "provinceName": "Kalimantan Tengah",
+    "cityCode": "62.02",
+    "cityName": "Barito Selatan",
+    "aliases": []
+  },
+  {
+    "provinceCode": "62",
+    "provinceName": "Kalimantan Tengah",
+    "cityCode": "62.13",
+    "cityName": "Barito Timur",
+    "aliases": []
+  },
+  {
+    "provinceCode": "62",
+    "provinceName": "Kalimantan Tengah",
+    "cityCode": "62.12",
+    "cityName": "Barito Utara",
+    "aliases": []
+  },
+  {
+    "provinceCode": "62",
+    "provinceName": "Kalimantan Tengah",
+    "cityCode": "62.05",
+    "cityName": "Gunung Mas",
+    "aliases": []
+  },
+  {
+    "provinceCode": "62",
+    "provinceName": "Kalimantan Tengah",
+    "cityCode": "62.03",
+    "cityName": "Kapuas",
+    "aliases": []
+  },
+  {
+    "provinceCode": "62",
+    "provinceName": "Kalimantan Tengah",
+    "cityCode": "62.06",
+    "cityName": "Katingan",
+    "aliases": []
+  },
+  {
+    "provinceCode": "62",
+    "provinceName": "Kalimantan Tengah",
+    "cityCode": "62.01",
+    "cityName": "Kotawaringin Barat",
+    "aliases": []
+  },
+  {
+    "provinceCode": "62",
+    "provinceName": "Kalimantan Tengah",
+    "cityCode": "62.04",
+    "cityName": "Kotawaringin Timur",
+    "aliases": []
+  },
+  {
+    "provinceCode": "62",
+    "provinceName": "Kalimantan Tengah",
+    "cityCode": "62.09",
+    "cityName": "Lamandau",
+    "aliases": []
+  },
+  {
+    "provinceCode": "62",
+    "provinceName": "Kalimantan Tengah",
+    "cityCode": "62.11",
+    "cityName": "Murung Raya",
+    "aliases": []
+  },
+  {
+    "provinceCode": "62",
+    "provinceName": "Kalimantan Tengah",
+    "cityCode": "62.10",
+    "cityName": "Pulang Pisau",
+    "aliases": []
+  },
+  {
+    "provinceCode": "62",
+    "provinceName": "Kalimantan Tengah",
+    "cityCode": "62.07",
+    "cityName": "Seruyan",
+    "aliases": []
+  },
+  {
+    "provinceCode": "62",
+    "provinceName": "Kalimantan Tengah",
+    "cityCode": "62.08",
+    "cityName": "Sukamara",
     "aliases": []
   },
   {
     "provinceCode": "62",
     "provinceName": "Kalimantan Tengah",
     "cityCode": "62.71",
-    "cityName": "Palangkaraya",
+    "cityName": "Kota Palangkaraya",
+    "aliases": []
+  },
+  {
+    "provinceCode": "63",
+    "provinceName": "Kalimantan Selatan",
+    "cityCode": "63.11",
+    "cityName": "Balangan",
+    "aliases": []
+  },
+  {
+    "provinceCode": "63",
+    "provinceName": "Kalimantan Selatan",
+    "cityCode": "63.02",
+    "cityName": "Banjar",
+    "aliases": []
+  },
+  {
+    "provinceCode": "63",
+    "provinceName": "Kalimantan Selatan",
+    "cityCode": "63.04",
+    "cityName": "Barito Kuala",
+    "aliases": []
+  },
+  {
+    "provinceCode": "63",
+    "provinceName": "Kalimantan Selatan",
+    "cityCode": "63.06",
+    "cityName": "Hulu Sungai Selatan",
+    "aliases": []
+  },
+  {
+    "provinceCode": "63",
+    "provinceName": "Kalimantan Selatan",
+    "cityCode": "63.07",
+    "cityName": "Hulu Sungai Tengah",
+    "aliases": []
+  },
+  {
+    "provinceCode": "63",
+    "provinceName": "Kalimantan Selatan",
+    "cityCode": "63.08",
+    "cityName": "Hulu Sungai Utara",
+    "aliases": []
+  },
+  {
+    "provinceCode": "63",
+    "provinceName": "Kalimantan Selatan",
+    "cityCode": "63.03",
+    "cityName": "Kotabaru",
+    "aliases": []
+  },
+  {
+    "provinceCode": "63",
+    "provinceName": "Kalimantan Selatan",
+    "cityCode": "63.10",
+    "cityName": "Tabalong",
+    "aliases": []
+  },
+  {
+    "provinceCode": "63",
+    "provinceName": "Kalimantan Selatan",
+    "cityCode": "63.09",
+    "cityName": "Tanah Bumbu",
+    "aliases": []
+  },
+  {
+    "provinceCode": "63",
+    "provinceName": "Kalimantan Selatan",
+    "cityCode": "63.01",
+    "cityName": "Tanah Laut",
+    "aliases": []
+  },
+  {
+    "provinceCode": "63",
+    "provinceName": "Kalimantan Selatan",
+    "cityCode": "63.05",
+    "cityName": "Tapin",
     "aliases": []
   },
   {
     "provinceCode": "63",
     "provinceName": "Kalimantan Selatan",
     "cityCode": "63.71",
-    "cityName": "Banjarmasin",
+    "cityName": "Kota Banjarmasin",
     "aliases": []
   },
   {
     "provinceCode": "63",
     "provinceName": "Kalimantan Selatan",
     "cityCode": "63.72",
-    "cityName": "Banjarbaru",
+    "cityName": "Kota Banjarbaru",
     "aliases": []
   },
   {
     "provinceCode": "64",
     "provinceName": "Kalimantan Timur",
-    "cityCode": "64.71",
-    "cityName": "Balikpapan",
+    "cityCode": "64.03",
+    "cityName": "Berau",
     "aliases": []
   },
   {
     "provinceCode": "64",
     "provinceName": "Kalimantan Timur",
-    "cityCode": "64.72",
-    "cityName": "Samarinda",
-    "aliases": []
-  },
-  {
-    "provinceCode": "64",
-    "provinceName": "Kalimantan Timur",
-    "cityCode": "64.74",
-    "cityName": "Bontang",
+    "cityCode": "64.07",
+    "cityName": "Kutai Barat",
     "aliases": []
   },
   {
     "provinceCode": "64",
     "provinceName": "Kalimantan Timur",
     "cityCode": "64.02",
-    "cityName": "Tenggarong",
+    "cityName": "Kutai Kartanegara",
+    "aliases": []
+  },
+  {
+    "provinceCode": "64",
+    "provinceName": "Kalimantan Timur",
+    "cityCode": "64.08",
+    "cityName": "Kutai Timur",
+    "aliases": []
+  },
+  {
+    "provinceCode": "64",
+    "provinceName": "Kalimantan Timur",
+    "cityCode": "64.11",
+    "cityName": "Mahakam Ulu",
+    "aliases": []
+  },
+  {
+    "provinceCode": "64",
+    "provinceName": "Kalimantan Timur",
+    "cityCode": "64.01",
+    "cityName": "Paser",
+    "aliases": []
+  },
+  {
+    "provinceCode": "64",
+    "provinceName": "Kalimantan Timur",
+    "cityCode": "64.09",
+    "cityName": "Penajam Paser Utara",
+    "aliases": []
+  },
+  {
+    "provinceCode": "64",
+    "provinceName": "Kalimantan Timur",
+    "cityCode": "64.71",
+    "cityName": "Kota Balikpapan",
+    "aliases": []
+  },
+  {
+    "provinceCode": "64",
+    "provinceName": "Kalimantan Timur",
+    "cityCode": "64.74",
+    "cityName": "Kota Bontang",
+    "aliases": []
+  },
+  {
+    "provinceCode": "64",
+    "provinceName": "Kalimantan Timur",
+    "cityCode": "64.72",
+    "cityName": "Kota Samarinda",
+    "aliases": []
+  },
+  {
+    "provinceCode": "65",
+    "provinceName": "Kalimantan Utara",
+    "cityCode": "65.01",
+    "cityName": "Bulungan",
+    "aliases": []
+  },
+  {
+    "provinceCode": "65",
+    "provinceName": "Kalimantan Utara",
+    "cityCode": "65.02",
+    "cityName": "Malinau",
+    "aliases": []
+  },
+  {
+    "provinceCode": "65",
+    "provinceName": "Kalimantan Utara",
+    "cityCode": "65.03",
+    "cityName": "Nunukan",
+    "aliases": []
+  },
+  {
+    "provinceCode": "65",
+    "provinceName": "Kalimantan Utara",
+    "cityCode": "65.04",
+    "cityName": "Tana Tidung",
     "aliases": []
   },
   {
     "provinceCode": "65",
     "provinceName": "Kalimantan Utara",
     "cityCode": "65.71",
-    "cityName": "Tarakan",
+    "cityName": "Kota Tarakan",
     "aliases": []
   },
   {
     "provinceCode": "71",
     "provinceName": "Sulawesi Utara",
-    "cityCode": "71.71",
-    "cityName": "Manado",
+    "cityCode": "71.01",
+    "cityName": "Bolaang Mongondow",
+    "aliases": []
+  },
+  {
+    "provinceCode": "71",
+    "provinceName": "Sulawesi Utara",
+    "cityCode": "71.11",
+    "cityName": "Bolaang Mongondow Selatan",
+    "aliases": []
+  },
+  {
+    "provinceCode": "71",
+    "provinceName": "Sulawesi Utara",
+    "cityCode": "71.08",
+    "cityName": "Bolaang Mongondow Timur",
+    "aliases": []
+  },
+  {
+    "provinceCode": "71",
+    "provinceName": "Sulawesi Utara",
+    "cityCode": "71.07",
+    "cityName": "Bolaang Mongondow Utara",
+    "aliases": []
+  },
+  {
+    "provinceCode": "71",
+    "provinceName": "Sulawesi Utara",
+    "cityCode": "71.03",
+    "cityName": "Kepulauan Sangihe",
+    "aliases": []
+  },
+  {
+    "provinceCode": "71",
+    "provinceName": "Sulawesi Utara",
+    "cityCode": "71.09",
+    "cityName": "Kepulauan Siau Tagulandang Biaro",
+    "aliases": []
+  },
+  {
+    "provinceCode": "71",
+    "provinceName": "Sulawesi Utara",
+    "cityCode": "71.04",
+    "cityName": "Kepulauan Talaud",
+    "aliases": []
+  },
+  {
+    "provinceCode": "71",
+    "provinceName": "Sulawesi Utara",
+    "cityCode": "71.02",
+    "cityName": "Minahasa",
+    "aliases": []
+  },
+  {
+    "provinceCode": "71",
+    "provinceName": "Sulawesi Utara",
+    "cityCode": "71.05",
+    "cityName": "Minahasa Selatan",
+    "aliases": []
+  },
+  {
+    "provinceCode": "71",
+    "provinceName": "Sulawesi Utara",
+    "cityCode": "71.06",
+    "cityName": "Minahasa Tenggara",
+    "aliases": []
+  },
+  {
+    "provinceCode": "71",
+    "provinceName": "Sulawesi Utara",
+    "cityCode": "71.10",
+    "cityName": "Minahasa Utara",
     "aliases": []
   },
   {
     "provinceCode": "71",
     "provinceName": "Sulawesi Utara",
     "cityCode": "71.72",
-    "cityName": "Bitung",
-    "aliases": []
-  },
-  {
-    "provinceCode": "71",
-    "provinceName": "Sulawesi Utara",
-    "cityCode": "71.73",
-    "cityName": "Tomohon",
+    "cityName": "Kota Bitung",
     "aliases": []
   },
   {
     "provinceCode": "71",
     "provinceName": "Sulawesi Utara",
     "cityCode": "71.74",
-    "cityName": "Kotamobagu",
+    "cityName": "Kota Kotamobagu",
+    "aliases": []
+  },
+  {
+    "provinceCode": "71",
+    "provinceName": "Sulawesi Utara",
+    "cityCode": "71.71",
+    "cityName": "Kota Manado",
+    "aliases": []
+  },
+  {
+    "provinceCode": "71",
+    "provinceName": "Sulawesi Utara",
+    "cityCode": "71.73",
+    "cityName": "Kota Tomohon",
+    "aliases": []
+  },
+  {
+    "provinceCode": "72",
+    "provinceName": "Sulawesi Tengah",
+    "cityCode": "72.07",
+    "cityName": "Banggai",
+    "aliases": []
+  },
+  {
+    "provinceCode": "72",
+    "provinceName": "Sulawesi Tengah",
+    "cityCode": "72.11",
+    "cityName": "Banggai Kepulauan",
+    "aliases": []
+  },
+  {
+    "provinceCode": "72",
+    "provinceName": "Sulawesi Tengah",
+    "cityCode": "72.12",
+    "cityName": "Banggai Laut",
+    "aliases": []
+  },
+  {
+    "provinceCode": "72",
+    "provinceName": "Sulawesi Tengah",
+    "cityCode": "72.06",
+    "cityName": "Buol",
+    "aliases": []
+  },
+  {
+    "provinceCode": "72",
+    "provinceName": "Sulawesi Tengah",
+    "cityCode": "72.02",
+    "cityName": "Donggala",
+    "aliases": []
+  },
+  {
+    "provinceCode": "72",
+    "provinceName": "Sulawesi Tengah",
+    "cityCode": "72.09",
+    "cityName": "Morowali",
+    "aliases": []
+  },
+  {
+    "provinceCode": "72",
+    "provinceName": "Sulawesi Tengah",
+    "cityCode": "72.13",
+    "cityName": "Morowali Utara",
+    "aliases": []
+  },
+  {
+    "provinceCode": "72",
+    "provinceName": "Sulawesi Tengah",
+    "cityCode": "72.10",
+    "cityName": "Parigi Moutong",
+    "aliases": []
+  },
+  {
+    "provinceCode": "72",
+    "provinceName": "Sulawesi Tengah",
+    "cityCode": "72.04",
+    "cityName": "Poso",
+    "aliases": []
+  },
+  {
+    "provinceCode": "72",
+    "provinceName": "Sulawesi Tengah",
+    "cityCode": "72.14",
+    "cityName": "Sigi",
+    "aliases": []
+  },
+  {
+    "provinceCode": "72",
+    "provinceName": "Sulawesi Tengah",
+    "cityCode": "72.08",
+    "cityName": "Tojo Una-Una",
+    "aliases": []
+  },
+  {
+    "provinceCode": "72",
+    "provinceName": "Sulawesi Tengah",
+    "cityCode": "72.05",
+    "cityName": "Toli-Toli",
     "aliases": []
   },
   {
     "provinceCode": "72",
     "provinceName": "Sulawesi Tengah",
     "cityCode": "72.71",
-    "cityName": "Palu",
+    "cityName": "Kota Palu",
+    "aliases": []
+  },
+  {
+    "provinceCode": "73",
+    "provinceName": "Sulawesi Selatan",
+    "cityCode": "73.08",
+    "cityName": "Barru",
+    "aliases": []
+  },
+  {
+    "provinceCode": "73",
+    "provinceName": "Sulawesi Selatan",
+    "cityCode": "73.06",
+    "cityName": "Bone",
+    "aliases": []
+  },
+  {
+    "provinceCode": "73",
+    "provinceName": "Sulawesi Selatan",
+    "cityCode": "73.03",
+    "cityName": "Bulukumba",
+    "aliases": []
+  },
+  {
+    "provinceCode": "73",
+    "provinceName": "Sulawesi Selatan",
+    "cityCode": "73.02",
+    "cityName": "Bantaeng",
+    "aliases": []
+  },
+  {
+    "provinceCode": "73",
+    "provinceName": "Sulawesi Selatan",
+    "cityCode": "73.09",
+    "cityName": "Enrekang",
+    "aliases": []
+  },
+  {
+    "provinceCode": "73",
+    "provinceName": "Sulawesi Selatan",
+    "cityCode": "73.07",
+    "cityName": "Gowa",
+    "aliases": []
+  },
+  {
+    "provinceCode": "73",
+    "provinceName": "Sulawesi Selatan",
+    "cityCode": "73.04",
+    "cityName": "Jeneponto",
+    "aliases": []
+  },
+  {
+    "provinceCode": "73",
+    "provinceName": "Sulawesi Selatan",
+    "cityCode": "73.01",
+    "cityName": "Kepulauan Selayar",
+    "aliases": []
+  },
+  {
+    "provinceCode": "73",
+    "provinceName": "Sulawesi Selatan",
+    "cityCode": "73.10",
+    "cityName": "Luwu",
+    "aliases": []
+  },
+  {
+    "provinceCode": "73",
+    "provinceName": "Sulawesi Selatan",
+    "cityCode": "73.24",
+    "cityName": "Luwu Timur",
+    "aliases": []
+  },
+  {
+    "provinceCode": "73",
+    "provinceName": "Sulawesi Selatan",
+    "cityCode": "73.22",
+    "cityName": "Luwu Utara",
+    "aliases": []
+  },
+  {
+    "provinceCode": "73",
+    "provinceName": "Sulawesi Selatan",
+    "cityCode": "73.05",
+    "cityName": "Maros",
+    "aliases": []
+  },
+  {
+    "provinceCode": "73",
+    "provinceName": "Sulawesi Selatan",
+    "cityCode": "73.11",
+    "cityName": "Pangkajene dan Kepulauan",
+    "aliases": []
+  },
+  {
+    "provinceCode": "73",
+    "provinceName": "Sulawesi Selatan",
+    "cityCode": "73.12",
+    "cityName": "Pinrang",
+    "aliases": []
+  },
+  {
+    "provinceCode": "73",
+    "provinceName": "Sulawesi Selatan",
+    "cityCode": "73.14",
+    "cityName": "Sidenreng Rappang",
+    "aliases": []
+  },
+  {
+    "provinceCode": "73",
+    "provinceName": "Sulawesi Selatan",
+    "cityCode": "73.13",
+    "cityName": "Sinjai",
+    "aliases": []
+  },
+  {
+    "provinceCode": "73",
+    "provinceName": "Sulawesi Selatan",
+    "cityCode": "73.15",
+    "cityName": "Soppeng",
+    "aliases": []
+  },
+  {
+    "provinceCode": "73",
+    "provinceName": "Sulawesi Selatan",
+    "cityCode": "73.16",
+    "cityName": "Takalar",
+    "aliases": []
+  },
+  {
+    "provinceCode": "73",
+    "provinceName": "Sulawesi Selatan",
+    "cityCode": "73.18",
+    "cityName": "Tana Toraja",
+    "aliases": []
+  },
+  {
+    "provinceCode": "73",
+    "provinceName": "Sulawesi Selatan",
+    "cityCode": "73.26",
+    "cityName": "Toraja Utara",
+    "aliases": []
+  },
+  {
+    "provinceCode": "73",
+    "provinceName": "Sulawesi Selatan",
+    "cityCode": "73.17",
+    "cityName": "Wajo",
     "aliases": []
   },
   {
     "provinceCode": "73",
     "provinceName": "Sulawesi Selatan",
     "cityCode": "73.71",
-    "cityName": "Makassar",
-    "aliases": []
-  },
-  {
-    "provinceCode": "73",
-    "provinceName": "Sulawesi Selatan",
-    "cityCode": "73.72",
-    "cityName": "Parepare",
+    "cityName": "Kota Makassar",
     "aliases": []
   },
   {
     "provinceCode": "73",
     "provinceName": "Sulawesi Selatan",
     "cityCode": "73.73",
-    "cityName": "Palopo",
+    "cityName": "Kota Palopo",
+    "aliases": []
+  },
+  {
+    "provinceCode": "73",
+    "provinceName": "Sulawesi Selatan",
+    "cityCode": "73.72",
+    "cityName": "Kota Parepare",
     "aliases": []
   },
   {
     "provinceCode": "74",
     "provinceName": "Sulawesi Tenggara",
-    "cityCode": "74.71",
-    "cityName": "Kendari",
+    "cityCode": "74.09",
+    "cityName": "Bombana",
+    "aliases": []
+  },
+  {
+    "provinceCode": "74",
+    "provinceName": "Sulawesi Tenggara",
+    "cityCode": "74.04",
+    "cityName": "Buton",
+    "aliases": []
+  },
+  {
+    "provinceCode": "74",
+    "provinceName": "Sulawesi Tenggara",
+    "cityCode": "74.15",
+    "cityName": "Buton Selatan",
+    "aliases": []
+  },
+  {
+    "provinceCode": "74",
+    "provinceName": "Sulawesi Tenggara",
+    "cityCode": "74.14",
+    "cityName": "Buton Tengah",
+    "aliases": []
+  },
+  {
+    "provinceCode": "74",
+    "provinceName": "Sulawesi Tenggara",
+    "cityCode": "74.12",
+    "cityName": "Buton Utara",
+    "aliases": []
+  },
+  {
+    "provinceCode": "74",
+    "provinceName": "Sulawesi Tenggara",
+    "cityCode": "74.01",
+    "cityName": "Kolaka",
+    "aliases": []
+  },
+  {
+    "provinceCode": "74",
+    "provinceName": "Sulawesi Tenggara",
+    "cityCode": "74.11",
+    "cityName": "Kolaka Timur",
+    "aliases": []
+  },
+  {
+    "provinceCode": "74",
+    "provinceName": "Sulawesi Tenggara",
+    "cityCode": "74.08",
+    "cityName": "Kolaka Utara",
+    "aliases": []
+  },
+  {
+    "provinceCode": "74",
+    "provinceName": "Sulawesi Tenggara",
+    "cityCode": "74.02",
+    "cityName": "Konawe",
+    "aliases": []
+  },
+  {
+    "provinceCode": "74",
+    "provinceName": "Sulawesi Tenggara",
+    "cityCode": "74.13",
+    "cityName": "Konawe Kepulauan",
+    "aliases": []
+  },
+  {
+    "provinceCode": "74",
+    "provinceName": "Sulawesi Tenggara",
+    "cityCode": "74.06",
+    "cityName": "Konawe Selatan",
+    "aliases": []
+  },
+  {
+    "provinceCode": "74",
+    "provinceName": "Sulawesi Tenggara",
+    "cityCode": "74.10",
+    "cityName": "Konawe Utara",
+    "aliases": []
+  },
+  {
+    "provinceCode": "74",
+    "provinceName": "Sulawesi Tenggara",
+    "cityCode": "74.05",
+    "cityName": "Muna",
+    "aliases": []
+  },
+  {
+    "provinceCode": "74",
+    "provinceName": "Sulawesi Tenggara",
+    "cityCode": "74.07",
+    "cityName": "Muna Barat",
+    "aliases": []
+  },
+  {
+    "provinceCode": "74",
+    "provinceName": "Sulawesi Tenggara",
+    "cityCode": "74.03",
+    "cityName": "Wakatobi",
     "aliases": []
   },
   {
     "provinceCode": "74",
     "provinceName": "Sulawesi Tenggara",
     "cityCode": "74.72",
-    "cityName": "Baubau",
+    "cityName": "Kota Baubau",
+    "aliases": []
+  },
+  {
+    "provinceCode": "74",
+    "provinceName": "Sulawesi Tenggara",
+    "cityCode": "74.71",
+    "cityName": "Kota Kendari",
+    "aliases": []
+  },
+  {
+    "provinceCode": "75",
+    "provinceName": "Gorontalo",
+    "cityCode": "75.01",
+    "cityName": "Boalemo",
+    "aliases": []
+  },
+  {
+    "provinceCode": "75",
+    "provinceName": "Gorontalo",
+    "cityCode": "75.03",
+    "cityName": "Bone Bolango",
+    "aliases": []
+  },
+  {
+    "provinceCode": "75",
+    "provinceName": "Gorontalo",
+    "cityCode": "75.02",
+    "cityName": "Gorontalo",
+    "aliases": []
+  },
+  {
+    "provinceCode": "75",
+    "provinceName": "Gorontalo",
+    "cityCode": "75.05",
+    "cityName": "Gorontalo Utara",
+    "aliases": []
+  },
+  {
+    "provinceCode": "75",
+    "provinceName": "Gorontalo",
+    "cityCode": "75.04",
+    "cityName": "Pohuwato",
     "aliases": []
   },
   {
     "provinceCode": "75",
     "provinceName": "Gorontalo",
     "cityCode": "75.71",
-    "cityName": "Gorontalo",
+    "cityName": "Kota Gorontalo",
+    "aliases": []
+  },
+  {
+    "provinceCode": "76",
+    "provinceName": "Sulawesi Barat",
+    "cityCode": "76.02",
+    "cityName": "Majene",
+    "aliases": []
+  },
+  {
+    "provinceCode": "76",
+    "provinceName": "Sulawesi Barat",
+    "cityCode": "76.03",
+    "cityName": "Mamasa",
     "aliases": []
   },
   {
@@ -658,66 +3129,241 @@
     "aliases": []
   },
   {
+    "provinceCode": "76",
+    "provinceName": "Sulawesi Barat",
+    "cityCode": "76.06",
+    "cityName": "Mamuju Tengah",
+    "aliases": []
+  },
+  {
+    "provinceCode": "76",
+    "provinceName": "Sulawesi Barat",
+    "cityCode": "76.04",
+    "cityName": "Pasangkayu",
+    "aliases": []
+  },
+  {
+    "provinceCode": "76",
+    "provinceName": "Sulawesi Barat",
+    "cityCode": "76.05",
+    "cityName": "Polewali Mandar",
+    "aliases": []
+  },
+  {
+    "provinceCode": "81",
+    "provinceName": "Maluku",
+    "cityCode": "81.03",
+    "cityName": "Buru",
+    "aliases": []
+  },
+  {
+    "provinceCode": "81",
+    "provinceName": "Maluku",
+    "cityCode": "81.08",
+    "cityName": "Buru Selatan",
+    "aliases": []
+  },
+  {
+    "provinceCode": "81",
+    "provinceName": "Maluku",
+    "cityCode": "81.07",
+    "cityName": "Kepulauan Aru",
+    "aliases": []
+  },
+  {
+    "provinceCode": "81",
+    "provinceName": "Maluku",
+    "cityCode": "81.06",
+    "cityName": "Kepulauan Tanimbar",
+    "aliases": []
+  },
+  {
+    "provinceCode": "81",
+    "provinceName": "Maluku",
+    "cityCode": "81.04",
+    "cityName": "Maluku Barat Daya",
+    "aliases": []
+  },
+  {
+    "provinceCode": "81",
+    "provinceName": "Maluku",
+    "cityCode": "81.02",
+    "cityName": "Maluku Tengah",
+    "aliases": []
+  },
+  {
+    "provinceCode": "81",
+    "provinceName": "Maluku",
+    "cityCode": "81.05",
+    "cityName": "Maluku Tenggara",
+    "aliases": []
+  },
+  {
+    "provinceCode": "81",
+    "provinceName": "Maluku",
+    "cityCode": "81.01",
+    "cityName": "Seram Bagian Barat",
+    "aliases": []
+  },
+  {
+    "provinceCode": "81",
+    "provinceName": "Maluku",
+    "cityCode": "81.09",
+    "cityName": "Seram Bagian Timur",
+    "aliases": []
+  },
+  {
     "provinceCode": "81",
     "provinceName": "Maluku",
     "cityCode": "81.71",
-    "cityName": "Ambon",
+    "cityName": "Kota Ambon",
     "aliases": []
   },
   {
     "provinceCode": "81",
     "provinceName": "Maluku",
     "cityCode": "81.72",
-    "cityName": "Tual",
+    "cityName": "Kota Tual",
     "aliases": []
   },
   {
     "provinceCode": "82",
     "provinceName": "Maluku Utara",
-    "cityCode": "82.71",
+    "cityCode": "82.02",
+    "cityName": "Halmahera Barat",
+    "aliases": []
+  },
+  {
+    "provinceCode": "82",
+    "provinceName": "Maluku Utara",
+    "cityCode": "82.03",
+    "cityName": "Halmahera Selatan",
+    "aliases": []
+  },
+  {
+    "provinceCode": "82",
+    "provinceName": "Maluku Utara",
+    "cityCode": "82.04",
+    "cityName": "Halmahera Tengah",
+    "aliases": []
+  },
+  {
+    "provinceCode": "82",
+    "provinceName": "Maluku Utara",
+    "cityCode": "82.05",
+    "cityName": "Halmahera Timur",
+    "aliases": []
+  },
+  {
+    "provinceCode": "82",
+    "provinceName": "Maluku Utara",
+    "cityCode": "82.06",
+    "cityName": "Halmahera Utara",
+    "aliases": []
+  },
+  {
+    "provinceCode": "82",
+    "provinceName": "Maluku Utara",
+    "cityCode": "82.07",
+    "cityName": "Kepulauan Sula",
+    "aliases": []
+  },
+  {
+    "provinceCode": "82",
+    "provinceName": "Maluku Utara",
+    "cityCode": "82.08",
+    "cityName": "Pulau Morotai",
+    "aliases": []
+  },
+  {
+    "provinceCode": "82",
+    "provinceName": "Maluku Utara",
+    "cityCode": "82.09",
+    "cityName": "Pulau Taliabu",
+    "aliases": []
+  },
+  {
+    "provinceCode": "82",
+    "provinceName": "Maluku Utara",
+    "cityCode": "82.01",
     "cityName": "Ternate",
     "aliases": []
   },
   {
     "provinceCode": "82",
     "provinceName": "Maluku Utara",
+    "cityCode": "82.71",
+    "cityName": "Kota Ternate",
+    "aliases": []
+  },
+  {
+    "provinceCode": "82",
+    "provinceName": "Maluku Utara",
     "cityCode": "82.72",
-    "cityName": "Tidore Kepulauan",
+    "cityName": "Kota Tidore Kepulauan",
     "aliases": []
   },
   {
     "provinceCode": "91",
     "provinceName": "Papua",
-    "cityCode": "91.71",
-    "cityName": "Jayapura",
+    "cityCode": "91.04",
+    "cityName": "Biak Numfor",
     "aliases": []
   },
   {
     "provinceCode": "91",
     "provinceName": "Papua",
     "cityCode": "91.01",
-    "cityName": "Merauke",
+    "cityName": "Jayapura",
     "aliases": []
   },
   {
     "provinceCode": "91",
     "provinceName": "Papua",
-    "cityCode": "92.71",
-    "cityName": "Sorong",
+    "cityCode": "91.11",
+    "cityName": "Keerom",
     "aliases": []
   },
   {
     "provinceCode": "91",
     "provinceName": "Papua",
     "cityCode": "91.02",
-    "cityName": "Timika",
+    "cityName": "Merauke",
     "aliases": []
   },
   {
-    "provinceCode": "32",
-    "provinceName": "Jawa Barat",
-    "cityCode": "32.14",
-    "cityName": "Purwakarta",
+    "provinceCode": "91",
+    "provinceName": "Papua",
+    "cityCode": "91.09",
+    "cityName": "Sarmi",
+    "aliases": []
+  },
+  {
+    "provinceCode": "91",
+    "provinceName": "Papua",
+    "cityCode": "91.07",
+    "cityName": "Waropen",
+    "aliases": []
+  },
+  {
+    "provinceCode": "91",
+    "provinceName": "Papua",
+    "cityCode": "91.08",
+    "cityName": "Yahukimo",
+    "aliases": []
+  },
+  {
+    "provinceCode": "91",
+    "provinceName": "Papua",
+    "cityCode": "91.10",
+    "cityName": "Yalimo",
+    "aliases": []
+  },
+  {
+    "provinceCode": "91",
+    "provinceName": "Papua",
+    "cityCode": "91.71",
+    "cityName": "Kota Jayapura",
     "aliases": []
   }
 ]
