@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { useAuthStore } from '@/store/authStore'
+import { useAuthStore, useAuthHydrated } from '@/store/authStore'
 import { AdminShell } from '@/components/layout/AdminShell'
 import { ParticipantShell } from '@/components/layout/ParticipantShell'
 import { PWAInstallBanner } from '@/components/features/scan/PWAInstallBanner'
@@ -33,6 +33,7 @@ function isParticipantAllowed(pathname: string): boolean {
 }
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
+  const hydrated = useAuthHydrated()
   const accessToken = useAuthStore((s) => s.accessToken)
   const user = useAuthStore((s) => s.user)
   const setAuth = useAuthStore((s) => s.setAuth)
@@ -41,6 +42,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const accessTokenRef = useRef(accessToken)
   const userRef = useRef(user)
+
+  // Show nothing while hydrating — prevents flash redirect to /login
+  if (!hydrated) return null
 
   const isAuthorized = useMemo(() => {
     if (!accessToken || !user) return false

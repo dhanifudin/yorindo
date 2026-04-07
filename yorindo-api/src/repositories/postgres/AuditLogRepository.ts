@@ -1,4 +1,5 @@
 import type { Pool, QueryResultRow } from 'pg'
+import { createId } from '@paralleldrive/cuid2'
 import type { IAuditLogRepository } from '../../interfaces/repositories/IAuditLogRepository.js'
 import type { AuditLog } from '../../types/domain.js'
 import { BasePostgresRepository } from './BasePostgresRepository.js'
@@ -39,9 +40,10 @@ export class PostgresAuditLogRepository
 
   async create(data: Omit<AuditLog, 'id' | 'createdAt'>): Promise<AuditLog> {
     const { rows } = await this.query<AuditLogRow>(
-      `INSERT INTO audit_logs (action, actor_id, actor_role, event_id, target_id, target_type, metadata)
-       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+      `INSERT INTO audit_logs (id, action, actor_id, actor_role, event_id, target_id, target_type, metadata)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
       [
+        createId(),
         data.action,
         data.actorId,
         data.actorRole,
