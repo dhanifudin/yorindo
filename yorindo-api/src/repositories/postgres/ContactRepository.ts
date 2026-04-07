@@ -143,6 +143,12 @@ export class PostgresContactRepository
     if (filters?.missingPhone) {
       conditions.push('phone IS NULL')
     }
+    if (filters?.hasEmail) {
+      conditions.push('email IS NOT NULL AND email <> \'\'')
+    }
+    if (filters?.hasPhone) {
+      conditions.push('phone IS NOT NULL AND phone <> \'\'')
+    }
     if (filters?.lastAttendedBefore) {
       conditions.push(`event_date < $${idx}`)
       values.push(filters.lastAttendedBefore)

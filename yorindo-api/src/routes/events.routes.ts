@@ -1110,7 +1110,11 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     if (body.data.filters?.behavior) contactFilters.behavior = body.data.filters.behavior
     if (body.data.filters?.lastAttendedBefore) contactFilters.lastAttendedBefore = body.data.filters.lastAttendedBefore
 
-    const recipientCount = body.data.contactIds?.length ?? (await contactRepository.findAll({ page: 1, pageSize: 500 }, contactFilters)).total
+    // Always exclude contacts missing phone or email — they can't receive any blast channel
+    const recipientCount = body.data.contactIds?.length ?? (await contactRepository.findAll(
+      { page: 1, pageSize: 500 },
+      { ...contactFilters, hasPhone: true, hasEmail: true },
+    )).total
     let templateName = 'Custom Message'
     let templateBody = body.data.customMessage || 'Mocked template body for ' + (body.data.templateId ?? 'unknown')
 
