@@ -2,9 +2,10 @@
 
 import { use, useState } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
-import Form from '@rjsf/core'
+import Form from '@rjsf/shadcn'
 import validator from '@rjsf/validator-ajv8'
 import type { RJSFSchema, UiSchema } from '@rjsf/utils'
+import '@rjsf/shadcn/dist/clean-slate.css'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
