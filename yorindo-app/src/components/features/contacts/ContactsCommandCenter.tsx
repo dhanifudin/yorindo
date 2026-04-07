@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect, startTransition } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useContacts } from '@/hooks/useContacts'
 import { Button } from '@/components/ui/button'
@@ -18,7 +18,7 @@ import { BlastModal } from './BlastModal'
 export function ContactsCommandCenter() {
   const [triageMode, setTriageMode] = useState<'flagged' | 'duplicates' | null>(null)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
-  const [selectedNames, setSelectedNames] = useState<string[]>([])   // ← Baru
+  const [selectedNames, setSelectedNames] = useState<string[]>([])
   const [selectMode, setSelectMode] = useState(false)
   const [resetKey, setResetKey] = useState(0)
   const [blastModalOpen, setBlastModalOpen] = useState(false)
@@ -29,7 +29,7 @@ export function ContactsCommandCenter() {
   const { setFilter } = useFilterStore()
   const { data: contacts } = useContacts()
 
-  // Reset selection saat ganti halaman
+  // Merge current page's selection with existing cross-page selection
   const handleSelectionChange = useCallback((ids: string[], names: string[]) => {
     setSelectedIds(ids)
     setSelectedNames(names)
@@ -46,13 +46,6 @@ export function ContactsCommandCenter() {
     setSelectMode(next)
     if (!next) handleClearSelection()
   }, [selectMode, handleClearSelection])
-
-  const currentPage = searchParams.get('page')
-
-  // Reset selection saat ganti halaman
-  useEffect(() => {
-    startTransition(() => { handleClearSelection() })
-  }, [currentPage, handleClearSelection])
 
   useEffect(() => {
     setFilter({
@@ -128,24 +121,16 @@ export function ContactsCommandCenter() {
       />
 
       {(() => {
-        // For selection mode, only blast contacts that have both phone and email
-        const blastableContacts = selectedIds.length > 0
-          ? (contacts?.data ?? []).filter(
-              (c) => selectedIds.includes(c.id) && !!c.phone && !!c.email
-            )
-          : []
-        const blastableIds = blastableContacts.map((c) => c.id)
-        const blastableNames = blastableContacts.map((c) => c.name)
         const isSelection = selectedIds.length > 0
         return (
           <BlastModal
             open={blastModalOpen}
             onClose={() => setBlastModalOpen(false)}
             onBlastSuccess={handleClearSelection}
-            recipientCount={isSelection ? blastableIds.length : (contacts?.pagination.total ?? 0)}
+            recipientCount={isSelection ? selectedIds.length : (contacts?.pagination.total ?? 0)}
             mode={isSelection ? 'selection' : 'segment'}
-            selectedIds={isSelection ? blastableIds : []}
-            selectedNames={isSelection ? blastableNames : []}
+            selectedIds={selectedIds}
+            selectedNames={selectedNames}
           />
         )
       })()}
