@@ -245,6 +245,7 @@ export default function EventsPage() {
         </SheetContent>
       </Sheet>
 
+
       {/* Mobile filter sheet */}
       <Sheet open={showFilterSheet} onOpenChange={setShowFilterSheet}>
         <SheetContent side="bottom" className="flex flex-col max-h-[70vh] overflow-y-auto">

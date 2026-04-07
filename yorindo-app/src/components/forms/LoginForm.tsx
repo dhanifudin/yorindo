@@ -6,7 +6,9 @@ import { z } from 'zod'
 import { useAuthStore } from '@/store/authStore'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { Eye, EyeOff } from 'lucide-react'
 import { Input } from '@/components/ui/input'
+import { InputGroup, InputGroupButton, InputGroupInput } from '@/components/ui/input-group'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 
@@ -20,6 +22,8 @@ export function LoginForm() {
   const { setAuth } = useAuthStore()
   const router = useRouter()
   const [apiError, setApiError] = useState<string | null>(null)
+
+  const [showPassword, setShowPassword] = useState(false)
 
   const {
     register,
@@ -66,13 +70,23 @@ export function LoginForm() {
 
       <div className="space-y-1.5">
         <Label htmlFor="password">Password</Label>
-        <Input
-          id="password"
-          type="password"
-          autoComplete="current-password"
-          {...register('password')}
-          aria-invalid={!!errors.password}
-        />
+        <InputGroup>
+          <InputGroupInput
+            id="password"
+            type={showPassword ? 'text' : 'password'}
+            autoComplete="current-password"
+            {...register('password')}
+            aria-invalid={!!errors.password}
+          />
+          <InputGroupButton
+            type="button"
+            variant="ghost"
+            aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
+            onClick={() => setShowPassword((prev) => !prev)}
+          >
+            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </InputGroupButton>
+        </InputGroup>
         {errors.password && (
           <p className="text-xs text-destructive">{errors.password.message}</p>
         )}
