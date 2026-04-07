@@ -42,6 +42,7 @@ export interface Event {
   is_paid: boolean         // AC7: default false
   price: number            // AC7: default 0
   payment_method: string | null  // AC7
+  registeredCount?: number // Capacity utilization (Story 4.7)
   createdAt: string
   updatedAt: string
 }
