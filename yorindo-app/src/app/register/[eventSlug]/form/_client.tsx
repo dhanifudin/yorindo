@@ -409,8 +409,8 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
                 <div className="space-y-4">
                   <p className="text-muted-foreground text-sm">Tidak ada pertanyaan survei untuk event ini.</p>
                   <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => setStep(0)}>← Kembali</Button>
-                    <Button className="flex-1" onClick={() => setStep(2)}>Lanjut →</Button>
+                    <Button variant="outline" className="h-11" onClick={() => setStep(0)}>← Kembali</Button>
+                    <Button className="flex-1 h-11" onClick={() => setStep(2)}>Lanjut →</Button>
                   </div>
                 </div>
               ) : (
@@ -426,10 +426,10 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
                   }}
                 >
                   <div className="flex gap-2 pt-4">
-                    <Button type="button" variant="outline" onClick={() => setStep(0)}>
+                    <Button type="button" variant="outline" className="h-11" onClick={() => setStep(0)}>
                       ← Kembali
                     </Button>
-                    <Button type="submit" className="flex-1">
+                    <Button type="submit" className="flex-1 h-11">
                       Lanjut →
                     </Button>
                   </div>
@@ -478,7 +478,7 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
                 )}
 
                 <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setStep(1)}>← Kembali</Button>
+                  <Button variant="outline" className="h-11" onClick={() => setStep(1)}>← Kembali</Button>
                   <Button
                     className="flex-1 h-11"
                     onClick={() => setStep(3)}
@@ -515,7 +515,7 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
                 </span>
               </label>
               <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setStep(2)}>← Kembali</Button>
+                <Button variant="outline" className="h-11" onClick={() => setStep(2)}>← Kembali</Button>
                 <Button
                   className="flex-1 h-11"
                   onClick={() => submitMutation.mutate()}
