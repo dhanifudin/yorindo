@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Combobox } from '@/components/ui/combobox'
 import { toast } from 'sonner'
 import type { Event } from '@/types/api'
 import { MockGoogleAuthDialog } from '@/components/auth/MockGoogleAuthDialog'
@@ -333,16 +333,14 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
                   <Label htmlFor="industry">
                     Jenis Industri Manufaktur <span className="text-destructive">*</span>
                   </Label>
-                  <Select value={form.industry} onValueChange={(v) => setForm((p) => ({ ...p, industry: v }))}>
-                    <SelectTrigger id="industry">
-                      <SelectValue placeholder="Pilih industri" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {INDUSTRIES.map((ind) => (
-                        <SelectItem key={ind} value={ind}>{ind}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Combobox
+                    options={INDUSTRIES.map((ind) => ({ value: ind, label: ind }))}
+                    value={form.industry}
+                    onValueChange={(v) => setForm((p) => ({ ...p, industry: v }))}
+                    placeholder="Pilih industri"
+                    searchPlaceholder="Cari industri..."
+                    emptyText="Industri tidak ditemukan."
+                  />
                 </div>
 
                 <div className="space-y-1.5">
