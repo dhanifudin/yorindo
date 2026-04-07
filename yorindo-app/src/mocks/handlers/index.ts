@@ -13,6 +13,7 @@ import { blastHandlers } from './blast'
 import { vendorHandlers } from './vendors'
 import { uploadHandlers } from './uploads'
 import { locationHandlers } from './locations'
+import { surveysHandlers } from './surveys'
 
 export const handlers = [
   ...locationHandlers,  // before others — /api/locations/* must be caught early

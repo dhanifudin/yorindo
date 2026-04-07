@@ -153,7 +153,7 @@ export const registrationHandlers = [
     await delay(400)
     // Read incoming payload and persist order object if provided
     // Note: the real API validates payloads; MSW mock accepts flexible shape for tests
-    const payload = await request.json().catch(() => ({}))
+    const payload = await request.json().catch(() => ({})) as Record<string, unknown>
     const newReg: StoredRegistration = {
       id: makeMockCuid2(),
       contactId: contactsPool[registrationsStore.length % contactsPool.length].id,

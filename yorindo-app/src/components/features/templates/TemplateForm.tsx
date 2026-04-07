@@ -261,7 +261,6 @@ export default function TemplateForm({
           <p className="font-medium mb-3">Preview Langsung</p>
           <TemplatePreview
             body={bodyValue}
-            type={type}
             channel={channel}
             logoUrl={logoPreview}
             imageType={imageType}
