@@ -552,6 +552,18 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(201).send(responseBody)
   })
 
+  fastify.get('/api/events/public/:slug', async (request, reply) => {
+    const { slug } = request.params as { slug: string }
+    const event = await eventRepository.findBySlug(slug)
+    if (!event) {
+      return reply.status(404).send({
+        error: { code: 'NOT_FOUND', message: 'Event not found', details: [] },
+      })
+    }
+    const surveySchema = await surveyRepository.findByEventId(event.id, 'registration')
+    return reply.status(200).send(toEventDto(event, surveySchema?.fields ?? {}))
+  })
+
   fastify.get('/api/events/:id', { preHandler: requireAuth }, async (request, reply) => {
     const parsed = EventIdParamsSchema.safeParse(request.params)
     if (!parsed.success) return replyValidationError(reply, parsed.error.issues, 'Invalid event id')

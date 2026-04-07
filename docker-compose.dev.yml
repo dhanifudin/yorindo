@@ -8,7 +8,7 @@ services:
   api:
     image: node:24
     working_dir: /app
-    command: sh -c "npm run dev"
+    command: sh -c "npm ci && npm run dev"
     env_file: ./yorindo-api/.env
     environment:
       NODE_ENV: development
@@ -19,7 +19,7 @@ services:
       TSX_LEGACY_WATCH: "true" # required for WSL2 / Docker Desktop file watching
     volumes:
       - ./yorindo-api:/app
-      - ./yorindo-api/node_modules:/app/node_modules
+      - api_node_modules:/app/node_modules
     ports:
       - "3000:3000"
     depends_on:
@@ -29,7 +29,7 @@ services:
   app:
     image: node:24
     working_dir: /app
-    command: sh -c "npm run dev"
+    command: sh -c "npm ci && npm run dev"
     env_file: ./yorindo-app/.env
     environment:
       NODE_ENV: development
@@ -38,8 +38,8 @@ services:
       WATCHPACK_POLLING: "true" # required for WSL2 / Docker Desktop file watching
     volumes:
       - ./yorindo-app:/app
-      - ./yorindo-app/node_modules:/app/node_modules
-      - /app/.next
+      - app_node_modules:/app/node_modules
+      - app_next:/app/.next
     ports:
       - "5173:5173"
     depends_on:
@@ -63,3 +63,6 @@ services:
 
 volumes:
   postgres_dev_data:
+  api_node_modules:
+  app_node_modules:
+  app_next:
