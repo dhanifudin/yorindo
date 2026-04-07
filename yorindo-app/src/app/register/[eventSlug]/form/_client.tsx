@@ -95,12 +95,18 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
 
   // phone blur/lookup removed
 
-  // Build Google Calendar deep link
-  const calendarLink = event
-    ? `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(event.name)}&dates=${encodeURIComponent(
-        new Date(event.eventDate).toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z'
-      )}/${encodeURIComponent(new Date(new Date(event.eventDate).getTime() + 2 * 3600000).toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z')}&details=${encodeURIComponent(event.description ?? '')}`
-    : '#'
+  // Build Google Calendar deep link (guard against missing/invalid event date)
+  const calendarLink = (() => {
+    if (!event?.eventDate) return '#'
+    const startMs = Date.parse(event.eventDate)
+    if (isNaN(startMs)) return '#'
+    const start = new Date(startMs)
+    const end = new Date(startMs + 2 * 3600000) // default 2-hour duration
+    const fmt = (d: Date) => d.toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z'
+    const dates = `${encodeURIComponent(fmt(start))}/${encodeURIComponent(fmt(end))}`
+    const details = encodeURIComponent(event.description ?? '')
+    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(event.name)}&dates=${dates}&details=${details}`
+  })()
 
   if (submitted) {
     const shareUrl = `${window.location.origin}/register/${eventSlug}`
