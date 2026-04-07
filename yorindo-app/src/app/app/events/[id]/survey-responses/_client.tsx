@@ -4,7 +4,6 @@ import React, { useState } from 'react'
 import { useSurveyResponses } from '@/hooks/useSurveys'
 import { SurveyResponseCharts } from '@/components/features/surveys/SurveyResponseCharts'
 import { SurveyResponsesTable } from '@/components/features/surveys/SurveyResponsesTable'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {

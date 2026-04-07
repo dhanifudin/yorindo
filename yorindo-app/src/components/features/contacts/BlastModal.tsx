@@ -117,6 +117,7 @@ export function BlastModal({
     },
   })
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const channel = form.watch('channel')
   const templateId = form.watch('templateId')
 

@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Check, ChevronsUpDown, X, Upload, ImageIcon, Loader2 } from 'lucide-react'
+import { Check, ChevronsUpDown, X, ImageIcon, Loader2 } from 'lucide-react'
 import Image from 'next/image'
 import { useCreateEvent, useUpdateEvent } from '@/hooks/useEvents'
 import { useVendors } from '@/hooks/useVendors'
@@ -54,18 +54,6 @@ const EVENT_TYPES = [
   { value: 'webinar', label: 'Webinar' },
 ]
 
-const ALLOWED_IMAGE_TYPES: ReadonlySet<string> = new Set([
-  'image/jpeg',
-  'image/jpg',
-  'image/png',
-  'image/webp',
-  'image/gif',
-  'image/avif',
-  'image/svg+xml',
-])
-
-const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024 // 5 MB
-
 // ─── Zod Schema ───────────────────────────────────────────────────────────────
 
 const schema = z.object({
@@ -91,59 +79,6 @@ interface EventCreateFormProps {
   event?: Event
   onSuccess: () => void
   onCancel: () => void
-}
-
-interface BannerUploadProps {
-  value: string
-  onChange: (url: string) => void
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function validateImageFile(file: File): string | null {
-  if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
-    const ext = file.name.split('.').pop()?.toUpperCase() ?? file.type
-    return `Format ${ext} tidak didukung. Gunakan JPG, PNG, WebP, GIF, atau AVIF.`
-  }
-  if (file.size > MAX_FILE_SIZE_BYTES) {
-    const sizeMB = (file.size / 1024 / 1024).toFixed(1)
-    return `Ukuran file ${sizeMB}MB melebihi batas 5MB. Kompres gambar terlebih dahulu.`
-  }
-  return null
-}
-
-function validateImageUrl(url: string): string | null {
-  try {
-    new URL(url)
-  } catch {
-    return 'Format URL tidak valid. Pastikan diawali dengan https://'
-  }
-  const hasImageExt = /\.(jpg|jpeg|png|webp|gif|avif|svg)(\?.*)?$/i.test(url)
-  if (!hasImageExt) {
-    return 'URL harus mengarah ke file gambar (contoh: .jpg, .png, .webp)'
-  }
-  return null
-}
-
-/**
- * MOCK upload — tidak perlu backend.
- * Simulate delay jaringan, lalu return blob URL lokal dari file yang dipilih.
- *
- * Nanti kalau backend sudah siap, ganti isi fungsi ini dengan:
- *   const formData = new FormData()
- *   formData.append('file', file)
- *   const res = await fetch('/api/uploads/image', { method: 'POST', body: formData })
- *   if (!res.ok) throw new Error('Upload gagal')
- *   const data = await res.json()
- *   return data.url
- *
- * CATATAN: blob URL hanya valid selama sesi browser saat ini.
- * Untuk production, backend harus menyimpan file ke storage
- * (Supabase Storage, S3, Cloudinary, dll) dan return URL permanen.
- */
-async function mockUploadImage(file: File): Promise<string> {
-  await new Promise((resolve) => setTimeout(resolve, 900))
-  return URL.createObjectURL(file)
 }
 
 // ─── Main Form ────────────────────────────────────────────────────────────────
@@ -204,7 +139,7 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
     },
   })
 
-  const isPaidWatched = watch('is_paid')
+  // eslint-disable-next-line react-hooks/incompatible-library
   const bannerUrlWatched = watch('bannerUrl')
 
 

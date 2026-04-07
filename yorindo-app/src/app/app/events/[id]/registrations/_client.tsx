@@ -95,15 +95,16 @@ export default function RegistrationsPage({ params }: RegistrationsPageProps) {
     staleTime: 30_000,
   })
 
-  const allRows = rawData?.data ?? []
-
   // FIFO waitlist rank map: { [regId]: position (1-based) } — O(1) lookup in column render
   const waitlistRanks = useMemo<Record<string, number>>(() => {
-    const sorted = allRows
+    const rows = rawData?.data ?? []
+    const sorted = rows
       .filter((r) => r.status === 'waitlisted')
       .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
     return Object.fromEntries(sorted.map((r, i) => [r.id, i + 1]))
-  }, [allRows])
+  }, [rawData?.data])
+
+  const allRows = rawData?.data ?? []
 
   // Derive quota status from current data
   const approvedCount = allRows.filter(
@@ -466,6 +467,7 @@ export default function RegistrationsPage({ params }: RegistrationsPageProps) {
     },
   ], [quotaFull, waitlistRanks]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data: allRows,
     columns,
@@ -490,11 +492,11 @@ export default function RegistrationsPage({ params }: RegistrationsPageProps) {
   // AI recommendation: all pending rows with score >= 80, sorted by score desc
   const aiRecommendedIds = useMemo(
     () =>
-      allRows
+      (rawData?.data ?? [])
         .filter((r) => r.status === 'pending' && r.aiScore >= 80)
         .sort((a, b) => b.aiScore - a.aiScore)
         .map((r) => r.id),
-    [allRows]
+    [rawData?.data]
   )
 
   const selectedIds = table
