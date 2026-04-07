@@ -136,6 +136,7 @@ export function ContactsCommandCenter() {
         recipientCount={selectedIds.length > 0 ? selectedIds.length : (contacts?.pagination.total ?? 0)}
         mode={selectedIds.length > 0 ? 'selection' : 'segment'}
         selectedIds={selectedIds}
+        selectedNames={selectedNames}
       />
     </div>
   )
