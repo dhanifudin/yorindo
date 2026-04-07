@@ -16,14 +16,14 @@ describe('Contacts handler', () => {
     expect(data.pagination.pageSize).toBe(20)
   })
 
-  it('filters contacts by industry', async () => {
-    const res = await fetch('/api/contacts?page=1&pageSize=50&industry=teknologi')
+  it('filters contacts by serviceType', async () => {
+    const res = await fetch('/api/contacts?page=1&pageSize=50&serviceType=teknologi')
     const data = await res.json()
 
     expect(res.ok).toBe(true)
-    // All returned contacts should match the industry filter
-    data.data.forEach((contact: { industryId: string }) => {
-      expect(contact.industryId).toBe('teknologi')
+    // All returned contacts should match the serviceType filter
+    data.data.forEach((contact: { serviceType: string }) => {
+      expect(contact.serviceType).toBe('teknologi')
     })
   })
 

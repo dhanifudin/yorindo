@@ -72,7 +72,11 @@ export class ErasureService {
     await this.contactRepository.anonymize(contact.id, hashedPhone)
 
     // Ensure suppressed in suppression list (for blast exclusion)
-    await this.suppressionRepository.suppress(phone, 'erasure_request')
+    await this.suppressionRepository.suppress(contact.id, 'erasure_request', { 
+      phone, 
+      email: contact.email,
+      name: 'Anonymized'
+    })
 
     // Audit: NO PII in log
     await this.auditLogger.log({

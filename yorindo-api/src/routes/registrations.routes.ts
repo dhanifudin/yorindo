@@ -150,11 +150,16 @@ export const registrationsRoutes: FastifyPluginAsync = async (fastify) => {
           name: payload.name,
           phone: payload.phone,
           email: payload.email,
-          industryId: null,
-          jobTitleId: null,
+          serviceType: null,
+          jobTitle: null,
           city: null,
+          provinceCode: null,
+          provinceName: null,
+          cityCode: null,
+          cityName: null,
           company: null,
-          companySize: null,
+          department: null,
+          eventDate: null,
           source: 'form',
           completenessScore: 0.55,
           consentStatus: 'active',
@@ -330,7 +335,7 @@ export const registrationsRoutes: FastifyPluginAsync = async (fastify) => {
       })
     } else {
       await whatsAppService.send({
-        to: contact.phone,
+        to: contact.phone ?? '',
         templateName: 'ticket_resend',
         body: `Tiket untuk ${event.name} telah dikirim ulang kepada ${contact.name}.`,
         variables: {

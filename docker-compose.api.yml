@@ -8,7 +8,11 @@ services:
     environment:
       REPOSITORY_IMPL: memory
       SERVICE_IMPL: mock
-      DATABASE_URL: postgresql://yorindo:${POSTGRES_PASSWORD}@postgres:5432/yorindo
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: yorindo
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: yorindo
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       UPLOADS_DIR: /app/uploads
       SENTRY_DSN: ${API_SENTRY_DSN:-}

@@ -31,6 +31,8 @@ function makeJob(overrides: Partial<BlastJobData> = {}): BlastJobData {
     eventId: 'event-001',
     channel: 'email',
     templateId: 'tmpl-001',
+    templateBody: 'Hello {{name}}',
+    templateName: 'Test Template',
     enqueuedBy: 'user-001',
     ...overrides,
   }
@@ -64,6 +66,10 @@ describe('BlastService', () => {
   })
 
   it('email channel sends only to non-suppressed contacts with email', async () => {
+    const { data: contacts } = await contactRepo.findAll({ page: 1, pageSize: 20 })
+    const contact = contacts.find((c) => c.email !== null)!
+    await suppressionRepo.suppress(contact.id, 'test_suppression', { email: contact.email })
+
     const result = await blastService.processJob(makeJob({ channel: 'email' }))
 
     const sentEmails = emailService.getSentEmails()
@@ -90,7 +96,11 @@ describe('BlastService', () => {
 
   it('suppressed contacts are excluded from delivery', async () => {
     const { data: contacts } = await contactRepo.findAll({ page: 1, pageSize: 1 })
-    await suppressionRepo.suppress(contacts[0]!.id, 'manual suppression')
+    const contact = contacts[0]!
+    await suppressionRepo.suppress(contact.id, 'manual suppression', { 
+      phone: contact.phone, 
+      email: contact.email 
+    })
 
     const result = await blastService.processJob(makeJob({ channel: 'whatsapp' }))
 

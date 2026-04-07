@@ -155,7 +155,7 @@ components:
     # ─── Contact ───────────────────────────────────────────────────────────────
     Contact:
       type: object
-      required: [id, name, phone, completenessScore, consentStatus, createdAt, updatedAt]
+      required: [id, name, completenessScore, consentStatus, createdAt, updatedAt]
       properties:
         id:
           type: string
@@ -165,22 +165,22 @@ components:
           example: Budi Santoso
         phone:
           type: string
+          nullable: true
           example: "+6281234567890"
         email:
           type: string
-          format: email
           nullable: true
           example: budi@example.com
-        industryId:
+        serviceType:
           type: string
           nullable: true
-          example: teknologi
-          description: Industry id from industries lookup table
-        jobTitleId:
+          example: Konsultasi
+          description: Raw service type from uploaded data
+        jobTitle:
           type: string
           nullable: true
-          example: direktur
-          description: Id from job_titles lookup table
+          example: Manajer
+          description: Raw job title from uploaded data
         city:
           type: string
           nullable: true
@@ -189,11 +189,15 @@ components:
           type: string
           nullable: true
           example: PT Teknologi Maju
-        companySize:
+        department:
           type: string
           nullable: true
-          enum: [small, medium, large, enterprise, '', null]
-          example: medium
+          example: Sales
+        eventDate:
+          type: string
+          nullable: true
+          example: '2026-03-31'
+          description: Date of the event the contact attended
         source:
           type: string
           nullable: true
@@ -357,6 +361,10 @@ components:
           type: string
           format: date-time
           example: "2026-03-19T10:30:00.000Z"
+        postSurveyEnabled:
+          type: boolean
+          example: false
+          description: Whether post-event survey is enabled
 
     CreateEventBody:
       type: object
@@ -416,6 +424,9 @@ components:
         targetCriteria:
           type: object
           additionalProperties: true
+        postSurveyEnabled:
+          type: boolean
+          description: Toggle post-event survey enablement
 
     PaginatedEvents:
       type: object
@@ -490,7 +501,6 @@ components:
               example: PT Maju Jaya
             contactEmail:
               type: string
-              format: email
               nullable: true
               example: budi@example.com
             contactPhone:
@@ -582,7 +592,6 @@ components:
           type: string
         email:
           type: string
-          format: email
         phone:
           type: string
           example: "+6281234567890"
@@ -722,7 +731,6 @@ components:
           type: string
         email:
           type: string
-          format: email
           example: admin@yorindo.id
         name:
           type: string
@@ -744,7 +752,6 @@ components:
       properties:
         email:
           type: string
-          format: email
         name:
           type: string
         role:
@@ -796,7 +803,6 @@ components:
       properties:
         email:
           type: string
-          format: email
           example: admin@yorindo.id
         password:
           type: string
@@ -995,7 +1001,6 @@ components:
           type: string
         email:
           type: string
-          format: email
         phone:
           type: string
         industryId:
@@ -1089,7 +1094,6 @@ components:
           example: Alibaba Cloud
         contact_email:
           type: string
-          format: email
           example: sponsor@alibabacloud.com
         industry:
           type: string
@@ -1126,7 +1130,6 @@ components:
           type: string
         contact_email:
           type: string
-          format: email
         industry:
           type: string
         logo_url:
@@ -1147,7 +1150,6 @@ components:
           type: string
         contact_email:
           type: string
-          format: email
         industry:
           type: string
         logo_url:
@@ -1278,6 +1280,7 @@ components:
         schema:
           type: object
           required: [type, properties]
+          additionalProperties: true
           properties:
             type:
               type: string
@@ -1424,17 +1427,13 @@ components:
 
     ContactFacets:
       type: object
-      required: [industry, city, companySize]
+      required: [serviceType, city]
       properties:
-        industry:
+        serviceType:
           type: array
           items:
             $ref: '#/components/schemas/FacetItem'
         city:
-          type: array
-          items:
-            $ref: '#/components/schemas/FacetItem'
-        companySize:
           type: array
           items:
             $ref: '#/components/schemas/FacetItem'
@@ -1486,7 +1485,6 @@ components:
           example: Budi Santoso
         email:
           type: string
-          format: email
           nullable: true
           example: budi@example.com
         phone:
@@ -1517,7 +1515,6 @@ components:
       properties:
         email:
           type: string
-          format: email
           nullable: true
         phone:
           type: string
@@ -1710,7 +1707,6 @@ components:
           type: string
         contactEmail:
           type: string
-          format: email
           example: sponsor@alibabacloud.com
         expiresAt:
           type: string
@@ -2133,22 +2129,21 @@ paths:
         - $ref: '#/components/parameters/PageSizeParam'
         - $ref: '#/components/parameters/SortByParam'
         - $ref: '#/components/parameters/SortDirParam'
-        - name: industry
+        - name: serviceType
           in: query
           schema:
             type: string
-          description: Filter by industry slug
+          description: Filter by serviceType
         - name: city
           in: query
           schema:
             type: string
           description: Filter by city name
-        - name: companySize
+        - name: jobTitle
           in: query
           schema:
             type: string
-            enum: [micro, small, medium, large, enterprise]
-          description: Filter by company size
+          description: Filter by job title (partial match)
         - name: flagFilter
           in: query
           schema:
@@ -2342,7 +2337,6 @@ paths:
                       type: string
                     email:
                       type: string
-                      format: email
                       nullable: true
                     city:
                       type: string
@@ -2775,6 +2769,79 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
 
+  /contacts/blast:
+    post:
+      summary: Initiate a blast to a set of contacts or a contact segment
+      operationId: blastContacts
+      tags: [Contacts]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  required: [contactIds, eventLink]
+                  properties:
+                    contactIds:
+                      type: array
+                      items:
+                        type: string
+                        minLength: 1
+                      description: Explicit list of contact IDs to blast
+                    eventLink:
+                      type: string
+                      format: uri
+                      description: Event landing page URL included in the blast
+                - type: object
+                  required: [segmentParams, eventLink, total]
+                  properties:
+                    segmentParams:
+                      type: object
+                      additionalProperties:
+                        type: string
+                      description: Filter parameters defining the target segment
+                    eventLink:
+                      type: string
+                      format: uri
+                      description: Event landing page URL included in the blast
+                    total:
+                      type: integer
+                      minimum: 1
+                      description: Expected recipient count for the segment
+      responses:
+        '202':
+          description: Blast queued successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, eventLink, recipientCount]
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  eventLink:
+                    type: string
+                    format: uri
+                  recipientCount:
+                    type: integer
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
   # ─────────────────────────────────────────────────────────────────────────────
   # VENDORS
   # ─────────────────────────────────────────────────────────────────────────────
@@ -2981,6 +3048,31 @@ paths:
   # ─────────────────────────────────────────────────────────────────────────────
   # EVENTS
   # ─────────────────────────────────────────────────────────────────────────────
+  /events/public/{slug}:
+    get:
+      summary: Get a public event by slug (unauthenticated)
+      operationId: getPublicEventBySlug
+      tags: [Events]
+      security: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Event details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '404':
+          description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
   /events/check-slug:
     get:
       summary: Check if a slug is available
@@ -3434,6 +3526,59 @@ paths:
                 $ref: '#/components/schemas/ApiError'
         '404':
           description: Deleted event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /events/{id}/overview:
+    get:
+      summary: Get overview metrics for an event
+      operationId: getEventOverview
+      tags: [Events]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Event overview metrics
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [blastCount, registrationCount, approvedCount, attendedCount, pendingApprovals, seatsRemaining, daysUntilEvent, lastBlastAt]
+                properties:
+                  blastCount:
+                    type: integer
+                  registrationCount:
+                    type: integer
+                  approvedCount:
+                    type: integer
+                  attendedCount:
+                    type: integer
+                  pendingApprovals:
+                    type: integer
+                  seatsRemaining:
+                    type: integer
+                  daysUntilEvent:
+                    type: integer
+                  lastBlastAt:
+                    type: string
+                    format: date-time
+                    nullable: true
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Event not found
           content:
             application/json:
               schema:
@@ -4977,7 +5122,6 @@ paths:
                   minLength: 8
                 email:
                   type: string
-                  format: email
       responses:
         '202':
           description: Erasure request accepted
@@ -5365,6 +5509,33 @@ paths:
                 $ref: '#/components/schemas/ApiError'
         '409':
           description: Assignment already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /users/me:
+    get:
+      summary: Get current authenticated user profile
+      operationId: getCurrentUser
+      tags: [Users]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: User not found
           content:
             application/json:
               schema:

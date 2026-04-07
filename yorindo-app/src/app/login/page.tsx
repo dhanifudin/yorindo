@@ -3,23 +3,24 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-import { useAuthStore } from '@/store/authStore'
+import { useAuthStore, useAuthHydrated } from '@/store/authStore'
 import { LoginForm } from '@/components/forms/LoginForm'
 import { MockGoogleAuthDialog } from '@/components/auth/MockGoogleAuthDialog'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 
 export default function LoginPage() {
+  const hydrated = useAuthHydrated()
   const accessToken = useAuthStore((s) => s.accessToken)
   const setAuth = useAuthStore((s) => s.setAuth)
   const router = useRouter()
   const [showSsoDialog, setShowSsoDialog] = useState(false)
 
   useEffect(() => {
-    if (accessToken) router.replace('/app')
-  }, [accessToken, router])
+    if (hydrated && accessToken) router.replace('/app')
+  }, [hydrated, accessToken, router])
 
-  if (accessToken) return <div />
+  if (!hydrated || accessToken) return <div />
 
   const handleParticipantLogin = async (name: string, email: string) => {
     try {

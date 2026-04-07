@@ -10,6 +10,16 @@ function optional(key: string, fallback = ''): string {
   return process.env[key] ?? fallback
 }
 
+function buildDatabaseUrl(): string {
+  const user = optional('POSTGRES_USER')
+  const password = optional('POSTGRES_PASSWORD')
+  const host = optional('POSTGRES_HOST', 'localhost')
+  const port = optional('POSTGRES_PORT', '5432')
+  const db = optional('POSTGRES_DB')
+  if (!user || !password || !db) return ''
+  return `postgresql://${user}:${encodeURIComponent(password)}@${host}:${port}/${db}`
+}
+
 export const config = {
   port: parseInt(optional('PORT', '3000'), 10),
   nodeEnv: optional('NODE_ENV', 'development'),
@@ -30,7 +40,7 @@ export const config = {
   smartFilterAiProvider: optional('SMART_FILTER_AI_PROVIDER', 'mock'),
 
   // Phase 2 only — optional strings; empty in Phase 1
-  databaseUrl: optional('DATABASE_URL'),
+  databaseUrl: buildDatabaseUrl(),
   redisUrl: optional('REDIS_URL'),
   snapshotDir: optional('SNAPSHOT_DIR', '/data/snapshots'),
   uploadsDir: optional('UPLOADS_DIR', 'uploads'),

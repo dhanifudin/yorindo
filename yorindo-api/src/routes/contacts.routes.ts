@@ -2,30 +2,18 @@ import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
 import { auditLogRepository, contactRepository, eventRepository, flaggedRecordsRepository, registrationRepository, suppressionRepository } from '../container.js'
 import { requireAdmin, requireAuth, type JwtPayload } from '../middleware/auth.js'
-import type { CompanySize, Contact, DuplicatePair, FlaggedRecord, FlaggedRecordStatus, RegistrationStatus, SuppressionRecord } from '../types/domain.js'
-import { INDONESIAN_INDUSTRIES, INDONESIAN_JOB_TITLES } from '../repositories/memory/_seeds.js'
+import type { Contact, DuplicatePair, FlaggedRecord, FlaggedRecordStatus, RegistrationStatus, SuppressionRecord } from '../types/domain.js'
+import { INDONESIAN_INDUSTRIES } from '../repositories/memory/_seeds.js'
 import { validateOpenApiRequest, validateOpenApiResponse } from '../lib/openapi-contract.js'
 
-const COMPANY_SIZE_TO_DOMAIN: Record<string, CompanySize> = {
-  small: '<50',
-  medium: '50-200',
-  large: '200-1000',
-  enterprise: '>1000',
-}
-
-const COMPANY_SIZE_TO_API: Record<CompanySize, string> = {
-  '<50': 'small',
-  '50-200': 'medium',
-  '200-1000': 'large',
-  '>1000': 'enterprise',
-}
+// Constants removed
 
 const ContactsQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
-  industry: z.string().trim().optional(),
+  serviceType: z.string().trim().optional(),
   city: z.string().trim().optional(),
-  companySize: z.string().trim().optional(),
+  jobTitle: z.string().trim().optional(),
   flagFilter: z.enum(['flagged', 'unflagged']).optional(),
   missingEmail: z.coerce.boolean().optional(),
   missingPhone: z.coerce.boolean().optional(),
@@ -81,9 +69,9 @@ const FlaggedResolutionBodySchema = z.object({
     city: z.string().trim().nullable().optional(),
     company: z.string().trim().nullable().optional(),
     department: z.string().trim().nullable().optional(),
-    industryId: z.string().trim().nullable().optional(),
-    jobTitleId: z.string().trim().nullable().optional(),
-    companySize: z.enum(['small', 'medium', 'large', 'enterprise']).nullable().optional(),
+    serviceType: z.string().trim().nullable().optional(),
+    jobTitle: z.string().trim().nullable().optional(),
+    eventDate: z.string().trim().nullable().optional(),
   }).optional(),
 })
 
@@ -134,22 +122,6 @@ function scoreIndustryMatch(query: string, slug: string, label: string): number 
   return Math.min(0.8, 0.45 + (matchedTokens / tokens.length) * 0.3)
 }
 
-/**
- * Mengubah nilai company size FE ke enum internal repository.
- */
-function toDomainCompanySize(companySize?: string): string | undefined {
-  if (!companySize) return undefined
-  return COMPANY_SIZE_TO_DOMAIN[companySize] ?? companySize
-}
-
-/**
- * Mengubah nilai company size domain ke bentuk respons yang dipakai FE.
- */
-function toApiCompanySize(companySize: Contact['companySize']): string {
-  if (!companySize) return ''
-  return COMPANY_SIZE_TO_API[companySize] ?? companySize
-}
-
 function toNullableText(value: unknown): string | null {
   if (value === null || value === undefined) return null
   const normalized = String(value).trim()
@@ -160,27 +132,6 @@ function normalizeApprovedEmail(value: unknown): string | null {
   const email = toNullableText(value)?.toLowerCase() ?? null
   if (!email) return null
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : null
-}
-
-/**
- * Mengubah id industri internal menjadi slug yang dipakai kontrak FE.
- */
-function toIndustrySlug(industryId: Contact['industryId']): string {
-  if (!industryId) return ''
-  const found = INDONESIAN_INDUSTRIES.find((item) => item.id === industryId || item.slug === industryId)
-  return found?.slug ?? industryId
-}
-
-function toIndustryId(industryId: string | null | undefined): string | null {
-  if (!industryId) return null
-  const found = INDONESIAN_INDUSTRIES.find((item) => item.id === industryId || item.slug === industryId)
-  return found?.id ?? industryId
-}
-
-function toJobTitleId(jobTitleId: string | null | undefined): string | null {
-  if (!jobTitleId) return null
-  const found = INDONESIAN_JOB_TITLES.find((item) => item.id === jobTitleId || item.slug === jobTitleId)
-  return found?.id ?? jobTitleId
 }
 
 /**
@@ -205,19 +156,14 @@ function toFlagFilter(flagFilter?: 'flagged' | 'unflagged') {
  */
 function toFacetsDto(facets: Awaited<ReturnType<typeof contactRepository.findFacets>>) {
   return {
-    industry: facets.industries.map((item) => ({
-      slug: toIndustrySlug(item.id),
-      label: item.name,
+    serviceType: facets.serviceType.map((item) => ({
+      slug: item.slug,
+      label: item.label,
       count: item.count,
     })),
-    city: facets.cities.map((item) => ({
-      slug: item.city.toLowerCase(),
-      label: item.city,
-      count: item.count,
-    })),
-    companySize: facets.companySizes.map((item) => ({
-      slug: toApiCompanySize(item.size as Contact['companySize']),
-      label: toApiCompanySize(item.size as Contact['companySize']).replace(/^./, (value) => value.toUpperCase()),
+    city: facets.city.map((item) => ({
+      slug: item.slug,
+      label: item.label,
       count: item.count,
     })),
   }
@@ -233,10 +179,11 @@ function toContactDto(contact: Contact) {
     email: contact.email,
     phone: contact.phone,
     company: contact.company ?? '',
-    industryId: toIndustrySlug(contact.industryId),
-    jobTitleId: contact.jobTitleId ?? '',
+    serviceType: contact.serviceType ?? null,
+    jobTitle: contact.jobTitle ?? null,
+    department: contact.department ?? null,
     city: contact.city ?? '',
-    companySize: toApiCompanySize(contact.companySize),
+    eventDate: contact.eventDate ?? null,
     completenessScore: contact.completenessScore,
     consentStatus: contact.consentStatus,
     flagCategory: contact.flagCategory,
@@ -286,9 +233,9 @@ function getSuggestedData(record: FlaggedRecord): Record<string, unknown> {
     city: toNullableText(normalized.city ?? rawData['city']),
     company: toNullableText(normalized.company ?? rawData['company']),
     department: toNullableText(normalized.department ?? rawData['department']),
-    industryId: toIndustrySlug(toIndustryId(toNullableText(normalized.industrySlug ?? normalized.industryId))),
-    jobTitleId: toNullableText(normalized.jobTitleSlug ?? normalized.jobTitleId) ?? '',
-    companySize: toApiCompanySize(toDomainCompanySize(toNullableText(normalized.companySize) ?? undefined) as Contact['companySize']),
+    serviceType: toNullableText(normalized.serviceType ?? rawData['serviceType']),
+    jobTitle: toNullableText(normalized.jobTitle ?? rawData['jobTitle']),
+    eventDate: toNullableText(normalized.eventDate ?? rawData['eventDate']),
   }
 }
 
@@ -312,20 +259,20 @@ function computeApprovalCompleteness(input: {
   phone: string
   email: string | null
   company: string | null
-  industryId: string | null
-  jobTitleId: string | null
+  serviceType: string | null
+  jobTitle: string | null
+  department: string | null
   city: string | null
-  companySize: Contact['companySize']
 }): number {
   const fields = [
     input.name,
     input.phone,
     input.email,
     input.company,
-    input.industryId,
-    input.jobTitleId,
+    input.serviceType,
+    input.jobTitle,
+    input.department,
     input.city,
-    input.companySize,
   ]
   const filled = fields.filter((field) => field !== null && field !== undefined && field !== '').length
   return Math.round((filled / fields.length) * 1000) / 1000
@@ -404,9 +351,9 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
       sortDir?: 'asc' | 'desc'
     }
     const filters = {} as {
-      industry?: string
+      serviceType?: string
       city?: string
-      companySize?: string
+      jobTitle?: string
       missingEmail?: boolean
       missingPhone?: boolean
       flagCategory?: string
@@ -414,13 +361,12 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     const sortBy = toSortBy(query.sortBy)
-    const companySize = toDomainCompanySize(query.companySize)
     const flagFilter = toFlagFilter(query.flagFilter)
     if (sortBy) paginationParams.sortBy = sortBy
     if (query.sortDir) paginationParams.sortDir = query.sortDir
-    if (query.industry) filters.industry = query.industry
+    if (query.serviceType) filters.serviceType = query.serviceType
     if (query.city) filters.city = query.city
-    if (companySize) filters.companySize = companySize
+    if (query.jobTitle) filters.jobTitle = query.jobTitle
     if (query.missingEmail) filters.missingEmail = true
     if (query.missingPhone) filters.missingPhone = true
     if (query.q) filters.search = query.q
@@ -900,9 +846,9 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
       city: overrideData?.city !== undefined ? overrideData.city : toNullableText(suggested.city),
       company: overrideData?.company !== undefined ? overrideData.company : toNullableText(suggested.company),
       department: overrideData?.department !== undefined ? overrideData.department : toNullableText(suggested.department),
-      industryId: overrideData?.industryId !== undefined ? overrideData.industryId : toNullableText(suggested.industryId),
-      jobTitleId: overrideData?.jobTitleId !== undefined ? overrideData.jobTitleId : toNullableText(suggested.jobTitleId),
-      companySize: overrideData?.companySize !== undefined ? overrideData.companySize : (toNullableText(suggested.companySize) as string | null),
+      serviceType: overrideData?.serviceType !== undefined ? overrideData.serviceType : toNullableText(suggested.serviceType),
+      jobTitle: overrideData?.jobTitle !== undefined ? overrideData.jobTitle : toNullableText(suggested.jobTitle),
+      eventDate: overrideData?.eventDate !== undefined ? overrideData.eventDate : toNullableText(suggested.eventDate),
     }
 
     if (!approvedDraft.name || !approvedDraft.phone) {
@@ -922,22 +868,26 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
       name: approvedDraft.name,
       phone: approvedDraft.phone,
       email: approvedDraft.email,
-      industryId: toIndustryId(approvedDraft.industryId),
-      jobTitleId: toJobTitleId(approvedDraft.jobTitleId),
+      serviceType: approvedDraft.serviceType,
+      jobTitle: approvedDraft.jobTitle,
       city: approvedDraft.city,
+      provinceCode: null,
+      provinceName: null,
+      cityCode: null,
+      cityName: null,
       company: approvedDraft.company,
       department: approvedDraft.department,
-      companySize: toDomainCompanySize(approvedDraft.companySize ?? undefined) as Contact['companySize'],
+      eventDate: approvedDraft.eventDate,
       source: 'excel_upload',
       completenessScore: computeApprovalCompleteness({
         name: approvedDraft.name,
         phone: approvedDraft.phone,
         email: approvedDraft.email,
         company: approvedDraft.company,
-        industryId: toIndustryId(approvedDraft.industryId),
-        jobTitleId: toJobTitleId(approvedDraft.jobTitleId),
+        serviceType: approvedDraft.serviceType,
+        jobTitle: approvedDraft.jobTitle,
+        department: approvedDraft.department,
         city: approvedDraft.city,
-        companySize: toDomainCompanySize(approvedDraft.companySize ?? undefined) as Contact['companySize'],
       }),
       consentStatus: 'legacy_unverified',
       flagCategory: null,
@@ -951,9 +901,9 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
       city: approvedContact.city,
       company: approvedContact.company,
       department: approvedContact.department ?? null,
-      industryId: approvedContact.industryId,
-      jobTitleId: approvedContact.jobTitleId,
-      companySize: approvedContact.companySize,
+      serviceType: approvedContact.serviceType,
+      jobTitle: approvedContact.jobTitle,
+      eventDate: approvedContact.eventDate,
     }, actor.sub)
 
     const resolved = await flaggedRecordsRepository.findById(flaggedRecord.id)
@@ -977,9 +927,9 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
         city: approvedContact.city,
         company: approvedContact.company,
         department: approvedContact.department ?? null,
-        industryId: toIndustrySlug(approvedContact.industryId),
-        jobTitleId: approvedContact.jobTitleId ?? '',
-        companySize: toApiCompanySize(approvedContact.companySize),
+        serviceType: approvedContact.serviceType,
+        jobTitle: approvedContact.jobTitle,
+        eventDate: approvedContact.eventDate,
       },
     }
 
@@ -999,6 +949,113 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
 
     const responseBody = toFlaggedRecordDto(resolved)
     validateOpenApiResponse({ path: '/contacts/flagged/{id}', method: 'patch', status: 200, body: responseBody })
+    return reply.status(200).send(responseBody)
+  })
+
+  // ── POST /api/contacts/blast ──────────────────────────────────────
+  const BlastBodySchema = z.union([
+    z.object({
+      contactIds: z.array(z.string().trim().min(1)),
+      eventLink: z.string().trim().url(),
+    }),
+    z.object({
+      segmentParams: z.record(z.string()),
+      eventLink: z.string().trim().url(),
+      total: z.number().int().min(1),
+    }),
+  ])
+
+  fastify.post('/api/contacts/blast', adminOnly, async (request, reply) => {
+    const bodyResult = BlastBodySchema.safeParse(request.body)
+    if (!bodyResult.success) {
+      return reply.status(400).send({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Invalid blast payload',
+          details: bodyResult.error.issues,
+        },
+      })
+    }
+
+    validateOpenApiRequest({ path: '/contacts/blast', method: 'post', body: bodyResult.data })
+
+    const actor = request.user as JwtPayload
+    const payload = bodyResult.data
+    const blastTarget = 'contactIds' in payload
+      ? { type: 'contacts' as const, count: payload.contactIds.length, contactIds: payload.contactIds }
+      : { type: 'segment' as const, count: payload.total, segmentParams: payload.segmentParams }
+
+    // Persist blast to audit log; actual dispatch handled by notification worker
+    await auditLogRepository.create({
+      action: 'contact.blast_initiated',
+      actorId: actor.sub,
+      actorRole: actor.role,
+      eventId: null,
+      targetId: `blast-${Date.now()}`,
+      targetType: 'contact_blast',
+      metadata: {
+        target: blastTarget,
+        eventLink: payload.eventLink,
+        channel: 'email',
+        status: 'queued',
+      },
+    })
+
+    const responseBody = {
+      success: true,
+      message: `Blast queued for ${blastTarget.count} contacts`,
+      eventLink: payload.eventLink,
+      recipientCount: blastTarget.count,
+    }
+    validateOpenApiResponse({ path: '/contacts/blast', method: 'post', status: 202, body: responseBody })
+    return reply.status(202).send(responseBody)
+  })
+
+  // ── PUT /api/contacts/bulk-flag ───────────────────────────────────
+  const BulkFlagBodySchema = z.object({
+    ids: z.array(z.string().trim().min(1)),
+    flagCategory: z.enum(['invalid-data', 'duplicate']).nullable(),
+  })
+
+  fastify.put('/api/contacts/bulk-flag', adminOnly, async (request, reply) => {
+    const bodyResult = BulkFlagBodySchema.safeParse(request.body)
+    if (!bodyResult.success) {
+      return reply.status(400).send({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Invalid bulk flag payload',
+          details: bodyResult.error.issues,
+        },
+      })
+    }
+
+    validateOpenApiRequest({ path: '/contacts/bulk-flag', method: 'put', body: bodyResult.data })
+
+    const { ids, flagCategory } = bodyResult.data
+    let updated = 0
+    for (const id of ids) {
+      const result = await contactRepository.update(id, { flagCategory })
+      if (result) updated++
+    }
+
+    const actor = request.user as JwtPayload
+    await auditLogRepository.create({
+      action: 'contact.bulk_flagged',
+      actorId: actor.sub,
+      actorRole: actor.role,
+      eventId: null,
+      targetId: `bulk-flag-${Date.now()}`,
+      targetType: 'contact',
+      metadata: { ids, flagCategory, updated },
+    })
+
+    const responseBody = {
+      success: true,
+      updated,
+      requested: ids.length,
+      flagCategory,
+    }
+    validateOpenApiResponse({ path: '/contacts/bulk-flag', method: 'put', status: 200, body: responseBody })
     return reply.status(200).send(responseBody)
   })
 }

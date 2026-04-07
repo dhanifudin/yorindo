@@ -6,6 +6,7 @@ import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { useEvents } from '@/hooks/useEvents'
 import { useEventStore } from '@/store/eventStore'
 import { EventCreateForm } from '@/components/features/events/EventCreateForm'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -48,7 +49,6 @@ interface DeletedEvent extends Event {
 
 export default function EventsPage() {
   const [showForm, setShowForm] = useState(false)
-  const [showDeleted, setShowDeleted] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Event | null>(null)
   const [detailEvent, setDetailEvent] = useState<Event | null>(null)
   const [editEvent, setEditEvent] = useState<Event | null>(null)
@@ -66,6 +66,7 @@ export default function EventsPage() {
   const searchQuery = searchParams.get('search') || ''
   const startDate = searchParams.get('startDate') || ''
   const endDate = searchParams.get('endDate') || ''
+  const isDeletedView = searchParams.get('deleted') === 'true'
 
   const updateParams = useCallback(
     (updates: Record<string, string | null>) => {
@@ -149,7 +150,7 @@ export default function EventsPage() {
   const { data: deletedData } = useQuery<{ data: DeletedEvent[] }>({
     queryKey: ['events-deleted'],
     queryFn: () => fetch('/api/events?deleted=true').then((r) => r.json()),
-    enabled: showDeleted,
+    enabled: isDeletedView,
   })
 
   const deleteMutation = useMutation({
@@ -168,7 +169,7 @@ export default function EventsPage() {
 
   const restoreMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`/api/events/${id}/restore`, { method: 'POST' })
+      const res = await fetch(`/api/events/${id}/restore`, { method: 'PATCH' })
       if (!res.ok) throw new Error('Restore gagal')
       return res.json()
     },
@@ -188,14 +189,14 @@ export default function EventsPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Manajemen Event</h1>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => setShowDeleted((v) => !v)}>
-            {showDeleted ? 'Aktif' : 'Terhapus'} ({deletedData?.data.length ?? 0})
+          <Button variant="outline" size="sm" onClick={() => updateParams({ deleted: isDeletedView ? null : 'true' })}>
+            {isDeletedView ? 'Aktif' : 'Terhapus'} ({deletedData?.data.length ?? 0})
           </Button>
-          {!showDeleted && <Button onClick={() => setShowForm(true)}>+ Event Baru</Button>}
+          {!isDeletedView && <Button onClick={() => setShowForm(true)}>+ Event Baru</Button>}
         </div>
       </div>
 
-      {showForm && !showDeleted && (
+      {showForm && !isDeletedView && (
         <Card className="mb-6">
           <CardContent className="pt-6">
             <h2 className="text-lg font-semibold mb-4">Buat Event Baru</h2>
@@ -317,19 +318,22 @@ export default function EventsPage() {
           <div className="flex-1 px-4 space-y-3 overflow-y-auto text-sm">
 
             {/* ── Banner image — tampil kalau ada ──────────────────────── */}
-            {detailEvent?.bannerUrl && (
-              <div className="rounded-lg overflow-hidden border border-border -mx-1">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+            <div className="relative aspect-video w-full rounded-lg overflow-hidden border border-border -mx-1 bg-muted">
+              {detailEvent?.bannerUrl ? (
+                <Image
                   src={detailEvent.bannerUrl}
-                  alt={`Banner ${detailEvent.name}`}
-                  className="w-full h-44 object-cover"
-                  onError={(e) => {
-                    ;(e.target as HTMLImageElement).parentElement!.style.display = 'none'
-                  }}
+                  alt={detailEvent.name}
+                  fill
+                  unoptimized
+                  className="object-cover"
                 />
-              </div>
-            )}
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-primary/10 via-muted to-primary/5 flex items-center justify-center">
+                  <span className="text-muted-foreground/30 text-xs font-medium">No Banner</span>
+                </div>
+              )}
+            </div>
+
 
             <div>
               <span className="text-muted-foreground">Status: </span>
@@ -396,21 +400,19 @@ export default function EventsPage() {
                 Edit
               </Button>
             )}
-            {detailEvent?.status === 'draft' && (
-              <Button
-                size="sm"
-                variant="ghost"
-                className="text-destructive hover:text-destructive"
-                onClick={() => { if (detailEvent) setDeleteTarget(detailEvent); setDetailEvent(null) }}
-              >
-                Hapus
-              </Button>
-            )}
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-destructive hover:text-destructive"
+              onClick={() => { if (detailEvent) setDeleteTarget(detailEvent); setDetailEvent(null) }}
+            >
+              Hapus
+            </Button>
           </SheetFooter>
         </SheetContent>
       </Sheet>
 
-      {showDeleted ? (
+      {isDeletedView ? (
         <div>
           <h2 className="text-lg font-semibold mb-4">Event Terhapus</h2>
           {!deletedData?.data.length ? (
@@ -535,15 +537,22 @@ export default function EventsPage() {
                       onClick={() => setDetailEvent(event)}
                     >
                       {/* Banner thumbnail di mobile card */}
-                      {event.bannerUrl && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={event.bannerUrl}
-                          alt=""
-                          className="w-full h-24 object-cover"
-                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-                        />
-                      )}
+                      <div className="relative aspect-video w-full overflow-hidden bg-muted">
+                        {event.bannerUrl ? (
+                          <Image
+                            src={event.bannerUrl}
+                            alt=""
+                            fill
+                            unoptimized
+                            className="object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-primary/10 via-muted to-primary/5 flex items-center justify-center">
+                            <span className="text-muted-foreground/30 text-[10px]">No Banner</span>
+                          </div>
+                        )}
+                      </div>
+
                       <div className="p-3">
                         <div className="flex items-center justify-between">
                           <span className="font-medium text-sm">{event.name}</span>
@@ -557,16 +566,14 @@ export default function EventsPage() {
                             {event.venue && ` · ${event.venue}`}
                             {event.capacity != null && ` · Kapasitas: ${event.capacity}`}
                           </div>
-                          {event.status === 'draft' && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-destructive hover:text-destructive -mr-2 h-7 px-2"
-                              onClick={(e) => { e.stopPropagation(); setDeleteTarget(event) }}
-                            >
-                              Hapus
-                            </Button>
-                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive -mr-2 h-7 px-2"
+                            onClick={(e) => { e.stopPropagation(); setDeleteTarget(event) }}
+                          >
+                            Hapus
+                          </Button>
                         </div>
                       </div>
                     </div>
@@ -594,20 +601,23 @@ export default function EventsPage() {
                         <TableRow key={event.id} className="cursor-pointer" onClick={() => setDetailEvent(event)}>
                           {/* Thumbnail di tabel desktop */}
                           <TableCell onClick={(e) => e.stopPropagation()}>
-                            {event.bannerUrl ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                src={event.bannerUrl}
-                                alt=""
-                                className="w-12 h-8 object-cover rounded"
-                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-                              />
-                            ) : (
-                              <div className="w-12 h-8 rounded bg-muted flex items-center justify-center">
-                                <span className="text-[10px] text-muted-foreground">—</span>
-                              </div>
-                            )}
+                            <div className="relative w-12 h-8 rounded overflow-hidden bg-muted border">
+                              {event.bannerUrl ? (
+                                <Image
+                                  src={event.bannerUrl}
+                                  alt=""
+                                  fill
+                                  unoptimized
+                                  className="object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full bg-gradient-to-br from-primary/10 via-muted to-primary/5 flex items-center justify-center">
+                                  <span className="text-[8px] text-muted-foreground/50">N/A</span>
+                                </div>
+                              )}
+                            </div>
                           </TableCell>
+
                           <TableCell
                             className="font-medium"
                             onClick={(e) => { e.stopPropagation(); setSelectedEvent(event.id); router.push(`/app/events/${event.id}`) }}
@@ -627,19 +637,17 @@ export default function EventsPage() {
                           </TableCell>
                           <TableCell onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center gap-1">
-                              {EDITABLE_STATUSES.includes(event.status) && (
+                               {EDITABLE_STATUSES.includes(event.status) && (
                                 <Button variant="outline" size="sm" onClick={() => setEditEvent(event)}>Edit</Button>
                               )}
-                              {event.status === 'draft' && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-destructive hover:text-destructive"
-                                  onClick={() => setDeleteTarget(event)}
-                                >
-                                  Hapus
-                                </Button>
-                              )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-destructive hover:text-destructive"
+                                onClick={() => setDeleteTarget(event)}
+                              >
+                                Hapus
+                              </Button>
                             </div>
                           </TableCell>
                         </TableRow>

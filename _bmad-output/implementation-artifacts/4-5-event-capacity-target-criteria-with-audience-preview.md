@@ -5,7 +5,7 @@ As an admin, I want to set event capacity and configure target criteria with a l
 
 ## Acceptance Criteria
 - [x] Event creation/edit form has capacity field
-- [x] Target criteria filters (industry/city/companySize)
+- [x] Target criteria filters (serviceType/city/jobTitle)
 - [x] "Preview Audience" button calls POST /api/events/:id/audience-preview
 - [x] Shows count, warns if 0
 

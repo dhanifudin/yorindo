@@ -8,12 +8,15 @@ export interface Contact {
   name: string
   phone: string
   email: string
-  industryId: string
-  jobTitleId: string
+  serviceType: string | null
+  jobTitle: string | null
   city: string
-  companySize: string
+  company: string
+  department: string | null
   completenessScore: number // 0.0–1.0, computed by GPT-4o in ETL (Story 3.3)
+  consentStatus: string
   flagCategory: FlagCategory // Manual flag set by admin (Story 3.4)
+  eventDate: string | null
   createdAt: string
   updatedAt: string
 }
@@ -39,6 +42,7 @@ export interface Event {
   is_paid: boolean         // AC7: default false
   price: number            // AC7: default 0
   payment_method: string | null  // AC7
+  registeredCount?: number // Capacity utilization (Story 4.7)
   createdAt: string
   updatedAt: string
 }
@@ -76,6 +80,15 @@ export interface UserEvent {
   userId: string
   eventId: string
   grantedAt: string
+}
+
+export interface BlastModalPayload {
+  eventId: string
+  channel: 'whatsapp' | 'email'
+  templateId?: string
+  customMessage?: string
+  recipientCount: number
+  selectedIds?: string[]
 }
 
 export interface AuthResponse {
@@ -217,11 +230,10 @@ export interface AudienceRecommendation {
   name: string
   email: string
   phone: string
-  industryId: string // matches Contact.industryId (normalized ID, not display string)
+  serviceType: string | null
   city: string
-  companySize: string
   score: number // 0–100
-  factors: string[] // e.g. ['industry:teknologi', 'attended:similar-event', 'location:jakarta']
+  factors: string[] // e.g. ['serviceType:teknologi', 'attended:similar-event', 'location:jakarta']
   reliabilityRate?: number // 0.0–1.0 (checked_in / registered ratio)
 }
 
@@ -247,7 +259,7 @@ export interface RecommendedEventsResponse {
 }
 
 export interface BlastPayload {
-  filters?: { industry?: string; city?: string; companySize?: string }
+  filters?: { serviceType?: string; city?: string }
   contactIds?: string[] // AI-curated list from sessionStorage
   templateId: string
   channel: 'whatsapp' | 'email'
@@ -294,9 +306,8 @@ export interface FacetItem {
 }
 
 export interface ContactsFacets {
-  industry: FacetItem[]
+  serviceType: FacetItem[]
   city: FacetItem[]
-  companySize: FacetItem[]
 }
 
 // ─── Contact History ──────────────────────────────────────────────────────────

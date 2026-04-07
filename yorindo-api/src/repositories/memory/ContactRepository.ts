@@ -1,13 +1,12 @@
 import { faker } from '@faker-js/faker'
 import { createId } from '@paralleldrive/cuid2'
 import type { IContactRepository, PaginationParams, ContactFilters } from '../../interfaces/repositories/IContactRepository.js'
-import type { Contact, DuplicateFieldChoice, DuplicateMatchReason, DuplicatePair, FacetResult } from '../../types/domain.js'
+import type { Contact, DuplicateFieldChoice, DuplicateMatchReason, DuplicatePair, FacetResult, EntityId } from '../../types/domain.js'
 import { SEED_CONTACT_IDS, INDONESIAN_INDUSTRIES, INDONESIAN_JOB_TITLES } from './_seeds.js'
 
 faker.seed(42)
 
 const INDONESIAN_CITIES = ['Jakarta', 'Bandung', 'Surabaya', 'Medan', 'Yogyakarta', 'Semarang', 'Makassar', 'Palembang', 'Denpasar', 'Balikpapan']
-const COMPANY_SIZES = ['<50', '50-200', '200-1000', '>1000'] as const
 const SOURCES = ['excel_upload', 'excel_upload', 'excel_upload', 'form', 'manual'] as const
 const DUPLICATE_PAIR_COUNT = 6
 
@@ -20,20 +19,10 @@ interface DuplicatePairState {
   resolvedAt: string | null
 }
 
-// Consent distribution: ~80% active, ~14% legacy_unverified, ~6% suppressed
 function consentStatus(i: number) {
   if (i >= 115) return 'suppressed' as const
   if (i % 7 === 0) return 'legacy_unverified' as const
   return 'active' as const
-}
-
-/**
- * Mengubah slug industri FE menjadi id lookup yang dipakai di seed repository.
- */
-function toIndustryId(industry?: string): string | undefined {
-  if (!industry) return undefined
-  const found = INDONESIAN_INDUSTRIES.find((item) => item.slug === industry || item.id === industry)
-  return found?.id ?? industry
 }
 
 export class InMemoryContactRepository implements IContactRepository {
@@ -45,9 +34,6 @@ export class InMemoryContactRepository implements IContactRepository {
     this._seedDuplicatePairs()
   }
 
-  /**
-   * Menyiapkan data kontak deterministik untuk dev dan test tanpa DB sungguhan.
-   */
   private _seed(): void {
     for (let i = 0; i < 120; i++) {
       const id = SEED_CONTACT_IDS[i]!
@@ -59,14 +45,19 @@ export class InMemoryContactRepository implements IContactRepository {
         id,
         name: faker.person.fullName(),
         phone: i >= 115
-          ? `+62811000000${i}`
+          ? null
           : `+6281${faker.number.int({ min: 100000000, max: 999999999 })}`,
         email: i % 8 === 0 ? null : faker.internet.email(),
-        industryId: i % 5 === 0 ? null : industry.id,
-        jobTitleId: i % 7 === 0 ? null : jobTitle.id,
+        serviceType: i % 5 === 0 ? null : industry.name,
+        jobTitle: i % 7 === 0 ? null : jobTitle.name,
         city: INDONESIAN_CITIES[i % INDONESIAN_CITIES.length]!,
+        provinceCode: null,
+        provinceName: null,
+        cityCode: null,
+        cityName: null,
         company: faker.company.name(),
-        companySize: COMPANY_SIZES[i % COMPANY_SIZES.length]!,
+        department: i % 6 === 0 ? 'Engineering' : 'Marketing',
+        eventDate: i % 10 === 0 ? '2024-03-20' : null,
         source: SOURCES[i % SOURCES.length]!,
         completenessScore: Math.round((0.4 + (i % 7) * 0.09) * 1000) / 1000,
         consentStatus: status,
@@ -79,12 +70,8 @@ export class InMemoryContactRepository implements IContactRepository {
     }
   }
 
-  /**
-   * Menyiapkan pasangan duplikat deterministik agar flow review dan merge bisa dites.
-   */
   private _seedDuplicatePairs(): void {
     const seededContacts = Array.from(this.contacts.values())
-
     for (let i = 0; i < DUPLICATE_PAIR_COUNT; i++) {
       const primary = seededContacts[i * 2]
       const duplicate = seededContacts[i * 2 + 1]
@@ -96,8 +83,8 @@ export class InMemoryContactRepository implements IContactRepository {
         email: primary.email ?? `duplicate-${i + 1}@example.com`,
         city: primary.city,
         company: primary.company,
-        industryId: primary.industryId,
-        companySize: primary.companySize,
+        serviceType: primary.serviceType,
+        jobTitle: primary.jobTitle,
         updatedAt: new Date().toISOString(),
       }
 
@@ -113,34 +100,18 @@ export class InMemoryContactRepository implements IContactRepository {
     }
   }
 
-  /**
-   * Mengambil pasangan duplikat yang masih aktif dan belum diselesaikan.
-   */
   private _activeDuplicatePairs(): DuplicatePair[] {
     const pairs: DuplicatePair[] = []
-
     for (const pair of this.duplicatePairs.values()) {
       if (pair.resolvedAt) continue
-
       const primary = this.contacts.get(pair.primaryId)
       const duplicate = this.contacts.get(pair.duplicateId)
-      if (!primary || !duplicate) continue
-      if (primary.deletedAt || duplicate.deletedAt) continue
-
-      pairs.push({
-        id: pair.id,
-        primary,
-        duplicate,
-        matchScore: pair.matchScore,
-        matchReasons: pair.matchReasons,
-      })
+      if (!primary || !duplicate || primary.deletedAt || duplicate.deletedAt) continue
+      pairs.push({ id: pair.id, primary, duplicate, matchScore: pair.matchScore, matchReasons: pair.matchReasons })
     }
     return pairs
   }
 
-  /**
-   * Mengurutkan koleksi kontak memory berdasarkan field yang diminta.
-   */
   private _sort(data: Contact[], params: PaginationParams): Contact[] {
     const sortBy = params.sortBy ?? 'createdAt'
     const sortDir = params.sortDir ?? 'desc'
@@ -155,86 +126,71 @@ export class InMemoryContactRepository implements IContactRepository {
     })
   }
 
-  /**
-   * Mengubah field kontak ke nilai yang aman dibandingkan saat sorting.
-   */
   private _sortValue(contact: Contact, sortBy: string): string | number {
     switch (sortBy) {
-      case 'name':
-        return contact.name.toLowerCase()
-      case 'email':
-        return (contact.email ?? '').toLowerCase()
-      case 'phone':
-        return contact.phone
-      case 'industry':
-      case 'industryId':
-        return (contact.industryId ?? '').toLowerCase()
-      case 'city':
-        return (contact.city ?? '').toLowerCase()
-      case 'company':
-        return (contact.company ?? '').toLowerCase()
-      case 'companySize':
-        return contact.companySize ?? ''
-      case 'created_at':
-      case 'createdAt':
-        return new Date(contact.createdAt).getTime()
-      default:
-        return new Date(contact.createdAt).getTime()
+      case 'name': return contact.name.toLowerCase()
+      case 'email': return (contact.email ?? '').toLowerCase()
+      case 'phone': return contact.phone ?? ''
+      case 'serviceType': return (contact.serviceType ?? '').toLowerCase()
+      case 'city': return (contact.city ?? '').toLowerCase()
+      case 'company': return (contact.company ?? '').toLowerCase()
+      case 'createdAt': return new Date(contact.createdAt).getTime()
+      default: return new Date(contact.createdAt).getTime()
     }
   }
 
-  /**
-   * Mengambil daftar kontak dengan filter, sorting, lalu pagination in-memory.
-   */
   async findAll(params: PaginationParams, filters?: ContactFilters): Promise<{ data: Contact[]; total: number }> {
     let data = Array.from(this.contacts.values()).filter(c => c.deletedAt === null)
-    const industryId = toIndustryId(filters?.industry)
 
-    if (industryId) data = data.filter(c => c.industryId === industryId)
+    if (filters?.serviceType) {
+      const st = filters.serviceType.toLowerCase()
+      data = data.filter(c => (c.serviceType ?? '').toLowerCase() === st)
+    }
     if (filters?.city) {
       const cityQuery = filters.city.toLowerCase()
       data = data.filter(c => (c.city ?? '').toLowerCase().includes(cityQuery))
     }
-    if (filters?.companySize) data = data.filter(c => c.companySize === filters.companySize)
+    if (filters?.jobTitle) {
+      const jt = filters.jobTitle.toLowerCase()
+      data = data.filter(c => (c.jobTitle ?? '').toLowerCase().includes(jt))
+    }
     if (filters?.flagCategory === 'ANY') data = data.filter(c => c.flagCategory !== null)
     else if (filters?.flagCategory === 'NONE') data = data.filter(c => c.flagCategory === null)
     else if (filters?.flagCategory) data = data.filter(c => c.flagCategory === filters.flagCategory)
+    
     if (filters?.consentStatus) data = data.filter(c => c.consentStatus === filters.consentStatus)
     if (filters?.missingEmail) data = data.filter(c => c.email === null)
-    if (filters?.missingPhone) data = data.filter(c => !c.phone)
-    if (filters?.industries?.length) data = data.filter(c => c.industryId && filters.industries!.includes(c.industryId))
+    if (filters?.missingPhone) data = data.filter(c => c.phone === null)
+
+    if (filters?.serviceTypes?.length) data = data.filter(c => c.serviceType && filters.serviceTypes!.includes(c.serviceType))
     if (filters?.cities?.length) data = data.filter(c => c.city && filters.cities!.includes(c.city))
-    if (filters?.companySizes?.length) data = data.filter(c => c.companySize && filters.companySizes!.includes(c.companySize))
-    if (filters?.jobTitles?.length) data = data.filter(c => c.jobTitleId && filters.jobTitles!.includes(c.jobTitleId))
+    if (filters?.jobTitles?.length) data = data.filter(c => c.jobTitle && filters.jobTitles!.includes(c.jobTitle))
+
     if (filters?.search) {
       const q = filters.search.toLowerCase()
       data = data.filter(c =>
         c.name.toLowerCase().includes(q) ||
-        c.phone.includes(q) ||
+        (c.phone ?? '').includes(q) ||
         (c.email ?? '').toLowerCase().includes(q) ||
         (c.company ?? '').toLowerCase().includes(q),
       )
     }
 
     data = this._sort(data, params)
-
     const total = data.length
-    const safePage = Math.max(1, params.page)
-    const start = (safePage - 1) * params.pageSize
+    const start = (Math.max(1, params.page) - 1) * params.pageSize
     return { data: data.slice(start, start + params.pageSize), total }
   }
 
-  async findById(id: string): Promise<Contact | null> {
+  async findById(id: EntityId): Promise<Contact | null> {
     return this.contacts.get(id) ?? null
   }
 
-  async findByPhone(phone: string): Promise<Contact | null> {
+  async findByPhone(phone: string | null): Promise<Contact | null> {
+    if (!phone) return null
     return Array.from(this.contacts.values()).find(c => c.phone === phone) ?? null
   }
 
-  /**
-   * Mengambil daftar kandidat duplikat dengan pagination sederhana.
-   */
   async findDuplicates(params: PaginationParams): Promise<{ data: DuplicatePair[]; total: number }> {
     const data = this._activeDuplicatePairs()
     const total = data.length
@@ -242,93 +198,101 @@ export class InMemoryContactRepository implements IContactRepository {
     return { data: data.slice(start, start + params.pageSize), total }
   }
 
-  /**
-   * Menandai pasangan duplikat sebagai bukan duplikat tanpa menghapus record kontaknya.
-   */
-  async dismissDuplicate(id: string): Promise<boolean> {
+  async dismissDuplicate(id: EntityId): Promise<boolean> {
     const pair = this.duplicatePairs.get(id)
     if (!pair || pair.resolvedAt) return false
-
-    this.duplicatePairs.set(id, {
-      ...pair,
-      resolvedAt: new Date().toISOString(),
-    })
+    pair.resolvedAt = new Date().toISOString()
     return true
   }
 
-  /**
-   * Menggabungkan data duplikat ke record utama lalu menonaktifkan record duplikat.
-   */
-  async mergeDuplicate(
-    primaryId: string,
-    fieldSelections?: Record<string, DuplicateFieldChoice>,
-  ): Promise<Contact | null> {
-    const pair = Array.from(this.duplicatePairs.values()).find(
-      (item) => item.primaryId === primaryId && item.resolvedAt === null,
+  async mergeDuplicate(primaryId: EntityId, fieldSelections?: Record<string, DuplicateFieldChoice>): Promise<Contact | null> {
+    const primary = this.contacts.get(primaryId)
+    if (!primary) return null
+
+    // Find the pair
+    const pairEntry = Array.from(this.duplicatePairs.entries()).find(
+      ([_, p]) => (p.primaryId === primaryId || p.duplicateId === primaryId) && p.resolvedAt === null
     )
-    if (!pair) return null
+    if (!pairEntry) return primary
 
-    const primary = this.contacts.get(pair.primaryId)
-    const duplicate = this.contacts.get(pair.duplicateId)
-    if (!primary || !duplicate) return null
-    if (primary.deletedAt || duplicate.deletedAt) return null
+    const [pairId, pair] = pairEntry
+    const otherId = pair.primaryId === primaryId ? pair.duplicateId : pair.primaryId
+    const other = this.contacts.get(otherId)
+    
+    const MERGEABLE_FIELDS = ['name', 'email', 'phone', 'city', 'company', 'department', 'serviceType', 'jobTitle', 'eventDate'] as const
+    type MergeableField = typeof MERGEABLE_FIELDS[number]
 
-    const merged: Contact = {
-      ...primary,
-      completenessScore: Math.max(primary.completenessScore, duplicate.completenessScore),
-      updatedAt: new Date().toISOString(),
+    if (other && fieldSelections) {
+      for (const field of MERGEABLE_FIELDS) {
+        if (fieldSelections[field] === 'duplicate') {
+          (primary as Record<MergeableField, unknown>)[field] = other[field]
+        }
+      }
     }
 
-    for (const [field, choice] of Object.entries(fieldSelections ?? {})) {
-      if (choice !== 'duplicate') continue
-      if (field === 'id' || field === 'createdAt' || field === 'updatedAt' || field === 'deletedAt') continue
-      if (!(field in duplicate)) continue
-      Object.assign(merged, { [field]: duplicate[field as keyof Contact] })
+    // Mark as resolved
+    pair.resolvedAt = new Date().toISOString()
+    this.duplicatePairs.set(pairId, pair)
+    
+    // Remove the 'other' contact if it was the duplicate
+    if (otherId !== primaryId) {
+      this.contacts.delete(otherId)
     }
 
-    this.contacts.set(primary.id, merged)
-    this.contacts.set(duplicate.id, {
-      ...duplicate,
-      deletedAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    })
-    this.duplicatePairs.set(pair.id, {
-      ...pair,
-      resolvedAt: new Date().toISOString(),
-    })
+    return primary
+  }
 
-    return merged
+  async createDuplicatePair(data: Omit<DuplicatePair, 'id' | 'resolvedAt'>): Promise<void> {
+    const id = createId()
+    this.duplicatePairs.set(id, {
+      id,
+      primaryId: data.primary.id,
+      duplicateId: data.duplicate.id,
+      matchScore: data.matchScore,
+      matchReasons: data.matchReasons,
+      resolvedAt: null,
+    })
   }
 
   async upsert(data: Omit<Contact, 'id' | 'createdAt' | 'updatedAt'>): Promise<Contact> {
-    const existing = Array.from(this.contacts.values()).find(c => c.phone === data.phone)
+    let existing: Contact | null = null
+    
+    if (data.phone) {
+      existing = await this.findByPhone(data.phone)
+    }
+    
+    if (!existing && data.email) {
+      existing = Array.from(this.contacts.values()).find(c => c.email === data.email) ?? null
+    }
+
     if (existing) {
-      const updated: Contact = { ...existing, ...data, updatedAt: new Date().toISOString() }
+      const updated = { ...existing, ...data, updatedAt: new Date().toISOString() }
       this.contacts.set(existing.id, updated)
       return updated
     }
-    const contact: Contact = {
-      id: createId(),
+    const newContact: Contact = {
       ...data,
+      id: createId(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
-    this.contacts.set(contact.id, contact)
-    return contact
+    this.contacts.set(newContact.id, newContact)
+    return newContact
   }
 
-  async update(id: string, data: Partial<Contact>): Promise<Contact | null> {
-    const existing = this.contacts.get(id)
-    if (!existing) return null
-    const updated: Contact = { ...existing, ...data, id, updatedAt: new Date().toISOString() }
+  async update(id: EntityId, data: Partial<Contact>): Promise<Contact | null> {
+    const contact = this.contacts.get(id)
+    if (!contact) return null
+    const updated = { ...contact, ...data, updatedAt: new Date().toISOString() }
     this.contacts.set(id, updated)
     return updated
   }
 
-  async softDelete(id: string): Promise<void> {
-    const existing = this.contacts.get(id)
-    if (existing) {
-      this.contacts.set(id, { ...existing, deletedAt: new Date().toISOString() })
+  async softDelete(id: EntityId): Promise<void> {
+    const contact = this.contacts.get(id)
+    if (contact) {
+      contact.deletedAt = new Date().toISOString()
+      this.contacts.set(id, contact)
     }
   }
 
@@ -338,50 +302,51 @@ export class InMemoryContactRepository implements IContactRepository {
       flagged: all.filter(c => c.flagCategory !== null).length,
       duplicates: this._activeDuplicatePairs().length,
       missingEmail: all.filter(c => c.email === null).length,
-      missingPhone: all.filter(c => !c.phone).length,
+      missingPhone: all.filter(c => c.phone === null).length,
     }
   }
 
-  async anonymize(id: string, hashedPhone: string): Promise<void> {
-    const existing = this.contacts.get(id)
-    if (!existing) return
-    this.contacts.set(id, {
-      ...existing,
-      name: 'ANONYMIZED',
-      phone: hashedPhone,
-      email: null,
-      consentStatus: 'suppressed',
-      updatedAt: new Date().toISOString(),
+  async findFacets(): Promise<FacetResult> {
+    const all = Array.from(this.contacts.values()).filter(c => c.deletedAt === null)
+    
+    const serviceTypeMap = new Map<string, number>()
+    const cityMap = new Map<string, number>()
+
+    all.forEach(c => {
+      if (c.serviceType) {
+        serviceTypeMap.set(c.serviceType, (serviceTypeMap.get(c.serviceType) ?? 0) + 1)
+      }
+      if (c.city) {
+        cityMap.set(c.city, (cityMap.get(c.city) ?? 0) + 1)
+      }
     })
+
+    return {
+      serviceType: Array.from(serviceTypeMap.entries()).map(([name, count]) => ({
+        slug: name.toLowerCase().replace(/\s+/g, '-'),
+        label: name,
+        count
+      })),
+      city: Array.from(cityMap.entries()).map(([name, count]) => ({
+        slug: name.toLowerCase().replace(/\s+/g, '-'),
+        label: name,
+        count
+      }))
+    }
+  }
+
+  async anonymize(id: EntityId, hashedPhone: string): Promise<void> {
+    const contact = this.contacts.get(id)
+    if (contact) {
+      contact.phone = hashedPhone
+      contact.email = null
+      contact.name = 'Anonymized'
+      contact.consentStatus = 'suppressed'
+      this.contacts.set(id, contact)
+    }
   }
 
   async existsByPhoneHash(hashedPhone: string): Promise<boolean> {
     return Array.from(this.contacts.values()).some(c => c.phone === hashedPhone)
-  }
-
-  /**
-   * Menghitung facet filter dari kontak aktif agar UI bisa menampilkan opsi filter.
-   */
-  async findFacets(): Promise<FacetResult> {
-    const all = Array.from(this.contacts.values()).filter(c => c.deletedAt === null)
-    const industryMap = new Map<string, number>()
-    const cityMap = new Map<string, number>()
-    const sizeMap = new Map<string, number>()
-
-    for (const c of all) {
-      if (c.industryId) industryMap.set(c.industryId, (industryMap.get(c.industryId) ?? 0) + 1)
-      if (c.city) cityMap.set(c.city, (cityMap.get(c.city) ?? 0) + 1)
-      if (c.companySize) sizeMap.set(c.companySize, (sizeMap.get(c.companySize) ?? 0) + 1)
-    }
-
-    return {
-      industries: INDONESIAN_INDUSTRIES.map(ind => ({
-        id: ind.id,
-        name: ind.name,
-        count: all.filter(c => c.industryId === ind.id).length,
-      })),
-      cities: Array.from(cityMap.entries()).map(([city, count]) => ({ city, count })),
-      companySizes: Array.from(sizeMap.entries()).map(([size, count]) => ({ size, count })),
-    }
   }
 }

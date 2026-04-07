@@ -14,7 +14,7 @@ import {
 } from '../container.js'
 import { findTemplateById } from '../data/templates.js'
 import { requireAdmin, requireAuth, requireRoles, type JwtPayload } from '../middleware/auth.js'
-import type { Event, EventStatus, Registration } from '../types/domain.js'
+import type { Event, EventStatus, Registration, TargetCriteria } from '../types/domain.js'
 import { validateOpenApiRequest, validateOpenApiResponse } from '../lib/openapi-contract.js'
 import { INDONESIAN_INDUSTRIES } from '../repositories/memory/_seeds.js'
 
@@ -85,6 +85,7 @@ const EventUpdateBodySchema = z.object({
   isPaid: z.boolean().optional(),
   price: z.number().min(0).nullable().optional(),
   paymentMethod: z.string().nullable().optional(),
+  postSurveyEnabled: z.boolean().optional(),
 }).superRefine((val, ctx) => {
   const sDate = val.startDate ?? val.eventDate;
   const eDate = val.endDate ?? val.eventDate;
@@ -109,9 +110,8 @@ const BlastBodySchema = z.object({
   customMessage: z.string().trim().optional(),
   channel: z.enum(['email', 'whatsapp']),
   filters: z.object({
-    industries: z.array(z.string()).optional(),
+    serviceTypes: z.array(z.string()).optional(),
     cities: z.array(z.string()).optional(),
-    companySizes: z.array(z.string()).optional(),
     jobTitles: z.array(z.string()).optional(),
     behavior: z.array(z.enum(['most_active', 'low_attendance', 'never_attended'])).optional(),
     lastAttendedBefore: z.string().optional(),
@@ -157,9 +157,8 @@ const UpdateEventSponsorBodySchema = z.object({
 })
 
 const AudiencePreviewBodySchema = z.object({
-  industries: z.array(z.string()).optional(),
+  serviceTypes: z.array(z.string()).optional(),
   cities: z.array(z.string()).optional(),
-  companySizes: z.array(z.string()).optional(),
   jobTitles: z.array(z.string()).optional(),
   behavior: z.array(z.enum(['most_active', 'low_attendance', 'never_attended'])).optional(),
   lastAttendedBefore: z.string().datetime({ offset: true }).optional(),
@@ -193,7 +192,7 @@ function toEventDto(event: Event, surveySchema?: unknown, registeredCount: numbe
     targetCriteria: event.targetCriteria ?? {},
     surveySchema: surveySchema ?? {},
     venue: event.venue ?? '',
-    industryTags: event.targetCriteria?.industries ?? [],
+    industryTags: event.targetCriteria?.serviceTypes ?? [],
     eventType: 'conference',
     topicTags: [],
     deletedAt: event.deletedAt,
@@ -205,6 +204,7 @@ function toEventDto(event: Event, surveySchema?: unknown, registeredCount: numbe
     approvalMode: event.approvalMode,
     scanFormat: event.scanFormat,
     notificationChannel: event.notificationChannel,
+    postSurveyEnabled: event.postSurveyEnabled ?? false,
   }
 }
 
@@ -329,14 +329,8 @@ async function updateEventHandler(request: FastifyRequest, reply: FastifyReply) 
   return reply.status(200).send(responseBody)
 }
 
-/**
- * Mengubah daftar industry id event ke slug FE agar URL blast tetap bersih.
- */
 function toIndustryTags(event: Event | null): string[] {
-  return (event?.targetCriteria?.industries ?? []).map((industryId) => {
-    const found = INDONESIAN_INDUSTRIES.find((item) => item.id === industryId || item.slug === industryId)
-    return found?.slug ?? industryId
-  })
+  return event?.targetCriteria?.serviceTypes ?? []
 }
 
 async function requireEventOr404(reply: FastifyReply, eventId: string) {
@@ -534,7 +528,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       price: payload.price ?? null,
       paymentMethod: payload.paymentMethod ?? null,
       targetCriteria: payload.targetCriteria ? { ...payload.targetCriteria } : {
-        industries: payload.industryTags ?? [],
+        serviceTypes: payload.industryTags ?? [],
       },
       surveySchemaId: null,
       vendorId: null,
@@ -556,6 +550,18 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     const responseBody = toEventDto(event, undefined, registrations.total)
     validateOpenApiResponse({ path: '/events', method: 'post', status: 201, body: responseBody })
     return reply.status(201).send(responseBody)
+  })
+
+  fastify.get('/api/events/public/:slug', async (request, reply) => {
+    const { slug } = request.params as { slug: string }
+    const event = await eventRepository.findBySlug(slug)
+    if (!event) {
+      return reply.status(404).send({
+        error: { code: 'NOT_FOUND', message: 'Event not found', details: [] },
+      })
+    }
+    const surveySchema = await surveyRepository.findByEventId(event.id, 'registration')
+    return reply.status(200).send(toEventDto(event, surveySchema?.fields ?? {}))
   })
 
   fastify.get('/api/events/:id', { preHandler: requireAuth }, async (request, reply) => {
@@ -642,6 +648,9 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
         return replyInvalidTransition(reply, existing.status, body.data.status)
       }
       updateData.status = body.data.status
+    }
+    if (body.data.postSurveyEnabled !== undefined) {
+      updateData.postSurveyEnabled = body.data.postSurveyEnabled
     }
 
     if (Object.keys(updateData).length === 0) {
@@ -971,9 +980,8 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       consentStatus: 'active',       // Exclude suppressed contacts
       flagCategory: 'NONE',          // Exclude flagged contacts
     }
-    if (body.data.industries?.length) filters.industries = body.data.industries
+    if (body.data.serviceTypes?.length) filters.serviceTypes = body.data.serviceTypes
     if (body.data.cities?.length) filters.cities = body.data.cities
-    if (body.data.companySizes?.length) filters.companySizes = body.data.companySizes
     if (body.data.jobTitles?.length) filters.jobTitles = body.data.jobTitles
 
     // Fetch all matching contacts (use large pageSize, rely on total for accurate count)
@@ -1019,21 +1027,18 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     // Build real breakdown from matched contacts
-    const industryBreakdown: Record<string, number> = {}
+    const serviceTypeBreakdown: Record<string, number> = {}
     const cityBreakdown: Record<string, number> = {}
-    const companySizeBreakdown: Record<string, number> = {}
     const jobTitleBreakdown: Record<string, number> = {}
     for (const c of matchedContacts) {
-      if (c.industryId) industryBreakdown[c.industryId] = (industryBreakdown[c.industryId] ?? 0) + 1
+      if (c.serviceType) serviceTypeBreakdown[c.serviceType] = (serviceTypeBreakdown[c.serviceType] ?? 0) + 1
       if (c.city) cityBreakdown[c.city] = (cityBreakdown[c.city] ?? 0) + 1
-      if (c.companySize) companySizeBreakdown[c.companySize] = (companySizeBreakdown[c.companySize] ?? 0) + 1
-      if (c.jobTitleId) jobTitleBreakdown[c.jobTitleId] = (jobTitleBreakdown[c.jobTitleId] ?? 0) + 1
+      if (c.jobTitle) jobTitleBreakdown[c.jobTitle] = (jobTitleBreakdown[c.jobTitle] ?? 0) + 1
     }
 
     const breakdown: Record<string, number> = {}
-    if (Object.keys(industryBreakdown).length) Object.assign(breakdown, industryBreakdown)
+    if (Object.keys(serviceTypeBreakdown).length) Object.assign(breakdown, serviceTypeBreakdown)
     if (Object.keys(cityBreakdown).length) Object.assign(breakdown, cityBreakdown)
-    if (Object.keys(companySizeBreakdown).length) Object.assign(breakdown, companySizeBreakdown)
     if (Object.keys(jobTitleBreakdown).length) Object.assign(breakdown, jobTitleBreakdown)
 
     const responseBody = {
@@ -1063,9 +1068,8 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
         name: contact.name,
         email: contact.email ?? '',
         phone: contact.phone,
-        industryId: contact.industryId ?? '',
+        serviceType: contact.serviceType ?? '',
         city: contact.city ?? '',
-        companySize: contact.companySize ?? '',
         score: Math.max(0, 100 - index),
         factors: [
           `event:${event.slug}`,
@@ -1099,15 +1103,18 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     if (!event) return
     validateOpenApiRequest({ path: '/events/{id}/blast', method: 'post', params: params.data, body: body.data })
     const payload = request.user as JwtPayload
-    const contactFilters: { industries?: string[]; cities?: string[]; companySizes?: string[]; jobTitles?: string[]; behavior?: string[]; lastAttendedBefore?: string } = {}
-    if (body.data.filters?.industries) contactFilters.industries = body.data.filters.industries
+    const contactFilters: TargetCriteria = {}
+    if (body.data.filters?.serviceTypes) contactFilters.serviceTypes = body.data.filters.serviceTypes
     if (body.data.filters?.cities) contactFilters.cities = body.data.filters.cities
-    if (body.data.filters?.companySizes) contactFilters.companySizes = body.data.filters.companySizes
     if (body.data.filters?.jobTitles) contactFilters.jobTitles = body.data.filters.jobTitles
     if (body.data.filters?.behavior) contactFilters.behavior = body.data.filters.behavior
     if (body.data.filters?.lastAttendedBefore) contactFilters.lastAttendedBefore = body.data.filters.lastAttendedBefore
 
-    const recipientCount = body.data.contactIds?.length ?? (await contactRepository.findAll({ page: 1, pageSize: 500 }, contactFilters)).total
+    // Always exclude contacts missing phone or email — they can't receive any blast channel
+    const recipientCount = body.data.contactIds?.length ?? (await contactRepository.findAll(
+      { page: 1, pageSize: 500 },
+      { ...contactFilters, hasPhone: true, hasEmail: true },
+    )).total
     let templateName = 'Custom Message'
     let templateBody = body.data.customMessage || 'Mocked template body for ' + (body.data.templateId ?? 'unknown')
 
@@ -1146,6 +1153,27 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     }
     validateOpenApiResponse({ path: '/events/{id}/blast', method: 'post', status: 202, body: responseBody })
     return reply.status(202).send(responseBody)
+  })
+
+  // ── GET /api/events/:id/overview ─────────────────────────────────
+  fastify.get('/api/events/:id/overview', { preHandler: requireAuth }, async (request, reply) => {
+    const params = EventIdParamsSchema.safeParse(request.params)
+    if (!params.success) return replyValidationError(reply, params.error.issues, 'Invalid event id')
+    const event = await requireEventOr404(reply, params.data.id)
+    if (!event) return
+
+    const metrics = await eventRepository.getOverviewMetrics(params.data.id)
+    const responseBody = {
+      blastCount:       metrics.invited,
+      registrationCount: metrics.registered,
+      approvedCount:    metrics.approved,
+      attendedCount:    metrics.attended,
+      pendingApprovals: metrics.registered - metrics.approved,
+      seatsRemaining:   Math.max((event.capacity ?? 0) - metrics.approved, 0),
+      daysUntilEvent:   Math.ceil((new Date(event.startDate).getTime() - Date.now()) / 86400000),
+      lastBlastAt:      null,
+    }
+    return reply.status(200).send(responseBody)
   })
 
   fastify.get('/api/events/:id/sponsors', { preHandler: [requireAuth, requireRoles('admin', 'viewer')] }, async (request, reply) => {

@@ -1,73 +1,70 @@
 import { createId } from '@paralleldrive/cuid2'
 import type { ISuppressionRepository } from '../../interfaces/repositories/ISuppressionRepository.js'
 import type { PaginationParams } from '../../interfaces/repositories/IContactRepository.js'
-import type { SuppressionRecord } from '../../types/domain.js'
+import type { SuppressionRecord, EntityId } from '../../types/domain.js'
 import { SEED_CONTACT_IDS } from './_seeds.js'
-
-// Suppressed contacts — last 5 of the seed set (indices 115–119)
-const SUPPRESSED_PHONES = [
-  '+62811000000115',
-  '+62811000000116',
-  '+62811000000117',
-  '+62811000000118',
-  '+62811000000119',
-] as const
-
-const SUPPRESSION_REASONS = [
-  'unsubscribed',
-  'unsubscribed',
-  'erasure_request',
-  'unsubscribed',
-  'manually_added',
-] as const
 
 export class InMemorySuppressionRepository implements ISuppressionRepository {
   private suppressedPhones: Set<string> = new Set()
   private suppressedEmails: Set<string> = new Set()
-  private records: Map<string, SuppressionRecord> = new Map()
+  private records: Map<EntityId, SuppressionRecord> = new Map()
 
   constructor() {
     this._seed()
   }
 
   private _seed(): void {
+    // Only seed for contacts that have a phone (first 5 of our seed set)
+    // Actually, following the original logic, we seed the last 5.
+    // In our new ContactRepository seeds, indices 115-119 have NULL phone.
+    // So we'll seed them with null phone and maybe one with an email.
     for (let i = 0; i < 5; i++) {
+      const contactId = SEED_CONTACT_IDS[115 + i]!
       const record: SuppressionRecord = {
         id: createId(),
-        contactId: SEED_CONTACT_IDS[115 + i]!,
-        phone: SUPPRESSED_PHONES[i]!,
-        email: null,
-        name: null,
-        reason: SUPPRESSION_REASONS[i]!,
+        contactId,
+        phone: null,
+        email: `suppressed-${i}@example.com`,
+        name: `Suppressed User ${i}`,
+        reason: 'unsubscribed',
         createdAt: new Date(Date.now() - (5 - i) * 7 * 86400000).toISOString(),
       }
       this.records.set(record.id, record)
-      this.suppressedPhones.add(SUPPRESSED_PHONES[i]!)
+      if (record.email) this.suppressedEmails.add(record.email.toLowerCase())
     }
   }
 
   async isSuppressed(input: string | { phone?: string | null; email?: string | null }): Promise<boolean> {
     if (typeof input === 'string') {
-      return this.suppressedPhones.has(input) || this.suppressedEmails.has(input.toLowerCase())
+      const lower = input.toLowerCase()
+      return this.suppressedPhones.has(input) || this.suppressedEmails.has(lower)
     }
 
     const phone = input.phone?.trim()
     const email = input.email?.trim().toLowerCase()
-    return (phone ? this.suppressedPhones.has(phone) : false) || (email ? this.suppressedEmails.has(email) : false)
+    
+    if (phone && this.suppressedPhones.has(phone)) return true
+    if (email && this.suppressedEmails.has(email)) return true
+    
+    return false
   }
 
   async suppress(
-    contactId: string,
+    contactId: EntityId,
     reason: string,
     options?: { phone?: string | null; email?: string | null; name?: string | null },
   ): Promise<SuppressionRecord> {
-    const phone = options?.phone?.trim() ?? contactId
+    const phone = options?.phone?.trim() ?? null
     const email = options?.email?.trim().toLowerCase() ?? null
+    
     const existing = Array.from(this.records.values()).find((record) =>
-      record.phone === phone || (email !== null && record.email === email),
+      (phone !== null && record.phone === phone) || 
+      (email !== null && record.email === email)
     )
 
     if (existing) {
+      if (phone) this.suppressedPhones.add(phone)
+      if (email) this.suppressedEmails.add(email)
       return existing
     }
 
@@ -86,7 +83,7 @@ export class InMemorySuppressionRepository implements ISuppressionRepository {
     return record
   }
 
-  async remove(id: string): Promise<boolean> {
+  async remove(id: EntityId): Promise<boolean> {
     const existing = this.records.get(id)
     if (!existing) return false
     this.records.delete(id)
@@ -95,7 +92,7 @@ export class InMemorySuppressionRepository implements ISuppressionRepository {
     return true
   }
 
-  async findAll(params: PaginationParams): Promise<{ data: SuppressionRecord[]; total: number }> {
+  async findAll(params: PaginationParams, filters?: any): Promise<{ data: SuppressionRecord[]; total: number }> {
     const data = Array.from(this.records.values())
     const total = data.length
     const start = (params.page - 1) * params.pageSize
