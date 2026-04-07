@@ -29,6 +29,9 @@ export function ContactsCommandCenter() {
   const { setFilter } = useFilterStore()
   const { data: contacts } = useContacts()
 
+  const hasFilters = ['serviceType', 'city', 'jobTitle', 'q', 'missingEmail', 'missingPhone', 'flagFilter']
+    .some((k) => !!searchParams.get(k))
+
   // Merge current page's selection with existing cross-page selection
   const handleSelectionChange = useCallback((ids: string[], names: string[]) => {
     setSelectedIds(ids)
@@ -113,7 +116,7 @@ export function ContactsCommandCenter() {
 
       <ActionToolbar
         total={contacts?.pagination.total ?? 0}
-        isVisible={true}
+        isVisible={hasFilters || selectedIds.length > 0}
         selectedIds={selectedIds}
         selectedNames={selectedNames}
         onClearSelection={handleClearSelection}
