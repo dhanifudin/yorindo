@@ -21,10 +21,9 @@ describe('DevToolbar', () => {
     useAuthStore.getState().clearAuth()
   })
 
-  it('renders DEV button button when mocks are enabled', () => {
-    // In this test environment, MOCKS_ENABLED is true (either via NODE_ENV or NEXT_PUBLIC_ENABLE_MOCKS)
+  it('renders DEV button when mocks are enabled in test env', () => {
+    // This test env has NEXT_PUBLIC_ENABLE_MOCKS or NODE_ENV=development set
     const { container } = render(<DevToolbar />, { wrapper: makeWrapper() })
-    // Should render a single button with DEV label
     const button = container.querySelector('button')
     expect(button).not.toBeNull()
     expect(button).toHaveTextContent('DEV')
