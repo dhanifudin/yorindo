@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Check, ChevronsUpDown, X, Upload, ImageIcon, Loader2, Database } from 'lucide-react'
+import { Check, ChevronsUpDown, X, Upload, Loader2, Database } from 'lucide-react'
 import { useCreateEvent, useUpdateEvent } from '@/hooks/useEvents'
 import { useVendors } from '@/hooks/useVendors'
 import { useEventSponsors } from '@/hooks/useEventSponsors'
@@ -322,6 +322,7 @@ function ImageSourceSelector({
                     )}
                   >
                     <div className="relative w-full h-40 bg-muted overflow-hidden">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={img.url}
                         alt={img.name}
@@ -394,16 +395,8 @@ function ImageSourceSelector({
 function BannerUpload({ value, onChange }: BannerUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [isDragging, setIsDragging] = useState(false)
-  const [isUploading, setIsUploading] = useState(false)
   const [showSourceModal, setShowSourceModal] = useState(false)
-  const [urlInput, setUrlInput] = useState('')
-
-  // Sync existing banner (edit mode)
-  useEffect(() => {
-    if (value?.startsWith('http') && !value.startsWith('blob:')) {
-      setUrlInput(value)
-    }
-  }, [value])
+  const [urlInput, setUrlInput] = useState(value?.startsWith('http') && !value?.startsWith('blob:') ? value ?? '' : '')
 
   // ── Upload file handler ─────────────────────────────────────────────────────
   const handleFile = useCallback(
@@ -414,15 +407,12 @@ function BannerUpload({ value, onChange }: BannerUploadProps) {
         return
       }
 
-      setIsUploading(true)
       try {
         const url = await mockUploadImage(file)
         onChange(url)
         toast.success('Gambar berhasil diupload')
-      } catch (err) {
+      } catch {
         toast.error('Upload gagal, silakan coba lagi')
-      } finally {
-        setIsUploading(false)
       }
     },
     [onChange]
@@ -501,6 +491,7 @@ function BannerUpload({ value, onChange }: BannerUploadProps) {
     return (
       <div className="space-y-2">
         <div className="relative rounded-lg overflow-hidden border border-border bg-muted">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={value}
             alt="Banner preview"

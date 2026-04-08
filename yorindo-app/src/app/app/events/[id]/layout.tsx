@@ -82,7 +82,7 @@ export default function EventHubShellLayout({ children, params }: HubLayoutProps
   })
 
   // Shared blockerState query — AC7
-  const { data: blockerState } = useQuery<any>({
+  const { data: blockerState } = useQuery<Record<string, unknown>>({
     queryKey: ['event', id, 'blockerState'],
     queryFn: () => fetch(`/api/events/${id}/overview`).then(r => r.json()),
     staleTime: 60_000,

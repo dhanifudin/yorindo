@@ -36,6 +36,8 @@ describe('FunnelVisualization', () => {
   it('shows "Belum ada blast — kirim undangan sekarang" CTA when blastCount = 0', async () => {
     render(<FunnelVisualization {...defaultProps} blastCount={0} />)
     await waitFor(() => expect(screen.getByText('Belum ada blast — kirim undangan sekarang')).toBeTruthy())
+  })
+
   it('shows "Kirim undangan" CTA when blastCount = 0', async () => {
     render(<FunnelVisualization {...defaultProps} blastCount={0} />)
     await waitFor(() => expect(screen.getByText('Kirim undangan')).toBeTruthy())
