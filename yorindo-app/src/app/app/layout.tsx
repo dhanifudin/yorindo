@@ -64,17 +64,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       return
     }
 
-    // Don't redirect for role-based restrictions — just render null instead
-    // This preserves the URL so the user stays on their intended page
+    // Role-based redirects to allowed paths
     if (user?.role === 'viewer' && !isViewerAllowed(pathname)) {
+      router.replace('/app/events')
       return
     }
 
     if (user?.role === 'participant' && !isParticipantAllowed(pathname)) {
+      router.replace('/app')
       return
     }
 
     if (user?.role === 'staff' && !isStaffAllowed(pathname)) {
+      router.replace('/app/scan')
       return
     }
   }, [hydrated, accessToken, user, router, pathname, isAuthorized])
