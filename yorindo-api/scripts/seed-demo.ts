@@ -436,14 +436,20 @@ export async function seedDemo(pool: Pool): Promise<void> {
     }
     console.log(`✓ Seeded ${FLAGGED_RECORDS.length} flagged records (invalid-data from ETL)`)
 
-    // ── Templates ──
+    // ── Templates (all 12: 6 types × 2 channels) ──
     const templateData = [
       { id: createId(), name: 'Undangan Event (WhatsApp)', type: 'invitation', channel: 'whatsapp', subject: null, body: 'Halo {{name}}, Anda diundang ke {{event_title}} pada {{date}} di {{venue}}.' },
-      { id: createId(), name: 'Undangan Event (Email)', type: 'invitation', channel: 'email', subject: 'Undangan: {{event_title}}', body: '<p>Halo {{name}},</p><p>Anda diundang untuk menghadiri <strong>{{event_title}}</strong> yang akan dilaksanakan pada:</p><p>Tanggal: {{date}}<br>Lokasi: {{venue}}</p><p>Kami mengharapkan kehadiran Anda.</p><p>Salam hormat,<br>Tim Yorindo</p>' },
-      { id: createId(), name: 'Konfirmasi Tiket', type: 'confirmation', channel: 'email', subject: 'Konfirmasi Registrasi - {{event_title}}', body: '<p>Selamat {{name}}!</p><p>Registrasi Anda untuk <strong>{{event_title}}</strong> telah disetujui.</p><p>Simpan email ini sebagai bukti registrasi Anda.</p>' },
-      { id: createId(), name: 'Penolakan', type: 'rejection', channel: 'email', subject: 'Status Registrasi - {{event_title}}', body: '<p>Maaf {{name}},</p><p>Registrasi Anda untuk <strong>{{event_title}}</strong> tidak dapat kami terima saat ini karena keterbatasan kapasitas.</p><p>Terima kasih atas minat Anda.</p>' },
-      { id: createId(), name: 'Pengingat Event', type: 'reminder', channel: 'whatsapp', subject: null, body: 'Halo {{name}}, event {{event_title}} tinggal {{days}} hari lagi! Sampai jumpa.' },
-      { id: createId(), name: 'Ticket Delivery', type: 'ticket_delivery', channel: 'email', subject: 'Tiket Anda - {{event_title}}', body: '<p>Berikut tiket Anda untuk <strong>{{event_title}}</strong>.</p><p>Token: {{token}}</p><p>Tunjukkan QR code ini saat check-in.</p>' },
+      { id: createId(), name: 'Undangan Event (Email)', type: 'invitation', channel: 'email', subject: 'Undangan: {{event_title}}', body: '<p>Halo {{name}},</p><p>Anda diundang ke <strong>{{event_title}}</strong> pada {{date}} di {{venue}}.</p>' },
+      { id: createId(), name: 'Konfirmasi Tiket (WhatsApp)', type: 'confirmation', channel: 'whatsapp', subject: null, body: 'Selamat {{name}}! Registrasi Anda untuk {{event_title}} telah disetujui.' },
+      { id: createId(), name: 'Konfirmasi Tiket (Email)', type: 'confirmation', channel: 'email', subject: 'Konfirmasi Registrasi - {{event_title}}', body: '<p>Selamat {{name}}!</p><p>Registrasi Anda untuk <strong>{{event_title}}</strong> telah disetujui.</p>' },
+      { id: createId(), name: 'Penolakan (WhatsApp)', type: 'rejection', channel: 'whatsapp', subject: null, body: 'Maaf {{name}}, registrasi Anda untuk {{event_title}} tidak dapat kami terima.' },
+      { id: createId(), name: 'Penolakan (Email)', type: 'rejection', channel: 'email', subject: 'Status Registrasi - {{event_title}}', body: '<p>Maaf {{name}},</p><p>Registrasi Anda untuk <strong>{{event_title}}</strong> tidak dapat kami terima.</p>' },
+      { id: createId(), name: 'Pengiriman Tiket (WhatsApp)', type: 'ticket_delivery', channel: 'whatsapp', subject: null, body: 'Berikut tiket Anda untuk {{event_title}}. Token: {{token}}' },
+      { id: createId(), name: 'Pengiriman Tiket (Email)', type: 'ticket_delivery', channel: 'email', subject: 'Tiket Anda - {{event_title}}', body: '<p>Berikut tiket Anda untuk <strong>{{event_title}}</strong>.</p><p>Token: {{token}}</p>' },
+      { id: createId(), name: 'Pembatalan Event (WhatsApp)', type: 'cancellation', channel: 'whatsapp', subject: null, body: 'Maaf {{name}}, event {{event_title}} pada {{date}} dibatalkan.' },
+      { id: createId(), name: 'Pembatalan Event (Email)', type: 'cancellation', channel: 'email', subject: 'Event Dibatalkan - {{event_title}}', body: '<p>Maaf {{name}},</p><p>Event <strong>{{event_title}}</strong> telah dibatalkan.</p>' },
+      { id: createId(), name: 'Pengingat Event (WhatsApp)', type: 'reminder', channel: 'whatsapp', subject: null, body: 'Halo {{name}}, event {{event_title}} tinggal {{days}} hari lagi! Jangan lupa untuk hadir.' },
+      { id: createId(), name: 'Pengingat Event (Email)', type: 'reminder', channel: 'email', subject: 'Pengingat: {{event_title}}', body: '<p>Halo {{name}},</p><p>Event <strong>{{event_title}}</strong> tinggal {{days}} hari lagi. Kami menantikan kehadiran Anda.</p>' },
     ]
     for (const tpl of templateData) {
       await client.query(
@@ -451,7 +457,7 @@ export async function seedDemo(pool: Pool): Promise<void> {
         [tpl.id, tpl.name, tpl.type, tpl.channel, tpl.subject, tpl.body]
       )
     }
-    console.log(`✓ Seeded ${templateData.length} templates`)
+    console.log(`✓ Seeded ${templateData.length} templates (6 types × 2 channels)`)
 
     // ── Event Sponsors ──
     let sponsorCount = 0
@@ -555,7 +561,7 @@ async function validate(client: PoolClient): Promise<void> {
   await check('Industries', `SELECT count(*) FROM industries`, c => c >= 6)
   await check('Job titles', `SELECT count(*) FROM job_titles`, c => c >= 8)
   await check('Vendors', `SELECT count(*) FROM vendors`, c => c >= 3)
-  await check('Templates', `SELECT count(*) FROM templates`, c => c >= 6)
+  await check('Templates', `SELECT count(*) FROM templates`, c => c >= 12)
   await check('Event sponsors', `SELECT count(*) FROM event_sponsors`, c => c >= 3)
   await check('Blast logs', `SELECT count(*) FROM blast_logs`, c => c >= 5)
 

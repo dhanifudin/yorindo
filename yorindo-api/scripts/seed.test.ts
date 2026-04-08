@@ -212,9 +212,9 @@ describe.skipIf(!hasDatabase)('Demo seed validation — Users', () => {
 // ─── Templates ─────────────────────────────────────────────────────────────────
 
 describe.skipIf(!hasDatabase)('Demo seed validation — Templates', () => {
-  it('should have ≥ 6 templates', async () => {
+  it('should have ≥ 12 templates', async () => {
     const total = await count('SELECT COUNT(*) as total FROM templates')
-    expect(total).toBeGreaterThanOrEqual(6)
+    expect(total).toBeGreaterThanOrEqual(12)
   })
 
   it('should have email invitation template', async () => {
