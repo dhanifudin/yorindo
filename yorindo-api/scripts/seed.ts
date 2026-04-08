@@ -125,7 +125,7 @@ async function seed(): Promise<void> {
         createId(),
         `Contact ${i}`,
         `+6281200000${String(i).padStart(3, '0')}`,
-        `contact${i}@example.com`,
+        i <= 8 ? `contact${i}@example.com` : null, // contacts 9-10 missing email
         city,
         `PT Perusahaan ${i}`,
         size,
@@ -138,7 +138,39 @@ async function seed(): Promise<void> {
         location?.city_name ?? null,
       ])
     }
-    console.log('✓ Seeded 10 contacts (with serviceType/industry)')
+    console.log('✓ Seeded 10 contacts (8 complete, 2 missing email)')
+
+    // Duplicate contact pairs (3 pairs for dev testing)
+    const devDupPairs = [
+      { nameA: 'Budi Santoso', phoneA: '+628120000101', emailA: 'budi@company.co.id', nameB: 'Budi Santoso', phoneB: '+628120000102', emailB: 'budi.santoso@gmail.com', score: 0.95 },
+      { nameA: 'Sari Dewi Kusuma', phoneA: '+628120000103', emailA: 'sari.kusuma@work.id', nameB: 'Sari Dewi', phoneB: '+628120000104', emailB: 'saridewi@gmail.com', score: 0.82 },
+      { nameA: 'Ahmad Hidayat', phoneA: '+628120000105', emailA: 'ahmad.h@office.id', nameB: 'Ahmad Hidayat S.', phoneB: '+628120000106', emailB: 'ahmadh@gmail.com', score: 0.78 },
+    ]
+    const location0 = cityLocationMap['Jakarta']
+    const industryId0 = industryMap['teknologi']
+    const jobTitleId0 = jobTitleMap['software-engineer']
+    for (const pair of devDupPairs) {
+      const primaryId = createId()
+      const duplicateId = createId()
+      await client.query(`
+        INSERT INTO contacts (id, name, phone, email, city, company, company_size, source, consent_status, industry_id, job_title_id, service_type, province_code, province_name, city_code, city_name)
+        VALUES ($1,$2,$3,$4,'Jakarta','PT Dev Corp','50-200','manual','active',$5,$6,'Elektronik & Peralatan Rumah Tangga',$7,$8,$9,$10)
+        ON CONFLICT (phone) DO NOTHING
+      `, [primaryId, pair.nameA, pair.phoneA, pair.emailA, industryId0, jobTitleId0,
+          location0?.province_code, location0?.province_name, location0?.city_code, location0?.city_name])
+      await client.query(`
+        INSERT INTO contacts (id, name, phone, email, city, company, company_size, source, consent_status, industry_id, job_title_id, service_type, flag_category, province_code, province_name, city_code, city_name)
+        VALUES ($1,$2,$3,$4,'Jakarta','PT Dev Corp','<50','form','active',$5,$6,'Elektronik & Peralatan Rumah Tangga','duplicate',$7,$8,$9,$10)
+        ON CONFLICT (phone) DO NOTHING
+      `, [duplicateId, pair.nameB, pair.phoneB, pair.emailB, industryId0, jobTitleId0,
+          location0?.province_code, location0?.province_name, location0?.city_code, location0?.city_name])
+      await client.query(`
+        INSERT INTO duplicate_pairs (id, primary_id, duplicate_id, match_score, match_reasons)
+        VALUES ($1,$2,$3,$4,$5)
+        ON CONFLICT (primary_id, duplicate_id) DO NOTHING
+      `, [createId(), primaryId, duplicateId, pair.score, JSON.stringify(['name_similar'])])
+    }
+    console.log('✓ Seeded 3 duplicate contact pairs')
 
     // Templates
     await client.query(`

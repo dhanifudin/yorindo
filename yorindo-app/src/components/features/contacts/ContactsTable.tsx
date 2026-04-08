@@ -162,6 +162,14 @@ export function ContactsTable({
       },
     },
     { accessorKey: 'serviceType', header: 'Industri' },
+    {
+      accessorKey: 'jobTitle',
+      header: 'Jabatan',
+      cell: ({ getValue }) => {
+        const val = getValue() as string | null | undefined
+        return <span className="text-muted-foreground">{val || '—'}</span>
+      },
+    },
     { accessorKey: 'city', header: 'Kota' },
     {
       id: 'completeness',
@@ -522,8 +530,10 @@ export function ContactsTable({
                       )}
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">
+                      {contact.jobTitle && <span>{contact.jobTitle}</span>}
+                      {contact.jobTitle && contact.serviceType && <span> · </span>}
                       {contact.serviceType && <span>{contact.serviceType}</span>}
-                      {contact.serviceType && contact.email && <span> · </span>}
+                      {(contact.jobTitle || contact.serviceType) && contact.email && <span> · </span>}
                       {contact.email && <span>{contact.email}</span>}
                     </div>
                   </div>
