@@ -75,12 +75,15 @@ export default function EventHubShellLayout({ children, params }: HubLayoutProps
     staleTime: 60_000,
   })
 
-  const { data: registrationStats } = useQuery<{ pagination: { total: number } }>({
-    queryKey: ['event-registrations', id, 'pending'],
-    queryFn: () => fetch(`/api/events/${id}/registrations?status=pending&pageSize=1`).then(r => r.json()),
+  // Shared blockerState query — AC7
+  const { data: blockerState } = useQuery<any>({
+    queryKey: ['event', id, 'blockerState'],
+    queryFn: () => fetch(`/api/events/${id}/overview`).then(r => r.json()),
+    staleTime: 60_000,
     enabled: !!id,
   })
-  const pendingCount = registrationStats?.pagination.total ?? 0
+  const pendingCount = blockerState?.pendingApprovals ?? 0
+  const daysUntilEvent = blockerState?.daysUntilEvent ?? 0
 
   const [showEditSheet, setShowEditSheet] = useState(false)
   const [confirmStatus, setConfirmStatus] = useState<Event['status'] | null>(null)
@@ -115,14 +118,30 @@ export default function EventHubShellLayout({ children, params }: HubLayoutProps
     }
   }
 
-  // Blocker strip items
+  // Blocker strip items — AC6, AC7
   const blockerItems = []
+  
   if (pendingCount > 0) {
     blockerItems.push({
       id: 'pending',
       label: `${pendingCount} pendaftar menunggu persetujuan`,
       onClick: () => { window.location.href = `${baseHref}/registrations` },
-      urgency: pendingCount > 20 ? 'warning' : 'default',
+      urgency: pendingCount > 20 ? 'critical' : 'default',
+    } as const)
+  }
+
+  // Countdown in BlockerStrip — AC6
+  if (daysUntilEvent >= 0 && daysUntilEvent <= 1) {
+    const hours = Math.round(daysUntilEvent * 24)
+    let urgency: 'default' | 'warning' | 'critical' = 'default'
+    if (hours < 6) urgency = 'critical'
+    else if (hours < 24) urgency = 'warning'
+
+    blockerItems.push({
+      id: 'countdown',
+      label: hours === 0 ? 'Event dimulai hari ini!' : `${hours} jam lagi hingga event dimulai.`,
+      onClick: () => {},
+      urgency,
     } as const)
   }
 

@@ -70,7 +70,7 @@ export function FunnelVisualization({ blastCount, registrationCount, approvedCou
         cta={
           blastCount === 0 ? (
             <Link href={`${baseHref}/blast`} className="text-xs text-primary underline underline-offset-2 whitespace-nowrap">
-              Kirim undangan
+              Belum ada blast — kirim undangan sekarang
             </Link>
           ) : undefined
         }

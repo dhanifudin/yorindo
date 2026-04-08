@@ -41,10 +41,6 @@
     "node_modules",
     "public/sw.js",
     "public/swe-worker*.js",
-    "**/*.test.ts",
-    "**/*.test.tsx",
-    "**/*.spec.ts",
-    "**/*.spec.tsx",
     "vitest.setup.ts",
     "vitest.config.ts"
   ]

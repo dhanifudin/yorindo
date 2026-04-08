@@ -227,20 +227,16 @@ export const eventHandlers = [
         { status: 404 }
       )
     }
-    const capacity = event.capacity ?? 200
-    const blastCount = 2000
-    const registrationCount = Math.floor(blastCount * 0.2)
-    const approvedCount = Math.floor(registrationCount * 0.75)
-    const attendedCount = event.status === 'completed' ? Math.floor(approvedCount * 0.85) : 0
+    // Deterministic seeded data for Story 4.8
     return HttpResponse.json({
-      blastCount,
-      registrationCount,
-      approvedCount,
-      attendedCount,
+      blastCount: 2000,
+      registrationCount: 400,
+      approvedCount: 280,
+      attendedCount: 0,
       lastBlastAt: '2026-04-01T09:00:00Z',
-      pendingApprovals: registrationCount - approvedCount,
-      seatsRemaining: Math.max(capacity - approvedCount, 0),
-      daysUntilEvent: Math.ceil((new Date(event.eventDate).getTime() - Date.now()) / 86400000),
+      pendingApprovals: 58,
+      seatsRemaining: 120,
+      daysUntilEvent: 3,
     })
   }),
 
