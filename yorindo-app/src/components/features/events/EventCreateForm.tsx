@@ -1,11 +1,10 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Check, ChevronsUpDown, X, Upload, ImageIcon, Loader2 } from 'lucide-react'
-import Image from 'next/image'
 import { useCreateEvent, useUpdateEvent } from '@/hooks/useEvents'
 import { useVendors } from '@/hooks/useVendors'
 import { useEventSponsors } from '@/hooks/useEventSponsors'
@@ -82,6 +81,20 @@ interface BannerUploadProps {
   value: string
   onChange: (url: string) => void
 }
+
+// ─── Constants ──────────────────────────────────────────────────────────────────
+
+const ALLOWED_IMAGE_TYPES = new Set([
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'image/avif',
+  'image/svg+xml',
+])
+
+const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024 // 5MB
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -455,12 +468,11 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
     },
   })
 
-  // eslint-disable-next-line react-hooks/incompatible-library
-  const bannerUrlWatched = watch('bannerUrl')
-
-
+  // Sync selected vendors when editing an event with existing sponsors
+  // This is a legitimate use of useEffect: syncing external prop state to local form state
   const loadedRef = useRef<string>('')
 
+  /* eslint-disable react-hooks/set-state-in-effect -- Legitimate: sync form state with existing sponsors when editing event */
   useEffect(() => {
     if (!existingSponsors) return
 
@@ -471,6 +483,7 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
       setSelectedVendorIds(existingSponsors.map((s: { vendor_id: string }) => s.vendor_id))
     }
   }, [existingSponsors])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
 
   const allVendors = vendorsData?.data ?? []

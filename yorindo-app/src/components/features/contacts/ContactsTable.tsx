@@ -272,9 +272,10 @@ export function ContactsTable({
                 <div className="space-y-3 text-sm">
                   <div><span className="text-muted-foreground">Email: </span>{detailContact?.email || '—'}</div>
                   <div><span className="text-muted-foreground">Telepon: </span>{detailContact?.phone}</div>
-                  <div><span className="text-muted-foreground">Industri: </span>{detailContact?.industryId}</div>
-                  <div><span className="text-muted-foreground">Kota: </span>{detailContact?.city}</div>
-                  <div><span className="text-muted-foreground">Ukuran Perusahaan: </span>{detailContact?.companySize}</div>
+                  <div><span className="text-muted-foreground">Industri: </span>{detailContact?.serviceType || '—'}</div>
+                  <div><span className="text-muted-foreground">Jabatan: </span>{detailContact?.jobTitle || '—'}</div>
+                  <div><span className="text-muted-foreground">Kota: </span>{detailContact?.city || '—'}</div>
+                  <div><span className="text-muted-foreground">Perusahaan: </span>{detailContact?.company || '—'}</div>
                   <div>
                     <span className="text-muted-foreground">Kelengkapan: </span>
                     {detailContact && `${Math.round(detailContact.completenessScore * 100)}%`}
@@ -486,15 +487,15 @@ export function ContactsTable({
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <p className="text-xs text-muted-foreground font-medium uppercase">Industri</p>
-                    <p className="mt-0.5">{detailContact?.industryId || '—'}</p>
+                    <p className="mt-0.5">{detailContact?.serviceType || '—'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground font-medium uppercase">Kota</p>
                     <p className="mt-0.5">{detailContact?.city || '—'}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground font-medium uppercase">Ukuran Perusahaan</p>
-                    <p className="mt-0.5">{detailContact?.companySize || '—'}</p>
+                    <p className="text-xs text-muted-foreground font-medium uppercase">Perusahaan</p>
+                    <p className="mt-0.5">{detailContact?.company || '—'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground font-medium uppercase">Kelengkapan</p>
