@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { useAuthStore, useAuthHydrated } from '@/store/authStore'
+import { useAuthStore } from '@/store/authStore'
 import { AdminShell } from '@/components/layout/AdminShell'
 import { ParticipantShell } from '@/components/layout/ParticipantShell'
 import { PWAInstallBanner } from '@/components/features/scan/PWAInstallBanner'
@@ -32,12 +32,16 @@ function isParticipantAllowed(pathname: string): boolean {
 }
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const hydrated = useAuthHydrated()
+  const [mounted, setMounted] = useState(false)
   const accessToken = useAuthStore((s) => s.accessToken)
   const user = useAuthStore((s) => s.user)
   const clearAuth = useAuthStore((s) => s.clearAuth)
   const router = useRouter()
   const pathname = usePathname()
+
+  // Prevent SSR/client hydration mismatch — render null until mounted
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { setMounted(true) }, [])
 
   const mocksEnabled = process.env.NEXT_PUBLIC_ENABLE_MOCKS === 'true'
 
@@ -55,37 +59,38 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [accessToken, user, pathname])
 
   useEffect(() => {
-    if (!hydrated) return // wait for store to rehydrate from localStorage
+    if (!mounted) return
 
-    if (!accessToken) {
-      // Save the intended destination for redirect-after-login
+    // Check Zustand hydration — skip redirect if hydration hasn't completed.
+    // When hydration finishes, Zustand updates the store, this component re-renders,
+    // and the effect fires again with the correct auth state.
+    const zustandPersist = (useAuthStore as unknown as { persist?: { hasHydrated: () => boolean } }).persist
+    if (!zustandPersist?.hasHydrated?.()) return
+
+    if (!accessToken || !user) {
       sessionStorage.setItem('loginRedirectUrl', pathname)
       router.replace('/login')
       return
     }
 
-    // Role-based redirects to allowed paths
-    if (user?.role === 'viewer' && !isViewerAllowed(pathname)) {
+    if (user.role === 'viewer' && !isViewerAllowed(pathname)) {
       router.replace('/app/events')
       return
     }
 
-    if (user?.role === 'participant' && !isParticipantAllowed(pathname)) {
+    if (user.role === 'participant' && !isParticipantAllowed(pathname)) {
       router.replace('/app')
       return
     }
 
-    if (user?.role === 'staff' && !isStaffAllowed(pathname)) {
+    if (user.role === 'staff' && !isStaffAllowed(pathname)) {
       router.replace('/app/scan')
       return
     }
-  }, [hydrated, accessToken, user, router, pathname, isAuthorized])
+  }, [mounted, accessToken, user, router, pathname, isAuthorized])
 
-  // Show nothing while hydrating — prevents flash redirect to /login
-  if (!hydrated) return null
-
+  if (!mounted) return null
   if (!accessToken || !user) return null
-
   if (!isAuthorized) return null
 
   if (user.role === 'participant') {
