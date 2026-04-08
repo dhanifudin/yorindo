@@ -15,12 +15,12 @@ function makeWrapper() {
 }
 
 describe('useTemplates', () => {
-  it('returns 3 seeded templates from MSW', async () => {
+  it('returns 12 seeded templates from MSW (6 types × 2 channels)', async () => {
     const { result } = renderHook(() => useTemplates(), { wrapper: makeWrapper() })
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 3000 })
 
-    expect(result.current.data).toHaveLength(3)
+    expect(result.current.data).toHaveLength(12)
   })
 
   it('returns templates with expected fields', async () => {
