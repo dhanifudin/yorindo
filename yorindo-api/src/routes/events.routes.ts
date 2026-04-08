@@ -13,6 +13,7 @@ import {
   eventSponsorRepository,
 } from '../container.js'
 import { findTemplateById } from '../data/templates.js'
+import { getRedisOptional } from '../lib/redis.js'
 import { requireAdmin, requireAuth, requireRoles, type JwtPayload } from '../middleware/auth.js'
 import type { Event, EventStatus, Registration, TargetCriteria } from '../types/domain.js'
 import { validateOpenApiRequest, validateOpenApiResponse } from '../lib/openapi-contract.js'
@@ -848,6 +849,17 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     const allowed = await requireEventAccessOr403(reply, request.user as JwtPayload | undefined, event.id)
     if (!allowed) return
     validateOpenApiRequest({ path: '/events/{id}/yorimind', method: 'get', params: params.data })
+
+    // Check Redis cache first (TTL 7 days)
+    const redis = getRedisOptional()
+    const cacheKey = `yorimind:event:${params.data.id}`
+    if (redis) {
+      const cached = await redis.get(cacheKey)
+      if (cached) {
+        return reply.status(200).send(JSON.parse(cached))
+      }
+    }
+
     const registrations = await registrationRepository.findByEvent(event.id, { page: 1, pageSize: 100 })
     const snapshot = {
       eventId: event.id,
@@ -879,7 +891,29 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       tracked_metrics: ['registrationCount', 'approvedCount', 'attendedCount'],
     }
     validateOpenApiResponse({ path: '/events/{id}/yorimind', method: 'get', status: 200, body: responseBody })
+
+    // Cache in Redis for 7 days
+    if (redis) {
+      await redis.set(cacheKey, JSON.stringify(responseBody), 'EX', 604800)
+    }
+
     return reply.status(200).send(responseBody)
+  })
+
+  fastify.delete('/api/events/:id/yorimind/cache', { preHandler: [requireAuth, requireRoles('admin', 'viewer')] }, async (request, reply) => {
+    const params = EventIdParamsSchema.safeParse(request.params)
+    if (!params.success) return replyValidationError(reply, params.error.issues, 'Invalid event id')
+    const event = await requireEventOr404(reply, params.data.id)
+    if (!event) return
+    const allowed = await requireEventAccessOr403(reply, request.user as JwtPayload | undefined, event.id)
+    if (!allowed) return
+
+    const redis = getRedisOptional()
+    if (redis) {
+      await redis.del(`yorimind:event:${params.data.id}`)
+    }
+
+    return reply.status(204).send()
   })
 
   fastify.get('/api/events/:id/attendance-stats', { preHandler: [requireAuth, requireRoles('admin', 'staff')] }, async (request, reply) => {

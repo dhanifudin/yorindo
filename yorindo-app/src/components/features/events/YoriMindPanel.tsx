@@ -28,7 +28,10 @@ export function YoriMindPanel({ eventId }: YoriMindPanelProps) {
     staleTime: 24 * 60 * 60 * 1000, // 24h cache
   })
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
+    // Invalidate backend Redis cache first
+    await fetch(`/api/events/${eventId}/yorimind/cache`, { method: 'DELETE' })
+    // Then invalidate React Query cache and refetch
     queryClient.invalidateQueries({ queryKey: ['yorimind', eventId] })
     queryClient.refetchQueries({ queryKey: ['yorimind', eventId] })
   }
