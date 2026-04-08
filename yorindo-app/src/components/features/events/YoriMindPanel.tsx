@@ -93,7 +93,7 @@ export function YoriMindPanel({ eventId }: YoriMindPanelProps) {
               <div>
                 <p className="text-sm font-medium mb-2">Penyebab Utama</p>
                 <ul className="space-y-1">
-                  {data.root_causes.map((cause, i) => (
+                  {data.root_causes?.map((cause, i) => (
                     <li key={i} className="text-sm text-muted-foreground flex gap-2">
                       <span className="text-destructive">•</span>
                       <span>{cause}</span>
@@ -106,7 +106,7 @@ export function YoriMindPanel({ eventId }: YoriMindPanelProps) {
               <div>
                 <p className="text-sm font-medium mb-2">Rekomendasi</p>
                 <div className="space-y-2">
-                  {data.recommendations.map((rec, i) => (
+                  {data.recommendations?.map((rec, i) => (
                     <div key={i} className="rounded-md border p-3 space-y-1">
                       <div className="flex items-start justify-between gap-2">
                         <p className="text-sm font-medium flex-1">{rec.action}</p>
@@ -124,7 +124,7 @@ export function YoriMindPanel({ eventId }: YoriMindPanelProps) {
               <div>
                 <p className="text-sm font-medium mb-2">Metrik yang Dipantau</p>
                 <div className="flex flex-wrap gap-1">
-                  {data.tracked_metrics.map((m) => (
+                  {data.tracked_metrics?.map((m) => (
                     <Badge key={m} className="bg-muted text-muted-foreground text-xs">{m}</Badge>
                   ))}
                 </div>

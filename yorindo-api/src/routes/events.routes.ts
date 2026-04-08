@@ -946,15 +946,12 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     const result = await yoriMindService.analyze(snapshot)
     const responseBody = {
       disabled: result.disabled ?? false,
-      analysis: result.summary,
-      root_causes: result.insights,
-      recommendations: result.recommendations.map((action) => ({
-        action,
-        impact: 'medium',
-        priority: 'medium',
-      })),
       summary: result.summary,
-      tracked_metrics: ['registrationCount', 'approvedCount', 'attendedCount'],
+      analysis: result.analysis,
+      root_causes: result.root_causes,
+      recommendations: result.recommendations,
+      tracked_metrics: result.tracked_metrics,
+      generatedAt: result.generatedAt,
     }
     validateOpenApiResponse({ path: '/events/{id}/yorimind', method: 'get', status: 200, body: responseBody })
 

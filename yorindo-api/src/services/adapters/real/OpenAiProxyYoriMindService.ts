@@ -19,15 +19,20 @@ Tugas Anda adalah menganalisis data event dan memberikan insight dalam bahasa In
 Berikan respons dalam format JSON EXACT seperti schema berikut:
 {
   "summary": "Ringkasan performa event dalam 2-3 kalimat (bahasa Indonesia)",
-  "insights": ["Insight 1", "Insight 2", "Insight 3"],
-  "recommendations": ["Rekomendasi 1", "Rekomendasi 2", "Rekomendasi 3"],
+  "analysis": "Analisis mendalam 1-2 paragraf tentang performa event, termasuk faktor keberhasilan atau kegagalan",
+  "root_causes": ["Penyebab utama 1", "Penyebab utama 2", "Penyebab utama 3"],
+  "recommendations": [
+    { "action": "Rekomendasi tindakan spesifik", "priority": "high|medium|low", "impact": "Dampak yang diharapkan jika rekomendasi ini dijalankan" }
+  ],
+  "tracked_metrics": ["Metrik 1", "Metrik 2", "Metrik 3"],
   "generatedAt": "ISO date string"
 }
 
 Rules:
 - Gunakan bahasa Indonesia yang profesional dan mudah dipahami
-- Berikan 3 insight berdasarkan data
-- Berikan 3 rekomendasi yang actionable
+- Berikan 3 root causes yang spesifik berdasarkan data (bukan generik)
+- Berikan 3 rekomendasi yang actionable dengan prioritas yang jelas
+- Berikan 3-5 tracked metrics yang relevan untuk dipantau ke depan
 - Fokus pada metrik: registration rate, attendance rate, conversion
 - Jika data menunjukkan performa buruk, berikan analisis penyebab yang masuk akal
 - Jika data menunjukkan performa baik, berikan insight tentang faktor keberhasilan`
@@ -76,9 +81,7 @@ Berikan analisis mendalam dalam format JSON.`
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: userContent },
       ],
-      response_format: { type: 'json_object' },
-      temperature: 0.7,
-      max_tokens: 4096,
+      max_completion_tokens: 4096,
     })
 
     const content = response.choices[0]?.message?.content
@@ -86,11 +89,35 @@ Berikan analisis mendalam dalam format JSON.`
 
     const parsed = JSON.parse(content)
 
+    // Handle both old format (insights[], recommendations: string[]) and new format
+    const rootCauses = Array.isArray(parsed.root_causes)
+      ? parsed.root_causes
+      : Array.isArray(parsed.insights)
+        ? parsed.insights
+        : []
+
+    const recommendations = Array.isArray(parsed.recommendations)
+      ? parsed.recommendations.map((rec: unknown) => {
+          if (typeof rec === 'string') return { action: rec, priority: 'medium' as const, impact: '' }
+          if (typeof rec === 'object' && rec !== null) {
+            const r = rec as Record<string, unknown>
+            return {
+              action: typeof r.action === 'string' ? r.action : '',
+              priority: (r.priority === 'high' || r.priority === 'medium' || r.priority === 'low') ? r.priority : 'medium' as const,
+              impact: typeof r.impact === 'string' ? r.impact : '',
+            }
+          }
+          return { action: '', priority: 'medium' as const, impact: '' }
+        })
+      : []
+
     return {
       disabled: false,
       summary: parsed.summary ?? 'Tidak ada ringkasan yang tersedia.',
-      insights: Array.isArray(parsed.insights) ? parsed.insights : [],
-      recommendations: Array.isArray(parsed.recommendations) ? parsed.recommendations : [],
+      analysis: parsed.analysis ?? 'Tidak ada analisis yang tersedia.',
+      root_causes: rootCauses,
+      recommendations,
+      tracked_metrics: Array.isArray(parsed.tracked_metrics) ? parsed.tracked_metrics : [],
       generatedAt: parsed.generatedAt ?? new Date().toISOString(),
     }
   }

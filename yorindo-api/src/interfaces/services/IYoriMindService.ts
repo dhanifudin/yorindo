@@ -18,8 +18,14 @@ export interface EventSnapshot {
 export interface YoriMindResult {
   disabled?: boolean            // true when AI provider is disabled (AC5)
   summary: string               // Indonesian language summary
-  insights: string[]            // bullet-point insights
-  recommendations: string[]     // actionable recommendations
+  analysis: string              // Deep-dive analysis paragraph
+  root_causes: string[]         // Root cause bullet points
+  recommendations: Array<{      // Prioritized recommendations
+    action: string
+    priority: 'high' | 'medium' | 'low'
+    impact: string
+  }>
+  tracked_metrics: string[]     // Metrics to monitor going forward
   generatedAt: string           // ISO date string
 }
 
