@@ -31,6 +31,17 @@ export function ContactsCommandCenter() {
   const hasFilters = ['serviceType', 'city', 'jobTitle', 'q', 'missingEmail', 'missingPhone', 'flagFilter']
     .some((k) => !!searchParams.get(k))
 
+  // Reset selection when filter params change (exclude page — page navigation keeps selection).
+  // Using the "reset during render" pattern to avoid setState-in-effect lint error.
+  const filterKey = ['serviceType', 'city', 'jobTitle', 'q', 'missingEmail', 'missingPhone', 'flagFilter']
+    .map((k) => `${k}=${searchParams.get(k) ?? ''}`)
+    .join('&')
+  const [prevFilterKey, setPrevFilterKey] = useState(filterKey)
+  if (prevFilterKey !== filterKey) {
+    setPrevFilterKey(filterKey)
+    setRowSelection({})
+  }
+
   // Derive selectedIds/Names directly from rowSelection + current page data
   const selectedIds = useMemo(
     () => (contacts?.data ?? []).filter((c) => rowSelection[c.id]).map((c) => c.id),
@@ -61,7 +72,6 @@ export function ContactsCommandCenter() {
       missingEmail: searchParams.get('missingEmail') === 'true',
       missingPhone: searchParams.get('missingPhone') === 'true',
     })
-    setRowSelection({})
   }, [searchParams, setFilter])
 
   const handleStatClick = (type: 'duplicates' | 'missingEmail' | 'missingPhone') => {

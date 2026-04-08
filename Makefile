@@ -11,7 +11,8 @@ DEV_API_TTY  = $(DEV_COMPOSE) exec api
 
 .PHONY: deploy-demo reset-demo stop-demo logs-demo migrate-demo seed-demo \
         up-dev stop-dev clean-dev logs-dev migrate-dev seed-dev setup-dev \
-        deploy-app stop-app logs-app
+        deploy-app stop-app logs-app \
+        lint lint-api lint-app test test-api test-app
 
 ## Deploy demo from scratch (wipe data, pull images, migrate, seed)
 deploy-demo:
@@ -181,3 +182,33 @@ stop-app:
 ## Follow app preview logs
 logs-app:
 	$(APP_COMPOSE) logs -f
+
+# ─────────────────────────────────────────────
+# Lint & Test
+# ─────────────────────────────────────────────
+
+## Lint both api and app (runs inside dev containers)
+lint: lint-api lint-app
+
+## Lint api (TypeScript type-check)
+lint-api:
+	@echo "🔍 Linting yorindo-api..."
+	$(DEV_COMPOSE) exec -T api npm run lint
+
+## Lint app (ESLint)
+lint-app:
+	@echo "🔍 Linting yorindo-app..."
+	$(DEV_COMPOSE) exec -T app npm run lint
+
+## Run all tests
+test: test-api test-app
+
+## Run api tests (vitest)
+test-api:
+	@echo "🧪 Testing yorindo-api..."
+	$(DEV_COMPOSE) exec -T api npm test
+
+## Run app tests (vitest)
+test-app:
+	@echo "🧪 Testing yorindo-app..."
+	$(DEV_COMPOSE) exec -T app npm test
