@@ -15,7 +15,7 @@ const seededAt = '2026-03-20T09:00:00.000Z'
 export const seededTemplates: BlastTemplate[] = [
   {
     id: 'tmpl-001',
-    name: 'Undangan Event',
+    name: 'Undangan Event (WhatsApp)',
     type: 'invitation',
     channel: 'whatsapp',
     body: 'Halo {{name}}, Anda diundang ke {{event_title}} pada {{date}} di {{venue}}.',
@@ -23,6 +23,14 @@ export const seededTemplates: BlastTemplate[] = [
   },
   {
     id: 'tmpl-002',
+    name: 'Undangan Event (Email)',
+    type: 'invitation',
+    channel: 'email',
+    body: '<p>Halo {{name}},</p><p>Anda diundang ke <strong>{{event_title}}</strong> pada {{date}} di {{venue}}.</p>',
+    createdAt: seededAt,
+  },
+  {
+    id: 'tmpl-003',
     name: 'Konfirmasi Tiket',
     type: 'confirmation',
     channel: 'email',
@@ -30,7 +38,7 @@ export const seededTemplates: BlastTemplate[] = [
     createdAt: seededAt,
   },
   {
-    id: 'tmpl-003',
+    id: 'tmpl-004',
     name: 'Penolakan',
     type: 'rejection',
     channel: 'email',

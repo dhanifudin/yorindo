@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useCallback, useEffect, startTransition } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
+import type { RowSelectionState } from '@tanstack/react-table'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useContacts } from '@/hooks/useContacts'
 import { Button } from '@/components/ui/button'
@@ -15,14 +16,10 @@ import { ContactsPagination } from './ContactsPagination'
 import { ActionToolbar } from './ActionToolbar'
 import { BlastModal } from './BlastModal'
 
-const FILTER_KEYS = ['serviceType', 'city', 'jobTitle', 'q', 'missingEmail', 'missingPhone', 'flagFilter']
-
 export function ContactsCommandCenter() {
   const [triageMode, setTriageMode] = useState<'flagged' | 'duplicates' | null>(null)
-  const [selectedIds, setSelectedIds] = useState<string[]>([])
-  const [selectedNames, setSelectedNames] = useState<string[]>([])   // ← Baru
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
   const [selectMode, setSelectMode] = useState(false)
-  const [resetKey, setResetKey] = useState(0)
   const [blastModalOpen, setBlastModalOpen] = useState(false)
 
   const router = useRouter()
@@ -31,18 +28,21 @@ export function ContactsCommandCenter() {
   const { setFilter } = useFilterStore()
   const { data: contacts } = useContacts()
 
-  const hasFilters = FILTER_KEYS.some((k) => !!searchParams.get(k))
+  const hasFilters = ['serviceType', 'city', 'jobTitle', 'q', 'missingEmail', 'missingPhone', 'flagFilter']
+    .some((k) => !!searchParams.get(k))
 
-  // Handle selection dari table (ids + names)
-  const handleSelectionChange = useCallback((ids: string[], names: string[]) => {
-    setSelectedIds(ids)
-    setSelectedNames(names)
-  }, [])
+  // Derive selectedIds/Names directly from rowSelection + current page data
+  const selectedIds = useMemo(
+    () => (contacts?.data ?? []).filter((c) => rowSelection[c.id]).map((c) => c.id),
+    [rowSelection, contacts?.data]
+  )
+  const selectedNames = useMemo(
+    () => (contacts?.data ?? []).filter((c) => rowSelection[c.id]).map((c) => c.name),
+    [rowSelection, contacts?.data]
+  )
 
   const handleClearSelection = useCallback(() => {
-    setSelectedIds([])
-    setSelectedNames([])
-    setResetKey((k) => k + 1)
+    setRowSelection({})
   }, [])
 
   const handleToggleSelectMode = useCallback(() => {
@@ -50,13 +50,6 @@ export function ContactsCommandCenter() {
     setSelectMode(next)
     if (!next) handleClearSelection()
   }, [selectMode, handleClearSelection])
-
-  const currentPage = searchParams.get('page')
-
-  // Reset selection saat ganti halaman
-  useEffect(() => {
-    startTransition(() => { handleClearSelection() })
-  }, [currentPage, handleClearSelection])
 
   useEffect(() => {
     setFilter({
@@ -68,6 +61,7 @@ export function ContactsCommandCenter() {
       missingEmail: searchParams.get('missingEmail') === 'true',
       missingPhone: searchParams.get('missingPhone') === 'true',
     })
+    setRowSelection({})
   }, [searchParams, setFilter])
 
   const handleStatClick = (type: 'duplicates' | 'missingEmail' | 'missingPhone') => {
@@ -113,8 +107,8 @@ export function ContactsCommandCenter() {
       />
 
       <ContactsTable
-        key={resetKey}
-        onSelectionChange={handleSelectionChange}   // ← sekarang terima 2 params
+        rowSelection={rowSelection}
+        onRowSelectionChange={setRowSelection}
         onToggleSelectMode={handleToggleSelectMode}
         selectMode={selectMode}
         selectedIds={selectedIds}
@@ -132,24 +126,38 @@ export function ContactsCommandCenter() {
       />
 
       {(() => {
-        // For selection mode, only blast contacts that have both phone and email
-        const blastableContacts = selectedIds.length > 0
-          ? (contacts?.data ?? []).filter(
-              (c) => selectedIds.includes(c.id) && !!c.phone && !!c.email
-            )
-          : []
-        const blastableIds = blastableContacts.map((c) => c.id)
-        const blastableNames = blastableContacts.map((c) => c.name)
-        const isSelection = selectedIds.length > 0
+        const serviceType = searchParams.get('serviceType')
+        const city = searchParams.get('city')
+        const jobTitle = searchParams.get('jobTitle')
+        const q = searchParams.get('q')
+
+        // Filters that the blast API supports directly
+        const segmentFilters = {
+          ...(serviceType ? { serviceTypes: [serviceType] } : {}),
+          ...(city ? { cities: [city] } : {}),
+          ...(jobTitle ? { jobTitles: [jobTitle] } : {}),
+        }
+
+        // If q (name search) or other unmappable filters are active in segment
+        // mode, resolve to visible contact IDs so the blast respects them
+        const hasUnmappableFilter = !!q
+        const pageContactIds = (contacts?.data ?? []).map((c) => c.id)
+        const pageContactNames = (contacts?.data ?? []).map((c) => c.name)
+
+        const effectiveIsSelection = selectedIds.length > 0 || hasUnmappableFilter
+        const effectiveIds = selectedIds.length > 0 ? selectedIds : hasUnmappableFilter ? pageContactIds : []
+        const effectiveNames = selectedIds.length > 0 ? selectedNames : hasUnmappableFilter ? pageContactNames : []
+
         return (
           <BlastModal
             open={blastModalOpen}
             onClose={() => setBlastModalOpen(false)}
             onBlastSuccess={handleClearSelection}
-            recipientCount={isSelection ? blastableIds.length : (contacts?.pagination.total ?? 0)}
-            mode={isSelection ? 'selection' : 'segment'}
-            selectedIds={isSelection ? blastableIds : []}
-            selectedNames={isSelection ? blastableNames : []}
+            recipientCount={effectiveIsSelection ? effectiveIds.length : (contacts?.pagination.total ?? 0)}
+            mode={effectiveIsSelection ? 'selection' : 'segment'}
+            selectedIds={effectiveIds}
+            selectedNames={effectiveNames}
+            segmentFilters={effectiveIsSelection ? undefined : segmentFilters}
           />
         )
       })()}

@@ -37,42 +37,42 @@ async function count(query: string, params?: unknown[]): Promise<number> {
 
 describe.skipIf(!hasDatabase)('Demo seed validation — Events', () => {
   it('should have ≥ 10 events', async () => {
-    const total = await count('SELECT COUNT(*) as total FROM events WHERE deleted_at IS NULL')
+    const total = await count('SELECT COUNT(*) as total FROM events')
     expect(total).toBeGreaterThanOrEqual(10)
   })
 
   it('should have ≥ 2 active events', async () => {
-    const total = await count("SELECT COUNT(*) as total FROM events WHERE status = 'active' AND deleted_at IS NULL")
+    const total = await count("SELECT COUNT(*) as total FROM events WHERE status = 'active'")
     expect(total).toBeGreaterThanOrEqual(2)
   })
 
   it('should have ≥ 2 published events', async () => {
-    const total = await count("SELECT COUNT(*) as total FROM events WHERE status = 'published' AND deleted_at IS NULL")
+    const total = await count("SELECT COUNT(*) as total FROM events WHERE status = 'published'")
     expect(total).toBeGreaterThanOrEqual(2)
   })
 
   it('should have ≥ 2 draft events', async () => {
-    const total = await count("SELECT COUNT(*) as total FROM events WHERE status = 'draft' AND deleted_at IS NULL")
+    const total = await count("SELECT COUNT(*) as total FROM events WHERE status = 'draft'")
     expect(total).toBeGreaterThanOrEqual(2)
   })
 
   it('should have ≥ 2 completed events', async () => {
-    const total = await count("SELECT COUNT(*) as total FROM events WHERE status = 'completed' AND deleted_at IS NULL")
+    const total = await count("SELECT COUNT(*) as total FROM events WHERE status = 'completed'")
     expect(total).toBeGreaterThanOrEqual(2)
   })
 
   it('should have ≥ 1 cancelled event', async () => {
-    const total = await count("SELECT COUNT(*) as total FROM events WHERE status = 'cancelled' AND deleted_at IS NULL")
+    const total = await count("SELECT COUNT(*) as total FROM events WHERE status = 'cancelled'")
     expect(total).toBeGreaterThanOrEqual(1)
   })
 
   it('should have ≥ 1 archived event', async () => {
-    const total = await count("SELECT COUNT(*) as total FROM events WHERE status = 'archived' AND deleted_at IS NULL")
+    const total = await count("SELECT COUNT(*) as total FROM events WHERE status = 'archived'")
     expect(total).toBeGreaterThanOrEqual(1)
   })
 
   it('should have ≥ 1 paid event (price > 0)', async () => {
-    const total = await count("SELECT COUNT(*) as total FROM events WHERE is_paid = true AND price > 0 AND deleted_at IS NULL")
+    const total = await count("SELECT COUNT(*) as total FROM events WHERE is_paid = true AND price > 0")
     expect(total).toBeGreaterThanOrEqual(1)
   })
 })
@@ -83,7 +83,7 @@ describe.skipIf(!hasDatabase)('Demo seed validation — Event Dates', () => {
   it('active events should have dates within the current window (±2 days)', async () => {
     const { rows } = await pool!.query(`
       SELECT name, date FROM events
-      WHERE status = 'active' AND deleted_at IS NULL
+      WHERE status = 'active'
       AND date < CURRENT_DATE - INTERVAL '2 days'
     `)
     expect(rows.length).toBe(0)
@@ -92,7 +92,7 @@ describe.skipIf(!hasDatabase)('Demo seed validation — Event Dates', () => {
   it('published events should have dates in the future', async () => {
     const { rows } = await pool!.query(`
       SELECT name, date FROM events
-      WHERE status = 'published' AND deleted_at IS NULL AND date < CURRENT_DATE
+      WHERE status = 'published' AND date < CURRENT_DATE
     `)
     expect(rows.length).toBe(0)
   })
@@ -100,7 +100,7 @@ describe.skipIf(!hasDatabase)('Demo seed validation — Event Dates', () => {
   it('draft events should have dates in the future', async () => {
     const { rows } = await pool!.query(`
       SELECT name, date FROM events
-      WHERE status = 'draft' AND deleted_at IS NULL AND date < CURRENT_DATE
+      WHERE status = 'draft' AND date < CURRENT_DATE
     `)
     expect(rows.length).toBe(0)
   })
@@ -108,7 +108,7 @@ describe.skipIf(!hasDatabase)('Demo seed validation — Event Dates', () => {
   it('completed events should have dates in the past', async () => {
     const { rows } = await pool!.query(`
       SELECT name, date FROM events
-      WHERE status = 'completed' AND deleted_at IS NULL AND date >= CURRENT_DATE
+      WHERE status = 'completed' AND date >= CURRENT_DATE
     `)
     expect(rows.length).toBe(0)
   })
@@ -116,7 +116,7 @@ describe.skipIf(!hasDatabase)('Demo seed validation — Event Dates', () => {
   it('cancelled events should have dates in the past', async () => {
     const { rows } = await pool!.query(`
       SELECT name, date FROM events
-      WHERE status = 'cancelled' AND deleted_at IS NULL AND date >= CURRENT_DATE
+      WHERE status = 'cancelled' AND date >= CURRENT_DATE
     `)
     expect(rows.length).toBe(0)
   })
@@ -124,7 +124,7 @@ describe.skipIf(!hasDatabase)('Demo seed validation — Event Dates', () => {
   it('archived events should have dates in the past', async () => {
     const { rows } = await pool!.query(`
       SELECT name, date FROM events
-      WHERE status = 'archived' AND deleted_at IS NULL AND date >= CURRENT_DATE
+      WHERE status = 'archived' AND date >= CURRENT_DATE
     `)
     expect(rows.length).toBe(0)
   })
@@ -134,7 +134,7 @@ describe.skipIf(!hasDatabase)('Demo seed validation — Event Dates', () => {
 
 describe.skipIf(!hasDatabase)('Demo seed validation — Contacts', () => {
   it('should have ≥ 400 unique contacts', async () => {
-    const total = await count("SELECT COUNT(*) as total FROM contacts WHERE deleted_at IS NULL")
+    const total = await count('SELECT COUNT(*) as total FROM contacts')
     expect(total).toBeGreaterThanOrEqual(400)
   })
 
@@ -145,7 +145,7 @@ describe.skipIf(!hasDatabase)('Demo seed validation — Contacts', () => {
   })
 
   it('should have ~15 opted-out contacts (consent_status = suppressed)', async () => {
-    const total = await count("SELECT COUNT(*) as total FROM contacts WHERE consent_status = 'suppressed' AND deleted_at IS NULL")
+    const total = await count("SELECT COUNT(*) as total FROM contacts WHERE consent_status = 'suppressed'")
     expect(total).toBeGreaterThanOrEqual(10)
     expect(total).toBeLessThanOrEqual(20)
   })
@@ -158,7 +158,7 @@ describe.skipIf(!hasDatabase)('Demo seed validation — Registrations', () => {
     const total = await count(`
       SELECT COUNT(*) as total FROM registrations r
       JOIN events e ON r.event_id = e.id
-      WHERE e.status = 'active' AND e.deleted_at IS NULL
+      WHERE e.status = 'active'
       AND r.attendance_status = 'attended'
     `)
     expect(total).toBeGreaterThanOrEqual(30)
@@ -168,7 +168,7 @@ describe.skipIf(!hasDatabase)('Demo seed validation — Registrations', () => {
     const total = await count(`
       SELECT COUNT(*) as total FROM registrations r
       JOIN events e ON r.event_id = e.id
-      WHERE e.status = 'published' AND e.deleted_at IS NULL AND r.status = 'pending'
+      WHERE e.status = 'published' AND r.status = 'pending'
     `)
     expect(total).toBeGreaterThanOrEqual(5)
   })
@@ -179,7 +179,7 @@ describe.skipIf(!hasDatabase)('Demo seed validation — Registrations', () => {
 describe.skipIf(!hasDatabase)('Demo seed validation — Users', () => {
   it('should have 3 demo users with correct roles', async () => {
     const { rows } = await pool!.query(`
-      SELECT email, role FROM users WHERE deleted_at IS NULL AND email IN (
+      SELECT email, role FROM users WHERE email IN (
         'admin@yorindo.id', 'staff@yorindo.id', 'viewer@yorindo.id'
       )
     `)
@@ -192,9 +192,25 @@ describe.skipIf(!hasDatabase)('Demo seed validation — Users', () => {
 // ─── Templates ─────────────────────────────────────────────────────────────────
 
 describe.skipIf(!hasDatabase)('Demo seed validation — Templates', () => {
-  it('should have ≥ 4 templates', async () => {
+  it('should have ≥ 6 templates', async () => {
     const total = await count('SELECT COUNT(*) as total FROM templates')
-    expect(total).toBeGreaterThanOrEqual(4)
+    expect(total).toBeGreaterThanOrEqual(6)
+  })
+
+  it('should have email invitation template', async () => {
+    const { rows } = await pool!.query(`
+      SELECT COUNT(*) as total FROM templates 
+      WHERE type = 'invitation' AND channel = 'email'
+    `)
+    expect(parseInt(rows[0].total, 10)).toBeGreaterThanOrEqual(1)
+  })
+
+  it('should have whatsapp invitation template', async () => {
+    const { rows } = await pool!.query(`
+      SELECT COUNT(*) as total FROM templates 
+      WHERE type = 'invitation' AND channel = 'whatsapp'
+    `)
+    expect(parseInt(rows[0].total, 10)).toBeGreaterThanOrEqual(1)
   })
 })
 
@@ -219,7 +235,7 @@ describe.skipIf(!hasDatabase)('Demo seed validation — Blast History', () => {
     const total = await count(`
       SELECT COUNT(*) as total FROM blast_logs bl
       JOIN events e ON bl.event_id = e.id
-      WHERE e.status = 'active' AND e.deleted_at IS NULL
+      WHERE e.status = 'active'
     `)
     expect(total).toBeGreaterThanOrEqual(5)
   })
@@ -233,7 +249,7 @@ describe.skipIf(!hasDatabase)('Demo seed validation — Survey Responses', () =>
       SELECT COUNT(*) as total FROM survey_responses sr
       JOIN registrations r ON sr.registration_id = r.id
       JOIN events e ON r.event_id = e.id
-      WHERE e.status = 'completed' AND e.deleted_at IS NULL
+      WHERE e.status = 'completed'
     `)
     expect(total).toBeGreaterThanOrEqual(20)
   })

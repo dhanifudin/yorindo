@@ -17,8 +17,7 @@ async function start(): Promise<void> {
     if (config.redisUrl && config.nodeEnv !== 'test') {
       startEtlWorker()
       workerStarted = true
-    }
-    if (config.serviceImpl === 'real' && config.redisUrl) {
+      // Start blast worker when Redis is available (both mock and real modes)
       blastWorker = startBlastWorker()
       fastify.log.info('Blast worker started')
     }
