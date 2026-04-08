@@ -230,12 +230,15 @@ export class PostgresContactRepository
         this.findById(row.duplicate_id),
       ])
       if (!primary || !duplicate) continue
+      const reasons = typeof row.match_reasons === 'string'
+        ? JSON.parse(row.match_reasons)
+        : (row.match_reasons as DuplicateMatchReason[] ?? [])
       pairs.push({
         id: row.id,
         primary,
         duplicate,
         matchScore: Number(row.match_score),
-        matchReasons: (row.match_reasons as DuplicateMatchReason[]) ?? [],
+        matchReasons: reasons,
       })
     }
 

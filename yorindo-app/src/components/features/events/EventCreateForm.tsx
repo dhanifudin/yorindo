@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Check, ChevronsUpDown, X, Upload, ImageIcon, Loader2 } from 'lucide-react'
+import { Check, ChevronsUpDown, X, Upload, ImageIcon, Loader2, Database } from 'lucide-react'
 import { useCreateEvent, useUpdateEvent } from '@/hooks/useEvents'
 import { useVendors } from '@/hooks/useVendors'
 import { useEventSponsors } from '@/hooks/useEventSponsors'
@@ -13,6 +13,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import { Link } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
   Command,
@@ -53,6 +54,64 @@ const EVENT_TYPES = [
   { value: 'webinar', label: 'Webinar' },
 ]
 
+const ALLOWED_IMAGE_TYPES: ReadonlySet<string> = new Set([
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'image/avif',
+  'image/svg+xml',
+])
+
+const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024 // 5 MB
+
+// ─── Mock Existing Images (Simulasi database admin sebelumnya) ─────────────────
+const MOCK_EXISTING_IMAGES = [
+  {
+    id: 'img-1',
+    name: 'Tech Summit 2024',
+    url: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=400&h=250&fit=crop',
+    uploadedBy: 'Admin Budi',
+    uploadedAt: '2024-01-15',
+  },
+  {
+    id: 'img-2',
+    name: 'Business Conference',
+    url: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=250&fit=crop',
+    uploadedBy: 'Admin Siti',
+    uploadedAt: '2024-01-20',
+  },
+  {
+    id: 'img-3',
+    name: 'Workshop Series 2024',
+    url: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=400&h=250&fit=crop',
+    uploadedBy: 'Admin Budi',
+    uploadedAt: '2024-02-01',
+  },
+  {
+    id: 'img-4',
+    name: 'Networking Event',
+    url: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=400&h=250&fit=crop',
+    uploadedBy: 'Admin Rini',
+    uploadedAt: '2024-02-10',
+  },
+  {
+    id: 'img-5',
+    name: 'Corporate Meeting',
+    url: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=400&h=250&fit=crop',
+    uploadedBy: 'Admin Budi',
+    uploadedAt: '2024-02-15',
+  },
+  {
+    id: 'img-6',
+    name: 'Seminar Digital',
+    url: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=250&fit=crop',
+    uploadedBy: 'Admin Siti',
+    uploadedAt: '2024-02-20',
+  },
+]
+
 // ─── Zod Schema ───────────────────────────────────────────────────────────────
 
 const schema = z.object({
@@ -81,20 +140,6 @@ interface BannerUploadProps {
   value: string
   onChange: (url: string) => void
 }
-
-// ─── Constants ──────────────────────────────────────────────────────────────────
-
-const ALLOWED_IMAGE_TYPES = new Set([
-  'image/jpeg',
-  'image/jpg',
-  'image/png',
-  'image/webp',
-  'image/gif',
-  'image/avif',
-  'image/svg+xml',
-])
-
-const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024 // 5MB
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -126,42 +171,241 @@ function validateImageUrl(url: string): string | null {
 /**
  * MOCK upload — tidak perlu backend.
  * Simulate delay jaringan, lalu return blob URL lokal dari file yang dipilih.
- *
- * Nanti kalau backend sudah siap, ganti isi fungsi ini dengan:
- *   const formData = new FormData()
- *   formData.append('file', file)
- *   const res = await fetch('/api/uploads/image', { method: 'POST', body: formData })
- *   if (!res.ok) throw new Error('Upload gagal')
- *   const data = await res.json()
- *   return data.url
- *
- * CATATAN: blob URL hanya valid selama sesi browser saat ini.
- * Untuk production, backend harus menyimpan file ke storage
- * (Supabase Storage, S3, Cloudinary, dll) dan return URL permanen.
  */
 async function mockUploadImage(file: File): Promise<string> {
   await new Promise((resolve) => setTimeout(resolve, 900))
   return URL.createObjectURL(file)
 }
 
+// ─── ImageSourceSelector Component (Modal untuk memilih sumber gambar) ────────
+
+
+// ─── ImageSourceSelector Component ────────────────────────────────────────────
+interface ImageSourceSelectorProps {
+  isOpen: boolean
+  onClose: () => void
+  onSelectExisting: (imageUrl: string) => void
+  onSelectDevice: () => void
+  urlInput: string
+  setUrlInput: (url: string) => void
+  onUrlApply: () => void
+}
+
+function ImageSourceSelector({
+  isOpen,
+  onClose,
+  onSelectExisting,
+  onSelectDevice,
+  urlInput,
+  setUrlInput,
+  onUrlApply,
+}: ImageSourceSelectorProps) {
+  const [selectedImageId, setSelectedImageId] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<'device' | 'gallery' | 'url'>('device')
+
+  const handleSelectImage = (imageUrl: string) => {
+    onSelectExisting(imageUrl)
+    setSelectedImageId(null)
+    onClose()
+  }
+
+  if (!isOpen) return null
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <Card className="w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-lg">
+        {/* Header */}
+        <div className="border-b border-border px-6 py-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold">Pilih Banner Event</h2>
+            <p className="text-xs text-muted-foreground mt-1">Pilih sumber gambar untuk banner</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1 hover:bg-muted rounded-md transition-colors"
+            aria-label="Tutup"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Tabs */}
+        <div className="border-b border-border px-6 pt-4">
+          <div className="flex gap-2 overflow-x-auto pb-2">
+            <button
+              type="button"
+              onClick={() => setActiveTab('device')}
+              className={cn(
+                'px-5 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap',
+                activeTab === 'device'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              )}
+            >
+              <Upload className="w-4 h-4 inline mr-2" />
+              Dari Device
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('gallery')}
+              className={cn(
+                'px-5 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap',
+                activeTab === 'gallery'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              )}
+            >
+              <Database className="w-4 h-4 inline mr-2" />
+              Database Gallery ({MOCK_EXISTING_IMAGES.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('url')}
+              className={cn(
+                'px-5 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap',
+                activeTab === 'url'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              )}
+            >
+              <Link className="w-4 h-4 inline mr-2" />
+              Masukkan URL
+            </button>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6">
+          {activeTab === 'device' ? (
+            // Tab Device
+            <div className="flex items-center justify-center py-16">
+              <div className="text-center max-w-md">
+                <div className="flex justify-center mb-6">
+                  <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Upload className="w-10 h-10 text-primary" />
+                  </div>
+                </div>
+                <h3 className="font-semibold text-xl mb-3">Upload dari Device</h3>
+                <p className="text-muted-foreground mb-8">
+                  Pilih gambar dari komputer atau ponsel Anda.<br />
+                  Format: JPG, PNG, WebP, GIF, AVIF (maks 5MB)
+                </p>
+                <Button type="button" onClick={onSelectDevice} className="w-full">
+                  Pilih File Gambar
+                </Button>
+              </div>
+            </div>
+          ) : activeTab === 'gallery' ? (
+            // Tab Gallery (sama seperti sebelumnya)
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-4">
+                <Database className="w-5 h-5 text-primary" />
+                <h3 className="font-semibold text-base">Galeri Database</h3>
+                <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full font-medium">
+                  {MOCK_EXISTING_IMAGES.length} gambar
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {MOCK_EXISTING_IMAGES.map((img) => (
+                  <div
+                    key={img.id}
+                    onClick={() => {
+                      setSelectedImageId(img.id)
+                      handleSelectImage(img.url)
+                    }}
+                    className={cn(
+                      'group relative rounded-lg overflow-hidden border-2 cursor-pointer transition-all',
+                      selectedImageId === img.id
+                        ? 'border-primary ring-2 ring-primary/30'
+                        : 'border-border hover:border-primary/50'
+                    )}
+                  >
+                    <div className="relative w-full h-40 bg-muted overflow-hidden">
+                      <img
+                        src={img.url}
+                        alt={img.name}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                        onError={(e) => {
+                          ;(e.target as HTMLImageElement).style.opacity = '0.2'
+                        }}
+                      />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100">
+                        <div className="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center">
+                          <Check className="w-6 h-6" />
+                        </div>
+                      </div>
+                      <div className="absolute top-2 right-2 px-2 py-1 bg-black/60 text-white text-xs rounded">
+                        {img.uploadedBy}
+                      </div>
+                    </div>
+                    <div className="p-3 bg-card">
+                      <h4 className="font-medium text-sm line-clamp-2">{img.name}</h4>
+                      <span className="text-xs text-muted-foreground">{img.uploadedAt}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            // Tab URL
+            <div className="max-w-lg mx-auto py-10">
+              <Label htmlFor="banner-url" className="text-base">Masukkan URL Gambar</Label>
+              <Input
+                id="banner-url"
+                type="url"
+                placeholder="https://example.com/banner.jpg"
+                value={urlInput}
+                onChange={(e) => setUrlInput(e.target.value)}
+                className="mt-3"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    onUrlApply()
+                  }
+                }}
+              />
+              <p className="text-xs text-muted-foreground mt-2">
+                Pastikan URL valid dan mengarah langsung ke file gambar (jpg, png, webp, dll)
+              </p>
+
+              <Button onClick={onUrlApply} className="w-full mt-8" size="lg">
+                Terapkan URL sebagai Banner
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="border-t border-border px-6 py-4 flex justify-end">
+          <Button type="button" variant="outline" onClick={onClose}>
+            Batal
+          </Button>
+        </div>
+      </Card>
+    </div>
+  )
+}
+
 // ─── BannerUpload Component ───────────────────────────────────────────────────
 
+// ─── BannerUpload Component ───────────────────────────────────────────────────
+// ─── BannerUpload Component (WAJIB) ───────────────────────────────────────────
 function BannerUpload({ value, onChange }: BannerUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
-  const [urlMode, setUrlMode] = useState(false)
+  const [showSourceModal, setShowSourceModal] = useState(false)
   const [urlInput, setUrlInput] = useState('')
 
-  // Sync saat edit mode — value dari props sudah ada (URL permanen dari server)
+  // Sync existing banner (edit mode)
   useEffect(() => {
-    if (value?.startsWith('http')) {
-      setUrlMode(true)
+    if (value?.startsWith('http') && !value.startsWith('blob:')) {
       setUrlInput(value)
     }
   }, [value])
 
-  // ── Upload handler ──────────────────────────────────────────────────────────
+  // ── Upload file handler ─────────────────────────────────────────────────────
   const handleFile = useCallback(
     async (file: File) => {
       const validationError = validateImageFile(file)
@@ -176,7 +420,7 @@ function BannerUpload({ value, onChange }: BannerUploadProps) {
         onChange(url)
         toast.success('Gambar berhasil diupload')
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'Upload gagal, silakan coba lagi')
+        toast.error('Upload gagal, silakan coba lagi')
       } finally {
         setIsUploading(false)
       }
@@ -191,7 +435,6 @@ function BannerUpload({ value, onChange }: BannerUploadProps) {
   }
 
   const handleDragLeave = (e: React.DragEvent) => {
-    // Cegah flickering saat pointer melewati child element di dalam dropzone
     if (!e.currentTarget.contains(e.relatedTarget as Node)) {
       setIsDragging(false)
     }
@@ -202,27 +445,24 @@ function BannerUpload({ value, onChange }: BannerUploadProps) {
       e.preventDefault()
       setIsDragging(false)
       const file = e.dataTransfer.files[0]
-      if (!file) return
-      // Validasi sebelum upload — error muncul langsung tanpa delay spinner
-      const validationError = validateImageFile(file)
-      if (validationError) {
-        toast.error(validationError)
-        return
-      }
-      handleFile(file)
+      if (file) handleFile(file)
     },
     [handleFile]
   )
 
-  // ── File input change ───────────────────────────────────────────────────────
-  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    e.target.value = '' // reset supaya file yang sama bisa dipilih ulang setelah dihapus
-    handleFile(file)
+  const handleAreaClick = () => setShowSourceModal(true)
+
+  const handleSelectFromDevice = () => {
+    setShowSourceModal(false)
+    inputRef.current?.click()
   }
 
-  // ── URL apply ───────────────────────────────────────────────────────────────
+  const handleSelectFromDatabase = (imageUrl: string) => {
+    onChange(imageUrl)
+    toast.success('Gambar dari database berhasil dipilih')
+    setShowSourceModal(false)
+  }
+
   const handleUrlApply = () => {
     const trimmed = urlInput.trim()
     if (!trimmed) {
@@ -235,27 +475,32 @@ function BannerUpload({ value, onChange }: BannerUploadProps) {
       return
     }
     onChange(trimmed)
-    toast.success('Banner berhasil diterapkan')
+    toast.success('Banner URL berhasil diterapkan')
+    setShowSourceModal(false)
+    setUrlInput('')
   }
 
-  // ── Clear / ganti foto ──────────────────────────────────────────────────────
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+    handleFile(file)
+  }
+
   const clearBanner = () => {
-    // Revoke blob URL supaya tidak memory leak
     if (value?.startsWith('blob:')) {
       URL.revokeObjectURL(value)
     }
     onChange('')
     setUrlInput('')
-    setUrlMode(false)
     if (inputRef.current) inputRef.current.value = ''
   }
 
-  // ── Render: sudah ada gambar → tampilkan preview ────────────────────────────
+  // Preview jika sudah ada banner
   if (value) {
     return (
       <div className="space-y-2">
         <div className="relative rounded-lg overflow-hidden border border-border bg-muted">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={value}
             alt="Banner preview"
@@ -264,157 +509,94 @@ function BannerUpload({ value, onChange }: BannerUploadProps) {
               ;(e.target as HTMLImageElement).style.opacity = '0.3'
             }}
           />
-          {/* Tombol X di pojok kanan atas */}
           <button
             type="button"
             onClick={clearBanner}
-            className="absolute top-2 right-2 rounded-full bg-black/60 hover:bg-black/80 text-white p-1.5 transition-colors"
+            className="absolute top-2 right-2 rounded-full bg-black/70 hover:bg-black text-white p-1.5 transition-colors"
             aria-label="Hapus banner"
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Label nama file / URL */}
-        <p className="text-xs text-muted-foreground truncate max-w-full">
-          {value.startsWith('blob:')
-            ? '⚠ Preview lokal — belum tersimpan ke server'
-            : value}
-        </p>
-
-        {/* Tombol ganti foto — lebih mudah ditemukan di mobile */}
         <Button
           type="button"
           variant="outline"
           size="sm"
           onClick={clearBanner}
-          className="w-full sm:w-auto text-xs"
+          className="w-full sm:w-auto"
         >
-          Ganti Foto
+          Ganti Banner
         </Button>
       </div>
     )
   }
-  
-  // ── Render: belum ada gambar → upload UI ────────────────────────────────────
+
+  // Drag & Drop Area - Wajib (dengan indikasi required)
   return (
-    <div className="space-y-3">
-      {/* Toggle Upload File | Pakai URL */}
-      <div className="flex gap-1 p-0.5 bg-muted rounded-md w-fit">
-        <button
+    <>
+      <ImageSourceSelector
+        isOpen={showSourceModal}
+        onClose={() => setShowSourceModal(false)}
+        onSelectExisting={handleSelectFromDatabase}
+        onSelectDevice={handleSelectFromDevice}
+        urlInput={urlInput}
+        setUrlInput={setUrlInput}
+        onUrlApply={handleUrlApply}
+      />
+
+      <div
+        onClick={handleAreaClick}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        className={cn(
+          'border-2 border-dashed rounded-2xl p-12 text-center transition-all cursor-pointer hover:border-primary/60 active:scale-[0.985]',
+          isDragging
+            ? 'border-primary bg-primary/5'
+            : 'border-border hover:bg-muted/50'
+        )}
+      >
+        <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+          <Upload className="w-8 h-8 text-primary" />
+        </div>
+
+        <h3 className="font-semibold text-2xl mb-2 flex items-center justify-center gap-2">
+          Banner Event <span className="text-destructive text-xl">*</span>
+        </h3>
+        <p className="text-muted-foreground mb-8 max-w-md mx-auto">
+          Wajib diisi. Klik area ini untuk memilih dari device, database, atau masukkan URL gambar
+        </p>
+
+        <Button
           type="button"
-          onClick={() => setUrlMode(false)}
-          className={cn(
-            'px-3 py-1 rounded text-xs font-medium transition-colors',
-            !urlMode
-              ? 'bg-background text-foreground shadow-sm'
-              : 'text-muted-foreground hover:text-foreground'
-          )}
+          variant="secondary"
+          size="lg"
+          onClick={(e) => {
+            e.stopPropagation()
+            setShowSourceModal(true)
+          }}
         >
-          Upload File
-        </button>
-        <button
-          type="button"
-          onClick={() => setUrlMode(true)}
-          className={cn(
-            'px-3 py-1 rounded text-xs font-medium transition-colors',
-            urlMode
-              ? 'bg-background text-foreground shadow-sm'
-              : 'text-muted-foreground hover:text-foreground'
-          )}
-        >
-          Pakai URL
-        </button>
+          Pilih Banner
+        </Button>
+
+        <p className="text-xs text-muted-foreground mt-8">
+          JPG • PNG • WebP • GIF • AVIF • Maks 5MB
+        </p>
       </div>
 
-      {urlMode ? (
-        // ── Mode URL ──────────────────────────────────────────────────────────
-        <div className="flex flex-col sm:flex-row gap-2">
-          <Input
-            type="url"
-            placeholder="https://example.com/banner.jpg"
-            value={urlInput}
-            onChange={(e) => setUrlInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault()
-                handleUrlApply()
-              }
-            }}
-            className="flex-1"
-          />
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleUrlApply}
-            className="shrink-0"
-          >
-            Terapkan
-          </Button>
-        </div>
-      ) : (
-        // ── Mode Upload File dengan Drag & Drop ───────────────────────────────
-        <div
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          onClick={() => !isUploading && inputRef.current?.click()}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if ((e.key === 'Enter' || e.key === ' ') && !isUploading) {
-              e.preventDefault()
-              inputRef.current?.click()
-            }
-          }}
-          aria-label="Upload gambar banner"
-          className={cn(
-            'relative flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-4 py-8 text-center cursor-pointer select-none transition-colors',
-            isDragging
-              ? 'border-primary bg-primary/5'
-              : 'border-border hover:border-primary/50 hover:bg-muted/40',
-            isUploading && 'pointer-events-none opacity-60 cursor-not-allowed'
-          )}
-        >
-          {/* Input hanya terima tipe gambar yang diizinkan — Excel/PDF tidak muncul di dialog */}
-          <input
-            ref={inputRef}
-            type="file"
-            accept="image/jpeg,image/jpg,image/png,image/webp,image/gif,image/avif,image/svg+xml"
-            className="hidden"
-            onChange={handleFileInputChange}
-            aria-hidden="true"
-          />
-
-          {isUploading ? (
-            <>
-              <Loader2 className="w-8 h-8 text-muted-foreground animate-spin" />
-              <p className="text-sm text-muted-foreground">Mengupload gambar...</p>
-            </>
-          ) : isDragging ? (
-            <>
-              <ImageIcon className="w-8 h-8 text-primary" />
-              <p className="text-sm font-medium text-primary">Lepas untuk upload</p>
-            </>
-          ) : (
-            <>
-              <Upload className="w-8 h-8 text-muted-foreground" />
-              <div>
-                <p className="text-sm font-medium">Drag &amp; drop atau klik untuk pilih</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  JPG, PNG, WebP, GIF, AVIF — maks 5MB
-                </p>
-              </div>
-            </>
-          )}
-        </div>
-      )}
-    </div>
+      {/* Hidden file input */}
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/jpeg,image/jpg,image/png,image/webp,image/gif,image/avif,image/svg+xml"
+        className="hidden"
+        onChange={handleFileInputChange}
+      />
+    </>
   )
 }
-
-// ─── Main Form ────────────────────────────────────────────────────────────────
+// ─── Main Form (Updated with better BannerUpload integration) ────────────────
 
 export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormProps) {
   const isEdit = !!event
@@ -521,8 +703,7 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
     ])
   }
 
-  // ─── MOCK TEMPLATES (digunakan untuk tampilan card) ────────────────────────
-  // Minimal 2 card per kategori sesuai permintaan. Bisa diganti dengan data real nanti.
+  // ─── MOCK TEMPLATES ────────────────────────────────────────────────────────
   const mockInvitationTemplates = [
     {
       id: 'template-inv-1',
@@ -854,7 +1035,7 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
         </div>
       </div>
 
-      {/* Templates → Diubah menjadi CARD (minimal 2 card per kategori) */}
+      {/* Templates */}
       <fieldset className="space-y-6 border border-border rounded-lg p-4">
         <legend className="text-sm font-medium text-foreground px-1">Template (Opsional)</legend>
 
@@ -908,7 +1089,7 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
           </div>
         </div>
 
-        {/* Template Konfirmasi (Penerimaan) */}
+        {/* Template Konfirmasi */}
         <div>
           <Label className="mb-3 block">Template Konfirmasi</Label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1016,7 +1197,7 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
         </p>
       )}
 
-      {/* Action buttons — di mobile full width, di desktop auto */}
+      {/* Action buttons */}
       <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-2">
         <Button type="button" variant="outline" onClick={onCancel} className="w-full sm:w-auto">
           Tutup
