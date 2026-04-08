@@ -15,7 +15,7 @@ import { TiptapEditor } from '@/components/ui/tiptap-editor'
 const schema = z.object({
   name: z.string().min(1, 'Nama template wajib diisi'),
   subject: z.string().optional(),
-  type: z.enum(['invitation', 'confirmation', 'rejection', 'cancellation']),
+  type: z.enum(['invitation', 'confirmation', 'rejection', 'ticket_delivery', 'cancellation', 'reminder']),
   channel: z.enum(['email', 'whatsapp']),
   body: z.string().min(10, 'Isi pesan minimal 10 karakter'),
   logoUrl: z.string().optional(),
