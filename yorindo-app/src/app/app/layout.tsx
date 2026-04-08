@@ -55,11 +55,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [accessToken, user, pathname])
 
   useEffect(() => {
+    if (!hydrated) return // wait for store to rehydrate from localStorage
+
     if (!accessToken) {
+      // Save the intended destination for redirect-after-login
+      sessionStorage.setItem('loginRedirectUrl', pathname)
       router.replace('/login')
       return
     }
 
+    // Role-based redirects to allowed paths
     if (user?.role === 'viewer' && !isViewerAllowed(pathname)) {
       router.replace('/app/events')
       return
@@ -74,7 +79,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       router.replace('/app/scan')
       return
     }
-  }, [accessToken, user, router, pathname, isAuthorized])
+  }, [hydrated, accessToken, user, router, pathname, isAuthorized])
 
   // Show nothing while hydrating — prevents flash redirect to /login
   if (!hydrated) return null
