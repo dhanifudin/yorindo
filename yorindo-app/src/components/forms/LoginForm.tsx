@@ -43,8 +43,10 @@ export function LoginForm() {
       }
       const data = await res.json()
       setAuth(data.accessToken, data.user, data.eventKeys ?? {})
-      // TODO(story-7.1): for each [eventId, key] in data.eventKeys, call scanStore.setEventKey(eventId, key)
-      router.push('/app')
+      // Redirect to the originally intended destination, or /app as fallback
+      const redirectUrl = sessionStorage.getItem('loginRedirectUrl')
+      sessionStorage.removeItem('loginRedirectUrl')
+      router.push(redirectUrl || '/app')
     } catch {
       setApiError('Gagal terhubung ke server. Coba lagi.')
     }
