@@ -32,3 +32,7 @@
 
 ## BlastModal render memoization (deferred from spec-3-13-blast-modal-revamp)
 `sortedEvents` and `selectedTemplate` are recomputed on every render. Low priority — query results are stable references from React Query. Consider `useMemo` if the event list grows large or the component re-renders frequently due to parent state.
+
+## Deferred from spec-contacts-drop-unique-phone-email (2026-04-08)
+
+**Concurrent upsert race condition:** Two simultaneous `upsert` calls with the same phone/email can both pass the SELECT collision check before either INSERT completes, producing two non-flagged duplicate rows. Fix requires `SELECT ... FOR UPDATE` or a PostgreSQL advisory lock in the `upsert` transaction. Low risk in current single-instance deployment; revisit before horizontal scaling.

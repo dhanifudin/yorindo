@@ -25,6 +25,11 @@ function triggerInstallPrompt() {
 }
 
 export function DevToolbar() {
+  if (!MOCKS_ENABLED) return null
+  return <DevToolbarInner />
+}
+
+function DevToolbarInner() {
   const { user, setAuth } = useAuthStore()
   const queryClient = useQueryClient()
   const [isExpanded, setIsExpanded] = useState(false)
@@ -62,8 +67,6 @@ export function DevToolbar() {
     setAuth('dev-token', mockUser)
     queryClient.invalidateQueries()
   }
-
-  if (!MOCKS_ENABLED) return null
 
   if (!isExpanded) {
     return (

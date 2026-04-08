@@ -35,6 +35,8 @@ describe('useCreateUser', () => {
   it('creates a new user with 201 status', async () => {
     const wrapper = makeWrapper()
     const { result } = renderHook(() => useCreateUser(), { wrapper })
+
+    await waitFor(() => expect(result.current).not.toBeNull(), { timeout: 1000 })
     result.current.mutate({
       name: 'Test User',
       email: 'test@yorindo.app',

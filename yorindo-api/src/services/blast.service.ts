@@ -157,9 +157,23 @@ export class BlastService {
   }
 
   async processJob(job: BlastJobData): Promise<BlastJobResult> {
-    const template = findTemplateById(job.templateId)
-    if (!template) {
-      throw new Error(`Template not found: ${job.templateId}`)
+    // Support both template lookup and custom template body
+    let template
+    if (job.templateId === 'custom' || job.templateId === 'contacts-blast') {
+      // Use custom template body from job data
+      template = {
+        id: job.templateId,
+        name: job.templateName,
+        type: 'invitation' as const,
+        channel: job.channel,
+        body: job.templateBody,
+        createdAt: new Date().toISOString(),
+      }
+    } else {
+      template = findTemplateById(job.templateId)
+      if (!template) {
+        throw new Error(`Template not found: ${job.templateId}`)
+      }
     }
 
     const event = await this.eventRepository.findById(job.eventId)
@@ -170,13 +184,18 @@ export class BlastService {
     }
 
     // Load contacts based on job filters or direct contactIds
-    let contacts = (await this.contactRepository.findAll({
-      page: 1,
-      pageSize: 500,
-    }, job.filters)).data
-
+    let contacts: Contact[]
     if (job.contactIds && job.contactIds.length > 0) {
-      contacts = contacts.filter(c => job.contactIds!.includes(c.id))
+      // Load specific contacts by IDs
+      const loaded = await Promise.all(job.contactIds.map((contactId) => this.contactRepository.findById(contactId)))
+      contacts = loaded.filter((contact): contact is Contact => contact !== null)
+    } else {
+      // Load contacts based on filters
+      const result = await this.contactRepository.findAll(
+        { page: 1, pageSize: 1000 },
+        job.filters,
+      )
+      contacts = result.data
     }
 
     let suppressedCount = 0

@@ -19,6 +19,7 @@ interface ConfirmResult {
     status: string
     eventName: string
     eventSlug: string
+    eventDate?: string
     participantName: string
     contactId: string
     participantEmail: string
@@ -107,6 +108,26 @@ export default function ConfirmPage({ params }: ConfirmPageProps) {
               <p className="text-sm text-muted-foreground">
                 Tim kami akan meninjau pendaftaran Anda dan memberitahu hasilnya melalui email.
               </p>
+              {/* Google Calendar link */}
+              {data?.registration.eventDate && (() => {
+                const startMs = Date.parse(data.registration.eventDate!)
+                if (isNaN(startMs)) return null
+                const start = new Date(startMs)
+                const end = new Date(startMs + 2 * 3600000)
+                const fmt = (d: Date) => d.toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z'
+                const dates = `${encodeURIComponent(fmt(start))}/${encodeURIComponent(fmt(end))}`
+                const link = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(data.registration.eventName)}&dates=${dates}`
+                return (
+                  <a
+                    href={link}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+                  >
+                    📅 Tambahkan ke Google Calendar
+                  </a>
+                )
+              })()}
               {/* Dashboard entry */}
               {participantAuthDone && (
                 <Button className="w-full" onClick={() => router.push('/app')}>

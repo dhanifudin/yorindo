@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { BlastProgressBar, type BlastJobStatus } from './BlastProgressBar'
 
 describe('BlastProgressBar', () => {
@@ -20,21 +20,21 @@ describe('BlastProgressBar', () => {
     expect(container.firstChild).toBeNull()
   })
 
-  it('shows progress bar when job is running', () => {
+  it('shows progress bar when job is running', async () => {
     const job: BlastJobStatus = { jobId: '1', status: 'running', sent: 50, total: 100 }
     render(<BlastProgressBar job={job} />)
-    expect(screen.getByText(/50%/)).toBeTruthy()
+    await waitFor(() => expect(screen.getByText(/50%/)).toBeTruthy())
   })
 
-  it('shows queued label when status is queued', () => {
+  it('shows queued label when status is queued', async () => {
     const job: BlastJobStatus = { jobId: '1', status: 'queued', sent: 0, total: 247 }
     render(<BlastProgressBar job={job} />)
-    expect(screen.getByText(/antrian/i)).toBeTruthy()
+    await waitFor(() => expect(screen.getByText(/antrian/i)).toBeTruthy())
   })
 
-  it('renders progressbar role', () => {
+  it('renders progressbar role', async () => {
     const job: BlastJobStatus = { jobId: '1', status: 'running', sent: 75, total: 100 }
     render(<BlastProgressBar job={job} />)
-    expect(screen.getByRole('progressbar')).toBeTruthy()
+    await waitFor(() => expect(screen.getByRole('progressbar')).toBeTruthy())
   })
 })

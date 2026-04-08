@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Check, ChevronsUpDown, X, Upload, ImageIcon, Loader2 } from 'lucide-react'
+import Image from 'next/image'
 import { useCreateEvent, useUpdateEvent } from '@/hooks/useEvents'
 import { useVendors } from '@/hooks/useVendors'
 import { useEventSponsors } from '@/hooks/useEventSponsors'
@@ -52,18 +53,6 @@ const EVENT_TYPES = [
   { value: 'seminar', label: 'Seminar' },
   { value: 'webinar', label: 'Webinar' },
 ]
-
-const ALLOWED_IMAGE_TYPES: ReadonlySet<string> = new Set([
-  'image/jpeg',
-  'image/jpg',
-  'image/png',
-  'image/webp',
-  'image/gif',
-  'image/avif',
-  'image/svg+xml',
-])
-
-const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024 // 5 MB
 
 // ─── Zod Schema ───────────────────────────────────────────────────────────────
 
@@ -465,6 +454,24 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
       topicTagsRaw: event?.topicTags?.join(', ') ?? '',
     },
   })
+
+  // eslint-disable-next-line react-hooks/incompatible-library
+  const bannerUrlWatched = watch('bannerUrl')
+
+
+  const loadedRef = useRef<string>('')
+
+  useEffect(() => {
+    if (!existingSponsors) return
+
+    const key = existingSponsors.map((s: { vendor_id: string }) => s.vendor_id).sort().join()
+
+    if (key && key !== loadedRef.current) {
+      loadedRef.current = key
+      setSelectedVendorIds(existingSponsors.map((s: { vendor_id: string }) => s.vendor_id))
+    }
+  }, [existingSponsors])
+
 
   const allVendors = vendorsData?.data ?? []
   const selectedVendors = allVendors.filter((v) => selectedVendorIds.includes(v.id))

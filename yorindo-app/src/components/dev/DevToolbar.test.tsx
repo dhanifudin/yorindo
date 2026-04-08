@@ -1,7 +1,19 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { render } from '@testing-library/react'
+import { createElement } from 'react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { DevToolbar } from './DevToolbar'
 import { useAuthStore } from '@/store/authStore'
+
+function makeWrapper() {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  })
+  function Wrapper({ children }: { children: React.ReactNode }) {
+    return createElement(QueryClientProvider, { client }, children)
+  }
+  return Wrapper
+}
 
 describe('DevToolbar', () => {
   beforeEach(() => {
@@ -9,18 +21,13 @@ describe('DevToolbar', () => {
     useAuthStore.getState().clearAuth()
   })
 
-  it('renders 3 role buttons in development', () => {
-    // NODE_ENV is 'test' in vitest, not 'development'
-    // We test the component behavior directly by checking it doesn't crash
-    // The NODE_ENV !== 'development' guard will make it return null in test env
-    const { container } = render(<DevToolbar />)
-    // In test env (NODE_ENV=test), DevToolbar returns null
-    expect(container.firstChild).toBeNull()
-  })
-
-  it('DevToolbar is null in non-development environment', () => {
-    const { container } = render(<DevToolbar />)
-    expect(container.firstChild).toBeNull()
+  it('renders DEV button button when mocks are enabled', () => {
+    // In this test environment, MOCKS_ENABLED is true (either via NODE_ENV or NEXT_PUBLIC_ENABLE_MOCKS)
+    const { container } = render(<DevToolbar />, { wrapper: makeWrapper() })
+    // Should render a single button with DEV label
+    const button = container.querySelector('button')
+    expect(button).not.toBeNull()
+    expect(button).toHaveTextContent('DEV')
   })
 })
 

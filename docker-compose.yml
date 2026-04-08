@@ -54,10 +54,13 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-demo123}
       POSTGRES_DB: yorindo
       REDIS_URL: redis://redis:6379
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-mock}
+      MAILTRAP_API_KEY: ${MAILTRAP_API_KEY:-}
       UPLOADS_DIR: /app/uploads
       SENTRY_DSN: ${API_SENTRY_DSN:-}
     volumes:
       - api_uploads:/app/uploads
+      - api_logs:/app/logs
     depends_on:
       postgres:
         condition: service_healthy
@@ -94,5 +97,6 @@ services:
 
 volumes:
   api_uploads:
+  api_logs:
   postgres_data:
   redis_data:

@@ -200,7 +200,7 @@ export class PostgresContactRepository
   async findByPhone(phone: string | null): Promise<Contact | null> {
     if (!phone) return null
     const { rows } = await this.query<ContactRow>(
-      'SELECT * FROM contacts WHERE phone = $1 AND deleted_at IS NULL',
+      'SELECT * FROM contacts WHERE phone = $1 AND deleted_at IS NULL ORDER BY created_at ASC LIMIT 1',
       [phone],
     )
     return rows[0] ? this.mapRow(rows[0]) : null
@@ -323,53 +323,79 @@ export class PostgresContactRepository
   }
 
   async upsert(data: Omit<Contact, 'id' | 'createdAt' | 'updatedAt'>): Promise<Contact> {
-    const { rows } = await this.query<ContactRow>(
-      `INSERT INTO contacts (
-         id, name, phone, email, service_type, job_title,
-         city, province_code, province_name, city_code, city_name,
-         company, department, event_date, source,
-         completeness_score, consent_status, flag_category, deleted_at
-       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
-       ON CONFLICT (phone) DO UPDATE SET
-         name              = EXCLUDED.name,
-         email             = COALESCE(EXCLUDED.email, contacts.email),
-         service_type      = COALESCE(EXCLUDED.service_type, contacts.service_type),
-         job_title         = COALESCE(EXCLUDED.job_title, contacts.job_title),
-         city              = COALESCE(EXCLUDED.city, contacts.city),
-         province_code     = COALESCE(EXCLUDED.province_code, contacts.province_code),
-         province_name     = COALESCE(EXCLUDED.province_name, contacts.province_name),
-         city_code         = COALESCE(EXCLUDED.city_code, contacts.city_code),
-         city_name         = COALESCE(EXCLUDED.city_name, contacts.city_name),
-         company           = COALESCE(EXCLUDED.company, contacts.company),
-         department        = COALESCE(EXCLUDED.department, contacts.department),
-         event_date        = COALESCE(EXCLUDED.event_date, contacts.event_date),
-         source            = EXCLUDED.source,
-         completeness_score= EXCLUDED.completeness_score,
-         updated_at        = NOW()
-       RETURNING *`,
-      [
-        createId(),
-        data.name,
-        data.phone,
-        data.email,
-        data.serviceType,
-        data.jobTitle,
-        data.city,
-        data.provinceCode,
-        data.provinceName,
-        data.cityCode,
-        data.cityName,
-        data.company,
-        data.department,
-        data.eventDate,
-        data.source,
-        data.completenessScore,
-        data.consentStatus,
-        data.flagCategory,
-        data.deletedAt,
-      ],
-    )
-    return this.mapRow(rows[0]!)
+    return this.withTransaction(async (client) => {
+      // Detect collision: phone first (stronger signal), then email
+      let existingMatch: ContactRow | null = null
+      let matchReasons: string[] = []
+
+      if (data.phone) {
+        const { rows } = await client.query<ContactRow>(
+          'SELECT * FROM contacts WHERE phone = $1 AND deleted_at IS NULL ORDER BY created_at ASC LIMIT 1',
+          [data.phone],
+        )
+        if (rows[0]) {
+          existingMatch = rows[0]
+          matchReasons = ['same_phone']
+        }
+      }
+
+      if (!existingMatch && data.email) {
+        const { rows } = await client.query<ContactRow>(
+          'SELECT * FROM contacts WHERE lower(email) = lower($1) AND deleted_at IS NULL ORDER BY created_at ASC LIMIT 1',
+          [data.email],
+        )
+        if (rows[0]) {
+          existingMatch = rows[0]
+          matchReasons = ['same_email']
+        }
+      }
+
+      const flagCategory = existingMatch ? 'duplicate' : (data.flagCategory ?? null)
+      const newId = createId()
+
+      const { rows } = await client.query<ContactRow>(
+        `INSERT INTO contacts (
+           id, name, phone, email, service_type, job_title,
+           city, province_code, province_name, city_code, city_name,
+           company, department, event_date, source,
+           completeness_score, consent_status, flag_category, deleted_at
+         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
+         RETURNING *`,
+        [
+          newId,
+          data.name,
+          data.phone,
+          data.email,
+          data.serviceType,
+          data.jobTitle,
+          data.city,
+          data.provinceCode,
+          data.provinceName,
+          data.cityCode,
+          data.cityName,
+          data.company,
+          data.department,
+          data.eventDate,
+          data.source,
+          data.completenessScore,
+          data.consentStatus,
+          flagCategory,
+          data.deletedAt,
+        ],
+      )
+
+      if (existingMatch) {
+        const matchScore = matchReasons.includes('same_phone') ? 0.95 : 0.85
+        await client.query(
+          `INSERT INTO duplicate_pairs (id, primary_id, duplicate_id, match_score, match_reasons)
+           VALUES ($1, $2, $3, $4, $5)
+           ON CONFLICT (primary_id, duplicate_id) DO NOTHING`,
+          [createId(), existingMatch.id, newId, matchScore, JSON.stringify(matchReasons)],
+        )
+      }
+
+      return this.mapRow(rows[0]!)
+    })
   }
 
   async update(id: EntityId, data: Partial<Contact>): Promise<Contact | null> {

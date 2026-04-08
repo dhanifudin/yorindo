@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useAuthStore, useAuthHydrated } from '@/store/authStore'
 import { AdminShell } from '@/components/layout/AdminShell'
@@ -35,7 +35,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const hydrated = useAuthHydrated()
   const accessToken = useAuthStore((s) => s.accessToken)
   const user = useAuthStore((s) => s.user)
-  const setAuth = useAuthStore((s) => s.setAuth)
   const clearAuth = useAuthStore((s) => s.clearAuth)
   const router = useRouter()
   const pathname = usePathname()

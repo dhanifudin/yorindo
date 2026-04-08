@@ -335,7 +335,7 @@ export interface AuditLog {
 
 // ─── Template ────────────────────────────────────────────────────────────────
 
-export type TemplateType = 'invitation' | 'confirmation' | 'rejection' | 'ticket_delivery'
+export type TemplateType = 'invitation' | 'confirmation' | 'rejection' | 'ticket_delivery' | 'cancellation' | 'reminder'
 export type TemplateChannel = 'email' | 'whatsapp'
 
 export interface Template {

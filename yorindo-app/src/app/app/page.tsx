@@ -13,14 +13,13 @@ export default function DashboardPage() {
   const user = useAuthStore((s) => s.user)
   const router = useRouter()
 
-  const knownRoles = ['admin', 'viewer', 'staff', 'participant']
-
   useEffect(() => {
     if (!accessToken) {
       router.replace('/login')
       return
     }
-    if (user && !knownRoles.includes(user.role)) {
+    const roles = ['admin', 'viewer', 'staff', 'participant']
+    if (user && !roles.includes(user.role)) {
       router.replace('/login')
     }
   }, [accessToken, user, router])

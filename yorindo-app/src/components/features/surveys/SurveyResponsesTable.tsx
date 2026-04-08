@@ -232,6 +232,7 @@ export function SurveyResponsesTable({ responses, total }: SurveyResponsesTableP
         total={filteredTotal}
         onPrev={() => table.previousPage()}
         onNext={() => table.nextPage()}
+        onPageChange={(p) => table.setPageIndex(p)}
       />
     </div>
   )
