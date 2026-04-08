@@ -32,6 +32,7 @@ const migrations = [
   '006_location_fields.sql',
   '007_demo_support_tables.sql',
   '008_phase2_schema_gaps.sql',
+  '009_registration_form_fields.sql',
 ]
 
 async function migrate(): Promise<void> {

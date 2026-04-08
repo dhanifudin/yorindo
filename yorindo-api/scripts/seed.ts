@@ -103,6 +103,7 @@ async function seed(): Promise<void> {
     const sizes = ['<50', '50-200', '200-1000', '>1000']
     const industrySlugs = ['teknologi', 'kesehatan']
     const jobSlugs = ['software-engineer', 'product-manager']
+    const industryNames = ['Elektronik & Peralatan Rumah Tangga', 'Farmasi & Alat Kesehatan']
 
     for (let i = 1; i <= 10; i++) {
       const city = cities[i % cities.length]
@@ -110,14 +111,15 @@ async function seed(): Promise<void> {
       const location = cityLocationMap[city]
       const industryId = industryMap[industrySlugs[i % 2]]
       const jobTitleId = jobTitleMap[jobSlugs[i % 2]]
+      const serviceType = industryNames[i % 2]
 
       await client.query(`
         INSERT INTO contacts (
           id, name, phone, email, city, company, company_size, source, consent_status,
-          industry_id, job_title_id,
+          industry_id, job_title_id, service_type,
           province_code, province_name, city_code, city_name
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, 'manual', 'active', $8, $9, $10, $11, $12, $13)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, 'manual', 'active', $8, $9, $10, $11, $12, $13, $14)
         ON CONFLICT (phone) DO NOTHING
       `, [
         createId(),
@@ -129,13 +131,25 @@ async function seed(): Promise<void> {
         size,
         industryId ?? null,
         jobTitleId ?? null,
+        serviceType,
         location?.province_code ?? null,
         location?.province_name ?? null,
         location?.city_code ?? null,
         location?.city_name ?? null,
       ])
     }
-    console.log('✓ Seeded 10 contacts (with province/city codes)')
+    console.log('✓ Seeded 10 contacts (with serviceType/industry)')
+
+    // Templates
+    await client.query(`
+      INSERT INTO templates (id, name, type, channel, subject, body) VALUES
+        ($1, 'Undangan Event (WhatsApp)', 'invitation', 'whatsapp', NULL, 'Halo {{name}}, Anda diundang ke {{event_title}} pada {{date}} di {{venue}}.'),
+        ($2, 'Undangan Event (Email)', 'invitation', 'email', 'Undangan: {{event_title}}', '<p>Halo {{name}},</p><p>Anda diundang ke <strong>{{event_title}}</strong> pada {{date}} di {{venue}}.</p>'),
+        ($3, 'Konfirmasi Tiket', 'confirmation', 'email', 'Konfirmasi: {{event_title}}', '<p>Selamat {{name}}! Registrasi Anda untuk {{event_title}} telah disetujui.</p>'),
+        ($4, 'Penolakan', 'rejection', 'email', 'Status Registrasi', '<p>Maaf {{name}}, registrasi Anda tidak dapat diterima.</p>')
+      ON CONFLICT DO NOTHING
+    `, [createId(), createId(), createId(), createId()])
+    console.log('✓ Seeded 4 templates (WhatsApp + Email invitation)')
 
     await client.query('COMMIT')
     console.log('Seed complete.')

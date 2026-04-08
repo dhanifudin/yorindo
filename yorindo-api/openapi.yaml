@@ -1988,6 +1988,36 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Template'
+    put:
+      summary: Update template (full replace)
+      operationId: updateTemplatePut
+      tags: [Blast]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                type: { type: string }
+                channel: { type: string }
+                body: { type: string }
+      responses:
+        '200':
+          description: Template updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
     delete:
       summary: Delete template
       operationId: deleteTemplate
@@ -2850,10 +2880,12 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [success, message, eventLink, recipientCount]
+                required: [success, jobId, message, eventLink, recipientCount]
                 properties:
                   success:
                     type: boolean
+                  jobId:
+                    type: string
                   message:
                     type: string
                   eventLink:

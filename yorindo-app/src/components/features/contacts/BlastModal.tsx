@@ -83,6 +83,12 @@ function formatDate(date: string | null | undefined): string {
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
+interface SegmentFilters {
+  serviceTypes?: string[]
+  cities?: string[]
+  jobTitles?: string[]
+}
+
 interface BlastModalProps {
   open: boolean
   onClose: () => void
@@ -91,6 +97,7 @@ interface BlastModalProps {
   mode: 'segment' | 'selection'
   selectedIds: string[]
   selectedNames?: string[]
+  segmentFilters?: SegmentFilters
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -103,6 +110,7 @@ export function BlastModal({
   mode,
   selectedIds,
   selectedNames = [],
+  segmentFilters,
 }: BlastModalProps) {
   const [activeTab, setActiveTab] = useState<'template' | 'custom'>('template')
 
@@ -177,7 +185,11 @@ export function BlastModal({
           ...(values.messageType === 'template'
             ? { templateId: values.templateId }
             : { customMessage: values.customMessage }),
-          ...(mode === 'selection' ? { contactIds: selectedIds } : {}),
+          ...(mode === 'selection'
+            ? { contactIds: selectedIds }
+            : segmentFilters && Object.values(segmentFilters).some((v) => v?.length)
+              ? { filters: segmentFilters }
+              : {}),
         }),
       })
       if (!res.ok) {

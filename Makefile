@@ -32,9 +32,9 @@ deploy-demo:
 	@until $(API_EXEC) wget -qO- http://localhost:3000/api/health > /dev/null 2>&1; do printf "."; sleep 2; done
 	@echo ""
 	@echo "🔄 Running migrations..."
-	$(API_EXEC_TTY) npx tsx scripts/migrate.ts
+	$(API_EXEC_TTY) npm run migrate
 	@echo "🌱 Running seed..."
-	$(API_EXEC_TTY) npx tsx scripts/seed.ts --demo
+	$(API_EXEC_TTY) npm run seed -- --demo
 	@echo ""
 	@echo "🧪 Running seed validation tests..."
 	$(API_EXEC_TTY) npx vitest run scripts/seed.test.ts --reporter=verbose || (echo "❌ Seed validation failed!" && exit 1)
@@ -64,9 +64,9 @@ reset-demo:
 	@until $(API_EXEC) wget -qO- http://localhost:3000/api/health > /dev/null 2>&1; do printf "."; sleep 2; done
 	@echo ""
 	@echo "🔄 Running migrations..."
-	$(API_EXEC_TTY) npx tsx scripts/migrate.ts
+	$(API_EXEC_TTY) npm run migrate
 	@echo "🌱 Running seed..."
-	$(API_EXEC_TTY) npx tsx scripts/seed.ts --demo
+	$(API_EXEC_TTY) npm run seed -- --demo
 	@echo ""
 	@echo "🧪 Running seed validation tests..."
 	$(API_EXEC_TTY) npx vitest run scripts/seed.test.ts --reporter=verbose || (echo "❌ Seed validation failed!" && exit 1)
@@ -89,17 +89,18 @@ logs-demo:
 ## Run migrations only
 migrate-demo:
 	@echo "🔄 Running migrations..."
-	$(API_EXEC_TTY) npx tsx scripts/migrate.ts
+	$(API_EXEC_TTY) npm run migrate
 
 ## Run seed only (uses --demo for comprehensive demo data)
 seed-demo:
 	@echo "🌱 Running seed..."
-	$(API_EXEC_TTY) npx tsx scripts/seed.ts --demo
+	$(API_EXEC_TTY) npm run seed -- --demo
 
 # ─────────────────────────────────────────────
 # Local Development (docker-compose.dev.yml)
 # Hot-reload: API @ http://localhost:3000
 #             App @ http://localhost:5173
+# Note: node_modules mounted from host (run npm ci on host first)
 # ─────────────────────────────────────────────
 
 ## Start local dev environment (hot-reload, no pre-built images)
@@ -114,13 +115,13 @@ up-dev:
 	@echo "   App: http://localhost:5173"
 	@echo "   Run 'make logs-dev' to follow logs."
 
-## Stop local dev environment (preserve volumes)
+## Stop local dev environment (preserve database data)
 stop-dev:
 	@echo "⏹️  Stopping dev services..."
 	$(DEV_COMPOSE) down
-	@echo "✅ Dev stopped. node_modules volumes preserved."
+	@echo "✅ Dev stopped. Database data preserved."
 
-## Wipe all dev data (postgres + node_modules volumes) — full clean slate
+## Wipe all dev data (postgres volume) — full clean slate
 clean-dev:
 	@echo "🗑️  Removing all dev containers and volumes..."
 	$(DEV_COMPOSE) down -v
@@ -133,30 +134,33 @@ logs-dev:
 ## Run migrations inside dev api container
 migrate-dev:
 	@echo "🔄 Running migrations in dev..."
-	$(DEV_COMPOSE) exec api npx tsx scripts/migrate.ts
+	$(DEV_COMPOSE) exec api node_modules/.bin/tsx scripts/migrate.ts
 
 ## Run basic dev seed (10 contacts, 3 events)
 seed-dev:
 	@echo "🌱 Running dev seed..."
-	$(DEV_COMPOSE) exec api npx tsx scripts/seed.ts
+	$(DEV_COMPOSE) exec api node_modules/.bin/tsx scripts/seed.ts
 
 ## Migrate + seed in one step (first-time local setup)
 setup-dev:
 	@echo "═══════════════════════════════════════════"
 	@echo "⚙️  Setting up Local Dev Database"
 	@echo "═══════════════════════════════════════════"
+	@echo "📦 Installing dependencies..."
+	cd yorindo-api && npm ci
+	cd yorindo-app && npm ci
 	@echo "🔌 Starting services..."
 	$(DEV_COMPOSE) up -d
 	@echo "⏳ Waiting for postgres..."
 	@until $(DEV_COMPOSE) exec -T postgres pg_isready -U yorindo -d yorindo > /dev/null 2>&1; do printf "."; sleep 1; done
 	@echo ""
-	@echo "⏳ Waiting for api npm install to complete..."
-	@until $(DEV_COMPOSE) exec -T api ls node_modules/.package-lock.json > /dev/null 2>&1; do printf "."; sleep 2; done
+	@echo "⏳ Waiting for api to be ready..."
+	@until $(DEV_COMPOSE) exec -T api node_modules/.bin/tsx --version > /dev/null 2>&1; do printf "."; sleep 2; done
 	@echo ""
 	@echo "🔄 Running migrations..."
-	$(DEV_COMPOSE) exec api npx tsx scripts/migrate.ts
+	$(DEV_COMPOSE) exec api node_modules/.bin/tsx scripts/migrate.ts
 	@echo "🌱 Running seed..."
-	$(DEV_COMPOSE) exec api npx tsx scripts/seed.ts
+	$(DEV_COMPOSE) exec api node_modules/.bin/tsx scripts/seed.ts
 	@echo ""
 	@echo "✅ Dev database ready."
 

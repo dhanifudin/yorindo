@@ -172,19 +172,26 @@ export const registrationsRoutes: FastifyPluginAsync = async (fastify) => {
 
     const existingContact = await contactRepository.findByPhone(payload.phone)
     const contact = existingContact
-      ? await contactRepository.update(existingContact.id, { name: payload.name, email: payload.email })
+      ? await contactRepository.update(existingContact.id, { 
+          name: payload.name, 
+          email: payload.email,
+          serviceType: payload.industry ?? existingContact.serviceType,
+          company: payload.company ?? existingContact.company,
+          jobTitle: payload.title ?? existingContact.jobTitle,
+          city: payload.location ?? existingContact.city,
+        })
       : await contactRepository.upsert({
           name: payload.name,
           phone: payload.phone,
           email: payload.email,
-          serviceType: null,
-          jobTitle: null,
-          city: null,
+          serviceType: payload.industry ?? null,
+          jobTitle: payload.title ?? null,
+          city: payload.location ?? null,
           provinceCode: null,
           provinceName: null,
           cityCode: null,
           cityName: null,
-          company: null,
+          company: payload.company ?? null,
           department: null,
           eventDate: null,
           source: 'form',

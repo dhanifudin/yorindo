@@ -49,9 +49,14 @@ export const config = {
   openaiApiKey: optional('OPENAI_API_KEY'),
   anthropicApiKey: optional('ANTHROPIC_API_KEY'),
   brevoApiKey: optional('BREVO_API_KEY'),
-  mailtrapApiKey: optional('MAILTRAP_API_KEY'),
   everproApiKey: optional('EVERPRO_API_KEY'),
   brevoSenderEmail: optional('BREVO_SENDER_EMAIL', 'no-reply@yorindo.app'),
+
+  // Mailtrap SMTP credentials
+  mailtrapHost: optional('MAILTRAP_HOST'),
+  mailtrapPort: parseInt(optional('MAILTRAP_PORT', '2525'), 10),
+  mailtrapUser: optional('MAILTRAP_USER'),
+  mailtrapPass: optional('MAILTRAP_PASS'),
 
   // Error monitoring — optional; Sentry skips init silently when undefined
   sentryDsn: optional('SENTRY_DSN') || undefined,
