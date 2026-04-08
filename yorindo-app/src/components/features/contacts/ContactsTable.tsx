@@ -7,12 +7,14 @@ import {
   flexRender,
   type ColumnDef,
   type RowSelectionState,
+  type PaginationState,
 } from '@tanstack/react-table'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams } from 'next/navigation'
 import { useContacts, useRecommendedEvents } from '@/hooks/useContacts'
 import { useFilterStore } from '@/store/filterStore'
 import type { Contact, FlagCategory, ContactHistoryItem, ContactHistoryResponse } from '@/types/api'
+
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -66,26 +68,28 @@ const FLAG_FILTER_OPTIONS = [
 ] as const
 
 interface ContactsTableProps {
-  onSelectionChange: (ids: string[], names: string[]) => void   // Diubah: sekarang kirim ids + names
+  onSelectionChange: (ids: string[], names: string[]) => void
   onToggleSelectMode: () => void
   selectMode: boolean
-  selectedIds: string[]
 }
 
 export function ContactsTable({
   onSelectionChange,
   onToggleSelectMode,
   selectMode,
-  selectedIds,
 }: ContactsTableProps) {
   const searchParams = useSearchParams()
   const { flagFilter, setFilter } = useFilterStore()
-  const page = parseInt(searchParams.get('page') ?? '1', 10)
+
+  const page = parseInt(searchParams?.get('page') ?? '1', 10) || 1
+
   const { data, isLoading, isError } = useContacts()
+
   const [detailContact, setDetailContact] = useState<Contact | null>(null)
   const [eventsExpanded, setEventsExpanded] = useState(false)
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
   const [selectedKeepId, setSelectedKeepId] = useState<string>('')
+
   const queryClient = useQueryClient()
 
   const { data: recommendedEventsData, isLoading: eventsLoading } = useRecommendedEvents(
@@ -93,24 +97,23 @@ export function ContactsTable({
     eventsExpanded,
   )
 
-  // History tab data
   const { data: historyData, isLoading: historyLoading } = useQuery<ContactHistoryResponse>({
     queryKey: ['contact-history', detailContact?.id],
-    queryFn: () =>
-      fetch(`/api/contacts/${detailContact!.id}/history`).then((r) => r.json()),
-    enabled: !!detailContact,
+    queryFn: () => fetch(`/api/contacts/${detailContact!.id}/history`).then((r) => r.json()),
+    enabled: !!detailContact?.id,
   })
 
-  // Duplicates data
-  const { data: duplicatesData, isLoading: duplicatesLoading } = useQuery({
+  const { data: duplicatesData, isLoading: duplicatesLoading } = useQuery<{
+    duplicates: Contact[]
+    reason?: string
+  }>({
     queryKey: ['contact-duplicates', detailContact?.id],
-    queryFn: () =>
-      fetch(`/api/contacts/${detailContact!.id}/duplicates`).then((r) => r.json()),
-    enabled: !!detailContact && detailContact.flagCategory === 'duplicate',
+    queryFn: () => fetch(`/api/contacts/${detailContact!.id}/duplicates`).then((r) => r.json()),
+    enabled: !!detailContact?.id && detailContact.flagCategory === 'duplicate',
   })
 
   const flagMutation = useMutation({
-    mutationFn: async ({ id, flagCategory }: { id: string; flagCategory: FlagCategory }) => {
+    mutationFn: async ({ id, flagCategory }: { id: string; flagCategory: FlagCategory | null }) => {
       const res = await fetch(`/api/contacts/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -139,12 +142,14 @@ export function ContactsTable({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contacts'] })
       setDetailContact(null)
+      setSelectedKeepId('')
       toast.success('Duplikat berhasil diselesaikan')
     },
     onError: () => toast.error('Gagal menyelesaikan duplikat'),
   })
 
-  const columns: ColumnDef<Contact>[] = [
+  // Columns with safe access for missing properties
+  const columns = useMemo<ColumnDef<Contact>[]>(() => [
     {
       id: 'select',
       header: ({ table }) => (
@@ -163,6 +168,7 @@ export function ContactsTable({
         />
       ),
       size: 40,
+      enableSorting: false,
     },
     {
       accessorKey: 'name',
@@ -173,7 +179,7 @@ export function ContactsTable({
           <div className="flex items-center gap-2">
             <span>{contact.name}</span>
             {contact.flagCategory && (
-              <Badge className={FLAG_LABELS[contact.flagCategory].className + ' text-[10px] px-1.5 py-0'}>
+              <Badge className={`${FLAG_LABELS[contact.flagCategory].className} text-[10px] px-1.5 py-0`}>
                 {FLAG_LABELS[contact.flagCategory].label}
               </Badge>
             )}
@@ -181,54 +187,76 @@ export function ContactsTable({
         )
       },
     },
-    { accessorKey: 'phone', header: 'Telepon' },
-    { accessorKey: 'industryId', header: 'Industri' },
-    { accessorKey: 'city', header: 'Kota' },
+    {
+      accessorKey: 'phone',
+      header: 'Telepon',
+    },
+    {
+      id: 'industryId',
+      header: 'Industri',
+      accessorFn: (row) => (row as any).industryId ?? '—',
+      cell: ({ getValue }) => String(getValue()),
+    },
+    {
+      id: 'city',
+      header: 'Kota',
+      accessorFn: (row) => (row as any).city ?? '—',
+      cell: ({ getValue }) => String(getValue()),
+    },
+    {
+      id: 'companySize',
+      header: 'Ukuran Perusahaan',
+      accessorFn: (row) => (row as any).companySize ?? '—',
+      cell: ({ getValue }) => String(getValue()),
+    },
     {
       accessorKey: 'completenessScore',
       header: 'Kelengkapan',
-      cell: ({ getValue }) => `${Math.round((getValue() as number) * 100)}%`,
+      cell: ({ getValue }) => {
+        const score = getValue<number>() ?? 0
+        return `${Math.round(score * 100)}%`
+      },
     },
-  ]
+  ], [])
 
   const handleResolveDuplicates = () => {
-    if (!selectedKeepId || !detailContact || !duplicatesData) return
-    const deleteIds = [detailContact.id, ...duplicatesData.duplicates.map((d: Contact) => d.id)].filter(id => id !== selectedKeepId)
+    if (!selectedKeepId || !detailContact || !duplicatesData?.duplicates?.length) return
+
+    const allIds = [detailContact.id, ...duplicatesData.duplicates.map((d) => d.id)]
+    const deleteIds = allIds.filter((id) => id !== selectedKeepId)
+
     resolveDuplicatesMutation.mutate({ keepId: selectedKeepId, deleteIds })
   }
+
+  const pagination = useMemo<PaginationState>(
+    () => ({ pageIndex: page - 1, pageSize: 20 }),
+    [page]
+  )
 
   const table = useReactTable({
     data: data?.data ?? [],
     columns,
-    pageCount: data?.pagination.totalPages ?? -1,
-    state: {
-      pagination: { pageIndex: page - 1, pageSize: 20 },
-      rowSelection,
-    },
+    pageCount: data?.pagination?.totalPages ?? -1,
+    state: { pagination, rowSelection },
     onRowSelectionChange: setRowSelection,
+    onPaginationChange: () => {},
     getCoreRowModel: getCoreRowModel(),
     getRowId: (row) => row.id,
     manualPagination: true,
-    manualFiltering: true,
+    enableRowSelection: true,
   })
 
-  // Ambil selected IDs dan Names
-  const derivedSelectedIds = useMemo(
-    () => table.getSelectedRowModel().rows.map((r) => r.original.id),
-    [rowSelection]
-  )
+  // ✅ These must come AFTER table is initialized
+  const selectedIds = useMemo(() => Object.keys(rowSelection), [rowSelection])
 
-  const derivedSelectedNames = useMemo(
-    () => table.getSelectedRowModel().rows.map((r) => r.original.name),
-    [rowSelection]
-  )
+  const selectedNames = useMemo(() => {
+    return table.getSelectedRowModel().rows.map((r) => r.original.name)
+  }, [rowSelection, table])
 
-  // Kirim ke parent component
   useEffect(() => {
-    onSelectionChange(derivedSelectedIds, derivedSelectedNames)
-  }, [derivedSelectedIds, derivedSelectedNames, onSelectionChange])
+    onSelectionChange(selectedIds, selectedNames)
+  }, [selectedIds, selectedNames, onSelectionChange])
 
-  // Set selectedKeepId when detailContact changes
   useEffect(() => {
     setSelectedKeepId(detailContact?.id || '')
   }, [detailContact])
@@ -243,11 +271,11 @@ export function ContactsTable({
 
   return (
     <>
-      {/* Contact detail sheet */}
+      {/* Contact Detail Sheet */}
       <Sheet
         open={!!detailContact}
-        onOpenChange={(v) => {
-          if (!v) {
+        onOpenChange={(open) => {
+          if (!open) {
             setDetailContact(null)
             setEventsExpanded(false)
           }
@@ -266,21 +294,27 @@ export function ContactsTable({
                 <TabsTrigger value="segmen">Segmen</TabsTrigger>
               </TabsList>
 
-              {/* Info tab */}
+              {/* Info Tab */}
               <TabsContent value="info" className="mt-4">
                 <div className="space-y-3 text-sm">
                   <div><span className="text-muted-foreground">Email: </span>{detailContact?.email || '—'}</div>
-                  <div><span className="text-muted-foreground">Telepon: </span>{detailContact?.phone}</div>
-                  <div><span className="text-muted-foreground">Industri: </span>{detailContact?.industryId}</div>
-                  <div><span className="text-muted-foreground">Kota: </span>{detailContact?.city}</div>
-                  <div><span className="text-muted-foreground">Ukuran Perusahaan: </span>{detailContact?.companySize}</div>
+                  <div><span className="text-muted-foreground">Telepon: </span>{detailContact?.phone || '—'}</div>
+                  <div>
+                    <span className="text-muted-foreground">Industri: </span>
+                    {(detailContact as any)?.industryId || '—'}
+                  </div>
+                  <div><span className="text-muted-foreground">Kota: </span>{(detailContact as any)?.city || '—'}</div>
+                  <div>
+                    <span className="text-muted-foreground">Ukuran Perusahaan: </span>
+                    {(detailContact as any)?.companySize || '—'}
+                  </div>
                   <div>
                     <span className="text-muted-foreground">Kelengkapan: </span>
-                    {detailContact && `${Math.round(detailContact.completenessScore * 100)}%`}
+                    {detailContact ? `${Math.round(detailContact.completenessScore * 100)}%` : '—'}
                   </div>
                   <div>
                     <span className="text-muted-foreground">Dibuat: </span>
-                    {detailContact && new Date(detailContact.createdAt).toLocaleDateString('id-ID')}
+                    {detailContact ? new Date(detailContact.createdAt).toLocaleDateString('id-ID') : '—'}
                   </div>
                   {detailContact?.flagCategory && (
                     <div>
@@ -292,8 +326,9 @@ export function ContactsTable({
                   )}
                 </div>
 
-                {/* Flag actions */}
                 <Separator className="my-4" />
+
+                {/* Flag Actions */}
                 <div className="space-y-2">
                   <p className="text-xs text-muted-foreground font-medium">Tandai sebagai:</p>
                   <div className="flex flex-wrap gap-2">
@@ -306,7 +341,7 @@ export function ContactsTable({
                         onClick={() => {
                           if (detailContact) {
                             flagMutation.mutate({ id: detailContact.id, flagCategory: cat })
-                            setDetailContact({ ...detailContact, flagCategory: cat })
+                            setDetailContact((prev) => (prev ? { ...prev, flagCategory: cat } : null))
                           }
                         }}
                       >
@@ -321,7 +356,7 @@ export function ContactsTable({
                         onClick={() => {
                           if (detailContact) {
                             flagMutation.mutate({ id: detailContact.id, flagCategory: null })
-                            setDetailContact({ ...detailContact, flagCategory: null })
+                            setDetailContact((prev) => (prev ? { ...prev, flagCategory: null } : null))
                           }
                         }}
                       >
@@ -331,13 +366,14 @@ export function ContactsTable({
                   </div>
                 </div>
 
-                {/* Duplicate resolution */}
+                {/* Duplicate Resolution Section */}
                 {detailContact?.flagCategory === 'duplicate' && (
                   <>
                     <Separator className="my-4" />
                     <div className="space-y-2">
                       <p className="text-xs text-muted-foreground font-medium">Selesaikan Duplikat</p>
-                      <p className="text-xs">Kontak ini ditandai sebagai duplikat. Pilih kontak yang ingin disimpan. Kontak lainnya akan dihapus.</p>
+                      <p className="text-xs">Pilih kontak yang ingin disimpan. Kontak lainnya akan dihapus.</p>
+
                       {duplicatesLoading ? (
                         <div className="space-y-2">
                           {Array.from({ length: 3 }).map((_, i) => (
@@ -346,13 +382,17 @@ export function ContactsTable({
                         </div>
                       ) : duplicatesData?.duplicates?.length ? (
                         <>
-                          <p className="text-xs text-muted-foreground">Alasan duplikat: {duplicatesData.reason || 'Data serupa ditemukan'}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Alasan: {duplicatesData.reason || 'Data serupa ditemukan'}
+                          </p>
                           <RadioGroup value={selectedKeepId} onValueChange={setSelectedKeepId}>
                             <div className="flex items-center space-x-2">
                               <RadioGroupItem value={detailContact.id} id={`keep-${detailContact.id}`} />
                               <Label htmlFor={`keep-${detailContact.id}`} className="text-xs cursor-pointer">
                                 <p className="font-medium">{detailContact.name}</p>
-                                <p className="text-muted-foreground">{detailContact.phone || '—'} · {detailContact.email || '—'}</p>
+                                <p className="text-muted-foreground">
+                                  {detailContact.phone || '—'} · {detailContact.email || '—'}
+                                </p>
                               </Label>
                             </div>
                             {duplicatesData.duplicates.map((d: Contact) => (
@@ -360,12 +400,15 @@ export function ContactsTable({
                                 <RadioGroupItem value={d.id} id={`keep-${d.id}`} />
                                 <Label htmlFor={`keep-${d.id}`} className="text-xs cursor-pointer">
                                   <p className="font-medium">{d.name}</p>
-                                  <p className="text-muted-foreground">{d.phone || '—'} · {d.email || '—'}</p>
+                                  <p className="text-muted-foreground">
+                                    {d.phone || '—'} · {d.email || '—'}
+                                  </p>
                                 </Label>
                               </div>
                             ))}
                           </RadioGroup>
-                          <div className="flex gap-2">
+
+                          <div className="flex gap-2 pt-2">
                             <Button
                               size="sm"
                               onClick={handleResolveDuplicates}
@@ -377,7 +420,7 @@ export function ContactsTable({
                               variant="outline"
                               size="sm"
                               onClick={() => {
-                                const deleteIds = [detailContact.id, ...duplicatesData.duplicates.map((d: Contact) => d.id)]
+                                const deleteIds = [detailContact.id, ...duplicatesData.duplicates.map((d) => d.id)]
                                 resolveDuplicatesMutation.mutate({ keepId: '', deleteIds })
                               }}
                               disabled={resolveDuplicatesMutation.isPending}
@@ -393,7 +436,7 @@ export function ContactsTable({
                   </>
                 )}
 
-                {/* Suggested Events section */}
+                {/* Suggested Events */}
                 <Separator className="my-4" />
                 <div>
                   <div className="flex items-center justify-between mb-2">
@@ -442,7 +485,7 @@ export function ContactsTable({
                 </div>
               </TabsContent>
 
-              {/* Riwayat tab */}
+              {/* Riwayat Tab */}
               <TabsContent value="riwayat" className="mt-4">
                 {historyLoading ? (
                   <div className="space-y-2">
@@ -450,7 +493,7 @@ export function ContactsTable({
                       <Skeleton key={i} className="h-12" />
                     ))}
                   </div>
-                ) : !historyData?.registrations.length ? (
+                ) : !historyData?.registrations?.length ? (
                   <p className="text-sm text-muted-foreground text-center py-8">
                     Belum ada riwayat event
                   </p>
@@ -480,20 +523,20 @@ export function ContactsTable({
                 )}
               </TabsContent>
 
-              {/* Segmen tab */}
+              {/* Segmen Tab */}
               <TabsContent value="segmen" className="mt-4 space-y-3 text-sm">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <p className="text-xs text-muted-foreground font-medium uppercase">Industri</p>
-                    <p className="mt-0.5">{detailContact?.industryId || '—'}</p>
+                    <p className="mt-0.5">{(detailContact as any)?.industryId || '—'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground font-medium uppercase">Kota</p>
-                    <p className="mt-0.5">{detailContact?.city || '—'}</p>
+                    <p className="mt-0.5">{(detailContact as any)?.city || '—'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground font-medium uppercase">Ukuran Perusahaan</p>
-                    <p className="mt-0.5">{detailContact?.companySize || '—'}</p>
+                    <p className="mt-0.5">{(detailContact as any)?.companySize || '—'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground font-medium uppercase">Kelengkapan</p>
@@ -519,7 +562,7 @@ export function ContactsTable({
         </SheetContent>
       </Sheet>
 
-      {/* Flag filter */}
+      {/* Flag Filter */}
       <div className="flex gap-2 mb-3">
         {FLAG_FILTER_OPTIONS.map((opt) => (
           <button
@@ -537,7 +580,7 @@ export function ContactsTable({
         ))}
       </div>
 
-      {/* Mobile section */}
+      {/* Mobile View */}
       <div className="md:hidden">
         <div className="sticky top-0 z-10 bg-background border-b py-2 flex items-center justify-between mb-2">
           <button
@@ -574,19 +617,16 @@ export function ContactsTable({
           ) : (
             table.getRowModel().rows.map((row) => {
               const contact = row.original
+              const industryId = (contact as any).industryId
+              const phone = contact.phone
+
               return (
                 <div
                   key={contact.id}
                   className={`rounded-lg border border-border bg-card p-3 cursor-pointer active:bg-muted/50 flex items-center gap-2 ${
                     row.getIsSelected() ? 'bg-muted/30' : ''
                   }`}
-                  onClick={() => {
-                    if (selectMode) {
-                      row.toggleSelected()
-                    } else {
-                      setDetailContact(contact)
-                    }
-                  }}
+                  onClick={() => (selectMode ? row.toggleSelected() : setDetailContact(contact))}
                 >
                   {selectMode && (
                     <Checkbox
@@ -600,15 +640,15 @@ export function ContactsTable({
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-sm">{contact.name}</span>
                       {contact.flagCategory && (
-                        <Badge className={FLAG_LABELS[contact.flagCategory].className + ' text-[10px] px-1.5 py-0'}>
+                        <Badge className={`${FLAG_LABELS[contact.flagCategory].className} text-[10px] px-1.5 py-0`}>
                           {FLAG_LABELS[contact.flagCategory].label}
                         </Badge>
                       )}
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">
-                      {contact.industryId && <span>{contact.industryId}</span>}
-                      {contact.industryId && contact.phone && <span> · </span>}
-                      {contact.phone && <span>{contact.phone}</span>}
+                      {industryId && <span>{industryId}</span>}
+                      {industryId && phone && <span> · </span>}
+                      {phone && <span>{phone}</span>}
                     </div>
                   </div>
                 </div>
@@ -618,7 +658,7 @@ export function ContactsTable({
         </div>
       </div>
 
-      {/* Desktop table */}
+      {/* Desktop Table */}
       <div className="rounded-md border hidden md:block">
         <Table>
           <TableHeader>
@@ -653,7 +693,7 @@ export function ContactsTable({
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
-                  className={`cursor-pointer ${row.getIsSelected() ? 'bg-muted/30' : ''}`}
+                  className={`cursor-pointer hover:bg-muted/50 ${row.getIsSelected() ? 'bg-muted/30' : ''}`}
                   onClick={() => setDetailContact(row.original)}
                 >
                   {row.getVisibleCells().map((cell) => (

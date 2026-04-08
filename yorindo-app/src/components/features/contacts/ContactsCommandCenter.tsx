@@ -115,9 +115,8 @@ export function ContactsCommandCenter() {
         onSelectionChange={handleSelectionChange}   // ← sekarang terima 2 params
         onToggleSelectMode={handleToggleSelectMode}
         selectMode={selectMode}
-        selectedIds={selectedIds}
-      />
 
+/>
       <ContactsPagination />
 
       <ActionToolbar
