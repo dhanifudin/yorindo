@@ -867,6 +867,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     }
     const result = await yoriMindService.analyze(snapshot)
     const responseBody = {
+      disabled: result.disabled ?? false,
       analysis: result.summary,
       root_causes: result.insights,
       recommendations: result.recommendations.map((action) => ({

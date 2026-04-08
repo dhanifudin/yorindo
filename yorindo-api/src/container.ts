@@ -47,6 +47,8 @@ import { MockOtpService } from './services/adapters/mock/OtpService.js'
 import { MockQueueService } from './services/adapters/mock/QueueService.js'
 import { MockWhatsAppService } from './services/adapters/mock/WhatsAppService.js'
 import { MockYoriMindService } from './services/adapters/mock/YoriMindService.js'
+import { DisabledYoriMindService } from './services/adapters/disabled/YoriMindService.js'
+import { OpenAiProxyYoriMindService } from './services/adapters/real/OpenAiProxyYoriMindService.js'
 import { BrevoEmailService } from './services/adapters/real/BrevoEmailService.js'
 import { BullQueueService } from './services/adapters/real/BullQueueService.js'
 import { EverproWhatsAppService } from './services/adapters/real/EverproWhatsAppService.js'
@@ -117,6 +119,18 @@ function resolveEtlNormalizationService(): IEtlNormalizationService {
   }
 }
 
+function resolveYoriMindService(): IYoriMindService {
+  switch (config.yorimindAiProvider) {
+    case 'disabled':
+      return new DisabledYoriMindService()
+    case 'openai-proxy':
+      return new OpenAiProxyYoriMindService()
+    case 'mock':
+    default:
+      return new MockYoriMindService()
+  }
+}
+
 function resolveServices(): {
   emailService: IEmailService
   whatsAppService: IWhatsAppService
@@ -130,6 +144,7 @@ function resolveServices(): {
     ? new MockQueueService()
     : new BullQueueService()
   const etlNormalizationService = resolveEtlNormalizationService()
+  const yoriMindService = resolveYoriMindService()
   const deduplicationService = new FuzzyDeduplicationService(repos.contactRepository)
 
   if (config.serviceImpl === 'mock') {
@@ -137,7 +152,7 @@ function resolveServices(): {
       emailService: new MockEmailService(),
       whatsAppService: new MockWhatsAppService(),
       etlNormalizationService,
-      yoriMindService: new MockYoriMindService(),
+      yoriMindService,
       queueService,
       otpService: new MockOtpService(),
       deduplicationService,
@@ -149,7 +164,7 @@ function resolveServices(): {
       emailService: new BrevoEmailService(),
       whatsAppService: new EverproWhatsAppService(),
       etlNormalizationService,
-      yoriMindService: new MockYoriMindService(),
+      yoriMindService,
       queueService,
       otpService: new MockOtpService(),
       deduplicationService,

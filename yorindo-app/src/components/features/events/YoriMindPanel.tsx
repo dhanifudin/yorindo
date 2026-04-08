@@ -60,7 +60,13 @@ export function YoriMindPanel({ eventId }: YoriMindPanelProps) {
       </CardHeader>
       {isExpanded && (
         <CardContent className="space-y-5">
-          {isLoading || isFetching ? (
+          {data?.disabled ? (
+            <div className="py-8 text-center space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Fitur YoriMind tidak aktif pada konfigurasi saat ini
+              </p>
+            </div>
+          ) : isLoading || isFetching ? (
             <div className="space-y-3">
               {Array.from({ length: 4 }).map((_, i) => (
                 <div key={i} className="h-4 bg-muted rounded animate-pulse" style={{ width: `${70 + i * 5}%` }} />

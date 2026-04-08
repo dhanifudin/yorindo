@@ -16,6 +16,7 @@ export interface EventSnapshot {
 }
 
 export interface YoriMindResult {
+  disabled?: boolean            // true when AI provider is disabled (AC5)
   summary: string               // Indonesian language summary
   insights: string[]            // bullet-point insights
   recommendations: string[]     // actionable recommendations
