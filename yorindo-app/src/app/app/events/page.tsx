@@ -660,6 +660,7 @@ export default function EventsPage() {
                 total={filteredEvents.length}
                 onPrev={() => setEventsPage((p) => Math.max(0, p - 1))}
                 onNext={() => setEventsPage((p) => p + 1)}
+                onPageChange={(p) => setEventsPage(p)}
               />
             </>
           )}

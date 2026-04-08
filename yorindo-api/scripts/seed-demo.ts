@@ -115,7 +115,8 @@ export async function seedDemo(pool: Pool): Promise<void> {
     // ── Clean slate ──
     await client.query(`
       TRUNCATE industries, job_titles, vendors, contacts, events, registrations,
-               users, user_events, flagged_records, audit_logs, consent_records, survey_responses
+               users, user_events, flagged_records, audit_logs, consent_records, survey_responses,
+               duplicate_pairs
       CASCADE
     `)
     console.log('✓ Truncated all tables')
@@ -217,7 +218,13 @@ export async function seedDemo(pool: Pool): Promise<void> {
       const phone = `${prefix}${String(10000000 + i).slice(-8)}`
       const email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}${i}@example.com`
       const isOptedOut = i < 15 // ~15 opted-out contacts
-      const completeness = (0.4 + Math.random() * 0.6).toFixed(3)
+      // Contacts 480-489: missing email (incomplete data)
+      // Contacts 490-499: missing phone (incomplete data)
+      const hasEmail = i < 480 || i >= 490
+      const hasPhone = i < 490
+      const completeness = hasEmail && hasPhone
+        ? (0.6 + Math.random() * 0.4).toFixed(3)
+        : (0.2 + Math.random() * 0.3).toFixed(3)
 
       await client.query(`
         INSERT INTO contacts (
@@ -226,7 +233,8 @@ export async function seedDemo(pool: Pool): Promise<void> {
           province_code, province_name, city_code, city_name
         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
       `, [
-        id, name, phone, email, city, pick(COMPANIES), size,
+        id, name, hasPhone ? phone : null, hasEmail ? email : null,
+        city, pick(COMPANIES), size,
         pick(['excel_upload', 'form', 'manual']),
         isOptedOut ? 'suppressed' : 'active',
         industryIds[industry], jobTitleIds[jobTitle], completeness,
@@ -235,7 +243,7 @@ export async function seedDemo(pool: Pool): Promise<void> {
         loc?.city_code ?? null, loc?.city_name ?? null,
       ])
     }
-    console.log(`✓ Seeded ${contactCount} contacts (${15} suppressed/opted-out)`)
+    console.log(`✓ Seeded ${contactCount} contacts (15 suppressed, 10 missing email, 10 missing phone)`)
 
     // ── Consent records for opted-out contacts ──
     for (let i = 0; i < 15; i++) {
@@ -245,6 +253,89 @@ export async function seedDemo(pool: Pool): Promise<void> {
       )
     }
     console.log('✓ Seeded 15 consent records (suppressed)')
+
+    // ── Duplicate contact pairs ──
+    // Create 15 realistic duplicate scenarios: same person re-uploaded with slight variations
+    // Phone numbers start at 600 (primary) and 700 (duplicate) to avoid collisions
+    // with the auto-generated 500 contacts above (which use i=0..499).
+    // Each pair has DIFFERENT phones — the duplicate is detected via name/email similarity,
+    // not identical phone (identical phone would block DB insert due to UNIQUE constraint).
+    const DUPLICATE_SCENARIOS = [
+      { nameA: 'Budi Santoso',        nameB: 'Budi Santoso',        emailA: 'budi.santoso@gmail.com',      emailB: 'budi.santoso@yahoo.com',      phoneA: '+628120000600', phoneB: '+628120000700', score: 0.97, reasons: ['name_exact', 'email_prefix_match'] },
+      { nameA: 'Sari Dewi Kusuma',    nameB: 'Sari Dewi',           emailA: 'sari.kusuma@company.co.id',   emailB: 'sari.dewi@gmail.com',         phoneA: '+628120000601', phoneB: '+628120000701', score: 0.85, reasons: ['name_similar', 'email_domain_match'] },
+      { nameA: 'Ahmad Hidayat',       nameB: 'Ahmad Hidayat S.',    emailA: 'ahmad.h@tokopedia.com',       emailB: 'ahmad.hidayat@gmail.com',     phoneA: '+628120000602', phoneB: '+628120000702', score: 0.88, reasons: ['name_similar', 'email_prefix_match'] },
+      { nameA: 'Putri Rahayu',        nameB: 'Putri Rahyu',         emailA: 'putri.rahayu@bandung.go.id',  emailB: 'putri.rahayu@gmail.com',      phoneA: '+628120000603', phoneB: '+628120000703', score: 0.93, reasons: ['name_similar', 'email_prefix_match'] },
+      { nameA: 'Dian Purnama',        nameB: 'Dian Purnama Sari',   emailA: 'dian.p@blibli.com',           emailB: 'dianpurnama@gmail.com',       phoneA: '+628120000604', phoneB: '+628120000704', score: 0.82, reasons: ['name_similar', 'email_prefix_match'] },
+      { nameA: 'Wahyu Nugroho',       nameB: 'Wahyu Nugroho',       emailA: 'wahyu@astra.co.id',           emailB: 'wahyu.nugroho@gmail.com',     phoneA: '+628120000605', phoneB: '+628120000705', score: 0.96, reasons: ['name_exact', 'email_prefix_match'] },
+      { nameA: 'Rizky Pratama',       nameB: 'Rizki Pratama',       emailA: 'rizky.pratama@gmail.com',     emailB: 'rizki.p@company.id',          phoneA: '+628120000606', phoneB: '+628120000706', score: 0.79, reasons: ['name_similar', 'email_prefix_match'] },
+      { nameA: 'Nurul Hidayah',       nameB: 'Nurul Hidayah',       emailA: 'nurul.hidayah@uin.ac.id',     emailB: 'nurul.hidayah@gmail.com',     phoneA: '+628120000607', phoneB: '+628120000707', score: 0.95, reasons: ['name_exact', 'email_prefix_match'] },
+      { nameA: 'Eko Setiawan',        nameB: 'Eko Setiawan',        emailA: 'eko.setiawan@mandiri.co.id',  emailB: 'ekosetiawan@hotmail.com',     phoneA: '+628120000608', phoneB: '+628120000708', score: 0.87, reasons: ['name_exact', 'email_prefix_match'] },
+      { nameA: 'Fitri Handayani',     nameB: 'Fitri Handayani',     emailA: 'fitri@gojek.com',             emailB: 'fitri.handayani@gmail.com',   phoneA: '+628120000609', phoneB: '+628120000709', score: 0.94, reasons: ['name_exact', 'email_prefix_match'] },
+      { nameA: 'Agus Wibowo',         nameB: 'Agus Wibowo P',       emailA: 'agus.wibowo@pertamina.com',   emailB: 'aguswibowo@gmail.com',        phoneA: '+628120000610', phoneB: '+628120000710', score: 0.91, reasons: ['name_similar', 'email_prefix_match'] },
+      { nameA: 'Maya Sari',           nameB: 'Maya Sari Indah',     emailA: 'maya.sari@telkom.co.id',      emailB: 'maya.sari@gmail.com',         phoneA: '+628120000612', phoneB: '+628120000712', score: 0.90, reasons: ['name_similar', 'email_prefix_match'] },
+      { nameA: 'Hendra Gunawan',      nameB: 'Hendra Gunawan',      emailA: 'h.gunawan@xl.co.id',          emailB: 'hendra.gunawan@gmail.com',    phoneA: '+628120000613', phoneB: '+628120000713', score: 0.97, reasons: ['name_exact', 'email_prefix_match'] },
+      { nameA: 'Rina Wulandari',      nameB: 'Rina Wulan',          emailA: 'rina.wulandari@unilever.com', emailB: 'rinawulan@gmail.com',         phoneA: '+628120000614', phoneB: '+628120000714', score: 0.89, reasons: ['name_similar', 'email_prefix_match'] },
+      { nameA: 'Taufik Ismail',       nameB: 'Taufiq Ismail',       emailA: 'taufik.ismail@garuda.co.id',  emailB: 'taufiq.ismail@gmail.com',     phoneA: '+628120000615', phoneB: '+628120000715', score: 0.78, reasons: ['name_similar', 'email_prefix_match'] },
+    ]
+
+    const dupContactIds: Array<{ primaryId: string; duplicateId: string }> = []
+    const dupCities = ['Jakarta', 'Bandung', 'Surabaya', 'Jakarta', 'Yogyakarta']
+    for (let i = 0; i < DUPLICATE_SCENARIOS.length; i++) {
+      const s = DUPLICATE_SCENARIOS[i]
+      const city = dupCities[i % dupCities.length]
+      const loc = LOCATIONS[city]
+      const industry = weightedPick(INDUSTRIES, INDUSTRY_WEIGHTS)
+      const jobTitle = pick(JOB_TITLES)
+
+      const primaryId = createId()
+      const duplicateId = createId()
+
+      // Insert primary contact (higher completeness — has both email & phone)
+      await client.query(`
+        INSERT INTO contacts (
+          id, name, phone, email, city, company, company_size, source, consent_status,
+          industry_id, job_title_id, completeness_score, service_type,
+          province_code, province_name, city_code, city_name
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+      `, [
+        primaryId, s.nameA, s.phoneA, s.emailA, city, pick(COMPANIES), '200-1000',
+        'excel_upload', 'active',
+        industryIds[industry], jobTitleIds[jobTitle], '0.850',
+        INDUSTRY_DISPLAY_NAMES[industry] ?? industry,
+        loc?.province_code ?? null, loc?.province_name ?? null,
+        loc?.city_code ?? null, loc?.city_name ?? null,
+      ])
+
+      // Insert duplicate contact (slightly different details)
+      await client.query(`
+        INSERT INTO contacts (
+          id, name, phone, email, city, company, company_size, source, consent_status,
+          industry_id, job_title_id, completeness_score, service_type,
+          province_code, province_name, city_code, city_name, flag_category
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+      `, [
+        duplicateId, s.nameB, s.phoneB, s.emailB, city, pick(COMPANIES), '<50',
+        'form', 'active',
+        industryIds[industry], jobTitleIds[jobTitle], '0.650',
+        INDUSTRY_DISPLAY_NAMES[industry] ?? industry,
+        loc?.province_code ?? null, loc?.province_name ?? null,
+        loc?.city_code ?? null, loc?.city_name ?? null,
+        'duplicate',
+      ])
+
+      // Register the duplicate pair
+      await client.query(`
+        INSERT INTO duplicate_pairs (id, primary_id, duplicate_id, match_score, match_reasons)
+        VALUES ($1, $2, $3, $4, $5)
+      `, [
+        createId(), primaryId, duplicateId, s.score,
+        JSON.stringify(s.reasons),
+      ])
+
+      dupContactIds.push({ primaryId, duplicateId })
+      contactIds.push(primaryId, duplicateId)
+    }
+    console.log(`✓ Seeded ${DUPLICATE_SCENARIOS.length} duplicate contact pairs (${DUPLICATE_SCENARIOS.length * 2} contacts)`)
 
     // ── Registrations ──
     let regIdx = 0
@@ -324,27 +415,26 @@ export async function seedDemo(pool: Pool): Promise<void> {
     }
     console.log(`✓ Seeded ${totalSurveys} survey responses`)
 
-    // ── Flagged records (8 total: 4 duplicate, 4 invalid-data) ──
-    for (let i = 0; i < 8; i++) {
-      const isDuplicate = i < 4
+    // ── Flagged records (ETL-stage records with data quality issues) ──
+    const FLAGGED_RECORDS = [
+      { name: 'Budi S.', phone: 'invalid-phone', email: 'budi@company.com', flags: [{ type: 'invalid-data', field: 'phone', message: 'Phone number format is invalid' }] },
+      { name: 'Sari Dewi', phone: '+6281234567890', email: 'not-an-email', flags: [{ type: 'invalid-data', field: 'email', message: 'Email format is invalid' }] },
+      { name: '', phone: '+6285234567891', email: 'someone@mail.com', flags: [{ type: 'invalid-data', field: 'name', message: 'Name is empty' }] },
+      { name: 'Ahmad Hidayat', phone: '+6287234567892', email: '', flags: [{ type: 'invalid-data', field: 'email', message: 'Email is required' }] },
+      { name: 'UNKNOWN CONTACT', phone: '+6281234500001', email: 'unknown@test.com', flags: [{ type: 'invalid-data', field: 'name', message: 'Name appears to be a placeholder' }] },
+      { name: 'Rahma Wijaya', phone: '+62811111111', email: 'rahma@gmail.com', flags: [{ type: 'invalid-data', field: 'phone', message: 'Phone number too short' }] },
+    ]
+    for (const rec of FLAGGED_RECORDS) {
       await client.query(`
         INSERT INTO flagged_records (id, raw_data, flags, status)
         VALUES ($1, $2, $3, 'pending')
       `, [
         createId(),
-        JSON.stringify({
-          name: `${pick(FIRST_NAMES)} ${pick(LAST_NAMES)}`,
-          phone: isDuplicate ? `+6281200000${String(i).padStart(3, '0')}` : `invalid-phone-${i}`,
-          email: isDuplicate ? `duplicate${i}@example.com` : '',
-          company: pick(COMPANIES),
-        }),
-        JSON.stringify(isDuplicate
-          ? [{ type: 'duplicate', field: 'phone', message: 'Phone matches existing contact' }]
-          : [{ type: 'invalid-data', field: i % 2 === 0 ? 'phone' : 'email', message: 'Invalid format' }]
-        ),
+        JSON.stringify({ name: rec.name, phone: rec.phone, email: rec.email, company: pick(COMPANIES) }),
+        JSON.stringify(rec.flags),
       ])
     }
-    console.log('✓ Seeded 8 flagged records (4 duplicate, 4 invalid-data)')
+    console.log(`✓ Seeded ${FLAGGED_RECORDS.length} flagged records (invalid-data from ETL)`)
 
     // ── Templates ──
     const templateData = [
@@ -449,15 +539,19 @@ async function validate(client: PoolClient): Promise<void> {
   await check('Archived events', `SELECT count(*) FROM events WHERE status = 'archived'`, c => c >= 1)
   await check('Active events in future or today', `SELECT count(*) FROM events WHERE status = 'active' AND date >= CURRENT_DATE`, c => c >= 1)
   await check('Completed events in past', `SELECT count(*) FROM events WHERE status = 'completed' AND date < CURRENT_DATE`, c => c >= 2)
-  await check('Total contacts', `SELECT count(*) FROM contacts`, c => c >= 450 && c <= 550)
+  await check('Total contacts', `SELECT count(*) FROM contacts`, c => c >= 500 && c <= 600)
   await check('Suppressed contacts', `SELECT count(*) FROM contacts WHERE consent_status = 'suppressed'`, c => c >= 10 && c <= 20)
+  await check('Contacts missing email', `SELECT count(*) FROM contacts WHERE email IS NULL AND deleted_at IS NULL`, c => c >= 5)
+  await check('Contacts missing phone', `SELECT count(*) FROM contacts WHERE phone IS NULL AND deleted_at IS NULL`, c => c >= 5)
+  await check('Duplicate pairs', `SELECT count(*) FROM duplicate_pairs WHERE resolved_at IS NULL`, c => c >= 10)
+  await check('Flagged as duplicate', `SELECT count(*) FROM contacts WHERE flag_category = 'duplicate'`, c => c >= 10)
   await check('Total users', `SELECT count(*) FROM users`, c => c === 3)
   await check('Demo admin exists', `SELECT count(*) FROM users WHERE email = 'admin@yorindo.id'`, c => c === 1)
   await check('Total registrations', `SELECT count(*) FROM registrations`, c => c >= 500)
   await check('Attended registrations', `SELECT count(*) FROM registrations WHERE attendance_status = 'attended'`, c => c >= 30)
   await check('Pending registrations', `SELECT count(*) FROM registrations WHERE status = 'pending'`, c => c >= 5)
   await check('Survey responses', `SELECT count(*) FROM survey_responses`, c => c >= 20)
-  await check('Flagged records', `SELECT count(*) FROM flagged_records`, c => c >= 5 && c <= 10)
+  await check('Flagged records (ETL)', `SELECT count(*) FROM flagged_records`, c => c >= 4 && c <= 10)
   await check('Industries', `SELECT count(*) FROM industries`, c => c >= 6)
   await check('Job titles', `SELECT count(*) FROM job_titles`, c => c >= 8)
   await check('Vendors', `SELECT count(*) FROM vendors`, c => c >= 3)
