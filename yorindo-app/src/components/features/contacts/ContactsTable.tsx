@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import {
   useReactTable,
   getCoreRowModel,
@@ -66,14 +66,16 @@ const FLAG_FILTER_OPTIONS = [
 ] as const
 
 interface ContactsTableProps {
-  onSelectionChange: (ids: string[], names: string[]) => void   // Diubah: sekarang kirim ids + names
+  rowSelection: RowSelectionState
+  onRowSelectionChange: (updater: RowSelectionState | ((old: RowSelectionState) => RowSelectionState)) => void
   onToggleSelectMode: () => void
   selectMode: boolean
   selectedIds: string[]
 }
 
 export function ContactsTable({
-  onSelectionChange,
+  rowSelection,
+  onRowSelectionChange,
   onToggleSelectMode,
   selectMode,
   selectedIds,
@@ -84,7 +86,6 @@ export function ContactsTable({
   const { data, isLoading, isError } = useContacts()
   const [detailContact, setDetailContact] = useState<Contact | null>(null)
   const [eventsExpanded, setEventsExpanded] = useState(false)
-  const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
   const [selectedKeepId, setSelectedKeepId] = useState<string>('')
   const queryClient = useQueryClient()
 
@@ -181,8 +182,23 @@ export function ContactsTable({
         )
       },
     },
-    { accessorKey: 'phone', header: 'Telepon' },
-    { accessorKey: 'industryId', header: 'Industri' },
+    {
+      accessorKey: 'email',
+      header: 'Email',
+      cell: ({ getValue }) => {
+        const email = getValue() as string | null | undefined
+        return <span className="text-muted-foreground">{email || '—'}</span>
+      },
+    },
+    { accessorKey: 'serviceType', header: 'Industri' },
+    {
+      accessorKey: 'jobTitle',
+      header: 'Jabatan',
+      cell: ({ getValue }) => {
+        const val = getValue() as string | null | undefined
+        return <span className="text-muted-foreground">{val || '—'}</span>
+      },
+    },
     { accessorKey: 'city', header: 'Kota' },
     {
       accessorKey: 'completenessScore',
@@ -205,28 +221,13 @@ export function ContactsTable({
       pagination: { pageIndex: page - 1, pageSize: 20 },
       rowSelection,
     },
-    onRowSelectionChange: setRowSelection,
+    onRowSelectionChange,
     getCoreRowModel: getCoreRowModel(),
     getRowId: (row) => row.id,
     manualPagination: true,
     manualFiltering: true,
   })
 
-  // Ambil selected IDs dan Names
-  const derivedSelectedIds = useMemo(
-    () => table.getSelectedRowModel().rows.map((r) => r.original.id),
-    [rowSelection]
-  )
-
-  const derivedSelectedNames = useMemo(
-    () => table.getSelectedRowModel().rows.map((r) => r.original.name),
-    [rowSelection]
-  )
-
-  // Kirim ke parent component
-  useEffect(() => {
-    onSelectionChange(derivedSelectedIds, derivedSelectedNames)
-  }, [derivedSelectedIds, derivedSelectedNames, onSelectionChange])
 
   // Set selectedKeepId when detailContact changes
   useEffect(() => {
@@ -271,9 +272,10 @@ export function ContactsTable({
                 <div className="space-y-3 text-sm">
                   <div><span className="text-muted-foreground">Email: </span>{detailContact?.email || '—'}</div>
                   <div><span className="text-muted-foreground">Telepon: </span>{detailContact?.phone}</div>
-                  <div><span className="text-muted-foreground">Industri: </span>{detailContact?.industryId}</div>
-                  <div><span className="text-muted-foreground">Kota: </span>{detailContact?.city}</div>
-                  <div><span className="text-muted-foreground">Ukuran Perusahaan: </span>{detailContact?.companySize}</div>
+                  <div><span className="text-muted-foreground">Industri: </span>{detailContact?.serviceType || '—'}</div>
+                  <div><span className="text-muted-foreground">Jabatan: </span>{detailContact?.jobTitle || '—'}</div>
+                  <div><span className="text-muted-foreground">Kota: </span>{detailContact?.city || '—'}</div>
+                  <div><span className="text-muted-foreground">Perusahaan: </span>{detailContact?.company || '—'}</div>
                   <div>
                     <span className="text-muted-foreground">Kelengkapan: </span>
                     {detailContact && `${Math.round(detailContact.completenessScore * 100)}%`}
@@ -485,15 +487,15 @@ export function ContactsTable({
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <p className="text-xs text-muted-foreground font-medium uppercase">Industri</p>
-                    <p className="mt-0.5">{detailContact?.industryId || '—'}</p>
+                    <p className="mt-0.5">{detailContact?.serviceType || '—'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground font-medium uppercase">Kota</p>
                     <p className="mt-0.5">{detailContact?.city || '—'}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground font-medium uppercase">Ukuran Perusahaan</p>
-                    <p className="mt-0.5">{detailContact?.companySize || '—'}</p>
+                    <p className="text-xs text-muted-foreground font-medium uppercase">Perusahaan</p>
+                    <p className="mt-0.5">{detailContact?.company || '—'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground font-medium uppercase">Kelengkapan</p>
@@ -606,9 +608,11 @@ export function ContactsTable({
                       )}
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">
-                      {contact.industryId && <span>{contact.industryId}</span>}
-                      {contact.industryId && contact.phone && <span> · </span>}
-                      {contact.phone && <span>{contact.phone}</span>}
+                      {contact.jobTitle && <span>{contact.jobTitle}</span>}
+                      {contact.jobTitle && contact.serviceType && <span> · </span>}
+                      {contact.serviceType && <span>{contact.serviceType}</span>}
+                      {(contact.jobTitle || contact.serviceType) && contact.email && <span> · </span>}
+                      {contact.email && <span>{contact.email}</span>}
                     </div>
                   </div>
                 </div>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -649,6 +649,24 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
       topicTagsRaw: event?.topicTags?.join(', ') ?? '',
     },
   })
+
+  // Sync selected vendors when editing an event with existing sponsors
+  // This is a legitimate use of useEffect: syncing external prop state to local form state
+  const loadedRef = useRef<string>('')
+
+  /* eslint-disable react-hooks/set-state-in-effect -- Legitimate: sync form state with existing sponsors when editing event */
+  useEffect(() => {
+    if (!existingSponsors) return
+
+    const key = existingSponsors.map((s: { vendor_id: string }) => s.vendor_id).sort().join()
+
+    if (key && key !== loadedRef.current) {
+      loadedRef.current = key
+      setSelectedVendorIds(existingSponsors.map((s: { vendor_id: string }) => s.vendor_id))
+    }
+  }, [existingSponsors])
+  /* eslint-enable react-hooks/set-state-in-effect */
+
 
   const allVendors = vendorsData?.data ?? []
   const selectedVendors = allVendors.filter((v) => selectedVendorIds.includes(v.id))

@@ -53,6 +53,8 @@ describe('useCreateVendor', () => {
     const wrapper = makeWrapper()
     const { result } = renderHook(() => useCreateVendor(), { wrapper })
 
+    await waitFor(() => expect(result.current).not.toBeNull(), { timeout: 1000 })
+
     act(() => {
       result.current.mutate({
         name: 'Google Indonesia',
@@ -78,6 +80,8 @@ describe('useDeleteVendor', () => {
     const wrapper = makeWrapper()
     const { result } = renderHook(() => useDeleteVendor(), { wrapper })
 
+    await waitFor(() => expect(result.current).not.toBeNull(), { timeout: 1000 })
+
     act(() => {
       result.current.mutate(linkedVendor!.id)
     })
@@ -94,6 +98,8 @@ describe('useDeleteVendor', () => {
 
     const wrapper = makeWrapper()
     const { result } = renderHook(() => useDeleteVendor(), { wrapper })
+
+    await waitFor(() => expect(result.current).not.toBeNull(), { timeout: 1000 })
 
     act(() => {
       result.current.mutate(unlinkedVendor!.id)

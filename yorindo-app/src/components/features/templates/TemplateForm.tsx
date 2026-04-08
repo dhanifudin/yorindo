@@ -15,7 +15,7 @@ import { TiptapEditor } from '@/components/ui/tiptap-editor'
 const schema = z.object({
   name: z.string().min(1, 'Nama template wajib diisi'),
   subject: z.string().optional(),
-  type: z.enum(['invitation', 'confirmation', 'rejection', 'cancellation']),
+  type: z.enum(['invitation', 'confirmation', 'rejection', 'ticket_delivery', 'cancellation', 'reminder']),
   channel: z.enum(['email', 'whatsapp']),
   body: z.string().min(10, 'Isi pesan minimal 10 karakter'),
   logoUrl: z.string().optional(),
@@ -75,6 +75,7 @@ export default function TemplateForm({
         },
   })
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const type = watch('type')
   const channel = watch('channel')
   const bodyValue = watch('body') ?? ''
@@ -244,6 +245,7 @@ export default function TemplateForm({
 
               {imagePreview && (
                 <div className="flex flex-col items-center gap-2">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={imagePreview} alt="preview" className="h-20 w-20 object-contain border rounded-xl" />
                   <Button type="button" variant="destructive" size="sm" onClick={removeLogo}>
                     Hapus
@@ -283,7 +285,6 @@ export default function TemplateForm({
           <p className="font-medium mb-3">Preview Langsung</p>
           <TemplatePreview
             body={bodyValue}
-            type={type}
             channel={channel}
             logoUrl={imagePreview}
             imageType={imageType}

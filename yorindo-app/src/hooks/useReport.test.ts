@@ -16,8 +16,9 @@ function makeWrapper() {
 
 describe('useReport', () => {
   it('returns seeded report data from MSW', async () => {
+    // event-004 deterministically maps to Profile 3 (Archive event)
     const { result } = renderHook(
-      () => useReport('event-001'),
+      () => useReport('event-004'),
       { wrapper: makeWrapper() }
     )
 
@@ -30,7 +31,7 @@ describe('useReport', () => {
 
   it('computes attendance and no-show rates', async () => {
     const { result } = renderHook(
-      () => useReport('event-001'),
+      () => useReport('event-004'),
       { wrapper: makeWrapper() }
     )
 

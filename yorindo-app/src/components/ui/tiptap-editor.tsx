@@ -12,7 +12,7 @@ import Placeholder from '@tiptap/extension-placeholder'
 
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { Bold, Italic, Underline as UnderlineIcon, Palette, Highlighter, Link as LinkIcon } from 'lucide-react'
+import { Bold, Italic, Underline as UnderlineIcon, Highlighter, Link as LinkIcon } from 'lucide-react'
 
 interface TiptapEditorProps {
   value: string

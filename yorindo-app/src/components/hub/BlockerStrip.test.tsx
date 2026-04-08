@@ -1,15 +1,17 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { BlockerStrip } from './BlockerStrip'
 
 describe('BlockerStrip', () => {
-  it('is hidden when no items', () => {
+  it('is hidden when no items', async () => {
     const { container } = render(<BlockerStrip items={[]} />)
-    const strip = container.firstElementChild
-    expect(strip?.className).toContain('hidden')
+    await waitFor(() => {
+      const strip = container.firstElementChild
+      expect(strip?.className).toContain('hidden')
+    })
   })
 
-  it('renders ghost buttons when items present', () => {
+  it('renders ghost buttons when items present', async () => {
     render(
       <BlockerStrip
         items={[
@@ -18,29 +20,35 @@ describe('BlockerStrip', () => {
         ]}
       />,
     )
-    expect(screen.getByText('5 pendaftar menunggu')).toBeTruthy()
-    expect(screen.getByText('Cek laporan')).toBeTruthy()
+    await waitFor(() => {
+      expect(screen.getByText('5 pendaftar menunggu')).toBeTruthy()
+      expect(screen.getByText('Cek laporan')).toBeTruthy()
+    })
   })
 
-  it('has role="status" and aria-live="polite"', () => {
+  it('has role="status" and aria-live="polite"', async () => {
     const { container } = render(<BlockerStrip items={[]} />)
-    const strip = container.firstElementChild
-    expect(strip?.getAttribute('role')).toBe('status')
-    expect(strip?.getAttribute('aria-live')).toBe('polite')
+    await waitFor(() => {
+      const strip = container.firstElementChild
+      expect(strip?.getAttribute('role')).toBe('status')
+      expect(strip?.getAttribute('aria-live')).toBe('polite')
+    })
   })
 
-  it('calls onClick when button is clicked', () => {
+  it('calls onClick when button is clicked', async () => {
     const onClick = vi.fn()
     render(<BlockerStrip items={[{ id: '1', label: 'Click me', onClick }]} />)
     fireEvent.click(screen.getByText('Click me'))
-    expect(onClick).toHaveBeenCalledOnce()
+    await waitFor(() => expect(onClick).toHaveBeenCalledOnce())
   })
 
-  it('strip is visible (no hidden class) when items present', () => {
+  it('strip is visible (no hidden class) when items present', async () => {
     const { container } = render(
       <BlockerStrip items={[{ id: '1', label: 'Item', onClick: vi.fn() }]} />,
     )
-    const strip = container.firstElementChild
-    expect(strip?.className).not.toContain('hidden')
+    await waitFor(() => {
+      const strip = container.firstElementChild
+      expect(strip?.className).not.toContain('hidden')
+    })
   })
 })
