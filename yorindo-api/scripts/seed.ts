@@ -125,7 +125,7 @@ async function seed(): Promise<void> {
         createId(),
         `Contact ${i}`,
         `+6281200000${String(i).padStart(3, '0')}`,
-        `contact${i}@example.com`,
+        i <= 8 ? `contact${i}@example.com` : null, // contacts 9-10 missing email
         city,
         `PT Perusahaan ${i}`,
         size,
@@ -138,18 +138,58 @@ async function seed(): Promise<void> {
         location?.city_name ?? null,
       ])
     }
-    console.log('✓ Seeded 10 contacts (with serviceType/industry)')
+    console.log('✓ Seeded 10 contacts (8 complete, 2 missing email)')
 
-    // Templates
+    // Duplicate contact pairs (3 pairs for dev testing)
+    const devDupPairs = [
+      { nameA: 'Budi Santoso', phoneA: '+628120000101', emailA: 'budi@company.co.id', nameB: 'Budi Santoso', phoneB: '+628120000102', emailB: 'budi.santoso@gmail.com', score: 0.95 },
+      { nameA: 'Sari Dewi Kusuma', phoneA: '+628120000103', emailA: 'sari.kusuma@work.id', nameB: 'Sari Dewi', phoneB: '+628120000104', emailB: 'saridewi@gmail.com', score: 0.82 },
+      { nameA: 'Ahmad Hidayat', phoneA: '+628120000105', emailA: 'ahmad.h@office.id', nameB: 'Ahmad Hidayat S.', phoneB: '+628120000106', emailB: 'ahmadh@gmail.com', score: 0.78 },
+    ]
+    const location0 = cityLocationMap['Jakarta']
+    const industryId0 = industryMap['teknologi']
+    const jobTitleId0 = jobTitleMap['software-engineer']
+    for (const pair of devDupPairs) {
+      const primaryId = createId()
+      const duplicateId = createId()
+      await client.query(`
+        INSERT INTO contacts (id, name, phone, email, city, company, company_size, source, consent_status, industry_id, job_title_id, service_type, province_code, province_name, city_code, city_name)
+        VALUES ($1,$2,$3,$4,'Jakarta','PT Dev Corp','50-200','manual','active',$5,$6,'Elektronik & Peralatan Rumah Tangga',$7,$8,$9,$10)
+        ON CONFLICT (phone) DO NOTHING
+      `, [primaryId, pair.nameA, pair.phoneA, pair.emailA, industryId0, jobTitleId0,
+          location0?.province_code, location0?.province_name, location0?.city_code, location0?.city_name])
+      await client.query(`
+        INSERT INTO contacts (id, name, phone, email, city, company, company_size, source, consent_status, industry_id, job_title_id, service_type, flag_category, province_code, province_name, city_code, city_name)
+        VALUES ($1,$2,$3,$4,'Jakarta','PT Dev Corp','<50','form','active',$5,$6,'Elektronik & Peralatan Rumah Tangga','duplicate',$7,$8,$9,$10)
+        ON CONFLICT (phone) DO NOTHING
+      `, [duplicateId, pair.nameB, pair.phoneB, pair.emailB, industryId0, jobTitleId0,
+          location0?.province_code, location0?.province_name, location0?.city_code, location0?.city_name])
+      await client.query(`
+        INSERT INTO duplicate_pairs (id, primary_id, duplicate_id, match_score, match_reasons)
+        VALUES ($1,$2,$3,$4,$5)
+        ON CONFLICT (primary_id, duplicate_id) DO NOTHING
+      `, [createId(), primaryId, duplicateId, pair.score, JSON.stringify(['name_similar'])])
+    }
+    console.log('✓ Seeded 3 duplicate contact pairs')
+
+    // Templates (all 12: 6 types × 2 channels)
     await client.query(`
       INSERT INTO templates (id, name, type, channel, subject, body) VALUES
         ($1, 'Undangan Event (WhatsApp)', 'invitation', 'whatsapp', NULL, 'Halo {{name}}, Anda diundang ke {{event_title}} pada {{date}} di {{venue}}.'),
         ($2, 'Undangan Event (Email)', 'invitation', 'email', 'Undangan: {{event_title}}', '<p>Halo {{name}},</p><p>Anda diundang ke <strong>{{event_title}}</strong> pada {{date}} di {{venue}}.</p>'),
-        ($3, 'Konfirmasi Tiket', 'confirmation', 'email', 'Konfirmasi: {{event_title}}', '<p>Selamat {{name}}! Registrasi Anda untuk {{event_title}} telah disetujui.</p>'),
-        ($4, 'Penolakan', 'rejection', 'email', 'Status Registrasi', '<p>Maaf {{name}}, registrasi Anda tidak dapat diterima.</p>')
+        ($3, 'Konfirmasi Tiket (WhatsApp)', 'confirmation', 'whatsapp', NULL, 'Selamat {{name}}! Registrasi Anda untuk {{event_title}} telah disetujui.'),
+        ($4, 'Konfirmasi Tiket (Email)', 'confirmation', 'email', 'Konfirmasi: {{event_title}}', '<p>Selamat {{name}}! Registrasi Anda untuk {{event_title}} telah disetujui.</p>'),
+        ($5, 'Penolakan (WhatsApp)', 'rejection', 'whatsapp', NULL, 'Maaf {{name}}, registrasi Anda tidak dapat diterima.'),
+        ($6, 'Penolakan (Email)', 'rejection', 'email', 'Status Registrasi', '<p>Maaf {{name}}, registrasi Anda tidak dapat diterima.</p>'),
+        ($7, 'Pengiriman Tiket (WhatsApp)', 'ticket_delivery', 'whatsapp', NULL, 'Berikut tiket Anda untuk {{event_title}}. Token: {{token}}'),
+        ($8, 'Pengiriman Tiket (Email)', 'ticket_delivery', 'email', 'Tiket Anda', '<p>Berikut tiket Anda untuk {{event_title}}.</p><p>Token: {{token}}</p>'),
+        ($9, 'Pembatalan Event (WhatsApp)', 'cancellation', 'whatsapp', NULL, 'Maaf {{name}}, event {{event_title}} dibatalkan.'),
+        ($10, 'Pembatalan Event (Email)', 'cancellation', 'email', 'Event Dibatalkan', '<p>Maaf {{name}}, event {{event_title}} telah dibatalkan.</p>'),
+        ($11, 'Pengingat Event (WhatsApp)', 'reminder', 'whatsapp', NULL, 'Halo {{name}}, event {{event_title}} tinggal {{days}} hari lagi!'),
+        ($12, 'Pengingat Event (Email)', 'reminder', 'email', 'Pengingat: {{event_title}}', '<p>Halo {{name}},</p><p>Event <strong>{{event_title}}</strong> tinggal {{days}} hari lagi.</p>')
       ON CONFLICT DO NOTHING
-    `, [createId(), createId(), createId(), createId()])
-    console.log('✓ Seeded 4 templates (WhatsApp + Email invitation)')
+    `, [createId(), createId(), createId(), createId(), createId(), createId(), createId(), createId(), createId(), createId(), createId(), createId()])
+    console.log('✓ Seeded 12 templates (6 types × 2 channels)')
 
     await client.query('COMMIT')
     console.log('Seed complete.')

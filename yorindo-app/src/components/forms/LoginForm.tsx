@@ -9,6 +9,7 @@ import { useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
+import { Eye, EyeOff } from 'lucide-react'
 
 const schema = z.object({
   email: z.string().email('Email tidak valid'),
@@ -20,6 +21,7 @@ export function LoginForm() {
   const { setAuth } = useAuthStore()
   const router = useRouter()
   const [apiError, setApiError] = useState<string | null>(null)
+  const [showPassword, setShowPassword] = useState(false)
 
   const {
     register,
@@ -66,13 +68,26 @@ export function LoginForm() {
 
       <div className="space-y-1.5">
         <Label htmlFor="password">Password</Label>
-        <Input
-          id="password"
-          type="password"
-          autoComplete="current-password"
-          {...register('password')}
-          aria-invalid={!!errors.password}
-        />
+        <div className="relative">
+          <Input
+            id="password"
+            type={showPassword ? 'text' : 'password'}
+            autoComplete="current-password"
+            {...register('password')}
+            aria-invalid={!!errors.password}
+            className="pr-10"
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+            onClick={() => setShowPassword(!showPassword)}
+            aria-label={showPassword ? 'Hide password' : 'Show password'}
+          >
+            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </Button>
+        </div>
         {errors.password && (
           <p className="text-xs text-destructive">{errors.password.message}</p>
         )}
@@ -88,3 +103,4 @@ export function LoginForm() {
     </form>
   )
 }
+  

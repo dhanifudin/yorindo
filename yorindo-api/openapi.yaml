@@ -1235,7 +1235,7 @@ components:
           example: Undangan Event
         type:
           type: string
-          enum: [invitation, confirmation, rejection, ticket_delivery]
+          enum: [invitation, confirmation, rejection, ticket_delivery, cancellation, reminder]
           example: invitation
         channel:
           type: string
@@ -1255,13 +1255,13 @@ components:
 
     CreateTemplateBody:
       type: object
-      required: [name, channel, body]
+      required: [name, type, channel, body]
       properties:
         name:
           type: string
         type:
           type: string
-          enum: [invitation, confirmation, rejection, cancellation]
+          enum: [invitation, confirmation, rejection, ticket_delivery, cancellation, reminder]
         channel:
           type: string
           enum: [email, whatsapp]

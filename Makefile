@@ -10,7 +10,7 @@ DEV_API_EXEC = $(DEV_COMPOSE) exec -T api
 DEV_API_TTY  = $(DEV_COMPOSE) exec api
 
 .PHONY: deploy-demo reset-demo stop-demo logs-demo migrate-demo seed-demo \
-        up-dev stop-dev clean-dev logs-dev migrate-dev seed-dev setup-dev \
+        up-dev stop-dev clean-dev logs-dev migrate-dev seed-dev seed-dev-demo setup-dev reset-dev \
         deploy-app stop-app logs-app \
         lint lint-api lint-app test test-api test-app
 
@@ -142,6 +142,27 @@ seed-dev:
 	@echo "🌱 Running dev seed..."
 	$(DEV_COMPOSE) exec api node_modules/.bin/tsx scripts/seed.ts
 
+## Run demo seed for dev (530 contacts, 15 duplicate pairs, missing data)
+seed-dev-demo:
+	@echo "🌱 Running demo seed in dev..."
+	$(DEV_COMPOSE) exec api node_modules/.bin/tsx scripts/seed.ts --demo
+
+## Wipe and re-seed dev database (migrate + demo seed) — no container restart
+reset-dev:
+	@echo "═══════════════════════════════════════════"
+	@echo "🔄 Resetting Dev Database"
+	@echo "═══════════════════════════════════════════"
+	@echo "⏳ Waiting for postgres..."
+	@until $(DEV_COMPOSE) exec -T postgres pg_isready -U yorindo -d yorindo > /dev/null 2>&1; do printf "."; sleep 1; done
+	@echo ""
+	@echo "🔄 Running migrations..."
+	$(DEV_COMPOSE) exec -T api node_modules/.bin/tsx scripts/migrate.ts
+	@echo "🌱 Running demo seed..."
+	$(DEV_COMPOSE) exec -T api node_modules/.bin/tsx scripts/seed.ts --demo
+	@echo ""
+	@echo "✅ Dev database reset with demo data."
+	@echo "   530 contacts · 15 duplicate pairs · 10 missing email · 10 missing phone"
+
 ## Migrate + seed in one step (first-time local setup)
 setup-dev:
 	@echo "═══════════════════════════════════════════"
@@ -195,10 +216,12 @@ lint-api:
 	@echo "🔍 Linting yorindo-api..."
 	$(DEV_COMPOSE) exec -T api npm run lint
 
-## Lint app (ESLint)
+## Lint app (ESLint + TypeScript type-check)
 lint-app:
 	@echo "🔍 Linting yorindo-app..."
 	$(DEV_COMPOSE) exec -T app npm run lint
+	@echo "📝 Typechecking yorindo-app..."
+	$(DEV_COMPOSE) exec -T app npx tsc --noEmit
 
 ## Run all tests
 test: test-api test-app

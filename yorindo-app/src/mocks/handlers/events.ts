@@ -136,6 +136,26 @@ export let eventsStore: Event[] = [
     createdAt: new Date(Date.now() - 45 * 86400000).toISOString(),
     updatedAt: new Date().toISOString(),
   },
+  {
+    id: 'e44rnx7cg7cstacu725iolms',
+    name: 'Konferensi Kesehatan Digital 2026',
+    slug: 'konferensi-kesehatan-digital-2026',
+    description: 'Konferensi transformasi digital sektor kesehatan: AI, telemedicine, dan manajemen data rumah sakit.',
+    status: 'active',
+    eventDate: '2026-04-20T02:00:00.000Z',
+    timezone: 'Asia/Jakarta',
+    capacity: 500,
+    bannerUrl: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=1200&h=675&fit=crop',
+    venue: 'Jakarta Convention Center, Assembly Hall',
+    industryTags: ['kesehatan', 'teknologi'],
+    eventType: 'conference',
+    topicTags: ['medtech', 'ai', 'telemedicine'],
+    is_paid: false,
+    price: 0,
+    payment_method: null,
+    createdAt: new Date(Date.now() - 30 * 86400000).toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
 ]
 
 export const eventHandlers = [

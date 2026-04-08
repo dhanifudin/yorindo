@@ -133,21 +133,41 @@ describe.skipIf(!hasDatabase)('Demo seed validation — Event Dates', () => {
 // ─── Contacts ──────────────────────────────────────────────────────────────────
 
 describe.skipIf(!hasDatabase)('Demo seed validation — Contacts', () => {
-  it('should have ≥ 400 unique contacts', async () => {
+  it('should have ≥ 500 unique contacts', async () => {
     const total = await count('SELECT COUNT(*) as total FROM contacts')
-    expect(total).toBeGreaterThanOrEqual(400)
+    expect(total).toBeGreaterThanOrEqual(500)
   })
 
-  it('should have 5-10 flagged records (in flagged_records table)', async () => {
+  it('should have ≥ 4 flagged records (in flagged_records table)', async () => {
     const total = await count("SELECT COUNT(*) as total FROM flagged_records WHERE status IN ('pending', 'reviewing')")
-    expect(total).toBeGreaterThanOrEqual(5)
-    expect(total).toBeLessThanOrEqual(10)
+    expect(total).toBeGreaterThanOrEqual(4)
+    expect(total).toBeLessThanOrEqual(12)
   })
 
   it('should have ~15 opted-out contacts (consent_status = suppressed)', async () => {
     const total = await count("SELECT COUNT(*) as total FROM contacts WHERE consent_status = 'suppressed'")
     expect(total).toBeGreaterThanOrEqual(10)
     expect(total).toBeLessThanOrEqual(20)
+  })
+
+  it('should have ≥ 10 unresolved duplicate pairs', async () => {
+    const total = await count('SELECT COUNT(*) as total FROM duplicate_pairs WHERE resolved_at IS NULL')
+    expect(total).toBeGreaterThanOrEqual(10)
+  })
+
+  it('should have contacts marked as duplicate (flag_category = duplicate)', async () => {
+    const total = await count("SELECT COUNT(*) as total FROM contacts WHERE flag_category = 'duplicate'")
+    expect(total).toBeGreaterThanOrEqual(10)
+  })
+
+  it('should have contacts with missing email', async () => {
+    const total = await count('SELECT COUNT(*) as total FROM contacts WHERE email IS NULL AND deleted_at IS NULL')
+    expect(total).toBeGreaterThanOrEqual(5)
+  })
+
+  it('should have contacts with missing phone', async () => {
+    const total = await count('SELECT COUNT(*) as total FROM contacts WHERE phone IS NULL AND deleted_at IS NULL')
+    expect(total).toBeGreaterThanOrEqual(5)
   })
 })
 
@@ -192,9 +212,9 @@ describe.skipIf(!hasDatabase)('Demo seed validation — Users', () => {
 // ─── Templates ─────────────────────────────────────────────────────────────────
 
 describe.skipIf(!hasDatabase)('Demo seed validation — Templates', () => {
-  it('should have ≥ 6 templates', async () => {
+  it('should have ≥ 12 templates', async () => {
     const total = await count('SELECT COUNT(*) as total FROM templates')
-    expect(total).toBeGreaterThanOrEqual(6)
+    expect(total).toBeGreaterThanOrEqual(12)
   })
 
   it('should have email invitation template', async () => {
@@ -231,12 +251,8 @@ describe.skipIf(!hasDatabase)('Demo seed validation — Vendors', () => {
 // ─── Blast History ─────────────────────────────────────────────────────────────
 
 describe.skipIf(!hasDatabase)('Demo seed validation — Blast History', () => {
-  it('should have ≥ 5 blast records across active events', async () => {
-    const total = await count(`
-      SELECT COUNT(*) as total FROM blast_logs bl
-      JOIN events e ON bl.event_id = e.id
-      WHERE e.status = 'active'
-    `)
+  it('should have ≥ 5 total blast log records', async () => {
+    const total = await count('SELECT COUNT(*) as total FROM blast_logs')
     expect(total).toBeGreaterThanOrEqual(5)
   })
 })

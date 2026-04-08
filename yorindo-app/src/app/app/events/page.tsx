@@ -245,6 +245,7 @@ export default function EventsPage() {
         </SheetContent>
       </Sheet>
 
+
       {/* Mobile filter sheet */}
       <Sheet open={showFilterSheet} onOpenChange={setShowFilterSheet}>
         <SheetContent side="bottom" className="flex flex-col max-h-[70vh] overflow-y-auto">
@@ -660,6 +661,7 @@ export default function EventsPage() {
                 total={filteredEvents.length}
                 onPrev={() => setEventsPage((p) => Math.max(0, p - 1))}
                 onNext={() => setEventsPage((p) => p + 1)}
+                onPageChange={(p) => setEventsPage(p)}
               />
             </>
           )}
