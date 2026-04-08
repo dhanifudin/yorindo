@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { useAuthStore } from '@/store/authStore'
+import { useAuthStore, useAuthHydrated } from '@/store/authStore'
 import { AdminShell } from '@/components/layout/AdminShell'
 import { ParticipantShell } from '@/components/layout/ParticipantShell'
 import { PWAInstallBanner } from '@/components/features/scan/PWAInstallBanner'
@@ -32,23 +32,12 @@ function isParticipantAllowed(pathname: string): boolean {
 }
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const [hydrated, setHydrated] = useState(false)
+  const hydrated = useAuthHydrated()
   const accessToken = useAuthStore((s) => s.accessToken)
   const user = useAuthStore((s) => s.user)
   const clearAuth = useAuthStore((s) => s.clearAuth)
   const router = useRouter()
   const pathname = usePathname()
-
-  // Wait for zustand to finish hydrating from localStorage
-  useEffect(() => {
-    // Subscribe to hydration event for reactivity
-    const unsub = useAuthStore.persist.onFinishHydration?.(() => setHydrated(true))
-    // Check if already hydrated (sync)
-    if (useAuthStore.persist.hasHydrated?.()) {
-      setHydrated(true)
-    }
-    return unsub
-  }, [])
 
   const mocksEnabled = process.env.NEXT_PUBLIC_ENABLE_MOCKS === 'true'
 
