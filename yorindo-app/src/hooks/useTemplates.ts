@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 export interface Template {
   id: string
   name: string
-  type: 'invitation' | 'confirmation' | 'rejection' | 'cancellation'
+  type: 'invitation' | 'confirmation' | 'rejection' | 'ticket_delivery' | 'cancellation' | 'reminder'
   channel: 'email' | 'whatsapp'
   subject?: string
   body: string

@@ -1235,7 +1235,7 @@ components:
           example: Undangan Event
         type:
           type: string
-          enum: [invitation, confirmation, rejection, ticket_delivery]
+          enum: [invitation, confirmation, rejection, ticket_delivery, cancellation, reminder]
           example: invitation
         channel:
           type: string
@@ -1255,13 +1255,13 @@ components:
 
     CreateTemplateBody:
       type: object
-      required: [name, channel, body]
+      required: [name, type, channel, body]
       properties:
         name:
           type: string
         type:
           type: string
-          enum: [invitation, confirmation, rejection, cancellation]
+          enum: [invitation, confirmation, rejection, ticket_delivery, cancellation, reminder]
         channel:
           type: string
           enum: [email, whatsapp]
@@ -1961,6 +1961,36 @@ paths:
     patch:
       summary: Update template
       operationId: updateTemplate
+      tags: [Blast]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                type: { type: string }
+                channel: { type: string }
+                body: { type: string }
+      responses:
+        '200':
+          description: Template updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+    put:
+      summary: Update template (full replace)
+      operationId: updateTemplatePut
       tags: [Blast]
       security:
         - BearerAuth: []
@@ -2850,10 +2880,12 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [success, message, eventLink, recipientCount]
+                required: [success, jobId, message, eventLink, recipientCount]
                 properties:
                   success:
                     type: boolean
+                  jobId:
+                    type: string
                   message:
                     type: string
                   eventLink:

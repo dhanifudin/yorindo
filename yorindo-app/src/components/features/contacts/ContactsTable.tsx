@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState } from 'react'
 import {
   useReactTable,
   getCoreRowModel,
@@ -64,14 +64,16 @@ const FLAG_FILTER_OPTIONS = [
 ] as const
 
 interface ContactsTableProps {
-  onSelectionChange: (ids: string[], names: string[]) => void   // Diubah: sekarang kirim ids + names
+  rowSelection: RowSelectionState
+  onRowSelectionChange: (updater: RowSelectionState | ((old: RowSelectionState) => RowSelectionState)) => void
   onToggleSelectMode: () => void
   selectMode: boolean
   selectedIds: string[]
 }
 
 export function ContactsTable({
-  onSelectionChange,
+  rowSelection,
+  onRowSelectionChange,
   onToggleSelectMode,
   selectMode,
   selectedIds,
@@ -82,7 +84,6 @@ export function ContactsTable({
   const { data, isLoading, isError } = useContacts()
   const [detailContact, setDetailContact] = useState<Contact | null>(null)
   const [eventsExpanded, setEventsExpanded] = useState(false)
-  const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
   const queryClient = useQueryClient()
 
   const { data: recommendedEventsData, isLoading: eventsLoading } = useRecommendedEvents(
@@ -161,6 +162,14 @@ export function ContactsTable({
       },
     },
     { accessorKey: 'serviceType', header: 'Industri' },
+    {
+      accessorKey: 'jobTitle',
+      header: 'Jabatan',
+      cell: ({ getValue }) => {
+        const val = getValue() as string | null | undefined
+        return <span className="text-muted-foreground">{val || '—'}</span>
+      },
+    },
     { accessorKey: 'city', header: 'Kota' },
     {
       id: 'completeness',
@@ -194,28 +203,13 @@ export function ContactsTable({
       pagination: { pageIndex: page - 1, pageSize: 20 },
       rowSelection,
     },
-    onRowSelectionChange: setRowSelection,
+    onRowSelectionChange,
     getCoreRowModel: getCoreRowModel(),
     getRowId: (row) => row.id,
     manualPagination: true,
     manualFiltering: true,
   })
 
-  // Ambil selected IDs dan Names
-  const derivedSelectedIds = useMemo(
-    () => table.getSelectedRowModel().rows.map((r) => r.original.id),
-    [table]
-  )
-
-  const derivedSelectedNames = useMemo(
-    () => table.getSelectedRowModel().rows.map((r) => r.original.name),
-    [table]
-  )
-
-  // Kirim ke parent component
-  useEffect(() => {
-    onSelectionChange(derivedSelectedIds, derivedSelectedNames)
-  }, [derivedSelectedIds, derivedSelectedNames, onSelectionChange])
 
   if (isError) {
     return (
@@ -536,8 +530,10 @@ export function ContactsTable({
                       )}
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">
+                      {contact.jobTitle && <span>{contact.jobTitle}</span>}
+                      {contact.jobTitle && contact.serviceType && <span> · </span>}
                       {contact.serviceType && <span>{contact.serviceType}</span>}
-                      {contact.serviceType && contact.email && <span> · </span>}
+                      {(contact.jobTitle || contact.serviceType) && contact.email && <span> · </span>}
                       {contact.email && <span>{contact.email}</span>}
                     </div>
                   </div>
