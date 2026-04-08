@@ -50,7 +50,7 @@ export const templatesRoutes: FastifyPluginAsync = async (fastify) => {
   // =========================
   const createSchema = z.object({
     name: z.string().min(1),
-    type: z.enum(['invitation', 'confirmation', 'rejection', 'ticket_delivery']),
+    type: z.enum(['invitation', 'confirmation', 'rejection', 'ticket_delivery', 'cancellation', 'reminder']),
     channel: z.enum(['email', 'whatsapp']),
     body: z.string().min(1),
   })
@@ -98,7 +98,7 @@ export const templatesRoutes: FastifyPluginAsync = async (fastify) => {
 
   const updateSchema = z.object({
     name: z.string().min(1).optional(),
-    type: z.enum(['invitation', 'confirmation', 'rejection', 'ticket_delivery']).optional(),
+    type: z.enum(['invitation', 'confirmation', 'rejection', 'ticket_delivery', 'cancellation', 'reminder']).optional(),
     channel: z.enum(['email', 'whatsapp']).optional(),
     body: z.string().min(1).optional(),
   })

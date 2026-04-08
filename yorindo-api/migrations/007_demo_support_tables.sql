@@ -11,7 +11,7 @@
 CREATE TABLE IF NOT EXISTS templates (
   id         TEXT PRIMARY KEY,
   name       VARCHAR(200) NOT NULL,
-  type       VARCHAR(30) NOT NULL CHECK (type IN ('invitation', 'confirmation', 'rejection', 'reminder', 'ticket_delivery')),
+  type       VARCHAR(30) NOT NULL CHECK (type IN ('invitation', 'confirmation', 'rejection', 'ticket_delivery', 'cancellation', 'reminder')),
   channel    VARCHAR(20) NOT NULL CHECK (channel IN ('email', 'whatsapp')),
   subject    VARCHAR(300),
   body       TEXT NOT NULL,
