@@ -50,7 +50,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   })
 
   const { data: metrics, isLoading } = useQuery<OverviewMetrics>({
-    queryKey: ['event', id, 'overview'],
+    queryKey: ['event', id, 'blockerState'],
     queryFn: () => fetch(`/api/events/${id}/overview`).then(r => r.json()),
     staleTime: 60_000,
     enabled: !!id,

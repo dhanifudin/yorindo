@@ -6,7 +6,7 @@
       "esnext",
       "webworker"
     ],
-    "types": ["@serwist/next/typings"],
+    "types": ["@serwist/next/typings", "@testing-library/jest-dom"],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -41,10 +41,6 @@
     "node_modules",
     "public/sw.js",
     "public/swe-worker*.js",
-    "**/*.test.ts",
-    "**/*.test.tsx",
-    "**/*.spec.ts",
-    "**/*.spec.tsx",
     "vitest.setup.ts",
     "vitest.config.ts"
   ]
