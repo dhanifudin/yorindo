@@ -20,7 +20,7 @@ describe('useEvents', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 3000 })
 
-    expect(result.current.data?.data).toHaveLength(6)
+    expect(result.current.data?.data).toHaveLength(7)
   })
 
   it('includes events with all expected statuses', async () => {
