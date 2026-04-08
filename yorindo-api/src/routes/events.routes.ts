@@ -841,6 +841,72 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(200).send(responseBody)
   })
 
+  // ── GET /api/events/:id/report ─────────────────────────────────────────────
+  fastify.get('/api/events/:id/report', { preHandler: [requireAuth, requireRoles('admin', 'viewer')] }, async (request, reply) => {
+    const params = EventIdParamsSchema.safeParse(request.params)
+    if (!params.success) return replyValidationError(reply, params.error.issues, 'Invalid event id')
+    const event = await requireEventOr404(reply, params.data.id)
+    if (!event) return
+    const allowed = await requireEventAccessOr403(reply, request.user as JwtPayload | undefined, event.id)
+    if (!allowed) return
+    validateOpenApiRequest({ path: '/events/{id}/report', method: 'get', params: params.data })
+
+    const registrations = await registrationRepository.findByEvent(event.id, { page: 1, pageSize: 1000 })
+    const totalInvited = event.capacity ?? 0
+    const registered = registrations.total
+    const approved = registrations.data.filter((r) => ['approved', 'attended'].includes(r.status)).length
+    const attended = registrations.data.filter((r) => r.status === 'attended').length
+    const attendanceRate = approved > 0 ? ((attended / approved) * 100).toFixed(1) : '0.0'
+    const noShowRate = approved > 0 ? (((approved - attended) / approved) * 100).toFixed(1) : '0.0'
+
+    // Build breakdowns from registration data
+    const contacts = await Promise.all(registrations.data.map((r) => contactRepository.findById(r.contactId)))
+    const validContacts = contacts.filter((c): c is NonNullable<typeof c> => c !== null)
+
+    const industryMap = new Map<string, number>()
+    const cityMap = new Map<string, number>()
+    const jobTitleMap = new Map<string, number>()
+
+    for (const contact of validContacts) {
+      if (contact.serviceType) {
+        industryMap.set(contact.serviceType, (industryMap.get(contact.serviceType) ?? 0) + 1)
+      }
+      if (contact.city) {
+        cityMap.set(contact.city, (cityMap.get(contact.city) ?? 0) + 1)
+      }
+      if (contact.jobTitle) {
+        jobTitleMap.set(contact.jobTitle, (jobTitleMap.get(contact.jobTitle) ?? 0) + 1)
+      }
+    }
+
+    const industryBreakdown = Array.from(industryMap.entries())
+      .map(([industry, count]) => ({ industry, count }))
+      .sort((a, b) => b.count - a.count)
+
+    const cityBreakdown = Array.from(cityMap.entries())
+      .map(([city, count]) => ({ city, count }))
+      .sort((a, b) => b.count - a.count)
+
+    const jobTitleBreakdown = Array.from(jobTitleMap.entries())
+      .map(([level, count]) => ({ level, count }))
+      .sort((a, b) => b.count - a.count)
+
+    const responseBody = {
+      eventId: event.id,
+      totalInvited,
+      registered,
+      approved,
+      attended,
+      attendanceRate,
+      noShowRate,
+      industryBreakdown,
+      cityBreakdown,
+      jobTitleBreakdown,
+    }
+    validateOpenApiResponse({ path: '/events/{id}/report', method: 'get', status: 200, body: responseBody })
+    return reply.status(200).send(responseBody)
+  })
+
   fastify.get('/api/events/:id/yorimind', { preHandler: [requireAuth, requireRoles('admin', 'viewer')] }, async (request, reply) => {
     const params = EventIdParamsSchema.safeParse(request.params)
     if (!params.success) return replyValidationError(reply, params.error.issues, 'Invalid event id')

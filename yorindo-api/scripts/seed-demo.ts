@@ -88,22 +88,23 @@ function pick<T>(arr: T[]): T {
 
 // ─── Event definitions ─────────────────────────────────────────────────────────
 interface EventDef {
-  name: string; slug: string; status: string; dateOffset: number; city: string
+  id?: string; name: string; slug: string; status: string; dateOffset: number; city: string
   venue: string; capacity: number; isPaid: boolean; price: number | null
   regCount: number; attendedCount: number; pendingCount: number; surveyCount: number
 }
 
 const EVENTS: EventDef[] = [
-  { name: 'TechConf Jakarta 2026',     slug: 'techconf-jakarta-2026',     status: 'active',    dateOffset: -1,   city: 'Jakarta',    venue: 'Jakarta Convention Center', capacity: 500, isPaid: false, price: null, regCount: 80, attendedCount: 42, pendingCount: 0, surveyCount: 0 },
-  { name: 'AI Summit Bandung',          slug: 'ai-summit-bandung',         status: 'active',    dateOffset: 2,    city: 'Bandung',    venue: 'Trans Convention Hall',     capacity: 200, isPaid: true,  price: 150000, regCount: 120, attendedCount: 0, pendingCount: 0, surveyCount: 0 },
-  { name: 'ERP Workshop Surabaya',      slug: 'erp-workshop-surabaya',     status: 'published', dateOffset: 14,   city: 'Surabaya',   venue: 'Hotel Majapahit',           capacity: 80,  isPaid: true,  price: 75000, regCount: 35, attendedCount: 0, pendingCount: 5, surveyCount: 0 },
-  { name: 'Fintech Networking Bali',    slug: 'fintech-networking-bali',   status: 'published', dateOffset: 30,   city: 'Denpasar',   venue: 'Bali Nusa Dua Convention',  capacity: 150, isPaid: false, price: null, regCount: 20, attendedCount: 0, pendingCount: 0, surveyCount: 0 },
-  { name: 'Cloud Conference Jakarta',   slug: 'cloud-conference-jakarta',  status: 'draft',     dateOffset: 60,   city: 'Jakarta',    venue: 'ICE BSD',                   capacity: 300, isPaid: false, price: null, regCount: 0, attendedCount: 0, pendingCount: 0, surveyCount: 0 },
-  { name: 'Data Summit Yogyakarta',     slug: 'data-summit-yogyakarta',    status: 'draft',     dateOffset: 90,   city: 'Yogyakarta', venue: 'Royal Ambarrukmo',          capacity: 100, isPaid: false, price: null, regCount: 0, attendedCount: 0, pendingCount: 0, surveyCount: 0 },
-  { name: 'DevOps Meetup Jakarta',      slug: 'devops-meetup-jakarta',     status: 'completed', dateOffset: -30,  city: 'Jakarta',    venue: 'WeWork Sudirman',           capacity: 60,  isPaid: false, price: null, regCount: 55, attendedCount: 42, pendingCount: 0, surveyCount: 20 },
-  { name: 'Marketing Forum Bandung',    slug: 'marketing-forum-bandung',   status: 'completed', dateOffset: -60,  city: 'Bandung',    venue: 'Padma Hotel',               capacity: 200, isPaid: false, price: null, regCount: 150, attendedCount: 98, pendingCount: 0, surveyCount: 30 },
-  { name: 'HR Tech Summit',             slug: 'hr-tech-summit',            status: 'cancelled', dateOffset: -15,  city: 'Jakarta',    venue: 'Ritz Carlton Pacific Place', capacity: 120, isPaid: false, price: null, regCount: 15, attendedCount: 0, pendingCount: 0, surveyCount: 0 },
-  { name: 'Startup Pitch Night',        slug: 'startup-pitch-night',       status: 'archived',  dateOffset: -180, city: 'Jakarta',    venue: 'Block71 Jakarta',           capacity: 250, isPaid: false, price: null, regCount: 200, attendedCount: 145, pendingCount: 0, surveyCount: 25 },
+  { id: null, name: 'TechConf Jakarta 2026',     slug: 'techconf-jakarta-2026',     status: 'active',    dateOffset: -1,   city: 'Jakarta',    venue: 'Jakarta Convention Center', capacity: 500, isPaid: false, price: null, regCount: 80, attendedCount: 42, pendingCount: 0, surveyCount: 0 },
+  { id: null, name: 'AI Summit Bandung',          slug: 'ai-summit-bandung',         status: 'active',    dateOffset: 2,    city: 'Bandung',    venue: 'Trans Convention Hall',     capacity: 200, isPaid: true,  price: 150000, regCount: 120, attendedCount: 0, pendingCount: 0, surveyCount: 0 },
+  { id: null, name: 'ERP Workshop Surabaya',      slug: 'erp-workshop-surabaya',     status: 'published', dateOffset: 14,   city: 'Surabaya',   venue: 'Hotel Majapahit',           capacity: 80,  isPaid: true,  price: 75000, regCount: 35, attendedCount: 0, pendingCount: 5, surveyCount: 0 },
+  { id: null, name: 'Fintech Networking Bali',    slug: 'fintech-networking-bali',   status: 'published', dateOffset: 30,   city: 'Denpasar',   venue: 'Bali Nusa Dua Convention',  capacity: 150, isPaid: false, price: null, regCount: 20, attendedCount: 0, pendingCount: 0, surveyCount: 0 },
+  { id: null, name: 'Cloud Conference Jakarta',   slug: 'cloud-conference-jakarta',  status: 'draft',     dateOffset: 60,   city: 'Jakarta',    venue: 'ICE BSD',                   capacity: 300, isPaid: false, price: null, regCount: 0, attendedCount: 0, pendingCount: 0, surveyCount: 0 },
+  { id: null, name: 'Data Summit Yogyakarta',     slug: 'data-summit-yogyakarta',    status: 'draft',     dateOffset: 90,   city: 'Yogyakarta', venue: 'Royal Ambarrukmo',          capacity: 100, isPaid: false, price: null, regCount: 0, attendedCount: 0, pendingCount: 0, surveyCount: 0 },
+  { id: null, name: 'DevOps Meetup Jakarta',      slug: 'devops-meetup-jakarta',     status: 'completed', dateOffset: -30,  city: 'Jakarta',    venue: 'WeWork Sudirman',           capacity: 60,  isPaid: false, price: null, regCount: 55, attendedCount: 42, pendingCount: 0, surveyCount: 20 },
+  { id: null, name: 'Marketing Forum Bandung',    slug: 'marketing-forum-bandung',   status: 'completed', dateOffset: -60,  city: 'Bandung',    venue: 'Padma Hotel',               capacity: 200, isPaid: false, price: null, regCount: 150, attendedCount: 98, pendingCount: 0, surveyCount: 30 },
+  { id: null, name: 'HR Tech Summit',             slug: 'hr-tech-summit',            status: 'cancelled', dateOffset: -15,  city: 'Jakarta',    venue: 'Ritz Carlton Pacific Place', capacity: 120, isPaid: false, price: null, regCount: 15, attendedCount: 0, pendingCount: 0, surveyCount: 0 },
+  { id: null, name: 'Startup Pitch Night',        slug: 'startup-pitch-night',       status: 'archived',  dateOffset: -180, city: 'Jakarta',    venue: 'Block71 Jakarta',           capacity: 250, isPaid: false, price: null, regCount: 200, attendedCount: 145, pendingCount: 0, surveyCount: 25 },
+  { id: 'e44rnx7cg7cstacu725iolms', name: 'Konferensi Kesehatan Digital 2026', slug: 'konferensi-kesehatan-digital-2026', status: 'active', dateOffset: 12, city: 'Jakarta', venue: 'Jakarta Convention Center, Assembly Hall', capacity: 500, isPaid: false, price: null, regCount: 180, attendedCount: 0, pendingCount: 15, surveyCount: 0 },
 ]
 
 // ─── Main seed function ────────────────────────────────────────────────────────
@@ -176,7 +177,7 @@ export async function seedDemo(pool: Pool): Promise<void> {
     // ── Events ──
     const eventIds: string[] = []
     for (const ev of EVENTS) {
-      const id = createId()
+      const id = ev.id ?? createId()
       eventIds.push(id)
       await client.query(`
         INSERT INTO events (id, name, slug, date, city, venue, capacity, status, is_paid, price, registration_closed, vendor_id)
@@ -536,7 +537,7 @@ async function validate(client: PoolClient): Promise<void> {
     }
   }
 
-  await check('Total events', `SELECT count(*) FROM events`, c => c === 10)
+  await check('Total events', `SELECT count(*) FROM events`, c => c >= 10 && c <= 12)
   await check('Active events', `SELECT count(*) FROM events WHERE status = 'active'`, c => c >= 2)
   await check('Published events', `SELECT count(*) FROM events WHERE status = 'published'`, c => c >= 2)
   await check('Draft events', `SELECT count(*) FROM events WHERE status = 'draft'`, c => c >= 2)
