@@ -13,36 +13,45 @@ const defaultProps = {
 }
 
 describe('FunnelVisualization', () => {
-  it('renders all 4 stage labels', () => {
+  it('renders all 4 stage labels', async () => {
     render(<FunnelVisualization {...defaultProps} />)
-    expect(screen.getByText('Diundang')).toBeTruthy()
-    expect(screen.getByText('Mendaftar')).toBeTruthy()
-    expect(screen.getByText('Disetujui')).toBeTruthy()
-    expect(screen.getByText('Hadir')).toBeTruthy()
+    await waitFor(() => {
+      expect(screen.getByText('Diundang')).toBeTruthy()
+      expect(screen.getByText('Mendaftar')).toBeTruthy()
+      expect(screen.getByText('Disetujui')).toBeTruthy()
+      expect(screen.getByText('Hadir')).toBeTruthy()
+    })
   })
 
-  it('renders count values', () => {
+  it('renders count values', async () => {
     render(<FunnelVisualization {...defaultProps} />)
-    expect(screen.getByText('2.000')).toBeTruthy()  // id-ID locale
-    expect(screen.getByText('400')).toBeTruthy()
-    expect(screen.getByText('280')).toBeTruthy()
-    expect(screen.getByText('0')).toBeTruthy()
+    await waitFor(() => {
+      expect(screen.getByText('2.000')).toBeTruthy()  // id-ID locale
+      expect(screen.getByText('400')).toBeTruthy()
+      expect(screen.getByText('280')).toBeTruthy()
+      expect(screen.getByText('0')).toBeTruthy()
+    })
   })
 
   it('shows "Belum ada blast — kirim undangan sekarang" CTA when blastCount = 0', async () => {
     render(<FunnelVisualization {...defaultProps} blastCount={0} />)
     await waitFor(() => expect(screen.getByText('Belum ada blast — kirim undangan sekarang')).toBeTruthy())
+  it('shows "Kirim undangan" CTA when blastCount = 0', async () => {
+    render(<FunnelVisualization {...defaultProps} blastCount={0} />)
+    await waitFor(() => expect(screen.getByText('Kirim undangan')).toBeTruthy())
   })
 
-  it('does NOT show CTA when blastCount > 0', () => {
+  it('does NOT show CTA when blastCount > 0', async () => {
     render(<FunnelVisualization {...defaultProps} />)
-    expect(screen.queryByText('Kirim undangan')).toBeNull()
+    await waitFor(() => expect(screen.queryByText('Kirim undangan')).toBeNull())
   })
 
-  it('renders role="meter" for each bar', () => {
+  it('renders role="meter" for each bar', async () => {
     render(<FunnelVisualization {...defaultProps} />)
-    const meters = screen.getAllByRole('meter')
-    expect(meters.length).toBe(4)
+    await waitFor(() => {
+      const meters = screen.getAllByRole('meter')
+      expect(meters.length).toBe(4)
+    })
   })
 })
 

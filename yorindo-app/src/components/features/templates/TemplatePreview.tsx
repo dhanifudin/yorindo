@@ -12,7 +12,6 @@ const SAMPLE_VALUES: Record<string, string> = {
 
 interface Props {
   body: string
-  type: string
   channel: 'email' | 'whatsapp'
   logoUrl?: string
   imageType?: 'header' | 'background'
@@ -20,7 +19,7 @@ interface Props {
   subject?: string
 }
 
-export function TemplatePreview({ body, type, channel, logoUrl, imageType = 'header', bgOpacity = 40, subject }: Props) {
+export function TemplatePreview({ body, channel, logoUrl, imageType = 'header', bgOpacity = 40, subject }: Props) {
   const previewHtml = body.replace(/\{\{(\w+)\}\}/g, (_, key) => SAMPLE_VALUES[key] ?? `{{${key}}}`)
 
   if (channel === 'email') {
@@ -33,11 +32,13 @@ export function TemplatePreview({ body, type, channel, logoUrl, imageType = 'hea
         )}
 
         {imageType === 'header' && logoUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
           <img src={logoUrl} className="w-full h-28 object-cover" alt="header" />
         )}
 
         {imageType === 'background' && logoUrl ? (
           <div className="relative overflow-hidden" style={{ minHeight: 180 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={logoUrl} className="absolute inset-0 w-full h-full object-cover" alt="background" />
             <div
               className="absolute inset-0"

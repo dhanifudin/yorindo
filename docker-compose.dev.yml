@@ -19,7 +19,6 @@ services:
       TSX_LEGACY_WATCH: "true" # required for WSL2 / Docker Desktop file watching
     volumes:
       - ./yorindo-api:/app
-      - api_node_modules:/app/node_modules
     ports:
       - "3000:3000"
     depends_on:
@@ -38,8 +37,6 @@ services:
       WATCHPACK_POLLING: "true" # required for WSL2 / Docker Desktop file watching
     volumes:
       - ./yorindo-app:/app
-      - app_node_modules:/app/node_modules
-      - app_next:/app/.next
     ports:
       - "5173:5173"
     depends_on:
@@ -63,6 +60,3 @@ services:
 
 volumes:
   postgres_dev_data:
-  api_node_modules:
-  app_node_modules:
-  app_next:

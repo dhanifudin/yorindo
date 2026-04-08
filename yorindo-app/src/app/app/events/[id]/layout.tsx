@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Skeleton } from '@/components/ui/skeleton'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { BlockerStrip } from '@/components/hub/BlockerStrip'
 import { EventHubLayout, LifecycleAction } from '@/components/hub/EventHubLayout'
@@ -38,14 +37,21 @@ interface HubLayoutProps {
 
 // ─── Tab config ───────────────────────────────────────────────────────────────
 
-const TABS = [
+interface EventTab {
+  label: string
+  key: string
+  href: string
+  disabledOnDraft?: boolean
+}
+
+const TABS: EventTab[] = [
   { label: 'Overview',   key: 'overview',       href: '' },
   { label: 'Undangan',   key: 'blast',          href: '/blast',          disabledOnDraft: true },
   { label: 'Registrasi', key: 'registrations',  href: '/registrations' },
   { label: 'Konfirmasi', key: 'confirmation',   href: '/confirmation',   disabledOnDraft: true },
   { label: 'Check-in',   key: 'checkin',        href: '/checkin',        disabledOnDraft: true },
   { label: 'Laporan',    key: 'report',         href: '/report' },
-] as const
+]
 
 // ─── Tab key detection ────────────────────────────────────────────────────────
 
@@ -205,7 +211,7 @@ export default function EventHubShellLayout({ children, params }: HubLayoutProps
           <nav className="flex border-b border-border bg-background px-6 overflow-x-auto">
             {TABS.map((tab) => {
               const isActive = activeTab === tab.key
-              const isDisabled = isDraftEvent && 'disabledOnDraft' in tab && (tab as any).disabledOnDraft
+              const isDisabled = isDraftEvent && tab.disabledOnDraft
               const href = `${baseHref}${tab.href}`
 
               const TabLink = (

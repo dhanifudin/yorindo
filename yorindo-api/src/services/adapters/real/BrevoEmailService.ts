@@ -1,5 +1,6 @@
 import type { IEmailService, EmailPayload } from '../../../interfaces/services/IEmailService.js'
 import { config } from '../../../config/index.js'
+import { logEmailDelivery } from '../../../lib/email-delivery-logger.js'
 
 export class BrevoEmailService implements IEmailService {
   private readonly BASE_URL = 'https://api.brevo.com/v3'
@@ -20,10 +21,14 @@ export class BrevoEmailService implements IEmailService {
       }),
     })
     if (!response.ok) {
-      throw new Error(`Brevo API error: ${response.status} ${await response.text()}`)
+      const errorText = await response.text()
+      logEmailDelivery({ messageId: 'unknown', to: payload.to, subject: payload.subject, status: 'failed', error: `Brevo API error: ${response.status}`, provider: 'brevo' })
+      throw new Error(`Brevo API error: ${response.status} ${errorText}`)
     }
     const data = await response.json() as { messageId?: string }
-    return { messageId: data.messageId ?? `brevo-${Date.now()}` }
+    const messageId = data.messageId ?? `brevo-${Date.now()}`
+    logEmailDelivery({ messageId, to: payload.to, subject: payload.subject, status: 'sent', provider: 'brevo' })
+    return { messageId }
   }
 
   async sendBatch(payloads: EmailPayload[]): Promise<{ sent: number; failed: number }> {
@@ -33,7 +38,8 @@ export class BrevoEmailService implements IEmailService {
       try {
         await this.send(payload)
         sent++
-      } catch {
+      } catch (err) {
+        logEmailDelivery({ messageId: 'unknown', to: payload.to, subject: payload.subject, status: 'failed', error: String(err), provider: 'brevo' })
         failed++
       }
     }

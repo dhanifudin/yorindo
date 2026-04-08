@@ -84,11 +84,11 @@ export function EventAssignmentDialog({ user, open, onClose }: EventAssignmentDi
     }
   }
 
-  const allEvents = eventsData?.data ?? []
   const events = useMemo(() => {
     const q = search.trim().toLowerCase()
-    return q ? allEvents.filter((e) => e.name.toLowerCase().includes(q)) : allEvents
-  }, [allEvents, search])
+    const events = eventsData?.data ?? []
+    return q ? events.filter((e) => e.name.toLowerCase().includes(q)) : events
+  }, [eventsData?.data, search])
 
   const STATUS_LABEL: Record<string, string> = {
     draft: 'Draft',

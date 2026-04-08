@@ -4,7 +4,6 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EventCloneDialog } from '@/components/features/events/EventCloneDialog'
-import { cn } from '@/lib/utils'
 import type { Event } from '@/types/api'
 
 interface EventHubLayoutProps {

@@ -56,6 +56,16 @@ const COMPANIES = [
 const PHONE_PREFIXES = ['+6281', '+6285', '+6287', '+62812']
 const INDUSTRIES = ['teknologi', 'keuangan', 'kesehatan', 'manufaktur', 'retail', 'pendidikan']
 const INDUSTRY_WEIGHTS = [30, 20, 15, 15, 10, 10] // percentage distribution
+
+// Realistic Indonesian industry display values (matches registration form)
+const INDUSTRY_DISPLAY_NAMES: Record<string, string> = {
+  teknologi: 'Elektronik & Peralatan Rumah Tangga',
+  keuangan: 'Fast-Moving Consumer Goods (FMCG)',
+  kesehatan: 'Farmasi & Alat Kesehatan',
+  manufaktur: 'Fabrikasi Logam & Mesin Presisi',
+  retail: 'Tekstil & Garmen',
+  pendidikan: 'Yang lain',
+}
 const SIZES: Array<'<50' | '50-200' | '200-1000' | '>1000'> = ['<50', '50-200', '200-1000', '>1000']
 const SIZE_WEIGHTS = [25, 35, 25, 15]
 const JOB_TITLES = ['direktur', 'manajer', 'supervisor', 'staf', 'engineer', 'analis', 'konsultan', 'wirausaha']
@@ -212,14 +222,15 @@ export async function seedDemo(pool: Pool): Promise<void> {
       await client.query(`
         INSERT INTO contacts (
           id, name, phone, email, city, company, company_size, source, consent_status,
-          industry_id, job_title_id, completeness_score,
+          industry_id, job_title_id, completeness_score, service_type,
           province_code, province_name, city_code, city_name
-        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
       `, [
         id, name, phone, email, city, pick(COMPANIES), size,
         pick(['excel_upload', 'form', 'manual']),
         isOptedOut ? 'suppressed' : 'active',
         industryIds[industry], jobTitleIds[jobTitle], completeness,
+        INDUSTRY_DISPLAY_NAMES[industry] ?? industry,
         loc?.province_code ?? null, loc?.province_name ?? null,
         loc?.city_code ?? null, loc?.city_name ?? null,
       ])
@@ -335,6 +346,69 @@ export async function seedDemo(pool: Pool): Promise<void> {
     }
     console.log('✓ Seeded 8 flagged records (4 duplicate, 4 invalid-data)')
 
+    // ── Templates ──
+    const templateData = [
+      { id: createId(), name: 'Undangan Event (WhatsApp)', type: 'invitation', channel: 'whatsapp', subject: null, body: 'Halo {{name}}, Anda diundang ke {{event_title}} pada {{date}} di {{venue}}.' },
+      { id: createId(), name: 'Undangan Event (Email)', type: 'invitation', channel: 'email', subject: 'Undangan: {{event_title}}', body: '<p>Halo {{name}},</p><p>Anda diundang untuk menghadiri <strong>{{event_title}}</strong> yang akan dilaksanakan pada:</p><p>Tanggal: {{date}}<br>Lokasi: {{venue}}</p><p>Kami mengharapkan kehadiran Anda.</p><p>Salam hormat,<br>Tim Yorindo</p>' },
+      { id: createId(), name: 'Konfirmasi Tiket', type: 'confirmation', channel: 'email', subject: 'Konfirmasi Registrasi - {{event_title}}', body: '<p>Selamat {{name}}!</p><p>Registrasi Anda untuk <strong>{{event_title}}</strong> telah disetujui.</p><p>Simpan email ini sebagai bukti registrasi Anda.</p>' },
+      { id: createId(), name: 'Penolakan', type: 'rejection', channel: 'email', subject: 'Status Registrasi - {{event_title}}', body: '<p>Maaf {{name}},</p><p>Registrasi Anda untuk <strong>{{event_title}}</strong> tidak dapat kami terima saat ini karena keterbatasan kapasitas.</p><p>Terima kasih atas minat Anda.</p>' },
+      { id: createId(), name: 'Pengingat Event', type: 'reminder', channel: 'whatsapp', subject: null, body: 'Halo {{name}}, event {{event_title}} tinggal {{days}} hari lagi! Sampai jumpa.' },
+      { id: createId(), name: 'Ticket Delivery', type: 'ticket_delivery', channel: 'email', subject: 'Tiket Anda - {{event_title}}', body: '<p>Berikut tiket Anda untuk <strong>{{event_title}}</strong>.</p><p>Token: {{token}}</p><p>Tunjukkan QR code ini saat check-in.</p>' },
+    ]
+    for (const tpl of templateData) {
+      await client.query(
+        `INSERT INTO templates (id, name, type, channel, subject, body) VALUES ($1, $2, $3, $4, $5, $6)`,
+        [tpl.id, tpl.name, tpl.type, tpl.channel, tpl.subject, tpl.body]
+      )
+    }
+    console.log(`✓ Seeded ${templateData.length} templates`)
+
+    // ── Event Sponsors ──
+    let sponsorCount = 0
+    for (let ei = 0; ei < EVENTS.length; ei++) {
+      const ev = EVENTS[ei]
+      if (['draft', 'cancelled'].includes(ev.status)) continue
+      
+      const eventId = eventIds[ei]
+      const vendorId = pick(vendorIds)
+      const tier = pick(['premium', 'standard', 'supporter'])
+      
+      await client.query(
+        `INSERT INTO event_sponsors (id, event_id, vendor_id, tier, display_order) 
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (event_id, vendor_id) DO NOTHING`,
+        [createId(), eventId, vendorId, tier, sponsorCount + 1]
+      )
+      sponsorCount++
+    }
+    console.log(`✓ Seeded ${sponsorCount} event-sponsor relationships`)
+
+    // ── Blast Logs ──
+    let blastCount = 0
+    for (let ei = 0; ei < EVENTS.length; ei++) {
+      const ev = EVENTS[ei]
+      if (['draft', 'cancelled'].includes(ev.status)) continue
+      
+      const eventId = eventIds[ei]
+      // Add 1-3 blast logs per active/completed event
+      const blastCountForEvent = ev.status === 'active' || ev.status === 'completed' ? Math.floor(Math.random() * 3) + 1 : 1
+      
+      for (let b = 0; b < blastCountForEvent; b++) {
+        const channel = pick(['email', 'whatsapp'])
+        const recipientCount = Math.floor(Math.random() * 150) + 20
+        const status = pick(['completed', 'completed', 'completed', 'failed'])
+        const daysAgo = ev.dateOffset - (b * 3) - 2
+        
+        await client.query(
+          `INSERT INTO blast_logs (id, event_id, channel, recipient_count, status, sent_at) 
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [createId(), eventId, channel, recipientCount, status, d(daysAgo)]
+        )
+        blastCount++
+      }
+    }
+    console.log(`✓ Seeded ${blastCount} blast log records`)
+
     await client.query('COMMIT')
     console.log('\n── Seed complete ──')
 
@@ -387,6 +461,9 @@ async function validate(client: PoolClient): Promise<void> {
   await check('Industries', `SELECT count(*) FROM industries`, c => c >= 6)
   await check('Job titles', `SELECT count(*) FROM job_titles`, c => c >= 8)
   await check('Vendors', `SELECT count(*) FROM vendors`, c => c >= 3)
+  await check('Templates', `SELECT count(*) FROM templates`, c => c >= 6)
+  await check('Event sponsors', `SELECT count(*) FROM event_sponsors`, c => c >= 3)
+  await check('Blast logs', `SELECT count(*) FROM blast_logs`, c => c >= 5)
 
   console.log(`\n${passed + failed} checks: ${passed} passed, ${failed} failed`)
   if (failed > 0) {

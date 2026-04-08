@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState } from 'react'
 import {
   useReactTable,
   getCoreRowModel,
@@ -64,14 +64,16 @@ const FLAG_FILTER_OPTIONS = [
 ] as const
 
 interface ContactsTableProps {
-  onSelectionChange: (ids: string[], names: string[]) => void   // Diubah: sekarang kirim ids + names
+  rowSelection: RowSelectionState
+  onRowSelectionChange: (updater: RowSelectionState | ((old: RowSelectionState) => RowSelectionState)) => void
   onToggleSelectMode: () => void
   selectMode: boolean
   selectedIds: string[]
 }
 
 export function ContactsTable({
-  onSelectionChange,
+  rowSelection,
+  onRowSelectionChange,
   onToggleSelectMode,
   selectMode,
   selectedIds,
@@ -82,7 +84,6 @@ export function ContactsTable({
   const { data, isLoading, isError } = useContacts()
   const [detailContact, setDetailContact] = useState<Contact | null>(null)
   const [eventsExpanded, setEventsExpanded] = useState(false)
-  const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
   const queryClient = useQueryClient()
 
   const { data: recommendedEventsData, isLoading: eventsLoading } = useRecommendedEvents(
@@ -152,16 +153,40 @@ export function ContactsTable({
         )
       },
     },
-    { accessorKey: 'phone', header: 'Telepon' },
+    {
+      accessorKey: 'email',
+      header: 'Email',
+      cell: ({ getValue }) => {
+        const email = getValue() as string | null | undefined
+        return <span className="text-muted-foreground">{email || '—'}</span>
+      },
+    },
     { accessorKey: 'serviceType', header: 'Industri' },
     { accessorKey: 'city', header: 'Kota' },
     {
+      id: 'completeness',
+      header: () => <span className="sr-only">Kelengkapan</span>,
       accessorKey: 'completenessScore',
-      header: 'Kelengkapan',
-      cell: ({ getValue }) => `${Math.round((getValue() as number) * 100)}%`,
+      cell: ({ getValue }) => {
+        const score = Math.round((getValue() as number) * 100)
+        const color =
+          score >= 80 ? 'bg-green-500' :
+          score >= 50 ? 'bg-yellow-400' :
+          'bg-red-500'
+        return (
+          <div className="flex justify-center">
+            <span
+              className={`inline-block w-2.5 h-2.5 rounded-full ${color}`}
+              title={`${score}%`}
+            />
+          </div>
+        )
+      },
+      size: 32,
     },
   ]
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data: data?.data ?? [],
     columns,
@@ -170,28 +195,13 @@ export function ContactsTable({
       pagination: { pageIndex: page - 1, pageSize: 20 },
       rowSelection,
     },
-    onRowSelectionChange: setRowSelection,
+    onRowSelectionChange,
     getCoreRowModel: getCoreRowModel(),
     getRowId: (row) => row.id,
     manualPagination: true,
     manualFiltering: true,
   })
 
-  // Ambil selected IDs dan Names
-  const derivedSelectedIds = useMemo(
-    () => table.getSelectedRowModel().rows.map((r) => r.original.id),
-    [rowSelection]
-  )
-
-  const derivedSelectedNames = useMemo(
-    () => table.getSelectedRowModel().rows.map((r) => r.original.name),
-    [rowSelection]
-  )
-
-  // Kirim ke parent component
-  useEffect(() => {
-    onSelectionChange(derivedSelectedIds, derivedSelectedNames)
-  }, [derivedSelectedIds, derivedSelectedNames, onSelectionChange])
 
   if (isError) {
     return (
@@ -417,6 +427,14 @@ export function ContactsTable({
         </SheetContent>
       </Sheet>
 
+      {/* Completeness legend */}
+      <div className="flex items-center gap-3 mb-2 text-xs text-muted-foreground">
+        <span className="font-medium">Kelengkapan:</span>
+        <span className="flex items-center gap-1"><span className="inline-block w-2.5 h-2.5 rounded-full bg-green-500" /> ≥ 80%</span>
+        <span className="flex items-center gap-1"><span className="inline-block w-2.5 h-2.5 rounded-full bg-yellow-400" /> 50–79%</span>
+        <span className="flex items-center gap-1"><span className="inline-block w-2.5 h-2.5 rounded-full bg-red-500" /> &lt; 50%</span>
+      </div>
+
       {/* Flag filter */}
       <div className="flex gap-2 mb-3">
         {FLAG_FILTER_OPTIONS.map((opt) => (
@@ -505,10 +523,15 @@ export function ContactsTable({
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">
                       {contact.serviceType && <span>{contact.serviceType}</span>}
-                      {contact.serviceType && contact.phone && <span> · </span>}
-                      {contact.phone && <span>{contact.phone}</span>}
+                      {contact.serviceType && contact.email && <span> · </span>}
+                      {contact.email && <span>{contact.email}</span>}
                     </div>
                   </div>
+                  {(() => {
+                    const score = Math.round(contact.completenessScore * 100)
+                    const color = score >= 80 ? 'bg-green-500' : score >= 50 ? 'bg-yellow-400' : 'bg-red-500'
+                    return <span className={`inline-block w-2.5 h-2.5 rounded-full flex-shrink-0 ${color}`} title={`${score}%`} />
+                  })()}
                 </div>
               )
             })

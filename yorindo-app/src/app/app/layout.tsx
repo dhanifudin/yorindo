@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useAuthStore, useAuthHydrated } from '@/store/authStore'
 import { AdminShell } from '@/components/layout/AdminShell'
@@ -35,16 +35,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const hydrated = useAuthHydrated()
   const accessToken = useAuthStore((s) => s.accessToken)
   const user = useAuthStore((s) => s.user)
-  const setAuth = useAuthStore((s) => s.setAuth)
   const clearAuth = useAuthStore((s) => s.clearAuth)
   const router = useRouter()
   const pathname = usePathname()
 
-  // Show nothing while hydrating — prevents flash redirect to /login
-  if (!hydrated) return null
+  const mocksEnabled = process.env.NEXT_PUBLIC_ENABLE_MOCKS === 'true'
 
   // Clear stale dev-token when MSW mocks are disabled
-  const mocksEnabled = process.env.NEXT_PUBLIC_ENABLE_MOCKS === 'true'
   if (accessToken === 'dev-token' && !mocksEnabled) {
     clearAuth()
   }
@@ -77,10 +74,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       router.replace('/app/scan')
       return
     }
-}, [accessToken, user, router, pathname, isAuthorized])
+  }, [accessToken, user, router, pathname, isAuthorized])
+
+  // Show nothing while hydrating — prevents flash redirect to /login
+  if (!hydrated) return null
 
   if (!accessToken || !user) return null
-
 
   if (!isAuthorized) return null
 

@@ -13,6 +13,8 @@ export interface ContactFilters {
   jobTitle?: string
   missingEmail?: boolean
   missingPhone?: boolean
+  hasEmail?: boolean
+  hasPhone?: boolean
   flagCategory?: string
   consentStatus?: string
   search?: string

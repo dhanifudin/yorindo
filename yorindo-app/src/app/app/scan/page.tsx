@@ -72,7 +72,7 @@ export default function ScanPage() {
     if (isStaff && filteredEvents.length === 1) {
       setSelectedEventId(filteredEvents[0].id)
     }
-  }, [isLoading, filteredEvents.length, isStaff, selectedEventId])
+  }, [isLoading, filteredEvents, isStaff, selectedEventId])
 
   // Track online/offline
   useEffect(() => {
