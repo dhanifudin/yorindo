@@ -321,6 +321,7 @@ components:
           example: 200
         bannerUrl:
           type: string
+          nullable: true
           format: uri
           example: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200"
           description: Event banner image URL (Story 4.7)
@@ -391,6 +392,7 @@ components:
           minimum: 1
         bannerUrl:
           type: string
+          nullable: true
           format: uri
           description: Event banner image URL
         venue:
@@ -429,6 +431,7 @@ components:
           minimum: 1
         bannerUrl:
           type: string
+          nullable: true
           format: uri
           description: Event banner image URL
         status:
