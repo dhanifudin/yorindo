@@ -53,7 +53,7 @@ const TABS: EventTab[] = [
   { label: 'Overview',   key: 'overview',       href: '' },
   { label: 'Undangan',   key: 'blast',          href: '/blast',          disabledOnDraft: true },
   { label: 'Registrasi', key: 'registrations',  href: '/registrations' },
-  { label: 'Konfirmasi', key: 'confirmation',   href: '/confirmation',   disabledOnDraft: true },
+  { label: 'Tiket', key: 'confirmation',   href: '/confirmation',   disabledOnDraft: true },
   { label: 'Check-in',   key: 'checkin',        href: '/checkin',        disabledOnDraft: true },
   { label: 'Laporan',    key: 'report',         href: '/report' },
 ]

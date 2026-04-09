@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -73,18 +73,27 @@ export function BlastConfigSheet({
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null)
   const [templatePopoverOpen, setTemplatePopoverOpen] = useState(false)
 
+  // Filter: invitation type + email channel only
+  const invitationTemplates = templates.filter(
+    (t) => t.type === 'invitation' && t.channel === 'email'
+  )
+
   const form = useForm<BlastFormValues>({
     resolver: zodResolver(blastSchema),
     mode: 'onBlur',
     defaultValues: { scheduleMode: 'now' },
   })
 
-  const scheduleMode = form.watch('scheduleMode')
+  // Auto-select first template on open
+  useEffect(() => {
+    if (open && invitationTemplates.length > 0 && !selectedTemplate) {
+      const first = invitationTemplates[0]
+      form.setValue('templateId', first.id, { shouldValidate: true })
+      setSelectedTemplate(first)
+    }
+  }, [open, invitationTemplates, selectedTemplate, form])
 
-  // Filter: invitation type + email channel only (WhatsApp disabled)
-  const invitationTemplates = templates.filter(
-    (t) => t.type === 'invitation' && t.channel === 'email'
-  )
+  const scheduleMode = form.watch('scheduleMode')
 
   async function onSubmit(values: BlastFormValues) {
     setIsSubmitting(true)
@@ -123,8 +132,8 @@ export function BlastConfigSheet({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) setSelectedTemplate(null) }}>
-      <DialogContent className="sm:max-w-md">
+    <Dialog open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) { setSelectedTemplate(null); form.reset({ scheduleMode: 'now' }) } }}>
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle>Kirim Undangan</DialogTitle>
           <DialogDescription>
@@ -132,144 +141,153 @@ export function BlastConfigSheet({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-          {/* Template selector — invitation + email only (Popover + Command) */}
-          <div className="space-y-2">
-            <Label>Template Undangan</Label>
-            <Popover open={templatePopoverOpen} onOpenChange={setTemplatePopoverOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={templatePopoverOpen}
-                  className="w-full justify-between font-normal"
-                >
-                  {selectedTemplate
-                    ? selectedTemplate.name
-                    : 'Pilih template…'}
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                <Command>
-                  <CommandInput placeholder="Cari template…" />
-                  <CommandEmpty>Tidak ada template undangan email</CommandEmpty>
-                  <CommandList>
-                    <CommandGroup>
-                      {invitationTemplates.map((t) => (
-                        <CommandItem
-                          key={t.id}
-                          value={t.id}
-                          onSelect={() => {
-                            form.setValue('templateId', t.id, { shouldValidate: true })
-                            setSelectedTemplate(t)
-                            setTemplatePopoverOpen(false)
-                          }}
-                        >
-                          <Check
-                            className={cn(
-                              'mr-2 h-4 w-4',
-                              selectedTemplate?.id === t.id ? 'opacity-100' : 'opacity-0'
-                            )}
-                          />
-                          {t.name}
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
-            {form.formState.errors.templateId && (
-              <p className="text-xs text-destructive">{form.formState.errors.templateId.message}</p>
-            )}
-          </div>
+        <div className="flex-1 overflow-y-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 px-1">
+            {/* Left column — Controls */}
+            <div className="space-y-5">
+              {/* Template selector */}
+              <div className="space-y-2">
+                <Label>Template Undangan</Label>
+                <Popover open={templatePopoverOpen} onOpenChange={setTemplatePopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={templatePopoverOpen}
+                      className="w-full justify-between font-normal"
+                    >
+                      {selectedTemplate
+                        ? selectedTemplate.name
+                        : 'Pilih template…'}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                    <Command>
+                      <CommandInput placeholder="Cari template…" />
+                      <CommandEmpty>Tidak ada template undangan email</CommandEmpty>
+                      <CommandList>
+                        <CommandGroup>
+                          {invitationTemplates.map((t) => (
+                            <CommandItem
+                              key={t.id}
+                              value={t.id}
+                              onSelect={() => {
+                                form.setValue('templateId', t.id, { shouldValidate: true })
+                                setSelectedTemplate(t)
+                                setTemplatePopoverOpen(false)
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  'mr-2 h-4 w-4',
+                                  selectedTemplate?.id === t.id ? 'opacity-100' : 'opacity-0'
+                                )}
+                              />
+                              {t.name}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                {form.formState.errors.templateId && (
+                  <p className="text-xs text-destructive">{form.formState.errors.templateId.message}</p>
+                )}
+              </div>
 
-          {/* Template Preview */}
-          {selectedTemplate && (
-            <div className="space-y-2">
-              <Label>Pratinjau</Label>
-              <div className="border border-border rounded-lg p-4 bg-muted/30">
-                <TemplatePreview
-                  body={selectedTemplate.body ?? ''}
-                  channel={selectedTemplate.channel}
-                  subject={selectedTemplate.subject}
-                />
+              {/* Schedule mode: Now or Later */}
+              <div className="space-y-2">
+                <Label>Jadwal Pengiriman</Label>
+                <RadioGroup
+                  value={scheduleMode}
+                  onValueChange={(val) =>
+                    form.setValue('scheduleMode', val as 'now' | 'later', { shouldValidate: true })
+                  }
+                  className="flex flex-col gap-3"
+                >
+                  <div className="flex items-center gap-2">
+                    <RadioGroupItem value="now" id="schedule-now" />
+                    <Label htmlFor="schedule-now" className="cursor-pointer font-normal">
+                      Kirim Sekarang
+                    </Label>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <RadioGroupItem value="later" id="schedule-later" className="mt-1" />
+                    <div className="flex-1 space-y-2">
+                      <Label htmlFor="schedule-later" className="cursor-pointer font-normal">
+                        Jadwalkan
+                      </Label>
+                      {scheduleMode === 'later' && (
+                        <div className="grid grid-cols-2 gap-3 mt-1">
+                          <div>
+                            <Label htmlFor="scheduledDate" className="text-xs text-muted-foreground">
+                              Tanggal
+                            </Label>
+                            <Input
+                              id="scheduledDate"
+                              type="date"
+                              min={new Date().toISOString().split('T')[0]}
+                              {...form.register('scheduledDate')}
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="scheduledTime" className="text-xs text-muted-foreground">
+                              Waktu
+                            </Label>
+                            <Input
+                              id="scheduledTime"
+                              type="time"
+                              defaultValue="09:00"
+                              {...form.register('scheduledTime')}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </RadioGroup>
               </div>
             </div>
-          )}
 
-          {/* Schedule mode: Now or Later */}
-          <div className="space-y-2">
-            <Label>Jadwal Pengiriman</Label>
-            <RadioGroup
-              value={scheduleMode}
-              onValueChange={(val) =>
-                form.setValue('scheduleMode', val as 'now' | 'later', { shouldValidate: true })
-              }
-              className="flex flex-col gap-3"
-            >
-              <div className="flex items-center gap-2">
-                <RadioGroupItem value="now" id="schedule-now" />
-                <Label htmlFor="schedule-now" className="cursor-pointer font-normal">
-                  Kirim Sekarang
-                </Label>
+            {/* Right column — Preview */}
+            <div className="space-y-2">
+              <Label>Pratinjau Template</Label>
+              <div className="border border-border rounded-lg bg-muted/30 overflow-y-auto max-h-[400px]">
+                {selectedTemplate ? (
+                  <TemplatePreview
+                    body={selectedTemplate.body ?? ''}
+                    channel={selectedTemplate.channel}
+                    subject={selectedTemplate.subject}
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">
+                    Pilih template untuk melihat pratinjau
+                  </div>
+                )}
               </div>
-              <div className="flex items-start gap-2">
-                <RadioGroupItem value="later" id="schedule-later" className="mt-1" />
-                <div className="flex-1 space-y-2">
-                  <Label htmlFor="schedule-later" className="cursor-pointer font-normal">
-                    Jadwalkan
-                  </Label>
-                  {scheduleMode === 'later' && (
-                    <div className="grid grid-cols-2 gap-3 mt-1">
-                      <div>
-                        <Label htmlFor="scheduledDate" className="text-xs text-muted-foreground">
-                          Tanggal
-                        </Label>
-                        <Input
-                          id="scheduledDate"
-                          type="date"
-                          min={new Date().toISOString().split('T')[0]}
-                          {...form.register('scheduledDate')}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="scheduledTime" className="text-xs text-muted-foreground">
-                          Waktu
-                        </Label>
-                        <Input
-                          id="scheduledTime"
-                          type="time"
-                          defaultValue="09:00"
-                          {...form.register('scheduledTime')}
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </RadioGroup>
+            </div>
           </div>
+        </div>
 
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isSubmitting}
-              type="button"
-            >
-              Batal
-            </Button>
-            <Button disabled={isSubmitting} type="submit">
-              {isSubmitting
-                ? 'Mengirim…'
-                : scheduleMode === 'now'
-                  ? 'Kirim Sekarang'
-                  : 'Jadwalkan Blast'}
-            </Button>
-          </DialogFooter>
-        </form>
+        <DialogFooter className="pt-4">
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isSubmitting}
+            type="button"
+          >
+            Batal
+          </Button>
+          <Button disabled={isSubmitting} type="submit" onClick={form.handleSubmit(onSubmit)}>
+            {isSubmitting
+              ? 'Mengirim…'
+              : scheduleMode === 'now'
+                ? 'Kirim Sekarang'
+                : 'Jadwalkan Blast'}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )

@@ -16,6 +16,7 @@ const REQUIRED_PATHS = [
   '/registrations',
   '/scan/verify',
   '/users',
+  '/tickets/{token}',
 ] as const
 
 let cachedDocument: OpenApiDocument | null = null

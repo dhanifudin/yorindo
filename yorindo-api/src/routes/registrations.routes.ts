@@ -134,6 +134,8 @@ async function handleStatusUpdate(request: any, reply: FastifyReply, method: 'po
       // Fetch invitation ticket template from database
       const tmpl = await templateRepository.findAll()
       const ticketTmpl = tmpl.find((t) => t.type === 'ticket_delivery' && t.channel === 'email')
+      const baseUrl = process.env.BASE_URL ?? 'http://localhost:3000'
+      const ticketLink = updated.ticketToken ? `${baseUrl}/tickets/${updated.ticketToken}` : ''
 
       const variables = {
         name: contact.name,
@@ -141,8 +143,9 @@ async function handleStatusUpdate(request: any, reply: FastifyReply, method: 'po
         date: formatDateId(event.startDate ?? ''),
         venue: event.venue ?? event.city ?? '',
         token: updated.ticketToken ?? '',
-        registration_link: `${process.env.BASE_URL ?? 'http://localhost:3000'}/register/${event.slug}`,
-        registration_url: `${process.env.BASE_URL ?? 'http://localhost:3000'}/register/${event.slug}`,
+        registration_link: ticketLink,
+        registration_url: ticketLink,
+        ticket_link: ticketLink,
       }
 
       await emailService.send({
@@ -462,10 +465,18 @@ export const registrationsRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(409).send({
         error: {
           code: 'INVALID_REGISTRATION_STATUS',
-          message: 'Ticket resend is only available for approved registrations awaiting confirmation',
+          message: 'Ticket resend is only available for approved registrations',
           details: [{ status: registration.status }],
         },
       })
+    }
+
+    // Generate ticket token if not exists
+    let ticketToken = registration.ticketToken
+    if (!ticketToken) {
+      const { createId } = await import('@paralleldrive/cuid2')
+      ticketToken = `ticket-${createId()}`
+      await registrationRepository.update(params.data.id, { ticketToken })
     }
 
     const contact = await contactRepository.findById(registration.contactId)
@@ -482,33 +493,52 @@ export const registrationsRoutes: FastifyPluginAsync = async (fastify) => {
       })
     }
 
-    const channel = event.notificationChannel === 'email' && contact.email ? 'email' : 'whatsapp'
+    // Fetch ticket template from database
+    const tmpl = await templateRepository.findAll()
+    const ticketTmpl = tmpl.find((t) => t.type === 'ticket_delivery' && t.channel === 'email')
+
+    const baseUrl = process.env.BASE_URL ?? 'http://localhost:3000'
+    const ticketLink = `${baseUrl}/tickets/${ticketToken}`
+
+    const formatDateId = (value: string): string => {
+      if (!value) return ''
+      try {
+        const d = new Date(value)
+        if (isNaN(d.getTime())) return value
+        return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+      } catch {
+        return value
+      }
+    }
+
+    const substituteTemplateVariables = (template: string, data: Record<string, string>): string => {
+      return template.replace(/\{\{(\w+)\}\}/g, (_, key) => data[key] ?? `{{${key}}}`)
+    }
+
+    const variables = {
+      name: contact.name,
+      event_title: event.name,
+      date: formatDateId(event.startDate ?? ''),
+      venue: event.venue ?? event.city ?? '',
+      token: ticketToken,
+      registration_link: ticketLink,
+      registration_url: ticketLink,
+      ticket_link: ticketLink,
+    }
+
     const resentAt = new Date().toISOString()
 
-    if (channel === 'email') {
-      await emailService.send({
-        to: contact.email ?? '',
-        subject: `Tiket untuk ${event.name}`,
-        body: `Tiket Anda untuk ${event.name} telah dikirim ulang.`,
-        templateId: 'ticket-resend',
-        variables: {
-          name: contact.name,
-          eventName: event.name,
-          ticketToken: registration.ticketToken ?? '',
-        },
-      })
-    } else {
-      await whatsAppService.send({
-        to: contact.phone ?? '',
-        templateName: 'ticket_resend',
-        body: `Tiket untuk ${event.name} telah dikirim ulang kepada ${contact.name}.`,
-        variables: {
-          name: contact.name,
-          eventName: event.name,
-          ticketToken: registration.ticketToken ?? '',
-        },
-      })
-    }
+    await emailService.send({
+      to: contact.email ?? '',
+      subject: ticketTmpl?.subject
+        ? substituteTemplateVariables(ticketTmpl.subject, variables)
+        : `Tiket untuk ${event.name}`,
+      body: ticketTmpl?.body
+        ? substituteTemplateVariables(ticketTmpl.body, variables)
+        : `<p>Halo <strong>${contact.name}</strong>, berikut tiket Anda untuk <strong>${event.name}</strong>.</p><p>Token: ${ticketToken}</p>`,
+      templateId: ticketTmpl?.id ?? 'ticket_delivery',
+      variables,
+    })
 
     await auditLogRepository.create({
       action: 'registration.ticket_resent',
@@ -517,16 +547,15 @@ export const registrationsRoutes: FastifyPluginAsync = async (fastify) => {
       eventId: event.id,
       targetId: registration.id,
       targetType: 'registration',
-      metadata: { channel, ticketToken: registration.ticketToken },
+      metadata: { channel: 'email', ticketToken },
     })
 
-    const responseBody = ResendTicketResponseSchema.parse({
+    const responseBody = {
       accepted: true,
       registrationId: registration.id,
-      channel,
+      channel: 'email',
       resentAt,
-    })
-    validateOpenApiResponse({ path: '/registrations/{id}/resend-ticket', method: 'post', status: 202, body: responseBody })
+    }
     return reply.status(202).send(responseBody)
   })
 
@@ -551,14 +580,18 @@ export const registrationsRoutes: FastifyPluginAsync = async (fastify) => {
         const event = await eventRepository.findById(reg.eventId)
         if (!contact?.email || !event) continue
 
+        const baseUrl = process.env.BASE_URL ?? 'http://localhost:3000'
+        const ticketLink = reg.ticketToken ? `${baseUrl}/tickets/${reg.ticketToken}` : ''
+
         const variables = {
           name: contact.name,
           event_title: event.name,
           date: formatDateId(event.startDate ?? ''),
           venue: event.venue ?? event.city ?? '',
           token: reg.ticketToken ?? '',
-          registration_link: `${process.env.BASE_URL ?? 'http://localhost:3000'}/register/${event.slug}`,
-          registration_url: `${process.env.BASE_URL ?? 'http://localhost:3000'}/register/${event.slug}`,
+          registration_link: ticketLink,
+          registration_url: ticketLink,
+          ticket_link: ticketLink,
         }
 
         await emailService.send({
