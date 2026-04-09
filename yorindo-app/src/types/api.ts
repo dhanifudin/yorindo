@@ -39,6 +39,9 @@ export interface Event {
   industryTags?: string[]   // e.g. ['teknologi', 'keuangan']
   eventType?: 'conference' | 'workshop' | 'networking' | 'seminar' | 'webinar'
   topicTags?: string[]      // e.g. ['fintech', 'digital-banking']
+  blastTemplateId?: string
+  confirmationTemplateId?: string
+  rejectionTemplateId?: string
   is_paid: boolean         // AC7: default false
   price: number            // AC7: default 0
   payment_method: string | null  // AC7

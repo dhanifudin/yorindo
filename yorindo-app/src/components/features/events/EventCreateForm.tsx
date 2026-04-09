@@ -606,9 +606,9 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
   const { data: existingSponsors } = useEventSponsors(event?.id ?? '')
 
   const [bannerUrl, setBannerUrl] = useState(event?.bannerUrl ?? '')
-  const [blastTemplateId, setBlastTemplateId] = useState('')
-  const [confirmationTemplateId, setConfirmationTemplateId] = useState('')
-  const [rejectionTemplateId, setRejectionTemplateId] = useState('')
+  const [blastTemplateId, setBlastTemplateId] = useState(event?.blastTemplateId ?? '')
+  const [confirmationTemplateId, setConfirmationTemplateId] = useState(event?.confirmationTemplateId ?? '')
+  const [rejectionTemplateId, setRejectionTemplateId] = useState(event?.rejectionTemplateId ?? '')
   const [industryTags, setIndustryTags] = useState<string[]>(event?.industryTags ?? [])
   const [selectedVendorIds, setSelectedVendorIds] = useState<string[]>([])
   const [vendorPopoverOpen, setVendorPopoverOpen] = useState(false)
