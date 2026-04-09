@@ -53,6 +53,7 @@ const EventCreateBodySchema = z.object({
   isPaid: z.boolean().default(false),
   price: z.number().min(0).nullable().optional(),
   paymentMethod: z.string().nullable().optional(),
+  bannerUrl: z.string().url().nullable().optional(),
 }).superRefine((val, ctx) => {
   const sDate = val.startDate ?? val.eventDate;
   const eDate = val.endDate ?? val.eventDate;
@@ -85,6 +86,7 @@ const EventUpdateBodySchema = z.object({
   isPaid: z.boolean().optional(),
   price: z.number().min(0).nullable().optional(),
   paymentMethod: z.string().nullable().optional(),
+  bannerUrl: z.string().url().nullable().optional(),
   postSurveyEnabled: z.boolean().optional(),
 }).superRefine((val, ctx) => {
   const sDate = val.startDate ?? val.eventDate;
@@ -205,6 +207,7 @@ function toEventDto(event: Event, surveySchema?: unknown, registeredCount: numbe
     scanFormat: event.scanFormat,
     notificationChannel: event.notificationChannel,
     postSurveyEnabled: event.postSurveyEnabled ?? false,
+    bannerUrl: event.bannerUrl,
   }
 }
 
@@ -296,6 +299,7 @@ async function updateEventHandler(request: FastifyRequest, reply: FastifyReply) 
   }
   if (body.data.timezone !== undefined) updateData.timezone = body.data.timezone
   if (body.data.capacity !== undefined) updateData.capacity = body.data.capacity
+  if (body.data.bannerUrl !== undefined) updateData.bannerUrl = body.data.bannerUrl
   if (body.data.targetCriteria !== undefined) updateData.targetCriteria = body.data.targetCriteria as Event['targetCriteria']
 
   if (body.data.status !== undefined) {
@@ -533,6 +537,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       surveySchemaId: null,
       vendorId: null,
       status: 'draft',
+      bannerUrl: payload.bannerUrl ?? null,
       deletedAt: null,
     })
     const registrations = await registrationRepository.findByEvent(event.id, { page: 1, pageSize: 1 })
@@ -611,6 +616,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     if (body.data.isPaid !== undefined) updateData.isPaid = body.data.isPaid
     if (body.data.price !== undefined) updateData.price = body.data.price
     if (body.data.paymentMethod !== undefined) updateData.paymentMethod = body.data.paymentMethod
+    if (body.data.bannerUrl !== undefined) updateData.bannerUrl = body.data.bannerUrl
     if (body.data.targetCriteria !== undefined) updateData.targetCriteria = body.data.targetCriteria as Event['targetCriteria']
 
     const updated = await eventRepository.update(existing.id, updateData)
@@ -720,6 +726,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       targetCriteria: event.targetCriteria ? JSON.parse(JSON.stringify(event.targetCriteria)) : null,
       surveySchemaId: null, // we will recreate survey below
       vendorId: event.vendorId,
+      bannerUrl: event.bannerUrl,
       status: 'draft',
       isPaid: event.isPaid,
       price: event.price,

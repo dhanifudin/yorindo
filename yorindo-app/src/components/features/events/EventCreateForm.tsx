@@ -641,6 +641,17 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
     },
   })
 
+  // Sync state when event prop changes
+  useEffect(() => {
+    if (event) {
+      setBannerUrl(event.bannerUrl ?? '')
+      setIndustryTags(event.industryTags ?? [])
+    } else {
+      setBannerUrl('')
+      setIndustryTags([])
+    }
+  }, [event])
+
   // Sync selected vendors when editing an event with existing sponsors
   // This is a legitimate use of useEffect: syncing external prop state to local form state
   const loadedRef = useRef<string>('')

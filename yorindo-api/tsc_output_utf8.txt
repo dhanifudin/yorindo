@@ -1,0 +1,9 @@
+﻿src/repositories/memory/ContactRepository.ts(46,21): error TS2339: Property 'name' does not exist on type 'Faker'.
+src/repositories/memory/ContactRepository.ts(49,36): error TS2339: Property 'number' does not exist on type 'DatatypeModule'.
+src/repositories/memory/EventRepository.ts(75,22): error TS2339: Property 'address' does not exist on type 'Faker'.
+src/repositories/memory/FlaggedRecordsRepository.ts(42,23): error TS2339: Property 'name' does not exist on type 'Faker'.
+src/repositories/memory/FlaggedRecordsRepository.ts(43,40): error TS2339: Property 'number' does not exist on type 'DatatypeModule'.
+src/repositories/memory/RegistrationRepository.ts(70,42): error TS2339: Property 'number' does not exist on type 'DatatypeModule'.
+src/repositories/memory/RegistrationRepository.ts(77,42): error TS2339: Property 'number' does not exist on type 'DatatypeModule'.
+src/repositories/postgres/EventRepository.ts(47,5): error TS2741: Property 'bannerUrl' is missing in type '{ id: string; name: string; slug: string; startDate: string; startTime: string; endDate: string; endTime: string; timezone: string; city: string | null; venue: string | null; description: string | null; ... 15 more ...; updatedAt: string; }' but required in type 'Event'.
+src/services/adapters/real/MailtrapEmailService.ts(4,24): error TS2307: Cannot find module 'nodemailer' or its corresponding type declarations.

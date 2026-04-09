@@ -67,14 +67,14 @@ export class InMemoryRegistrationRepository implements IRegistrationRepository {
           id: createId(),
           channel: 'whatsapp',
           sentAt: new Date(now - 10 * 86400000).toISOString(),
-          recipientCount: faker.datatype.number({ min: 50, max: 200 }),
+          recipientCount: faker.number.int({ min: 50, max: 200 }),
           status: 'completed',
         },
         {
           id: createId(),
           channel: 'email',
           sentAt: new Date(now - 5 * 86400000).toISOString(),
-          recipientCount: faker.datatype.number({ min: 50, max: 200 }),
+          recipientCount: faker.number.int({ min: 50, max: 200 }),
           status: 'completed',
         },
       ])

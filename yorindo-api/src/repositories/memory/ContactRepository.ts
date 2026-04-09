@@ -43,10 +43,10 @@ export class InMemoryContactRepository implements IContactRepository {
 
       const contact: Contact = {
         id,
-        name: faker.name.fullName(),
+        name: faker.person.fullName(),
         phone: i >= 115
           ? null
-          : `+6281${faker.datatype.number({ min: 100000000, max: 999999999 })}`,
+          : `+6281${faker.number.int({ min: 100000000, max: 999999999 })}`,
         email: i % 8 === 0 ? null : faker.internet.email(),
         serviceType: i % 5 === 0 ? null : industry.name,
         jobTitle: i % 7 === 0 ? null : jobTitle.name,

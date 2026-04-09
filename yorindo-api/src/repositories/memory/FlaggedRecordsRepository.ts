@@ -39,8 +39,8 @@ export class InMemoryFlaggedRecordsRepository implements IFlaggedRecordsReposito
       const record: FlaggedRecord = {
         id,
         rawData: {
-          name: faker.name.fullName(),
-          phone: `+628${faker.datatype.number({ min: 100000000, max: 999999999 })}`,
+          name: faker.person.fullName(),
+          phone: `+628${faker.number.int({ min: 100000000, max: 999999999 })}`,
           email: i % 4 === 0 ? '' : faker.internet.email(),
           company: faker.company.name(),
           city: ['Jakarta', 'Bandung', 'Surabaya'][i % 3],

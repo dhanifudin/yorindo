@@ -1,6 +1,7 @@
 import type { IEmailService, EmailPayload } from '../../../interfaces/services/IEmailService.js'
 import { config } from '../../../config/index.js'
 import { logEmailDelivery } from '../../../lib/email-delivery-logger.js'
+// @ts-ignore
 import nodemailer from 'nodemailer'
 
 export class MailtrapEmailService implements IEmailService {

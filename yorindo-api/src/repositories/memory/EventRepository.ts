@@ -72,7 +72,7 @@ export class InMemoryEventRepository implements IEventRepository {
         endTime: '17:00',
         timezone: i % 3 === 0 ? 'Asia/Makassar' : i % 3 === 1 ? 'Asia/Jayapura' : 'Asia/Jakarta',
         city: CITIES[i % CITIES.length]!,
-        venue: faker.address.streetAddress() + ', ' + CITIES[i % CITIES.length],
+        venue: faker.location.streetAddress() + ', ' + CITIES[i % CITIES.length],
         description: faker.lorem.paragraph(),
         capacity: [50, 100, 150, 200, 250, 300, 75, 120, 80, 400, 60, 500][i]!,
         waitlistBuffer: 10,
@@ -89,6 +89,11 @@ export class InMemoryEventRepository implements IEventRepository {
         isPaid: i % 2 === 0,
         price: i % 2 === 0 ? 500000 : null,
         paymentMethod: i % 2 === 0 ? 'bank_transfer' : null,
+        bannerUrl: i % 3 === 0 
+          ? 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&h=675&fit=crop'
+          : i % 3 === 1
+            ? 'https://images.unsplash.com/photo-1505373877841-8d25f7d46678?w=1200&h=675&fit=crop'
+            : null,
         deletedAt: null,
         createdAt: new Date(now - (12 - i) * 10 * 86400000).toISOString(),
         updatedAt: new Date(now - i * 86400000).toISOString(),

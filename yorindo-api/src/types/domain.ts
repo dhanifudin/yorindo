@@ -112,6 +112,7 @@ export interface Event {
   isPaid: boolean
   price: number | null
   paymentMethod: string | null
+  bannerUrl: string | null         // Event banner image URL (Story 4.7)
   postSurveyEnabled?: boolean      // Phase 2: dual survey toggle
   deletedAt: ISODateString | null
   createdAt: ISODateString

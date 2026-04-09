@@ -83,6 +83,33 @@ describe('Events Routes API (Story 4.1 BE)', () => {
     testEventId = json.id
   })
 
+  it('POST /api/events - saves and returns bannerUrl', async () => {
+    const bannerUrl = 'https://example.com/banner.jpg'
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/events',
+      headers: { Authorization: `Bearer ${adminToken}` },
+      payload: {
+        name: 'Banner Test Event',
+        eventDate: '2026-10-10T09:00:00Z',
+        timezone: 'Asia/Jakarta',
+        bannerUrl,
+      },
+    })
+
+    expect(res.statusCode).toBe(201)
+    const json = res.json()
+    expect(json.bannerUrl).toBe(bannerUrl)
+
+    // Verify retrieval
+    const getRes = await app.inject({
+      method: 'GET',
+      url: `/api/events/${json.id}`,
+      headers: { Authorization: `Bearer ${adminToken}` },
+    })
+    expect(getRes.json().bannerUrl).toBe(bannerUrl)
+  })
+
   it('GET /api/events/check-slug - returns false for used slug', async () => {
     const res = await app.inject({
       method: 'GET',
