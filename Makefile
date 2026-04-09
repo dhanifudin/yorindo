@@ -14,7 +14,7 @@ DEV_API_TTY  = $(DEV_COMPOSE) exec api
         deploy-app stop-app logs-app \
         lint lint-api lint-app test test-api test-app
 
-## Deploy demo from scratch (wipe data, pull images, migrate, seed)
+## Deploy demo (tag release) — full deploy: down -v, pull, up, migrate, seed
 deploy-demo:
 	@echo "═══════════════════════════════════════════"
 	@echo "🚀 Deploying Demo Environment"
@@ -42,7 +42,7 @@ deploy-demo:
 	@echo ""
 	@echo "═══════════════════════════════════════════"
 	@echo "✅ Demo deployed successfully!"
-	@echo "🌐 URL: http://localhost:8888"
+	@echo "🌐 URL: https://demo.dhanifudin.com"
 	@echo "👤 Admin:    admin@yorindo.id / Password123!"
 	@echo "👤 Viewer:   viewer@yorindo.id / Password123!"
 	@echo "👤 Staff:    staff@yorindo.id / Password123!"
@@ -74,7 +74,7 @@ reset-demo:
 	@echo ""
 	@echo "═══════════════════════════════════════════"
 	@echo "✅ Demo reset complete!"
-	@echo "🌐 URL: http://localhost:8888"
+	@echo "🌐 URL: https://demo.dhanifudin.com"
 	@echo "═══════════════════════════════════════════"
 
 ## Stop demo (preserve data)
@@ -188,13 +188,14 @@ setup-dev:
 
 # ─────────────────────────────────────────────
 # App Preview (app.dhanifudin.com)
+# Deployed on push to main (yorindo-app path).
 # ─────────────────────────────────────────────
 
 ## Deploy app preview (pull + start)
 deploy-app:
 	$(APP_COMPOSE) pull
 	$(APP_COMPOSE) up -d
-	@echo "App preview deployed. http://localhost:5173"
+	@echo "App preview deployed — https://app.dhanifudin.com"
 
 ## Stop app preview
 stop-app:

@@ -4,14 +4,21 @@ on:
   push:
     tags:
       - 'v*.*.*'
+    branches:
+      - main
+    paths:
+      - 'yorindo-api/**'
+      - 'yorindo-app/**'
   workflow_dispatch:
 
 env:
   IMAGE_API: ${{ secrets.DOCKERHUB_USERNAME }}/yorindo-api
   IMAGE_APP: ${{ secrets.DOCKERHUB_USERNAME }}/yorindo-app
 
+# ─── DEMO (stable) — deployed on tag push ──────────────────────────────
 jobs:
-  build-and-push:
+  build-and-push-demo:
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     outputs:
       image_tag: ${{ steps.tag.outputs.value }}
@@ -50,13 +57,11 @@ jobs:
           tags: |
             ${{ env.IMAGE_APP }}:${{ steps.tag.outputs.value }}
             ${{ env.IMAGE_APP }}:latest
-          build-args: |
-            NEXT_PUBLIC_SENTRY_DSN=${{ secrets.APP_SENTRY_DSN }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  deploy:
-    needs: build-and-push
+  deploy-demo:
+    needs: build-and-push-demo
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -66,47 +71,43 @@ jobs:
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
+          EMAIL_PROVIDER: ${{ secrets.EMAIL_PROVIDER || 'mock' }}
+          MAILTRAP_HOST: ${{ secrets.MAILTRAP_HOST || '' }}
+          MAILTRAP_PORT: ${{ secrets.MAILTRAP_PORT || '2525' }}
+          MAILTRAP_USER: ${{ secrets.MAILTRAP_USER || '' }}
+          MAILTRAP_PASS: ${{ secrets.MAILTRAP_PASS || '' }}
+          WHATSAPP_PROVIDER: ${{ secrets.WHATSAPP_PROVIDER || 'mock' }}
+          EVERPRO_API_KEY: ${{ secrets.EVERPRO_API_KEY || '' }}
+          AI_PROVIDER: ${{ secrets.AI_PROVIDER || 'disabled' }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || '' }}
         run: |
-          python - <<'PY'
-          from pathlib import Path
-          import os
+          printf '%s\n' \
+            "POSTGRES_PASSWORD=${POSTGRES_PASSWORD}" \
+            "JWT_SECRET=${JWT_SECRET}" \
+            "JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}" \
+            "IMAGE_TAG=${{ needs.build-and-push-demo.outputs.image_tag }}" \
+            "REPOSITORY_IMPL=postgres" \
+            "EMAIL_PROVIDER=${EMAIL_PROVIDER}" \
+            "MAILTRAP_HOST=${MAILTRAP_HOST}" \
+            "MAILTRAP_PORT=${MAILTRAP_PORT}" \
+            "MAILTRAP_USER=${MAILTRAP_USER}" \
+            "MAILTRAP_PASS=${MAILTRAP_PASS}" \
+            "WHATSAPP_PROVIDER=${WHATSAPP_PROVIDER}" \
+            "EVERPRO_API_KEY=${EVERPRO_API_KEY}" \
+            "AI_PROVIDER=${AI_PROVIDER}" \
+            "OPENAI_API_KEY=${OPENAI_API_KEY}" \
+            "NEXT_PUBLIC_ENABLE_MOCKS=false" \
+            "NEXT_PUBLIC_BASE_PATH=" \
+            > .deploy.env
 
-          template = Path('env.demo.template').read_text()
-          result = (template
-              .replace('CHANGE_ME_min_16_chars', os.environ['POSTGRES_PASSWORD'])
-              .replace('CHANGE_ME_min_32_chars_xxxxxxxxxxxxxxxx', os.environ['JWT_SECRET'])
-              .replace('CHANGE_ME_different_min_32_chars_xxxx', os.environ['JWT_REFRESH_SECRET'])
-          )
-          Path('.deploy.env').write_text(result)
-          PY
-          echo "IMAGE_TAG=${{ needs.build-and-push.outputs.image_tag }}" >> .deploy.env
-      - name: Ensure VPS directories exist
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          script: |
-            mkdir -p /var/www/yorindo/nginx
-            chmod 755 /var/www/yorindo/nginx
-
-      - name: Upload compose, Makefile and env files to VPS
+      - name: Upload compose and env to VPS
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           source: docker-compose.yml,Makefile,.deploy.env
-          target: /var/www/yorindo
-
-      - name: Upload nginx config
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          source: "nginx/nginx.conf,nginx/vps.conf"
-          target: /var/www/yorindo
+          target: /var/www/emu
 
       - name: Deploy to VPS via SSH
         uses: appleboy/ssh-action@v1
@@ -115,41 +116,146 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            restore_previous_env() {
-              if [ -f /var/www/yorindo/.env.previous ]; then
-                cp /var/www/yorindo/.env.previous /var/www/yorindo/.env
-              fi
+            set -e
+            DIR=/var/www/emu
+            restore_previous() {
+              [ -f $DIR/.env.previous ] && cp $DIR/.env.previous $DIR/.env
             }
 
-            test -s /var/www/yorindo/.deploy.env
-            chmod 600 /var/www/yorindo/.deploy.env
-            NGINX_PORT=$(grep -E '^NGINX_PORT=' /var/www/yorindo/.deploy.env 2>/dev/null | cut -d= -f2 || echo '8080')
+            test -s $DIR/.deploy.env
+            chmod 600 $DIR/.deploy.env
+            NGINX_PORT=8888
             if ! grep -Rqs "127.0.0.1:${NGINX_PORT}" /etc/nginx/sites-enabled /etc/nginx/conf.d 2>/dev/null; then
-              echo "VPS nginx is not configured to proxy port ${NGINX_PORT}. Update the VPS nginx config before deploying."
+              echo "VPS nginx not configured for port ${NGINX_PORT}."
               exit 1
             fi
-            if [ -f /var/www/yorindo/.env ]; then
-              cp /var/www/yorindo/.env /var/www/yorindo/.env.previous
+            [ -f $DIR/.env ] && cp $DIR/.env $DIR/.env.previous
+            mv $DIR/.deploy.env $DIR/.env
+            chmod 600 $DIR/.env
+            cd $DIR
+            if ! docker compose down -v; then
+              restore_previous
+              exit 1
             fi
-            mv /var/www/yorindo/.deploy.env /var/www/yorindo/.env
-            chmod 600 /var/www/yorindo/.env
-            cd /var/www/yorindo
             if ! docker compose pull; then
-              restore_previous_env
+              restore_previous
               exit 1
             fi
-            if ! docker compose up -d; then
-              restore_previous_env
-              docker compose up -d
-              exit 1
-            fi
-
+            docker compose up -d postgres redis
+            until docker compose exec -T postgres pg_isready -U yorindo -d yorindo > /dev/null 2>&1; do sleep 1; done
+            docker compose up -d api app nginx
             sleep 15
+
+            docker compose exec -T api npx tsx scripts/migrate.ts
+            docker compose exec -T api npx tsx scripts/seed.ts --demo
+
             response=$(curl -s -o /dev/null -w "%{http_code}" https://demo.dhanifudin.com/api/health)
             if [ "$response" != "200" ]; then
-              restore_previous_env
+              restore_previous
               docker compose up -d
               echo "Health check failed: HTTP $response"
               exit 1
             fi
-            echo "Health check passed: HTTP $response"
+            echo "✅ Demo deployed — HTTP $response"
+
+# ─── APP PREVIEW — deployed on main push ───────────────────────────────
+  build-and-push-app:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.tag.outputs.value }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set image tag
+        id: tag
+        run: echo "value=preview-${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
+
+      - name: Build and push App preview image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./yorindo-app
+          push: true
+          tags: |
+            ${{ env.IMAGE_APP }}:${{ steps.tag.outputs.value }}
+            ${{ env.IMAGE_APP }}:preview
+          build-args: |
+            NEXT_PUBLIC_ENABLE_MOCKS=false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy-app:
+    needs: build-and-push-app
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare deploy env file
+        run: |
+          cat > .deploy.env <<EOF
+          NEXT_PUBLIC_ENABLE_MOCKS=false
+          NEXT_PUBLIC_BASE_PATH=
+          IMAGE_TAG=${{ needs.build-and-push-app.outputs.image_tag }}
+          EOF
+
+      - name: Upload compose and env to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: docker-compose.app.yml,.deploy.env
+          target: /var/www/emu-app
+
+      - name: Deploy App Preview to VPS via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -e
+            DIR=/var/www/emu-app
+            restore_previous() {
+              [ -f $DIR/.env.previous ] && cp $DIR/.env.previous $DIR/.env
+            }
+
+            test -s $DIR/.deploy.env
+            chmod 600 $DIR/.deploy.env
+            NGINX_PORT=5173
+            if ! grep -Rqs "127.0.0.1:${NGINX_PORT}" /etc/nginx/sites-enabled /etc/nginx/conf.d 2>/dev/null; then
+              echo "VPS nginx not configured for port ${NGINX_PORT}."
+              exit 1
+            fi
+            [ -f $DIR/.env ] && cp $DIR/.env $DIR/.env.previous
+            mv $DIR/.deploy.env $DIR/.env
+            chmod 600 $DIR/.env
+            cd $DIR
+            if ! docker compose -f docker-compose.app.yml pull; then
+              restore_previous
+              exit 1
+            fi
+            if ! docker compose -f docker-compose.app.yml up -d; then
+              restore_previous
+              docker compose -f docker-compose.app.yml up -d
+              exit 1
+            fi
+
+            sleep 15
+            response=$(curl -s -o /dev/null -w "%{http_code}" https://app.dhanifudin.com)
+            if [ "$response" != "200" ]; then
+              restore_previous
+              docker compose -f docker-compose.app.yml up -d
+              echo "Health check failed: HTTP $response"
+              exit 1
+            fi
+            echo "✅ App preview deployed — HTTP $response"

@@ -13,7 +13,7 @@ export class BrevoEmailService implements IEmailService {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        sender: { email: config.brevoSenderEmail },
+        sender: { email: 'noreply@emu.app' },
         to: [{ email: payload.to }],
         subject: payload.subject,
         htmlContent: payload.body,

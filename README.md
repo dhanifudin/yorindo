@@ -1,4 +1,4 @@
-# Yorindo
+# EM · U
 
 Event management platform — admin portal, participant registration, QR check-in, and analytics.
 
@@ -8,10 +8,18 @@ Event management platform — admin portal, participant registration, QR check-i
 yorindo/
 ├── yorindo-api/           # Fastify REST API (TypeScript)
 ├── yorindo-app/           # Next.js frontend (TypeScript)
-├── docker-compose.yml     # Production deployment
+├── docker-compose.yml     # Demo deployment (demo.dhanifudin.com)
+├── docker-compose.app.yml # App preview (app.dhanifudin.com)
 ├── docker-compose.dev.yml # Local development
-└── .env.example           # Root env template (production / Docker)
+└── .env.example           # Root env template
 ```
+
+## Environments
+
+| URL | Purpose | Deploy Trigger |
+|-----|---------|----------------|
+| `https://demo.dhanifudin.com` | Stable demo | Tag push (`v*.*.*`) |
+| `https://app.dhanifudin.com` | Preview / staging | Push to `main` (`yorindo-app/**`) |
 
 ---
 

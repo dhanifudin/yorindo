@@ -23,18 +23,19 @@ function buildDatabaseUrl(): string {
 export const config = {
   port: parseInt(optional('PORT', '3000'), 10),
   nodeEnv: optional('NODE_ENV', 'development'),
+  baseUrl: optional('BASE_URL', 'http://localhost:3000'),
 
-  // Auth — required (used in Phase 1 JWT middleware)
+  // Auth — required
   jwtSecret: required('JWT_SECRET'),
   jwtRefreshSecret: required('JWT_REFRESH_SECRET'),
 
-  // Service adapter selection — defaults drive Phase 1 (in-memory / mock)
+  // Service adapter selection
   repositoryImpl: optional('REPOSITORY_IMPL', 'memory'),   // 'memory' | 'postgres'
   serviceImpl: optional('SERVICE_IMPL', 'mock'),           // 'mock' | 'real'
   emailProvider: optional('EMAIL_PROVIDER', 'mock'),       // 'mock' | 'brevo' | 'mailtrap'
   whatsappProvider: optional('WHATSAPP_PROVIDER', 'mock'), // 'mock' | 'everpro'
 
-  // AI provider selection — defaults to mock in Phase 1
+  // AI provider selection
   etlAiProvider: optional('ETL_AI_PROVIDER', 'disabled'),
   yorimindAiProvider: optional('YORIMIND_AI_PROVIDER', 'mock'),
   smartFilterAiProvider: optional('SMART_FILTER_AI_PROVIDER', 'mock'),
@@ -43,18 +44,18 @@ export const config = {
   yorimindAiBaseUrl: optional('YORIMIND_AI_BASE_URL'),
   yorimindAiApiKey: optional('YORIMIND_AI_API_KEY'),
 
-  // Phase 2 only — optional strings; empty in Phase 1
+  // Database
   databaseUrl: buildDatabaseUrl(),
   redisUrl: optional('REDIS_URL'),
+
+  // File paths
   snapshotDir: optional('SNAPSHOT_DIR', '/data/snapshots'),
   uploadsDir: optional('UPLOADS_DIR', 'uploads'),
 
-  // External API keys — Phase 2 only; unused in Phase 1
+  // External API keys
   openaiApiKey: optional('OPENAI_API_KEY'),
-  anthropicApiKey: optional('ANTHROPIC_API_KEY'),
   brevoApiKey: optional('BREVO_API_KEY'),
   everproApiKey: optional('EVERPRO_API_KEY'),
-  brevoSenderEmail: optional('BREVO_SENDER_EMAIL', 'no-reply@emu.app'),
 
   // Mailtrap SMTP credentials
   mailtrapHost: optional('MAILTRAP_HOST'),
@@ -62,6 +63,6 @@ export const config = {
   mailtrapUser: optional('MAILTRAP_USER'),
   mailtrapPass: optional('MAILTRAP_PASS'),
 
-  // Error monitoring — optional; Sentry skips init silently when undefined
+  // Error monitoring — optional
   sentryDsn: optional('SENTRY_DSN') || undefined,
 } as const

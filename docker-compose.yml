@@ -1,5 +1,9 @@
-# Demo environment — demo.dhanifudin.com
-# Pulls pre-built images from Docker Hub, fronted by nginx on port 8888.
+# EM · U — Demo environment (demo.dhanifudin.com)
+# Full stack: nginx + api + app + postgres + redis
+# Deployed on tag release (v*.*.*).
+#
+# Environment variables are read from the root .env file.
+# Sysadmins can override any value by setting it in .env before deployment.
 #
 # Usage:
 #   make deploy-demo        (full deploy: down -v, pull, up, migrate, seed)
@@ -12,7 +16,7 @@
 
 services:
   nginx:
-    container_name: yorindo-demo-nginx
+    container_name: emu-demo-nginx
     image: nginx:alpine
     ports:
       - "127.0.0.1:8888:80"
@@ -24,7 +28,7 @@ services:
     restart: unless-stopped
 
   postgres:
-    container_name: yorindo-demo-db
+    container_name: emu-demo-db
     image: postgres:16-alpine
     environment:
       POSTGRES_DB: yorindo
@@ -40,24 +44,42 @@ services:
       retries: 10
 
   api:
-    container_name: yorindo-demo-api
+    container_name: emu-demo-api
     image: dhanifudin/yorindo-api:${IMAGE_TAG:-latest}
     expose:
       - "3000"
-    env_file: .env
     environment:
-      REPOSITORY_IMPL: ${REPOSITORY_IMPL:-memory}
-      SERVICE_IMPL: mock
+      NODE_ENV: production
+      BASE_URL: https://demo.dhanifudin.com
+      CORS_ORIGIN: https://demo.dhanifudin.com
+
+      # Auth (from .env)
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+
+      # Database
+      REPOSITORY_IMPL: ${REPOSITORY_IMPL:-postgres}
       POSTGRES_HOST: postgres
       POSTGRES_PORT: "5432"
       POSTGRES_USER: yorindo
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-demo123}
       POSTGRES_DB: yorindo
-      REDIS_URL: redis://redis:6379
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+
+      # Email (from .env)
       EMAIL_PROVIDER: ${EMAIL_PROVIDER:-mock}
-      MAILTRAP_API_KEY: ${MAILTRAP_API_KEY:-}
-      UPLOADS_DIR: /app/uploads
-      SENTRY_DSN: ${API_SENTRY_DSN:-}
+      MAILTRAP_HOST: ${MAILTRAP_HOST:-}
+      MAILTRAP_PORT: ${MAILTRAP_PORT:-2525}
+      MAILTRAP_USER: ${MAILTRAP_USER:-}
+      MAILTRAP_PASS: ${MAILTRAP_PASS:-}
+
+      # WhatsApp (from .env)
+      WHATSAPP_PROVIDER: ${WHATSAPP_PROVIDER:-mock}
+      EVERPRO_API_KEY: ${EVERPRO_API_KEY:-}
+
+      # AI (from .env)
+      AI_PROVIDER: ${AI_PROVIDER:-disabled}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
     volumes:
       - api_uploads:/app/uploads
       - api_logs:/app/logs
@@ -74,19 +96,19 @@ services:
         max-file: "5"
 
   app:
-    container_name: yorindo-demo-app
+    container_name: emu-demo-app
     image: dhanifudin/yorindo-app:${IMAGE_TAG:-latest}
     expose:
       - "3000"
-    env_file: .env
     environment:
-      SENTRY_DSN: ${APP_SENTRY_DSN:-}
+      API_URL: http://api:3000
+      NEXT_PUBLIC_ENABLE_MOCKS: "false"
     depends_on:
       - api
     restart: unless-stopped
 
   redis:
-    container_name: yorindo-demo-redis
+    container_name: emu-demo-redis
     image: redis:7-alpine
     expose:
       - "6379"
