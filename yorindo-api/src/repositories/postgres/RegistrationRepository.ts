@@ -181,7 +181,8 @@ export class PostgresRegistrationRepository
     const { rows } = await this.query<RegistrationRow>(
       `UPDATE registrations SET status = $2::reg_status,
          ticket_token = CASE WHEN $2::reg_status = 'approved' AND ticket_token IS NULL THEN $3 ELSE ticket_token END,
-         approved_at = CASE WHEN $2::reg_status = 'approved' THEN NOW() ELSE approved_at END
+         approved_at = CASE WHEN $2::reg_status = 'approved' THEN NOW() ELSE approved_at END,
+         attended_at = CASE WHEN $2::reg_status = 'attended' THEN NOW() ELSE attended_at END
        WHERE id = $1 RETURNING *`,
       [id, status, `ticket-${createId()}`],
     )
