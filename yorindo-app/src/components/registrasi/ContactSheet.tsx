@@ -11,9 +11,8 @@ import {
 } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { AiScoreBadge } from './AiScoreBadge'
-import { ChevronLeft, ChevronRight, Flag, UserCheck } from 'lucide-react'
-import type { FlagCategory, Registration } from '@/types/api'
+import { ChevronLeft, ChevronRight, UserCheck } from 'lucide-react'
+import type { Registration } from '@/types/api'
 
 interface SurveyResponse {
   question: string
@@ -25,9 +24,6 @@ interface ContactSheetRegistration {
   contactName: string
   contactEmail: string
   contactPhone: string
-  contactFlagCategory: FlagCategory
-  aiScore: number
-  flagOverride: boolean
   status: Registration['status']
   createdAt: string
   // Survey data from the form the user filled; optional because some rows may not include it yet
@@ -81,11 +77,6 @@ export function ContactSheet({
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [handleKeyDown])
-
-  const showFlag =
-    registration &&
-    !registration.flagOverride &&
-    (registration.contactFlagCategory === 'invalid-data' || registration.contactFlagCategory === 'duplicate')
 
   // Mock survey responses (for demo purposes)
   const mockSurveyResponses: SurveyResponse[] = [
@@ -152,11 +143,6 @@ export function ContactSheet({
                   <p className="font-medium">{registration.contactPhone}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground uppercase font-medium">Skor AI</p>
-                  <AiScoreBadge score={registration.aiScore} />
-                </div>
-
-                <div>
                   <p className="text-xs text-muted-foreground uppercase font-medium">Status</p>
                   <Badge variant="outline">{STATUS_LABEL[registration.status]}</Badge>
                 </div>
@@ -171,18 +157,6 @@ export function ContactSheet({
                   </p>
                 </div>
               </div>
-
-              {/* Flag Warning */}
-              {showFlag && (
-                <div className="rounded-md bg-red-50 border border-red-200 p-3">
-                  <div className="flex items-center gap-2">
-                    <Flag className="h-4 w-4 text-red-600" />
-                    <span className="text-sm font-medium text-red-700">
-                      Flag: {registration?.contactFlagCategory ? registration.contactFlagCategory.replace('-', ' ') : ''}
-                    </span>
-                  </div>
-                </div>
-              )}
 
               {/* Survey Responses - Main Section */}
               <div>

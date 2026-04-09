@@ -722,6 +722,19 @@ components:
           description: Total IDs submitted
           example: 8
 
+    BulkRejectResult:
+      type: object
+      required: [rejected, total]
+      properties:
+        rejected:
+          type: integer
+          description: Number of registrations successfully rejected
+          example: 5
+        total:
+          type: integer
+          description: Total IDs submitted
+          example: 5
+
     # ─── User ──────────────────────────────────────────────────────────────────
     User:
       type: object
@@ -5151,6 +5164,82 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BulkApproveResult'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Insufficient role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /registrations/bulk-reject:
+    put:
+      summary: Bulk reject registrations and send rejection emails (admin/staff)
+      operationId: bulkRejectRegistrations
+      tags: [Registrations]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkApproveBody'
+      responses:
+        '200':
+          description: Rejection results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkRejectResult'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Insufficient role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+    patch:
+      summary: Bulk reject registrations and send rejection emails (admin/staff)
+      operationId: bulkRejectRegistrationsPatch
+      tags: [Registrations]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkApproveBody'
+      responses:
+        '200':
+          description: Rejection results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkRejectResult'
         '400':
           description: Validation error
           content:

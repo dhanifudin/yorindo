@@ -180,9 +180,10 @@ export class PostgresRegistrationRepository
   async updateStatus(id: EntityId, status: RegistrationStatus): Promise<Registration | null> {
     const { rows } = await this.query<RegistrationRow>(
       `UPDATE registrations SET status = $2::reg_status,
+         ticket_token = CASE WHEN $2::reg_status = 'approved' AND ticket_token IS NULL THEN $3 ELSE ticket_token END,
          approved_at = CASE WHEN $2::reg_status = 'approved' THEN NOW() ELSE approved_at END
        WHERE id = $1 RETURNING *`,
-      [id, status],
+      [id, status, `ticket-${createId()}`],
     )
     return rows[0] ? this.mapRow(rows[0]) : null
   }
@@ -190,7 +191,10 @@ export class PostgresRegistrationRepository
   async bulkApprove(ids: EntityId[]): Promise<{ approved: number }> {
     return this.withTransaction(async (client) => {
       const { rowCount } = await client.query(
-        `UPDATE registrations SET status = 'approved', approved_at = NOW()
+        `UPDATE registrations
+         SET status = 'approved',
+             approved_at = NOW(),
+             ticket_token = CASE WHEN ticket_token IS NULL THEN 'ticket-' || gen_random_uuid()::text ELSE ticket_token END
          WHERE id = ANY($1::text[]) AND status != 'approved'`,
         [ids],
       )

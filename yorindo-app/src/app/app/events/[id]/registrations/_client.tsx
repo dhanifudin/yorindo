@@ -33,12 +33,11 @@ import {
 } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
-import { Flag, ChevronLeft, ChevronRight, Zap } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Zap } from 'lucide-react'
 import { BulkApproveBar } from '@/components/registrasi/BulkApproveBar'
-import { AiScoreBadge } from '@/components/registrasi/AiScoreBadge'
 import { ContactSheet } from '@/components/registrasi/ContactSheet'
 import { RegistrationFilters } from '@/components/registrasi/RegistrationFilters'
-import type { Event, Registration, RegistrationWithContact } from '@/types/api'
+import type { Registration, RegistrationWithContact } from '@/types/api'
 
 interface RegistrationsPageProps {
   params: Promise<{ id: string }>
@@ -87,10 +86,6 @@ export default function RegistrationsPage({ params }: RegistrationsPageProps) {
   const [fastMode, setFastMode] = useState(false)
   const tableContainerRef = useRef<HTMLDivElement>(null)
 
-  // Read event capacity from cache (loaded by layout)
-  const event = queryClient.getQueryData<Event>(['events', id])
-  const capacity = event?.capacity ?? null
-
   const { data: rawData, isLoading } = useQuery<{ data: RegistrationWithContact[]; pagination: { total: number } }>({
     queryKey: ['event-registrations', id],
     queryFn: () =>
@@ -98,22 +93,7 @@ export default function RegistrationsPage({ params }: RegistrationsPageProps) {
     staleTime: 30_000,
   })
 
-  // FIFO waitlist rank map: { [regId]: position (1-based) } — O(1) lookup in column render
-  const waitlistRanks = useMemo<Record<string, number>>(() => {
-    const rows = rawData?.data ?? []
-    const sorted = rows
-      .filter((r) => r.status === 'waitlisted')
-      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-    return Object.fromEntries(sorted.map((r, i) => [r.id, i + 1]))
-  }, [rawData?.data])
-
   const allRows = rawData?.data ?? []
-
-  // Derive quota status from current data
-  const approvedCount = allRows.filter(
-    (r) => r.status === 'approved' || r.status === 'confirmed'
-  ).length
-  const quotaFull = capacity !== null && approvedCount >= capacity
 
   // Mutations — defined BEFORE columns so they can be captured in closures
   const approveMutation = useMutation({
@@ -137,29 +117,6 @@ export default function RegistrationsPage({ params }: RegistrationsPageProps) {
       toast.error('Gagal menyetujui')
     },
     onSuccess: () => toast.success('Peserta disetujui', { duration: 4000 }),
-  })
-
-  const waitlistMutation = useMutation({
-    mutationFn: (regId: string) => patchRegistrationStatus(regId, 'waitlisted'),
-    onMutate: async (regId) => {
-      await queryClient.cancelQueries({ queryKey: ['event-registrations', id] })
-      const previous = queryClient.getQueryData(['event-registrations', id])
-      queryClient.setQueryData(
-        ['event-registrations', id],
-        (old: { data: RegistrationWithContact[] } | undefined) => ({
-          ...old,
-          data: (old?.data ?? []).map((r) =>
-            r.id === regId ? { ...r, status: 'waitlisted' as const } : r
-          ),
-        })
-      )
-      return { previous }
-    },
-    onError: (_err, _regId, ctx) => {
-      queryClient.setQueryData(['event-registrations', id], ctx?.previous)
-      toast.error('Gagal menambah ke waitlist')
-    },
-    onSuccess: () => toast.success('Peserta ditambahkan ke waitlist (kuota penuh)', { duration: 4000 }),
   })
 
   const rejectMutation = useMutation({
@@ -219,6 +176,32 @@ export default function RegistrationsPage({ params }: RegistrationsPageProps) {
       setRowSelection({})
     },
     onError: () => toast.error('Gagal bulk approve'),
+  })
+
+  const bulkRejectMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const res = await fetch('/api/registrations/bulk-reject', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids }),
+      })
+      if (!res.ok) throw new Error('Gagal bulk reject')
+      return res.json()
+    },
+    onSuccess: (_data, ids) => {
+      queryClient.setQueryData(
+        ['event-registrations', id],
+        (old: { data: RegistrationWithContact[] } | undefined) => ({
+          ...old,
+          data: (old?.data ?? []).map((r) =>
+            ids.includes(r.id) ? { ...r, status: 'rejected' as const } : r
+          ),
+        })
+      )
+      toast.success(`Menolak ${ids.length} pendaftar`, { duration: 4000 })
+      setRowSelection({})
+    },
+    onError: () => toast.error('Gagal bulk reject'),
   })
 
   const promoteMutation = useMutation({
@@ -304,30 +287,15 @@ export default function RegistrationsPage({ params }: RegistrationsPageProps) {
       header: 'Peserta',
       cell: ({ row }) => {
         const reg = row.original
-        const showFlag =
-          !reg.flagOverride &&
-          (reg.contactFlagCategory === 'invalid-data' || reg.contactFlagCategory === 'duplicate')
         return (
           <div className="flex flex-col gap-0.5">
             <div className="text-sm font-medium text-left hover:underline">
               {reg.contactName}
             </div>
             <span className="text-xs text-muted-foreground">{reg.contactEmail}</span>
-            {showFlag && (
-              <span className="inline-flex items-center gap-1 text-xs text-red-700">
-                <Flag className="h-3 w-3" />
-                {reg.contactFlagCategory}
-              </span>
-            )}
           </div>
         )
       },
-    },
-    {
-      id: 'score',
-      accessorKey: 'aiScore',
-      header: 'Skor AI',
-      cell: ({ row }) => <AiScoreBadge score={row.original.aiScore} />,
     },
     {
       id: 'status',
@@ -338,61 +306,33 @@ export default function RegistrationsPage({ params }: RegistrationsPageProps) {
         return row.original.status === filterValue
       },
       cell: ({ row }) => (
-        <div className="flex flex-col gap-0.5">
-          <Badge className={`${STATUS_BADGE_CLASS[row.original.status]} text-xs`}>
-            {STATUS_LABEL[row.original.status]}
-          </Badge>
-          {row.original.status === 'waitlisted' && waitlistRanks[row.original.id] && (
-            <span className="text-xs text-muted-foreground">#{waitlistRanks[row.original.id]}</span>
-          )}
-        </div>
+        <Badge className={`${STATUS_BADGE_CLASS[row.original.status]} text-xs`}>
+          {STATUS_LABEL[row.original.status]}
+        </Badge>
       ),
-    },
-    {
-      id: 'flag',
-      accessorFn: (row) => row.contactFlagCategory && !row.flagOverride,
-      header: '',
-      filterFn: (row, _id, filterValue) => {
-        if (!filterValue) return true
-        return (
-          !row.original.flagOverride &&
-          (row.original.contactFlagCategory === 'invalid-data' || row.original.contactFlagCategory === 'duplicate')
-        )
-      },
-      cell: () => null,
     },
     {
       id: 'actions',
       header: 'Aksi',
       cell: ({ row }) => {
         const reg = row.original
-        // pending: approve/waitlist + reject
+        // pending: approve + reject
         if (reg.status === 'pending') {
           return (
             <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
               <Button
                 size="sm"
                 className="h-7 text-xs"
-                variant={quotaFull ? 'outline' : 'default'}
                 onClick={() => {
-                  if (quotaFull) {
-                    if (fastMode) {
-                      waitlistMutation.mutate(reg.id)
-                    } else {
-                      // Reuse approve confirmation for waitlist too
-                      setApproveTarget({ id: reg.id, name: reg.contactName })
-                    }
+                  if (fastMode) {
+                    approveMutation.mutate(reg.id)
                   } else {
-                    if (fastMode) {
-                      approveMutation.mutate(reg.id)
-                    } else {
-                      setApproveTarget({ id: reg.id, name: reg.contactName })
-                    }
+                    setApproveTarget({ id: reg.id, name: reg.contactName })
                   }
                 }}
-                disabled={approveMutation.isPending || waitlistMutation.isPending}
+                disabled={approveMutation.isPending}
               >
-                {quotaFull ? 'Waitlist' : 'Setujui'}
+                Setujui
               </Button>
               <Button
                 size="sm"
@@ -408,29 +348,6 @@ export default function RegistrationsPage({ params }: RegistrationsPageProps) {
                 disabled={rejectMutation.isPending}
               >
                 Tolak
-              </Button>
-            </div>
-          )
-        }
-        // waitlisted: promote + cancel
-        if (reg.status === 'waitlisted') {
-          return (
-            <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-              <Button
-                size="sm"
-                className="h-7 text-xs"
-                onClick={() => promoteMutation.mutate(reg.id)}
-                disabled={promoteMutation.isPending}
-              >
-                Promosikan
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-7 text-xs text-destructive"
-                onClick={() => setCancelTarget({ id: reg.id, name: reg.contactName })}
-              >
-                Batalkan
               </Button>
             </div>
           )
@@ -482,7 +399,7 @@ export default function RegistrationsPage({ params }: RegistrationsPageProps) {
         return null
       },
     },
-  ], [quotaFull, waitlistRanks, fastMode, approveMutation, waitlistMutation, rejectMutation, promoteMutation]) // eslint-disable-line react-hooks/exhaustive-deps
+  ], [fastMode, approveMutation, rejectMutation]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
@@ -506,24 +423,9 @@ export default function RegistrationsPage({ params }: RegistrationsPageProps) {
   // sheetIndex is an absolute index into filteredRows (across all pages)
   const sheetReg = sheetIndex !== null ? filteredRows[sheetIndex]?.original ?? null : null
 
-  // AI recommendation: all pending rows with score >= 80, sorted by score desc
-  const aiRecommendedIds = useMemo(
-    () =>
-      (rawData?.data ?? [])
-        .filter((r) => r.status === 'pending' && r.aiScore >= 80)
-        .sort((a, b) => b.aiScore - a.aiScore)
-        .map((r) => r.id),
-    [rawData?.data]
-  )
-
   const selectedIds = table
     .getSelectedRowModel()
     .rows.map((r) => r.original.id)
-
-  // Quota info banner
-  const quotaBannerText = capacity !== null
-    ? `${approvedCount} / ${capacity} kuota terisi${quotaFull ? ' — kuota penuh, pendaftar baru akan masuk waitlist' : ''}`
-    : null
 
   if (isLoading) {
     return (
@@ -536,23 +438,10 @@ export default function RegistrationsPage({ params }: RegistrationsPageProps) {
 
   return (
     <div className="space-y-3">
-      {/* Quota status banner */}
-      {quotaBannerText && (
-        <div className={`rounded-md border px-4 py-2 text-sm ${
-          quotaFull
-            ? 'bg-red-50 border-red-200 text-red-700'
-            : 'bg-blue-50 border-blue-200 text-blue-700'
-        }`}>
-          {quotaBannerText}
-        </div>
-      )}
-
       <BulkApproveBar
-        aiRecommendedCount={aiRecommendedIds.length}
-        aiScoringStatus="complete"
         selectedCount={selectedIds.length}
         onBulkApprove={(ids) => bulkApproveMutation.mutate(ids)}
-        aiRecommendedIds={aiRecommendedIds}
+        onBulkReject={(ids) => bulkRejectMutation.mutate(ids)}
         selectedIds={selectedIds}
       />
 
@@ -588,13 +477,11 @@ export default function RegistrationsPage({ params }: RegistrationsPageProps) {
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow key={headerGroup.id}>
                     {headerGroup.headers.map((header) => (
-                      header.column.id === 'flag' ? null : (
-                        <TableHead key={header.id} className="text-xs">
-                          {typeof header.column.columnDef.header === 'function'
-                            ? header.column.columnDef.header(header.getContext())
-                            : header.column.columnDef.header}
-                        </TableHead>
-                      )
+                      <TableHead key={header.id} className="text-xs">
+                        {typeof header.column.columnDef.header === 'function'
+                          ? header.column.columnDef.header(header.getContext())
+                          : header.column.columnDef.header}
+                      </TableHead>
                     ))}
                   </TableRow>
                 ))}
@@ -616,19 +503,17 @@ export default function RegistrationsPage({ params }: RegistrationsPageProps) {
                       className="cursor-pointer"
                       onClick={() => setSheetIndex(filteredIndex)}
                     >
-                      {row.getVisibleCells().map((cell) =>
-                        cell.column.id === 'flag' ? null : (
-                          <TableCell
-                            key={cell.id}
-                            className="py-2"
-                            onClick={cell.column.id === 'select' || cell.column.id === 'actions' ? (e) => e.stopPropagation() : undefined}
-                          >
-                            {typeof cell.column.columnDef.cell === 'function'
-                              ? cell.column.columnDef.cell(cell.getContext())
-                              : null}
-                          </TableCell>
-                        )
-                      )}
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell
+                          key={cell.id}
+                          className="py-2"
+                          onClick={cell.column.id === 'select' || cell.column.id === 'actions' ? (e) => e.stopPropagation() : undefined}
+                        >
+                          {typeof cell.column.columnDef.cell === 'function'
+                            ? cell.column.columnDef.cell(cell.getContext())
+                            : null}
+                        </TableCell>
+                      ))}
                     </TableRow>
                   )})
                 )}
@@ -707,23 +592,13 @@ export default function RegistrationsPage({ params }: RegistrationsPageProps) {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Approve / Waitlist confirmation */}
+      {/* Approve confirmation */}
       <AlertDialog open={approveTarget !== null} onOpenChange={(open: boolean) => { if (!open) setApproveTarget(null) }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {quotaFull ? 'Masukkan ke Waitlist?' : 'Setujui Pendaftaran?'}
-            </AlertDialogTitle>
+            <AlertDialogTitle>Setujui Pendaftaran?</AlertDialogTitle>
             <AlertDialogDescription>
-              {quotaFull ? (
-                <>
-                  Kuota penuh. Masukkan <strong>{approveTarget?.name}</strong> ke waitlist?
-                </>
-              ) : (
-                <>
-                  Setujui pendaftaran <strong>{approveTarget?.name}</strong>?
-                </>
-              )}
+              Setujui pendaftaran <strong>{approveTarget?.name}</strong>?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -731,16 +606,12 @@ export default function RegistrationsPage({ params }: RegistrationsPageProps) {
             <AlertDialogAction
               onClick={() => {
                 if (!approveTarget) return
-                if (quotaFull) {
-                  waitlistMutation.mutate(approveTarget.id)
-                } else {
-                  approveMutation.mutate(approveTarget.id)
-                }
+                approveMutation.mutate(approveTarget.id)
                 setApproveTarget(null)
               }}
-              disabled={approveMutation.isPending || waitlistMutation.isPending}
+              disabled={approveMutation.isPending}
             >
-              {quotaFull ? 'Ya, Waitlist' : 'Ya, Setujui'}
+              Ya, Setujui
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
