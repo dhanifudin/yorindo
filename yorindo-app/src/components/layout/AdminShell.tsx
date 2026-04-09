@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -100,13 +101,37 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         )}
       >
         <div className={cn(
-          'flex items-center border-b border-sidebar-border',
-          collapsed ? 'justify-center py-5 px-2' : 'justify-between px-4 py-5'
+          'flex items-center justify-between border-b border-sidebar-border relative',
+          collapsed ? 'py-2 px-2' : 'py-2 px-3'
         )}>
-          {!collapsed && <span className="font-bold text-sidebar-primary">Yorindo</span>}
+          <div className={cn(
+            'flex items-center justify-center flex-1',
+            collapsed && 'justify-center'
+          )}>
+            {!collapsed && (
+              <Image
+                src="/icons/emyu.jpg"
+                alt="EM · U Logo"
+                width={200}
+                height={56}
+                priority
+                className="object-contain"
+              />
+            )}
+            {collapsed && (
+              <Image
+                src="/icons/emyu.jpg"
+                alt="EM · U Logo"
+                width={45}
+                height={32}
+                priority
+                className="object-contain"
+              />
+            )}
+          </div>
           <button
             onClick={toggleCollapsed}
-            className="text-sidebar-foreground hover:text-sidebar-accent-foreground transition-colors"
+            className="text-sidebar-foreground hover:text-sidebar-accent-foreground transition-colors shrink-0 ml-2"
             aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             {collapsed ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}
@@ -171,11 +196,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         {/* Topbar — hidden on scan page */}
         {!pathname.startsWith('/app/scan') && (
           <header className="sticky top-0 z-30 h-14 flex items-center gap-3 px-4 md:px-6 border-b border-border bg-background/95 backdrop-blur shrink-0">
-            {/* Search placeholder */}
-            <div className="flex items-center gap-2 flex-1 max-w-sm h-8 px-3 rounded-md border border-border bg-muted/50 text-xs text-muted-foreground cursor-default">
-              <Search className="h-3.5 w-3.5 shrink-0" />
-              <span>Cari atau ketik...</span>
-            </div>
+
 
             <div className="flex-1" />
 

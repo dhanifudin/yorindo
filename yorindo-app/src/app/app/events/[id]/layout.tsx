@@ -40,9 +40,7 @@ interface HubLayoutProps {
   params: Promise<{ id: string }>
 }
 
-// ─── Tab config ───────────────────────────────────────────────────────────────
-
-interface EventTab {
+type TabConfig = {
   label: string
   key: string
   href: string
@@ -86,19 +84,20 @@ export default function EventHubShellLayout({ children, params }: HubLayoutProps
     staleTime: 60_000,
   })
 
-  // Shared blockerState query — AC7
+  // Shared blockerState query
   const { data: blockerState } = useQuery<EventOverviewResponse>({
     queryKey: ['event', id, 'blockerState'],
     queryFn: () => fetch(`/api/events/${id}/overview`).then(r => r.json()),
     staleTime: 60_000,
     enabled: !!id,
   })
+
+  // FIXED: Gunakan blockerState.pendingApprovals
   const pendingCount = blockerState?.pendingApprovals ?? 0
-  const daysUntilEvent = blockerState?.daysUntilEvent ?? 0
 
   const [showEditSheet, setShowEditSheet] = useState(false)
   const [confirmStatus, setConfirmStatus] = useState<Event['status'] | null>(null)
-  
+
   const statusMutation = useMutation({
     mutationFn: async (nextStatus: Event['status']) => {
       const res = await fetch(`/api/events/${id}`, {
@@ -129,31 +128,21 @@ export default function EventHubShellLayout({ children, params }: HubLayoutProps
     }
   }
 
-  // Blocker strip items — AC6, AC7
-  const blockerItems = []
-  
+  // Blocker strip items
+  const blockerItems: Array<{
+    id: string
+    label: string
+    onClick: () => void
+    urgency?: 'default' | 'warning'
+  }> = []
+
   if (pendingCount > 0) {
     blockerItems.push({
       id: 'pending',
       label: `${pendingCount} pendaftar menunggu persetujuan`,
       onClick: () => { window.location.href = `${baseHref}/registrations` },
-      urgency: pendingCount > 20 ? 'critical' : 'default',
-    } as const)
-  }
-
-  // Countdown in BlockerStrip — AC6
-  if (daysUntilEvent >= 0 && daysUntilEvent <= 1) {
-    const hours = Math.round(daysUntilEvent * 24)
-    let urgency: 'default' | 'warning' | 'critical' = 'default'
-    if (hours < 6) urgency = 'critical'
-    else if (hours < 24) urgency = 'warning'
-
-    blockerItems.push({
-      id: 'countdown',
-      label: hours === 0 ? 'Event dimulai hari ini!' : `${hours} jam lagi hingga event dimulai.`,
-      onClick: () => {},
-      urgency,
-    } as const)
+      urgency: pendingCount > 20 ? 'warning' : 'default',
+    })
   }
 
   const isDraftEvent = event?.status === 'draft'
@@ -177,7 +166,7 @@ export default function EventHubShellLayout({ children, params }: HubLayoutProps
           </div>
         </SheetContent>
       </Sheet>
-      
+
       {/* Confirm status change dialog */}
       <AlertDialog open={!!confirmStatus} onOpenChange={(open) => !open && setConfirmStatus(null)}>
         <AlertDialogContent>
@@ -190,7 +179,7 @@ export default function EventHubShellLayout({ children, params }: HubLayoutProps
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Batal</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={() => confirmStatus && statusMutation.mutate(confirmStatus)}
               className={confirmStatus === 'cancelled' ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : ''}
             >
@@ -216,7 +205,7 @@ export default function EventHubShellLayout({ children, params }: HubLayoutProps
           <nav className="flex border-b border-border bg-background px-6 overflow-x-auto">
             {TABS.map((tab) => {
               const isActive = activeTab === tab.key
-              const isDisabled = isDraftEvent && tab.disabledOnDraft
+              const isDisabled = isDraftEvent && !!tab.disabledOnDraft
               const href = `${baseHref}${tab.href}`
 
               const TabLink = (
@@ -257,7 +246,7 @@ export default function EventHubShellLayout({ children, params }: HubLayoutProps
         <BlockerStrip items={blockerItems} />
       </div>
 
-      {/* Mobile-only full-screen check-in mode placeholder - AC8 */}
+      {/* Mobile-only full-screen check-in mode placeholder */}
       {isCheckinTab && (
         <div className="block lg:hidden bg-background">
           {/* Mobile check-in content renders via children below, but chrome is hidden */}

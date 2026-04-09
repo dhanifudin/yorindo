@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   useReactTable,
   getCoreRowModel,
@@ -102,12 +102,61 @@ export function ContactsTable({
     enabled: !!detailContact,
   })
 
-  // Duplicates data
-  const { data: duplicatesData, isLoading: duplicatesLoading } = useQuery({
-    queryKey: ['contact-duplicates', detailContact?.id],
-    queryFn: () =>
-      fetch(`/api/contacts/${detailContact!.id}/duplicates`).then((r) => r.json()),
+  type DuplicateGroup = {
+    id: string
+    primary: Contact
+    duplicate: Contact
+    matchScore: number
+    matchReasons: string[]
+  }
+
+  const { data: duplicateGroups, isLoading: duplicateLoading } = useQuery<{
+    data: DuplicateGroup[]
+  }>({
+    queryKey: ['contacts-duplicates', detailContact?.id],
+    queryFn: async () => {
+      const res = await fetch('/api/contacts/duplicates?pageSize=100')
+      if (!res.ok) {
+        throw new Error('Gagal memuat duplikat')
+      }
+      return res.json()
+    },
     enabled: !!detailContact && detailContact.flagCategory === 'duplicate',
+    placeholderData: keepPreviousData => keepPreviousData,
+  })
+
+  const duplicateGroup = useMemo(() => {
+    if (!duplicateGroups?.data || !detailContact) return null
+    return duplicateGroups.data.find(
+      (group) =>
+        group.primary.id === detailContact.id || group.duplicate.id === detailContact.id,
+    ) ?? null
+  }, [duplicateGroups?.data, detailContact])
+
+  const duplicatePartner = useMemo(() => {
+    if (!duplicateGroup || !detailContact) return null
+    return duplicateGroup.primary.id === detailContact.id
+      ? duplicateGroup.duplicate
+      : duplicateGroup.primary
+  }, [duplicateGroup, detailContact])
+
+  const mergeMutation = useMutation({
+    mutationFn: async ({ keepId, removeId }: { keepId: string; removeId: string }) => {
+      const res = await fetch(`/api/contacts/${keepId}/merge`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mergeIntoId: keepId, removeId }),
+      })
+      if (!res.ok) throw new Error('Merge gagal')
+      return res.json()
+    },
+    onSuccess: (contact: Contact) => {
+      queryClient.invalidateQueries({ queryKey: ['contacts'] })
+      queryClient.invalidateQueries({ queryKey: ['contacts-duplicates'] })
+      setDetailContact(contact)
+      toast.success('Duplikat berhasil digabungkan')
+    },
+    onError: () => toast.error('Gagal menggabungkan duplikat'),
   })
 
   const flagMutation = useMutation({
@@ -208,8 +257,15 @@ export function ContactsTable({
   ]
 
   const handleResolveDuplicates = () => {
-    if (!selectedKeepId || !detailContact || !duplicatesData) return
-    const deleteIds = [detailContact.id, ...duplicatesData.duplicates.map((d: Contact) => d.id)].filter(id => id !== selectedKeepId)
+    if (!selectedKeepId || !detailContact || !duplicateGroups?.data) return
+    const allDuplicates = [detailContact, ...(duplicateGroups.data.find(
+      (g) => g.primary.id === detailContact.id || g.duplicate.id === detailContact.id,
+    )?.primary.id === detailContact.id 
+      ? [duplicateGroups.data.find((g) => g.primary.id === detailContact.id)?.duplicate] 
+      : [duplicateGroups.data.find((g) => g.duplicate.id === detailContact.id)?.primary]
+    ).filter(Boolean) as Contact[]]
+    
+    const deleteIds = allDuplicates.map((d) => d.id).filter(id => id !== selectedKeepId)
     resolveDuplicatesMutation.mutate({ keepId: selectedKeepId, deleteIds })
   }
 
@@ -227,7 +283,6 @@ export function ContactsTable({
     manualPagination: true,
     manualFiltering: true,
   })
-
 
   // Set selectedKeepId when detailContact changes
   useEffect(() => {
@@ -340,15 +395,15 @@ export function ContactsTable({
                     <div className="space-y-2">
                       <p className="text-xs text-muted-foreground font-medium">Selesaikan Duplikat</p>
                       <p className="text-xs">Kontak ini ditandai sebagai duplikat. Pilih kontak yang ingin disimpan. Kontak lainnya akan dihapus.</p>
-                      {duplicatesLoading ? (
+                      {duplicateLoading ? (
                         <div className="space-y-2">
                           {Array.from({ length: 3 }).map((_, i) => (
                             <Skeleton key={i} className="h-8" />
                           ))}
                         </div>
-                      ) : duplicatesData?.duplicates?.length ? (
+                      ) : duplicateGroup ? (
                         <>
-                          <p className="text-xs text-muted-foreground">Alasan duplikat: {duplicatesData.reason || 'Data serupa ditemukan'}</p>
+                          <p className="text-xs text-muted-foreground">Alasan duplikat: Data serupa ditemukan</p>
                           <RadioGroup value={selectedKeepId} onValueChange={setSelectedKeepId}>
                             <div className="flex items-center space-x-2">
                               <RadioGroupItem value={detailContact.id} id={`keep-${detailContact.id}`} />
@@ -357,15 +412,15 @@ export function ContactsTable({
                                 <p className="text-muted-foreground">{detailContact.phone || '—'} · {detailContact.email || '—'}</p>
                               </Label>
                             </div>
-                            {duplicatesData.duplicates.map((d: Contact) => (
-                              <div key={d.id} className="flex items-center space-x-2">
-                                <RadioGroupItem value={d.id} id={`keep-${d.id}`} />
-                                <Label htmlFor={`keep-${d.id}`} className="text-xs cursor-pointer">
-                                  <p className="font-medium">{d.name}</p>
-                                  <p className="text-muted-foreground">{d.phone || '—'} · {d.email || '—'}</p>
+                            {duplicatePartner && (
+                              <div className="flex items-center space-x-2">
+                                <RadioGroupItem value={duplicatePartner.id} id={`keep-${duplicatePartner.id}`} />
+                                <Label htmlFor={`keep-${duplicatePartner.id}`} className="text-xs cursor-pointer">
+                                  <p className="font-medium">{duplicatePartner.name}</p>
+                                  <p className="text-muted-foreground">{duplicatePartner.phone || '—'} · {duplicatePartner.email || '—'}</p>
                                 </Label>
                               </div>
-                            ))}
+                            )}
                           </RadioGroup>
                           <div className="flex gap-2">
                             <Button
@@ -379,8 +434,9 @@ export function ContactsTable({
                               variant="outline"
                               size="sm"
                               onClick={() => {
-                                const deleteIds = [detailContact.id, ...duplicatesData.duplicates.map((d: Contact) => d.id)]
-                                resolveDuplicatesMutation.mutate({ keepId: '', deleteIds })
+                                if (duplicatePartner) {
+                                  resolveDuplicatesMutation.mutate({ keepId: '', deleteIds: [detailContact.id, duplicatePartner.id] })
+                                }
                               }}
                               disabled={resolveDuplicatesMutation.isPending}
                             >

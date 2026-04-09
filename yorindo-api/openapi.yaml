@@ -4184,6 +4184,41 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
 
+  /events/{id}/yorimind/cache:
+    delete:
+      summary: Invalidate YoriMind cache for event (admin/viewer)
+      operationId: deleteYoriMindCache
+      tags: [Events, YoriMind]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Cache invalidated successfully
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Insufficient role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
   /events/{id}/attendance-stats:
     get:
       summary: Get live attendance stats for event (admin/staff) — poll every 5s

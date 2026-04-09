@@ -102,7 +102,7 @@ export function PWAInstallBanner({ mode = 'global' }: PWAInstallBannerProps) {
   if (mode === 'global' && pathname.startsWith('/app/scan')) return null
   if (mode === 'global' && isDismissed()) return null
 
-  const title = mode === 'scan' ? 'Install Yorindo Check-in' : 'Install Yorindo'
+  const title = mode === 'scan' ? 'Install EM · U Check-in' : 'Install EM · U'
   const subtitle = mode === 'scan' ? 'Akses cepat & mode offline' : 'Install sebagai aplikasi'
 
   return (

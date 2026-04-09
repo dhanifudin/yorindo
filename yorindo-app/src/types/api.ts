@@ -108,6 +108,7 @@ export interface ScanResult {
 }
 
 export interface YoriMindResult {
+  disabled?: boolean
   analysis: string
   root_causes: string[]
   recommendations: Array<{

@@ -8,7 +8,7 @@ services:
   api:
     image: node:24
     working_dir: /app
-    command: sh -c "npm run dev"
+    command: sh -c "npm ci && npm run dev"
     env_file: ./yorindo-api/.env
     environment:
       NODE_ENV: development
@@ -28,7 +28,7 @@ services:
   app:
     image: node:24
     working_dir: /app
-    command: sh -c "npm run dev"
+    command: sh -c "PUPPETEER_SKIP_DOWNLOAD=true npm ci && npm run dev"
     env_file: ./yorindo-app/.env
     environment:
       NODE_ENV: development

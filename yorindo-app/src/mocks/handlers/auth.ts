@@ -4,9 +4,9 @@ import { makeMockCuid2 } from './id'
 
 // MSW seed accounts — any password works in Phase 1 dev mode
 const MOCK_USERS = [
-  { id: MOCK_USER_IDS.admin,  email: 'admin@yorindo.id',  role: 'admin' as const,  name: 'Admin Yorindo' },
+  { id: MOCK_USER_IDS.admin,  email: 'admin@yorindo.id',  role: 'admin' as const,  name: 'Admin EM · U' },
   { id: MOCK_USER_IDS.staff,  email: 'staff@yorindo.id',  role: 'staff' as const,  name: 'Budi Santoso' },
-  { id: MOCK_USER_IDS.viewer, email: 'viewer@yorindo.id', role: 'viewer' as const, name: 'Viewer Yorindo' },
+  { id: MOCK_USER_IDS.viewer, email: 'viewer@yorindo.id', role: 'viewer' as const, name: 'Viewer EM · U' },
 ]
 
 // Staff event keys for offline QR check-in (Story 7.2)

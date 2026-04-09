@@ -39,6 +39,10 @@ export const config = {
   yorimindAiProvider: optional('YORIMIND_AI_PROVIDER', 'mock'),
   smartFilterAiProvider: optional('SMART_FILTER_AI_PROVIDER', 'mock'),
 
+  // YoriMind AI proxy config (mlapi.run OpenAI-compatible)
+  yorimindAiBaseUrl: optional('YORIMIND_AI_BASE_URL'),
+  yorimindAiApiKey: optional('YORIMIND_AI_API_KEY'),
+
   // Phase 2 only — optional strings; empty in Phase 1
   databaseUrl: buildDatabaseUrl(),
   redisUrl: optional('REDIS_URL'),

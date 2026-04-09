@@ -6,15 +6,17 @@ import { z } from 'zod'
 import { useAuthStore } from '@/store/authStore'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { Eye, EyeOff } from 'lucide-react'
+
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
-import { Eye, EyeOff } from 'lucide-react'
 
 const schema = z.object({
   email: z.string().email('Email tidak valid'),
   password: z.string().min(8, 'Minimal 8 karakter'),
 })
+
 type FormValues = z.infer<typeof schema>
 
 export function LoginForm() {
@@ -43,17 +45,15 @@ export function LoginForm() {
       }
       const data = await res.json()
       setAuth(data.accessToken, data.user, data.eventKeys ?? {})
-      // Redirect to the originally intended destination, or /app as fallback
-      const redirectUrl = sessionStorage.getItem('loginRedirectUrl')
-      sessionStorage.removeItem('loginRedirectUrl')
-      router.push(redirectUrl || '/app')
+      router.push('/app')
     } catch {
       setApiError('Gagal terhubung ke server. Coba lagi.')
     }
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 w-full" noValidate>
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 w-full" noValidate>
+      {/* Email Field */}
       <div className="space-y-1.5">
         <Label htmlFor="email">Email</Label>
         <Input
@@ -68,6 +68,7 @@ export function LoginForm() {
         )}
       </div>
 
+      {/* Password Field with Eye Toggle */}
       <div className="space-y-1.5">
         <Label htmlFor="password">Password</Label>
         <div className="relative">
@@ -77,32 +78,37 @@ export function LoginForm() {
             autoComplete="current-password"
             {...register('password')}
             aria-invalid={!!errors.password}
-            className="pr-10"
+            className="pr-12" 
           />
-          <Button
+          <button
             type="button"
-            variant="ghost"
-            size="sm"
-            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
             onClick={() => setShowPassword(!showPassword)}
-            aria-label={showPassword ? 'Hide password' : 'Show password'}
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+            aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
           >
-            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-          </Button>
+            {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+          </button>
         </div>
         {errors.password && (
           <p className="text-xs text-destructive">{errors.password.message}</p>
         )}
       </div>
 
+      {/* API Error */}
       {apiError && (
-        <p className="text-sm text-destructive text-center">{apiError}</p>
+        <p className="text-sm text-destructive text-center pt-2">{apiError}</p>
       )}
 
-      <Button type="submit" className="w-full" disabled={isSubmitting}>
-        {isSubmitting ? 'Masuk...' : 'Masuk'}
-      </Button>
+      {/* Submit Button with better spacing */}
+      <div className="pt-4">
+        <Button 
+          type="submit" 
+          className="w-full h-12 text-base font-semibold" 
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? 'Masuk...' : 'Masuk'}
+        </Button>
+      </div>
     </form>
   )
 }
-  

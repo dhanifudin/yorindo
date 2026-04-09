@@ -29,7 +29,7 @@ export default function LearnDataRightsPage() {
           <CardContent className="pt-5">
             <h2 className="font-semibold mb-2">🗑️ Penghapusan Data (Erasure)</h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Penghapusan data <strong className="text-foreground">menganonimkan seluruh data pribadi Anda secara permanen</strong> di semua catatan sistem Yorindo.
+              Penghapusan data <strong className="text-foreground">menganonimkan seluruh data pribadi Anda secara permanen</strong> di semua catatan sistem EM · U.
               Ini termasuk nama, email, nomor telepon, dan identitas lainnya. Riwayat kehadiran event dapat dipertahankan namun
               <strong className="text-foreground"> tidak lagi terhubung ke identitas Anda</strong>. Tindakan ini tidak dapat dibatalkan.
             </p>
