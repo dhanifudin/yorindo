@@ -37,7 +37,8 @@ export class PostgresTemplateRepository
     }
     if (row.subject != null) template.subject = row.subject
     if (row.logo_url != null) template.logoUrl = row.logo_url
-    if (row.image_type != null) template.imageType = row.image_type as Template['imageType']
+    const imageType = row.image_type as Template['imageType'] | null | undefined
+    if (imageType != null) template.imageType = imageType
     if (row.bg_opacity != null) template.bgOpacity = Number(row.bg_opacity)
     return template
   }
