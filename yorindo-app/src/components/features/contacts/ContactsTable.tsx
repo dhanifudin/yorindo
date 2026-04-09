@@ -116,20 +116,18 @@ export function ContactsTable({
 
   const { data: duplicateGroups, isLoading: duplicateLoading } = useQuery<{
     data: DuplicateGroup[]
-  }>(
-    ['contacts-duplicates', detailContact?.id],
-    async () => {
+  }>({
+    queryKey: ['contacts-duplicates', detailContact?.id],
+    queryFn: async () => {
       const res = await fetch('/api/contacts/duplicates?pageSize=100')
       if (!res.ok) {
         throw new Error('Gagal memuat duplikat')
       }
       return res.json()
     },
-    {
-      enabled: !!detailContact && detailContact.flagCategory === 'duplicate',
-      keepPreviousData: true,
-    },
-  )
+    enabled: !!detailContact && detailContact.flagCategory === 'duplicate',
+    placeholderData: keepPreviousData => keepPreviousData,
+  })
 
   const duplicateGroup = useMemo(() => {
     if (!duplicateGroups?.data || !detailContact) return null
