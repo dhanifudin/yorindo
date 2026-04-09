@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contribution Report — https://github.com/dhanifudin/yorindo</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --text: #c9d1d9;
+      --text-muted: #8b949e;
+      --accent: #58a6ff;
+      --green: #3fb950;
+      --red: #f85149;
+      --yellow: #d29922;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 2rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1 { font-size: 1.75rem; margin-bottom: 0.5rem; }
+    h1 a { color: var(--accent); text-decoration: none; }
+    h1 a:hover { text-decoration: underline; }
+    .subtitle { color: var(--text-muted); margin-bottom: 2rem; }
+    .repo-link {
+      display: inline-block;
+      margin-bottom: 1.5rem;
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .repo-link:hover { text-decoration: underline; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--surface);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    th, td {
+      padding: 0.75rem 1rem;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      background: #1c2128;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      position: sticky;
+      top: 0;
+    }
+    td:first-child, th:first-child { text-align: left; }
+    tr:hover { background: #1c2128; }
+    td a { color: var(--accent); text-decoration: none; }
+    td a:hover { text-decoration: underline; }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .badge-green { background: rgba(63,185,80,0.15); color: var(--green); }
+    .badge-red { background: rgba(248,81,73,0.15); color: var(--red); }
+    .badge-yellow { background: rgba(210,153,34,0.15); color: var(--yellow); }
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .summary-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1rem;
+      text-align: center;
+    }
+    .summary-card .number { font-size: 2rem; font-weight: 700; color: var(--accent); }
+    .summary-card .label { color: var(--text-muted); font-size: 0.85rem; margin-top: 0.25rem; }
+    .footer { margin-top: 2rem; color: var(--text-muted); font-size: 0.8rem; text-align: center; }
+    @media (max-width: 768px) {
+      body { padding: 1rem; }
+      table { font-size: 0.85rem; }
+      th, td { padding: 0.5rem; }
+    }
+  </style>
+</head>
+<body>
+  <h1><a href="https://github.com/dhanifudin/yorindo">Contribution Report</a></h1>
+  <p class="subtitle">Period: 2025-01-01 → now</p>
+
+  <div class="summary">
+    <div class="summary-card">
+      <div class="number">184</div>
+      <div class="label">Issues Opened</div>
+    </div>
+    <div class="summary-card">
+      <div class="number">127</div>
+      <div class="label">PRs Opened</div>
+    </div>
+    <div class="summary-card">
+      <div class="number">129</div>
+      <div class="label">Issue Comments</div>
+    </div>
+    <div class="summary-card">
+      <div class="number">0</div>
+      <div class="label">PR Comments</div>
+    </div>
+    <div class="summary-card">
+      <div class="number">0</div>
+      <div class="label">PR Reviews</div>
+    </div>
+    <div class="summary-card">
+      <div class="number">14</div>
+      <div class="label">Contributors</div>
+    </div>
+  </div>
+
+  <h2 style="margin-bottom: 1rem;">Contributor Breakdown</h2>
+  <div style="overflow-x: auto;">
+    <table>
+      <thead>
+        <tr>
+          <th>Contributor</th>
+          <th>Issues</th>
+          <th>PRs</th>
+          <th>Issue Cmts</th>
+          <th>PR Cmts</th>
+          <th>Reviews</th>
+          <th><span class="badge badge-green">Approved</span></th>
+          <th><span class="badge badge-red">Changes Req.</span></th>
+          <th><span class="badge badge-yellow">Commented</span></th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody>
+    <tr>
+      <td><a href="https://github.com/dhanifudin">dhanifudin</a></td>
+      <td>111</td>
+      <td>52</td>
+      <td>21</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td><strong>184</strong></td>
+    </tr>
+    <tr>
+      <td><a href="https://github.com/azizaja595e">azizaja595e</a></td>
+      <td>36</td>
+      <td>0</td>
+      <td>10</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td><strong>46</strong></td>
+    </tr>
+    <tr>
+      <td><a href="https://github.com/bogyramadhan-afk">bogyramadhan-afk</a></td>
+      <td>19</td>
+      <td>0</td>
+      <td>19</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td><strong>38</strong></td>
+    </tr>
+    <tr>
+      <td><a href="https://github.com/raquellajuvabel">raquellajuvabel</a></td>
+      <td>7</td>
+      <td>0</td>
+      <td>24</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td><strong>31</strong></td>
+    </tr>
+    <tr>
+      <td><a href="https://github.com/GiovanniDimas">GiovanniDimas</a></td>
+      <td>0</td>
+      <td>20</td>
+      <td>4</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td><strong>24</strong></td>
+    </tr>
+    <tr>
+      <td><a href="https://github.com/erick-surbakti">erick-surbakti</a></td>
+      <td>0</td>
+      <td>15</td>
+      <td>7</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td><strong>22</strong></td>
+    </tr>
+    <tr>
+      <td><a href="https://github.com/lanleimeng">lanleimeng</a></td>
+      <td>2</td>
+      <td>17</td>
+      <td>1</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td><strong>20</strong></td>
+    </tr>
+    <tr>
+      <td><a href="https://github.com/ninditya">ninditya</a></td>
+      <td>0</td>
+      <td>11</td>
+      <td>5</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td><strong>16</strong></td>
+    </tr>
+    <tr>
+      <td><a href="https://github.com/yohanesjuliantino12">yohanesjuliantino12</a></td>
+      <td>2</td>
+      <td>12</td>
+      <td>1</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td><strong>15</strong></td>
+    </tr>
+    <tr>
+      <td><a href="https://github.com/Adzky">Adzky</a></td>
+      <td>1</td>
+      <td>0</td>
+      <td>11</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td><strong>12</strong></td>
+    </tr>
+    <tr>
+      <td><a href="https://github.com/Rinaaa13">Rinaaa13</a></td>
+      <td>0</td>
+      <td>0</td>
+      <td>12</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td><strong>12</strong></td>
+    </tr>
+    <tr>
+      <td><a href="https://github.com/rialfi49">rialfi49</a></td>
+      <td>4</td>
+      <td>0</td>
+      <td>6</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td><strong>10</strong></td>
+    </tr>
+    <tr>
+      <td><a href="https://github.com/thisiselysa">thisiselysa</a></td>
+      <td>2</td>
+      <td>0</td>
+      <td>6</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td><strong>8</strong></td>
+    </tr>
+    <tr>
+      <td><a href="https://github.com/adyatma7">adyatma7</a></td>
+      <td>0</td>
+      <td>0</td>
+      <td>2</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td><strong>2</strong></td>
+    </tr></tbody>
+    </table>
+  </div>
+
+  <p class="footer">Generated on 2026-04-09 · GitHub API + RepoSense</p>
+</body>
+</html>
