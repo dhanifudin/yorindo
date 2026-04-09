@@ -26,19 +26,20 @@ export class PostgresTemplateRepository
   }
 
   private mapRow(row: TemplateRow): Template {
-    return {
+    const template: Template = {
       id: row.id,
       name: row.name,
       type: row.type as Template['type'],
       channel: row.channel as Template['channel'],
-      subject: row.subject ?? undefined,
       body: row.body,
-      logoUrl: row.logo_url,
-      imageType: row.image_type as Template['imageType'],
-      bgOpacity: row.bg_opacity != null ? Number(row.bg_opacity) : null,
       createdAt: this.toIso(row.created_at),
       updatedAt: this.toIso(row.updated_at),
     }
+    if (row.subject != null) template.subject = row.subject
+    if (row.logo_url != null) template.logoUrl = row.logo_url
+    if (row.image_type != null) template.imageType = row.image_type as Template['imageType']
+    if (row.bg_opacity != null) template.bgOpacity = Number(row.bg_opacity)
+    return template
   }
 
   async create(data: Omit<Template, 'id' | 'createdAt' | 'updatedAt'>): Promise<Template> {

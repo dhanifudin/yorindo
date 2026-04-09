@@ -14,6 +14,7 @@ import {
   templateRepository,
 } from '../container.js'
 import { blastProgressStore } from '../lib/blast-progress-store.js'
+import { getRedisOptional } from '../lib/redis.js'
 import { requireAdmin, requireAuth, requireRoles, type JwtPayload } from '../middleware/auth.js'
 import type { Event, EventStatus, Registration, TargetCriteria } from '../types/domain.js'
 import { validateOpenApiRequest, validateOpenApiResponse } from '../lib/openapi-contract.js'
