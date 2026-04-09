@@ -5303,6 +5303,7 @@ paths:
       operationId: getTicket
       description: Returns ticket details including QR payload for display to staff at check-in.
       tags: [Tickets]
+      security: []
       parameters:
         - name: token
           in: path
