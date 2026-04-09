@@ -47,7 +47,7 @@ type TabConfig = {
   disabledOnDraft?: boolean
 }
 
-const TABS: EventTab[] = [
+const TABS: TabConfig[] = [
   { label: 'Overview',   key: 'overview',       href: '' },
   { label: 'Undangan',   key: 'blast',          href: '/blast',          disabledOnDraft: true },
   { label: 'Registrasi', key: 'registrations',  href: '/registrations' },
