@@ -29,11 +29,29 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { LandingHeader } from '@/components/layout/LandingHeader';
 
+// ─── Data Constants ─────────────────────────────────────────────────────────
+
 const ABOUT_CARDS = [
-  { icon: CalendarCheck, title: 'Manajemen Event', description: 'Kelola event end-to-end — konfigurasi, jadwal, kapasitas, dan siklus hidup dalam satu platform.' },
-  { icon: TicketCheck, title: 'Sistem Tiket', description: 'Terbitkan dan lacak tiket, atur kuota, dan validasi kehadiran peserta.' },
-  { icon: Users, title: 'Database Kontak', description: 'Import, normalisasi, dan kelola ribuan kontak dengan deteksi duplikat berbasis AI.' },
-  { icon: Target, title: 'Kontrol Operasional', description: 'Monitor KPI, kelola workflow, dan pastikan efisiensi operasional event Anda.' },
+  { 
+    icon: CalendarCheck, 
+    title: 'Manajemen Event', 
+    description: 'Kelola event end-to-end — konfigurasi, jadwal, kapasitas, dan siklus hidup dalam satu platform.' 
+  },
+  { 
+    icon: TicketCheck, 
+    title: 'Sistem Tiket', 
+    description: 'Terbitkan dan lacak tiket, atur kuota, dan validasi kehadiran peserta.' 
+  },
+  { 
+    icon: Users, 
+    title: 'Database Kontak', 
+    description: 'Import, normalisasi, dan kelola ribuan kontak dengan deteksi duplikat berbasis AI.' 
+  },
+  { 
+    icon: Target, 
+    title: 'Kontrol Operasional', 
+    description: 'Monitor KPI, kelola workflow, dan pastikan efisiensi operasional event Anda.' 
+  },
 ];
 
 const MODULES = [
@@ -64,12 +82,14 @@ const SECURITY_CARDS = [
   { icon: KeyRound, title: 'Pengelolaan Data UU PDP', description: 'Semua data operasional ditangani dengan audit trail dan perlindungan sesuai UU PDP.' },
 ];
 
+// ─── Main Component ─────────────────────────────────────────────────────────
+
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-white">
       <LandingHeader />
 
-      {/* HERO SECTION - Improved Mobile */}
+      {/* HERO SECTION */}
       <section id="overview" className="relative overflow-hidden">
         <div className="absolute inset-0">
           <Image
@@ -86,7 +106,13 @@ export default function LandingPage() {
           <div className="max-w-3xl text-center">
             {/* Label */}
             <div className="inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-xs font-medium tracking-wide bg-black/5 text-black border border-black/10 mb-6 md:mb-8">
-              <Image src="/icons/icon.jpg" alt="Admin Portal" width={16} height={16} className="rounded-full" />
+              <Image 
+                src="/icons/icon.jpg" 
+                alt="Admin Portal" 
+                width={16} 
+                height={16} 
+                className="rounded-full" 
+              />
               Admin Portal
             </div>
 
@@ -117,16 +143,23 @@ export default function LandingPage() {
               </Link>
             </Button>
 
-            {/* Stats */}
+            {/* Stats - FIXED */}
             <div className="mt-16 md:mt-20 grid grid-cols-3 gap-8 md:gap-16">
               {[
-                { value: '', label: '' },
-                { value: '', label: '' },
-                { value: '', label: '' },
+                { value: '6', label: 'Core Modules' },
+                { value: '24/7', label: 'System Uptime' },
+                { value: 'Secure', label: 'Role-Based' },
               ].map((stat) => (
-                <div key={stat.label} className="text-center">
-                  <div className="text-3xl md:text-4xl font-black text-black">{stat.value}</div>
-                  <div className="text-sm text-gray-500 mt-1.5">{stat.label}</div>
+                <div 
+                  key={stat.label} 
+                  className="text-center"
+                >
+                  <div className="text-3xl md:text-4xl font-black text-black">
+                    {stat.value}
+                  </div>
+                  <div className="text-sm text-gray-500 mt-1.5">
+                    {stat.label}
+                  </div>
                 </div>
               ))}
             </div>
@@ -144,7 +177,7 @@ export default function LandingPage() {
               <span className="gradient-text">EM · U Platform</span>
             </h2>
             <p className="mt-4 text-muted-foreground text-[15px] leading-relaxed">
-              Platform internal yang dirancang untuk tim mengelola, monitor, dan kendalikan seluruh operasional.
+              Platform internal yang dirancang untuk tim admin — kelola, monitor, dan kendalikan seluruh operasional.
             </p>
           </div>
 
@@ -216,7 +249,6 @@ export default function LandingPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-6 relative">
-            {/* Connector line - only on desktop */}
             <div className="hidden md:block absolute top-9 left-1/4 right-1/4 h-[3px] bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
 
             {STEPS.map((s, index) => (
@@ -245,7 +277,9 @@ export default function LandingPage() {
               Arsitektur{' '}
               <span className="gradient-text">sistem</span>
             </h2>
-            <p className="mt-4 text-muted-foreground text-[15px]">Gambaran sederhana bagaimana data mengalir melalui platform.</p>
+            <p className="mt-4 text-muted-foreground text-[15px]">
+              Gambaran sederhana bagaimana data mengalir melalui platform.
+            </p>
           </div>
 
           <div className="max-w-4xl mx-auto">
@@ -309,11 +343,17 @@ export default function LandingPage() {
           <div className="flex flex-col md:flex-row items-center justify-between gap-8">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-black/10 flex items-center justify-center">
-                <Image src="/icons/icon.jpg" alt="EM · U" width={24} height={24} className="rounded" />
+                <Image 
+                  src="/icons/icon.jpg" 
+                  alt="EM · U" 
+                  width={24} 
+                  height={24} 
+                  className="rounded" 
+                />
               </div>
               <div>
                 <span className="text-lg font-bold text-foreground">EM · U Communication</span>
-                <p className="text-xs text-muted-foreground">EM · U Platform</p>
+                <p className="text-xs text-muted-foreground">Admin Platform</p>
               </div>
             </div>
 
@@ -341,5 +381,5 @@ export default function LandingPage() {
         </div>
       </footer>
     </div>
-  )
+  );
 }
