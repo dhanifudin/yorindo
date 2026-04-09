@@ -642,6 +642,7 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
   })
 
   // Sync state when event prop changes
+  /* eslint-disable react-hooks/set-state-in-effect -- Legitimate: sync form state when event prop changes */
   useEffect(() => {
     if (event) {
       setBannerUrl(event.bannerUrl ?? '')
@@ -651,6 +652,7 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
       setIndustryTags([])
     }
   }, [event])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Sync selected vendors when editing an event with existing sponsors
   // This is a legitimate use of useEffect: syncing external prop state to local form state

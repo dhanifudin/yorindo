@@ -213,6 +213,7 @@ export function ContactsTable({
     resolveDuplicatesMutation.mutate({ keepId: selectedKeepId, deleteIds })
   }
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data: data?.data ?? [],
     columns,
