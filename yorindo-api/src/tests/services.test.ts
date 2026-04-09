@@ -107,7 +107,7 @@ describe('MockYoriMindService', () => {
       registrations: [],
     })
     expect(result.summary).toContain('Test Event')
-    expect(result.insights).toHaveLength(3)
+    expect(result.root_causes).toHaveLength(3)
     expect(result.recommendations).toHaveLength(3)
     expect(result.generatedAt).toBeTruthy()
   })
