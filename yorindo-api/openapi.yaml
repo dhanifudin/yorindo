@@ -1243,12 +1243,12 @@ components:
           example: whatsapp
         body:
           type: string
-          example: "Halo {{name}}, Anda diundang ke {{event_title}} pada {{date}}."
+          example: "Halo {{name}}, Anda diundang ke {{event_title}} pada {{date}} di {{venue}}.\n\nDaftar melalui: {{registration_link}}"
         variables:
           type: array
           items:
             type: string
-          example: [name, event_title, date]
+          example: [name, event_title, date, venue, registration_link]
         createdAt:
           type: string
           format: date-time

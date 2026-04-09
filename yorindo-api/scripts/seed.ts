@@ -170,20 +170,19 @@ async function seed(): Promise<void> {
 
     // Templates (all 12: 6 types × 2 channels)
     await client.query(`
-      INSERT INTO templates (id, name, type, channel, subject, body) VALUES
-        ($1, 'Undangan Event (WhatsApp)', 'invitation', 'whatsapp', NULL, 'Halo {{name}}, Anda diundang ke {{event_title}} pada {{date}} di {{venue}}.'),
-        ($2, 'Undangan Event (Email)', 'invitation', 'email', 'Undangan: {{event_title}}', '<p>Halo {{name}},</p><p>Anda diundang ke <strong>{{event_title}}</strong> pada {{date}} di {{venue}}.</p>'),
-        ($3, 'Konfirmasi Tiket (WhatsApp)', 'confirmation', 'whatsapp', NULL, 'Selamat {{name}}! Registrasi Anda untuk {{event_title}} telah disetujui.'),
-        ($4, 'Konfirmasi Tiket (Email)', 'confirmation', 'email', 'Konfirmasi: {{event_title}}', '<p>Selamat {{name}}! Registrasi Anda untuk {{event_title}} telah disetujui.</p>'),
-        ($5, 'Penolakan (WhatsApp)', 'rejection', 'whatsapp', NULL, 'Maaf {{name}}, registrasi Anda tidak dapat diterima.'),
-        ($6, 'Penolakan (Email)', 'rejection', 'email', 'Status Registrasi', '<p>Maaf {{name}}, registrasi Anda tidak dapat diterima.</p>'),
-        ($7, 'Pengiriman Tiket (WhatsApp)', 'ticket_delivery', 'whatsapp', NULL, 'Berikut tiket Anda untuk {{event_title}}. Token: {{token}}'),
-        ($8, 'Pengiriman Tiket (Email)', 'ticket_delivery', 'email', 'Tiket Anda', '<p>Berikut tiket Anda untuk {{event_title}}.</p><p>Token: {{token}}</p>'),
-        ($9, 'Pembatalan Event (WhatsApp)', 'cancellation', 'whatsapp', NULL, 'Maaf {{name}}, event {{event_title}} dibatalkan.'),
-        ($10, 'Pembatalan Event (Email)', 'cancellation', 'email', 'Event Dibatalkan', '<p>Maaf {{name}}, event {{event_title}} telah dibatalkan.</p>'),
-        ($11, 'Pengingat Event (WhatsApp)', 'reminder', 'whatsapp', NULL, 'Halo {{name}}, event {{event_title}} tinggal {{days}} hari lagi!'),
-        ($12, 'Pengingat Event (Email)', 'reminder', 'email', 'Pengingat: {{event_title}}', '<p>Halo {{name}},</p><p>Event <strong>{{event_title}}</strong> tinggal {{days}} hari lagi.</p>')
-      ON CONFLICT DO NOTHING
+      INSERT INTO templates (id, name, type, channel, subject, body, logo_url, image_type, bg_opacity) VALUES
+        ($1, 'Undangan Event (WhatsApp)', 'invitation', 'whatsapp', NULL, 'Halo {{name}}, Anda diundang ke {{event_title}} pada {{date}} di {{venue}}.\n\nDaftar melalui: {{registration_link}}', NULL, NULL, NULL),
+        ($2, 'Undangan Event (Email)', 'invitation', 'email', 'Undangan: {{event_title}}', '<p>Halo {{name}},</p><p>Anda diundang ke <strong>{{event_title}}</strong> pada {{date}} di {{venue}}.</p><p>Daftar melalui: <a href="{{registration_link}}">{{registration_link}}</a></p>', NULL, NULL, NULL),
+        ($3, 'Konfirmasi Tiket (WhatsApp)', 'confirmation', 'whatsapp', NULL, 'Selamat {{name}}! Registrasi Anda untuk {{event_title}} telah disetujui.', NULL, NULL, NULL),
+        ($4, 'Konfirmasi Tiket (Email)', 'confirmation', 'email', 'Konfirmasi: {{event_title}}', '<p>Selamat {{name}}! Registrasi Anda untuk {{event_title}} telah disetujui.</p>', NULL, NULL, NULL),
+        ($5, 'Penolakan (WhatsApp)', 'rejection', 'whatsapp', NULL, 'Maaf {{name}}, registrasi Anda tidak dapat diterima.', NULL, NULL, NULL),
+        ($6, 'Penolakan (Email)', 'rejection', 'email', 'Status Registrasi', '<p>Maaf {{name}}, registrasi Anda tidak dapat diterima.</p>', NULL, NULL, NULL),
+        ($7, 'Pengiriman Tiket (WhatsApp)', 'ticket_delivery', 'whatsapp', NULL, 'Berikut tiket Anda untuk {{event_title}}. Token: {{token}}', NULL, NULL, NULL),
+        ($8, 'Pengiriman Tiket (Email)', 'ticket_delivery', 'email', 'Tiket Anda', '<p>Berikut tiket Anda untuk {{event_title}}.</p><p>Token: {{token}}</p>', NULL, NULL, NULL),
+        ($9, 'Pembatalan Event (WhatsApp)', 'cancellation', 'whatsapp', NULL, 'Maaf {{name}}, event {{event_title}} dibatalkan.', NULL, NULL, NULL),
+        ($10, 'Pembatalan Event (Email)', 'cancellation', 'email', 'Event Dibatalkan', '<p>Maaf {{name}}, event {{event_title}} telah dibatalkan.</p>', NULL, NULL, NULL),
+        ($11, 'Pengingat Event (WhatsApp)', 'reminder', 'whatsapp', NULL, 'Halo {{name}}, event {{event_title}} tinggal {{days}} hari lagi!', NULL, NULL, NULL),
+        ($12, 'Pengingat Event (Email)', 'reminder', 'email', 'Pengingat: {{event_title}}', '<p>Halo {{name}},</p><p>Event <strong>{{event_title}}</strong> tinggal {{days}} hari lagi.</p>', NULL, NULL, NULL)
     `, [createId(), createId(), createId(), createId(), createId(), createId(), createId(), createId(), createId(), createId(), createId(), createId()])
     console.log('✓ Seeded 12 templates (6 types × 2 channels)')
 

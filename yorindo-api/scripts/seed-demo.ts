@@ -463,8 +463,8 @@ export async function seedDemo(pool: Pool): Promise<void> {
 
     // ── Templates (all 12: 6 types × 2 channels) ──
     const templateData = [
-      { id: createId(), name: 'Undangan Event (WhatsApp)', type: 'invitation', channel: 'whatsapp', subject: null, body: 'Halo {{name}}, Anda diundang ke {{event_title}} pada {{date}} di {{venue}}.' },
-      { id: createId(), name: 'Undangan Event (Email)', type: 'invitation', channel: 'email', subject: 'Undangan: {{event_title}}', body: '<p>Halo {{name}},</p><p>Anda diundang ke <strong>{{event_title}}</strong> pada {{date}} di {{venue}}.</p>' },
+      { id: createId(), name: 'Undangan Event (WhatsApp)', type: 'invitation', channel: 'whatsapp', subject: null, body: 'Halo {{name}}, Anda diundang ke {{event_title}} pada {{date}} di {{venue}}.\n\nDaftar melalui: {{registration_link}}' },
+      { id: createId(), name: 'Undangan Event (Email)', type: 'invitation', channel: 'email', subject: 'Undangan: {{event_title}}', body: '<p>Halo {{name}},</p><p>Anda diundang ke <strong>{{event_title}}</strong> pada {{date}} di {{venue}}.</p><p>Daftar melalui: <a href="{{registration_link}}">{{registration_link}}</a></p>' },
       { id: createId(), name: 'Konfirmasi Tiket (WhatsApp)', type: 'confirmation', channel: 'whatsapp', subject: null, body: 'Selamat {{name}}! Registrasi Anda untuk {{event_title}} telah disetujui.' },
       { id: createId(), name: 'Konfirmasi Tiket (Email)', type: 'confirmation', channel: 'email', subject: 'Konfirmasi Registrasi - {{event_title}}', body: '<p>Selamat {{name}}!</p><p>Registrasi Anda untuk <strong>{{event_title}}</strong> telah disetujui.</p>' },
       { id: createId(), name: 'Penolakan (WhatsApp)', type: 'rejection', channel: 'whatsapp', subject: null, body: 'Maaf {{name}}, registrasi Anda untuk {{event_title}} tidak dapat kami terima.' },

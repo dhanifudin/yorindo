@@ -8,6 +8,7 @@ const SAMPLE_VALUES: Record<string, string> = {
   confirm_url: 'https://example.com/confirm',
   industry: 'Teknologi',
   company: 'PT. Maju Jaya',
+  registration_link: 'https://yorindo.id/register/erp-summit-jakarta-2026',
 }
 
 interface Props {

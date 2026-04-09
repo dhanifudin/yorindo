@@ -5,6 +5,7 @@ import {
   emailService,
   eventRepository,
   suppressionRepository,
+  templateRepository,
   whatsAppService,
 } from '../container.js'
 import { getRedis } from '../lib/redis.js'
@@ -17,6 +18,7 @@ async function processBlastJob(job: { id?: string | number | null; data: BlastJo
     suppressionRepository,
     contactRepository,
     eventRepository,
+    templateRepository,
     auditLogRepository,
   )
 

@@ -2,9 +2,9 @@ import type { IAuditLogRepository } from '../interfaces/repositories/IAuditLogRe
 import type { IContactRepository } from '../interfaces/repositories/IContactRepository.js'
 import type { IEventRepository } from '../interfaces/repositories/IEventRepository.js'
 import type { ISuppressionRepository } from '../interfaces/repositories/ISuppressionRepository.js'
+import type { ITemplateRepository } from '../interfaces/repositories/ITemplateRepository.js'
 import type { IEmailService } from '../interfaces/services/IEmailService.js'
 import type { IWhatsAppService } from '../interfaces/services/IWhatsAppService.js'
-import { findTemplateById } from '../data/templates.js'
 import type { Contact } from '../types/domain.js'
 
 export interface BlastJobData {
@@ -65,6 +65,7 @@ export class BlastService {
     private readonly suppressionRepository: ISuppressionRepository,
     private readonly contactRepository: IContactRepository,
     private readonly eventRepository: IEventRepository,
+    private readonly templateRepository: ITemplateRepository,
     private readonly auditLogRepository: IAuditLogRepository,
     private readonly sleep: (ms: number) => Promise<void> = wait,
   ) { }
@@ -168,19 +169,26 @@ export class BlastService {
         channel: job.channel,
         body: job.templateBody,
         createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       }
     } else {
-      template = findTemplateById(job.templateId)
+      template = await this.templateRepository.findById(job.templateId)
       if (!template) {
         throw new Error(`Template not found: ${job.templateId}`)
       }
     }
 
     const event = await this.eventRepository.findById(job.eventId)
+    const originUrl = process.env.BASE_URL ?? 'http://localhost:3000'
+    const eventSlug = event?.slug ?? job.eventId
+    const registrationLink = `${originUrl}/register/${eventSlug}`
+
     const eventVars = {
       event_title: event?.name ?? job.eventId,
       date: event?.startDate ?? '',
-      venue: event?.city ?? '',
+      venue: event?.venue ?? event?.city ?? '',
+      registration_link: registrationLink,
+      registration_url: registrationLink,
     }
 
     // Load contacts based on job filters or direct contactIds
