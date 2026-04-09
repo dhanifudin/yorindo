@@ -92,7 +92,7 @@ export default function VendorReportPage({ params }: VendorReportPageProps) {
               <p className="font-medium">Perjanjian Pemrosesan Data (DPA) — {data.dpaVersion}</p>
               <p className="text-muted-foreground">
                 Dengan mengakses laporan ini, Anda menyetujui bahwa data peserta akan digunakan sesuai
-                dengan ketentuan kontrak antara klien dan Yorindo, dan sesuai dengan UU PDP Indonesia.
+                dengan ketentuan kontrak antara klien dan EM · U, dan sesuai dengan UU PDP Indonesia.
                 Data tidak boleh dibagikan kepada pihak ketiga tanpa persetujuan tertulis.
               </p>
             </div>

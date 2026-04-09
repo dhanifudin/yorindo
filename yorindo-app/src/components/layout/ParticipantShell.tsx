@@ -25,7 +25,7 @@ export function ParticipantShell({ children }: { children: React.ReactNode }) {
       {/* Top bar */}
       <header className="border-b border-border bg-card">
         <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
-          <span className="font-bold text-primary">Yorindo</span>
+          <span className="font-bold text-primary">EM · U</span>
           <div className="flex items-center gap-3">
             {(user?.name || user?.email) && (
               <span className="text-sm text-muted-foreground">{user.name || user.email}</span>

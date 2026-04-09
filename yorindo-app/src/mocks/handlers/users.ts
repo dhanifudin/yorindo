@@ -23,7 +23,7 @@ export const userEventAssignments: Map<string, Set<string>> = new Map([
 export const usersStore: StoredUser[] = [
   {
     id: MOCK_USER_IDS.admin,
-    name: 'Admin Yorindo',
+    name: 'Admin EM · U',
     email: 'admin@yorindo.id',
     role: 'admin',
     createdAt: new Date('2026-01-01').toISOString(),

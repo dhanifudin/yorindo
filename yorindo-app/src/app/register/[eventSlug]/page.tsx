@@ -39,7 +39,7 @@ export function generateStaticParams() {
 export function generateMetadata({ params }: { params: { eventSlug: string } }): Metadata {
   const event = EVENT_OG[params.eventSlug]
   if (!event) {
-    return { title: 'Event — Yorindo' }
+    return { title: 'Event — EM · U' }
   }
 
   const ogImage = event.banner ?? DEFAULT_OG_IMAGE
@@ -48,7 +48,7 @@ export function generateMetadata({ params }: { params: { eventSlug: string } }):
     : event.description
 
   return {
-    title: `${event.title} — Yorindo`,
+    title: `${event.title} — EM · U`,
     description,
     openGraph: {
       title: event.title,

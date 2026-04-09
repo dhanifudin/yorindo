@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 
 export const metadata: Metadata = {
-  title: "Yorindo",
+  title: "EM · U",
   description: "Event management platform",
   manifest: "/manifest.json",
   icons: {

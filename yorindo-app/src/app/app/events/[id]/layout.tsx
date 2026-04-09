@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Skeleton } from '@/components/ui/skeleton'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { BlockerStrip } from '@/components/hub/BlockerStrip'
 import { EventHubLayout, LifecycleAction } from '@/components/hub/EventHubLayout'
@@ -36,16 +35,23 @@ interface HubLayoutProps {
   params: Promise<{ id: string }>
 }
 
+type TabConfig = {
+  label: string
+  key: string
+  href: string
+  disabledOnDraft?: boolean
+}
+
 // ─── Tab config ───────────────────────────────────────────────────────────────
 
-const TABS = [
-  { label: 'Overview',   key: 'overview',       href: '' },
-  { label: 'Undangan',   key: 'blast',          href: '/blast',          disabledOnDraft: true },
-  { label: 'Registrasi', key: 'registrations',  href: '/registrations' },
-  { label: 'Konfirmasi', key: 'confirmation',   href: '/confirmation',   disabledOnDraft: true },
-  { label: 'Check-in',   key: 'checkin',        href: '/checkin',        disabledOnDraft: true },
-  { label: 'Laporan',    key: 'report',         href: '/report' },
-] as const
+const TABS: readonly TabConfig[] = [
+  { label: 'Overview', key: 'overview', href: '' },
+  { label: 'Undangan', key: 'blast', href: '/blast', disabledOnDraft: true },
+  { label: 'Registrasi', key: 'registrations', href: '/registrations' },
+  { label: 'Konfirmasi', key: 'confirmation', href: '/confirmation', disabledOnDraft: true },
+  { label: 'Check-in', key: 'checkin', href: '/checkin', disabledOnDraft: true },
+  { label: 'Laporan', key: 'report', href: '/report' },
+]
 
 // ─── Tab key detection ────────────────────────────────────────────────────────
 
@@ -80,11 +86,12 @@ export default function EventHubShellLayout({ children, params }: HubLayoutProps
     queryFn: () => fetch(`/api/events/${id}/registrations?status=pending&pageSize=1`).then(r => r.json()),
     enabled: !!id,
   })
+
   const pendingCount = registrationStats?.pagination.total ?? 0
 
   const [showEditSheet, setShowEditSheet] = useState(false)
   const [confirmStatus, setConfirmStatus] = useState<Event['status'] | null>(null)
-  
+
   const statusMutation = useMutation({
     mutationFn: async (nextStatus: Event['status']) => {
       const res = await fetch(`/api/events/${id}`, {
@@ -116,14 +123,20 @@ export default function EventHubShellLayout({ children, params }: HubLayoutProps
   }
 
   // Blocker strip items
-  const blockerItems = []
+  const blockerItems: Array<{
+    id: string
+    label: string
+    onClick: () => void
+    urgency?: 'default' | 'warning'
+  }> = []
+
   if (pendingCount > 0) {
     blockerItems.push({
       id: 'pending',
       label: `${pendingCount} pendaftar menunggu persetujuan`,
       onClick: () => { window.location.href = `${baseHref}/registrations` },
       urgency: pendingCount > 20 ? 'warning' : 'default',
-    } as const)
+    })
   }
 
   const isDraftEvent = event?.status === 'draft'
@@ -147,7 +160,7 @@ export default function EventHubShellLayout({ children, params }: HubLayoutProps
           </div>
         </SheetContent>
       </Sheet>
-      
+
       {/* Confirm status change dialog */}
       <AlertDialog open={!!confirmStatus} onOpenChange={(open) => !open && setConfirmStatus(null)}>
         <AlertDialogContent>
@@ -160,7 +173,7 @@ export default function EventHubShellLayout({ children, params }: HubLayoutProps
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Batal</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={() => confirmStatus && statusMutation.mutate(confirmStatus)}
               className={confirmStatus === 'cancelled' ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : ''}
             >
@@ -186,7 +199,7 @@ export default function EventHubShellLayout({ children, params }: HubLayoutProps
           <nav className="flex border-b border-border bg-background px-6 overflow-x-auto">
             {TABS.map((tab) => {
               const isActive = activeTab === tab.key
-              const isDisabled = isDraftEvent && 'disabledOnDraft' in tab && (tab as any).disabledOnDraft
+              const isDisabled = isDraftEvent && !!tab.disabledOnDraft
               const href = `${baseHref}${tab.href}`
 
               const TabLink = (
@@ -227,7 +240,7 @@ export default function EventHubShellLayout({ children, params }: HubLayoutProps
         <BlockerStrip items={blockerItems} />
       </div>
 
-      {/* Mobile-only full-screen check-in mode placeholder - AC8 */}
+      {/* Mobile-only full-screen check-in mode placeholder */}
       {isCheckinTab && (
         <div className="block lg:hidden bg-background">
           {/* Mobile check-in content renders via children below, but chrome is hidden */}
