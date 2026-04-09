@@ -66,6 +66,7 @@ describe('BlastService', () => {
       templateRepo,
       auditLogRepository,
       async () => undefined,
+      0, // no delay in tests
     )
   })
 
@@ -157,6 +158,7 @@ describe('BlastService', () => {
       templateRepo,
       auditLogRepository,
       async () => undefined,
+      0, // no delay in tests
     )
 
     await failingBlastService.processJob(makeJob({ channel: 'email' }))

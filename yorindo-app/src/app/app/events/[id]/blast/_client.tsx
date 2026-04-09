@@ -20,6 +20,9 @@ interface Template {
   id: string
   name: string
   channel: 'whatsapp' | 'email'
+  type: string
+  body?: string
+  subject?: string
 }
 
 export default function BlastPage({ params }: BlastPageProps) {

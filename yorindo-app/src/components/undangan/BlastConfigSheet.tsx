@@ -6,38 +6,40 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-  SheetFooter,
-} from '@/components/ui/sheet'
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
+import { TemplatePreview } from '@/components/features/templates/TemplatePreview'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-
-const MAX_CUSTOM_MESSAGE = 1000
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command'
+import { cn } from '@/lib/utils'
+import { Check, ChevronsUpDown } from 'lucide-react'
 
 const blastSchema = z.object({
-  channel: z.enum(['whatsapp', 'email']),
-  templateId: z.string().optional(),
-  customMessage: z.string().max(MAX_CUSTOM_MESSAGE).optional(),
-  scheduledAt: z.string().optional(),       // Computed ISO 8601 UTC from date + time
-  scheduledDate: z.string().optional(),      // YYYY-MM-DD
-  scheduledTime: z.string().optional(),      // HH:MM (24hr)
-}).refine(
-  (data) => !!data.templateId || !!data.customMessage?.trim(),
-  { message: 'Pilih template atau tulis pesan kustom', path: ['templateId'] }
-)
+  templateId: z.string().min(1, 'Pilih template undangan'),
+  scheduleMode: z.enum(['now', 'later']),
+  scheduledDate: z.string().optional(),
+  scheduledTime: z.string().optional(),
+})
 
 type BlastFormValues = z.infer<typeof blastSchema>
 
@@ -45,6 +47,9 @@ interface Template {
   id: string
   name: string
   channel: 'whatsapp' | 'email'
+  type: string
+  body?: string
+  subject?: string
 }
 
 interface BlastConfigSheetProps {
@@ -65,40 +70,49 @@ export function BlastConfigSheet({
   onSuccess,
 }: BlastConfigSheetProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null)
+  const [templatePopoverOpen, setTemplatePopoverOpen] = useState(false)
 
   const form = useForm<BlastFormValues>({
     resolver: zodResolver(blastSchema),
     mode: 'onBlur',
-    defaultValues: { channel: 'whatsapp' },
+    defaultValues: { scheduleMode: 'now' },
   })
 
-  const selectedChannel = form.watch('channel')
-  const customMessage = form.watch('customMessage') ?? ''
-  const filteredTemplates = templates.filter((t) => t.channel === selectedChannel)
+  const scheduleMode = form.watch('scheduleMode')
+
+  // Filter: invitation type + email channel only (WhatsApp disabled)
+  const invitationTemplates = templates.filter(
+    (t) => t.type === 'invitation' && t.channel === 'email'
+  )
 
   async function onSubmit(values: BlastFormValues) {
     setIsSubmitting(true)
     try {
-      const body: Record<string, unknown> = { eventId }
-      if (values.channel) body.channel = values.channel
-      if (values.templateId) body.templateId = values.templateId
-      if (values.customMessage?.trim()) body.customMessage = values.customMessage
-      // Only send scheduledAt if both date and time were provided
-      if (values.scheduledAt && values.scheduledDate && values.scheduledTime) {
-        body.scheduledAt = values.scheduledAt
+      const body: Record<string, unknown> = {
+        eventId,
+        channel: 'email',
+        templateId: values.templateId,
       }
+
+      if (values.scheduleMode === 'later' && values.scheduledDate && values.scheduledTime) {
+        body.scheduledAt = `${values.scheduledDate}T${values.scheduledTime}:00.000Z`
+      }
+
       if (selectedContactIds && selectedContactIds.length > 0) {
         body.contactIds = selectedContactIds
       }
+
       const res = await fetch(`/api/events/${eventId}/blast`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
       if (!res.ok) throw new Error('Failed')
-      const data = await res.json() as { jobId?: string }
+      const data = (await res.json()) as { jobId?: string }
       onOpenChange(false)
-      form.reset({ channel: 'whatsapp', scheduledDate: undefined, scheduledTime: undefined, scheduledAt: undefined })
+      setSelectedTemplate(null)
+      form.reset({ scheduleMode: 'now', scheduledDate: undefined, scheduledTime: undefined })
       toast.success('Blast dijadwalkan')
       onSuccess(data.jobId)
     } catch {
@@ -109,152 +123,154 @@ export function BlastConfigSheet({
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="flex flex-col overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle>Kirim Undangan</SheetTitle>
-          <SheetDescription>
-            Konfigurasi blast undangan untuk event ini
-          </SheetDescription>
-        </SheetHeader>
+    <Dialog open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) setSelectedTemplate(null) }}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Kirim Undangan</DialogTitle>
+          <DialogDescription>
+            Pilih template undangan dan jadwal pengiriman
+          </DialogDescription>
+        </DialogHeader>
 
-        <div className="flex-1 px-4 space-y-4 overflow-y-auto">
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-5 flex-1">
-            {/* Channel radio */}
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+          {/* Template selector — invitation + email only (Popover + Command) */}
+          <div className="space-y-2">
+            <Label>Template Undangan</Label>
+            <Popover open={templatePopoverOpen} onOpenChange={setTemplatePopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={templatePopoverOpen}
+                  className="w-full justify-between font-normal"
+                >
+                  {selectedTemplate
+                    ? selectedTemplate.name
+                    : 'Pilih template…'}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                <Command>
+                  <CommandInput placeholder="Cari template…" />
+                  <CommandEmpty>Tidak ada template undangan email</CommandEmpty>
+                  <CommandList>
+                    <CommandGroup>
+                      {invitationTemplates.map((t) => (
+                        <CommandItem
+                          key={t.id}
+                          value={t.id}
+                          onSelect={() => {
+                            form.setValue('templateId', t.id, { shouldValidate: true })
+                            setSelectedTemplate(t)
+                            setTemplatePopoverOpen(false)
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              'mr-2 h-4 w-4',
+                              selectedTemplate?.id === t.id ? 'opacity-100' : 'opacity-0'
+                            )}
+                          />
+                          {t.name}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+            {form.formState.errors.templateId && (
+              <p className="text-xs text-destructive">{form.formState.errors.templateId.message}</p>
+            )}
+          </div>
+
+          {/* Template Preview */}
+          {selectedTemplate && (
             <div className="space-y-2">
-              <Label>Saluran</Label>
-              <div className="flex gap-3">
-                {(['whatsapp', 'email'] as const).map((ch) => (
-                  <label key={ch} className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      value={ch}
-                      {...form.register('channel')}
-                      className="accent-primary"
-                      onChange={() => {
-                        form.setValue('channel', ch, { shouldValidate: true })
-                        form.setValue('templateId', '')
-                      }}
-                      checked={selectedChannel === ch}
-                    />
-                    <span className="text-sm capitalize">{ch === 'whatsapp' ? 'WhatsApp' : 'Email'}</span>
-                  </label>
-                ))}
+              <Label>Pratinjau</Label>
+              <div className="border border-border rounded-lg p-4 bg-muted/30">
+                <TemplatePreview
+                  body={selectedTemplate.body ?? ''}
+                  channel={selectedTemplate.channel}
+                  subject={selectedTemplate.subject}
+                />
               </div>
             </div>
+          )}
 
-            {/* Template selector */}
-            <div className="space-y-2">
-              <Label htmlFor="templateId">Template</Label>
-              <Select
-                value={form.watch('templateId') ?? ''}
-                onValueChange={(val) => form.setValue('templateId', val, { shouldValidate: true })}
-              >
-                <SelectTrigger id="templateId">
-                  <SelectValue placeholder="Pilih template…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {filteredTemplates.length === 0 ? (
-                    <SelectItem value="_none" disabled>Tidak ada template untuk saluran ini</SelectItem>
-                  ) : (
-                    filteredTemplates.map((t) => (
-                      <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-              {form.formState.errors.templateId && (
-                <p className="text-xs text-destructive">{form.formState.errors.templateId.message}</p>
-              )}
-            </div>
-
-            {/* Custom message (optional — replaces template) */}
-            <div className="space-y-2">
+          {/* Schedule mode: Now or Later */}
+          <div className="space-y-2">
+            <Label>Jadwal Pengiriman</Label>
+            <RadioGroup
+              value={scheduleMode}
+              onValueChange={(val) =>
+                form.setValue('scheduleMode', val as 'now' | 'later', { shouldValidate: true })
+              }
+              className="flex flex-col gap-3"
+            >
               <div className="flex items-center gap-2">
-                <div className="flex-1 h-px bg-border" />
-                <span className="text-xs text-muted-foreground">atau tulis pesan kustom</span>
-                <div className="flex-1 h-px bg-border" />
+                <RadioGroupItem value="now" id="schedule-now" />
+                <Label htmlFor="schedule-now" className="cursor-pointer font-normal">
+                  Kirim Sekarang
+                </Label>
               </div>
-              <Label htmlFor="customMessage">Pesan Kustom (opsional)</Label>
-              <Textarea
-                id="customMessage"
-                {...form.register('customMessage')}
-                rows={4}
-                placeholder="Tulis pesan undangan secara langsung tanpa template…"
-                onChange={(e) => {
-                  if (e.target.value.length <= MAX_CUSTOM_MESSAGE) {
-                    form.setValue('customMessage', e.target.value, { shouldValidate: true })
-                  }
-                }}
-              />
-              <div className="flex justify-end">
-                <p className="text-xs text-muted-foreground">{customMessage.length} / {MAX_CUSTOM_MESSAGE}</p>
-              </div>
-            </div>
-
-            {/* Optional scheduled date & time */}
-            <div className="space-y-2">
-              <Label>Jadwalkan (opsional)</Label>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label htmlFor="scheduledDate" className="text-xs text-muted-foreground">Tanggal</Label>
-                  <Input
-                    id="scheduledDate"
-                    type="date"
-                    min={new Date().toISOString().split('T')[0]}
-                    {...form.register('scheduledDate')}
-                    onChange={(e) => {
-                      form.setValue('scheduledDate', e.target.value, { shouldValidate: true })
-                      // Recompute scheduledAt from date + time
-                      const date = e.target.value
-                      const time = form.getValues('scheduledTime') ?? '09:00'
-                      if (date) {
-                        form.setValue('scheduledAt', `${date}T${time}:00.000Z`, { shouldValidate: true })
-                      }
-                    }}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="scheduledTime" className="text-xs text-muted-foreground">Waktu (24 jam)</Label>
-                  <Input
-                    id="scheduledTime"
-                    type="time"
-                    defaultValue="09:00"
-                    {...form.register('scheduledTime')}
-                    onChange={(e) => {
-                      form.setValue('scheduledTime', e.target.value, { shouldValidate: true })
-                      // Recompute scheduledAt from date + time
-                      const date = form.getValues('scheduledDate')
-                      const time = e.target.value
-                      if (date) {
-                        form.setValue('scheduledAt', `${date}T${time}:00.000Z`, { shouldValidate: true })
-                      }
-                    }}
-                  />
+              <div className="flex items-start gap-2">
+                <RadioGroupItem value="later" id="schedule-later" className="mt-1" />
+                <div className="flex-1 space-y-2">
+                  <Label htmlFor="schedule-later" className="cursor-pointer font-normal">
+                    Jadwalkan
+                  </Label>
+                  {scheduleMode === 'later' && (
+                    <div className="grid grid-cols-2 gap-3 mt-1">
+                      <div>
+                        <Label htmlFor="scheduledDate" className="text-xs text-muted-foreground">
+                          Tanggal
+                        </Label>
+                        <Input
+                          id="scheduledDate"
+                          type="date"
+                          min={new Date().toISOString().split('T')[0]}
+                          {...form.register('scheduledDate')}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="scheduledTime" className="text-xs text-muted-foreground">
+                          Waktu
+                        </Label>
+                        <Input
+                          id="scheduledTime"
+                          type="time"
+                          defaultValue="09:00"
+                          {...form.register('scheduledTime')}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
-          </form>
-        </div>
+            </RadioGroup>
+          </div>
 
-        <SheetFooter>
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={isSubmitting}
-            type="button"
-          >
-            Batal
-          </Button>
-          <Button
-            onClick={form.handleSubmit(onSubmit)}
-            disabled={isSubmitting}
-            type="button"
-          >
-            {isSubmitting ? 'Mengirim…' : 'Kirim Blast'}
-          </Button>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
+              type="button"
+            >
+              Batal
+            </Button>
+            <Button disabled={isSubmitting} type="submit">
+              {isSubmitting
+                ? 'Mengirim…'
+                : scheduleMode === 'now'
+                  ? 'Kirim Sekarang'
+                  : 'Jadwalkan Blast'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }
