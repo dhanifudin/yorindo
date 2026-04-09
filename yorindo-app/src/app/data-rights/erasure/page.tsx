@@ -43,6 +43,7 @@ export default function ErasurePage() {
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({ resolver: zodResolver(schema) })
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const confirmed = watch('confirmed')
 
   const onSubmit = async (values: FormValues) => {

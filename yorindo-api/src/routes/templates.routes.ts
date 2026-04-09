@@ -6,6 +6,7 @@ import { InMemoryTemplateRepository } from '../repositories/memory/TemplateRepos
 import { InMemoryAuditLogRepository } from '../repositories/memory/AuditLogRepository.js'
 import { Template } from '../types/domain.js'
 
+// Template routes - supports both PATCH and PUT for updates
 // repositories
 export const templateRepo = new InMemoryTemplateRepository()
 export const auditRepo = new InMemoryAuditLogRepository()
@@ -49,7 +50,7 @@ export const templatesRoutes: FastifyPluginAsync = async (fastify) => {
   // =========================
   const createSchema = z.object({
     name: z.string().min(1),
-    type: z.enum(['invitation', 'confirmation', 'rejection', 'ticket_delivery']),
+    type: z.enum(['invitation', 'confirmation', 'rejection', 'ticket_delivery', 'cancellation', 'reminder']),
     channel: z.enum(['email', 'whatsapp']),
     body: z.string().min(1),
   })
@@ -97,12 +98,12 @@ export const templatesRoutes: FastifyPluginAsync = async (fastify) => {
 
   const updateSchema = z.object({
     name: z.string().min(1).optional(),
-    type: z.enum(['invitation', 'confirmation', 'rejection', 'ticket_delivery']).optional(),
+    type: z.enum(['invitation', 'confirmation', 'rejection', 'ticket_delivery', 'cancellation', 'reminder']).optional(),
     channel: z.enum(['email', 'whatsapp']).optional(),
     body: z.string().min(1).optional(),
   })
 
-  fastify.patch('/api/templates/:id', async (request, reply) => {
+  const handleUpdateTemplate = async (request: any, reply: FastifyReply) => {
     const paramsParsed = paramsSchema.safeParse(request.params)
     if (!paramsParsed.success) {
       return replyValidationError(reply, paramsParsed.error.issues, 'Invalid params')
@@ -153,7 +154,11 @@ export const templatesRoutes: FastifyPluginAsync = async (fastify) => {
     })
 
     return reply.status(200).send(updated)
-  })
+  }
+
+  // Support both PATCH and PUT for template updates
+  fastify.patch('/api/templates/:id', handleUpdateTemplate)
+  fastify.put('/api/templates/:id', handleUpdateTemplate)
 
   // =========================
   // DELETE /api/templates/:id

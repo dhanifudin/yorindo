@@ -57,11 +57,12 @@ describe('useAudienceRecommendations', () => {
     expect(Object.keys(data?.excludedReasons ?? {})).not.toHaveLength(0)
   })
 
-  it('does not fetch when enabled is false', () => {
+  it('does not fetch when enabled is false', async () => {
     const { result } = renderHook(() => useAudienceRecommendations('event-001', false), {
       wrapper: makeWrapper(),
     })
 
+    await waitFor(() => expect(result.current).not.toBeNull(), { timeout: 1000 })
     expect(result.current.isLoading).toBe(false)
     expect(result.current.isFetching).toBe(false)
     expect(result.current.data).toBeUndefined()

@@ -269,6 +269,7 @@ export default function UsersPage() {
             total={total}
             onPrev={() => setUsersPage((p) => Math.max(1, p - 1))}
             onNext={() => setUsersPage((p) => (p * PAGE_SIZE < total ? p + 1 : p))}
+            onPageChange={(p) => setUsersPage(p + 1)}
           />
         </>
       )}

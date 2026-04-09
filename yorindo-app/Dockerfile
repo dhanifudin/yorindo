@@ -2,6 +2,7 @@
 FROM node:24-alpine AS deps
 WORKDIR /app
 COPY package*.json ./
+COPY scripts/ ./scripts/
 RUN npm ci
 
 # Stage 2: Build the application

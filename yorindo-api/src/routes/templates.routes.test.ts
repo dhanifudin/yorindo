@@ -44,7 +44,7 @@ describe('Templates API', () => {
       headers: { authorization: `Bearer ${createToken('admin')}` }
     })
     expect(res.statusCode).toBe(200)
-    expect(res.json()).toHaveLength(4) // seeded templates
+    expect(res.json()).toHaveLength(12) // seeded templates (6 types × 2 channels)
   })
 
   it('should create template', async () => {

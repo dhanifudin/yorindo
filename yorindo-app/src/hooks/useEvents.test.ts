@@ -20,7 +20,7 @@ describe('useEvents', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 3000 })
 
-    expect(result.current.data?.data).toHaveLength(6)
+    expect(result.current.data?.data).toHaveLength(7)
   })
 
   it('includes events with all expected statuses', async () => {
@@ -42,6 +42,7 @@ describe('useCreateEvent', () => {
     const wrapper = makeWrapper()
     const { result } = renderHook(() => useCreateEvent(), { wrapper })
 
+    await waitFor(() => expect(result.current).not.toBeNull(), { timeout: 1000 })
     result.current.mutate({
       name: 'Test Event',
       eventDate: '2026-06-01T09:00:00.000Z',

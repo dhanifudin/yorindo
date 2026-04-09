@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
-import { auditLogRepository, contactRepository, eventRepository, flaggedRecordsRepository, registrationRepository, suppressionRepository } from '../container.js'
+import { auditLogRepository, contactRepository, eventRepository, flaggedRecordsRepository, queueService, registrationRepository, suppressionRepository } from '../container.js'
 import { requireAdmin, requireAuth, type JwtPayload } from '../middleware/auth.js'
 import type { Contact, DuplicatePair, FlaggedRecord, FlaggedRecordStatus, RegistrationStatus, SuppressionRecord } from '../types/domain.js'
 import { INDONESIAN_INDUSTRIES } from '../repositories/memory/_seeds.js'
@@ -981,11 +981,26 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
 
     const actor = request.user as JwtPayload
     const payload = bodyResult.data
+    
+    // Determine blast target and actual recipient count
     const blastTarget = 'contactIds' in payload
       ? { type: 'contacts' as const, count: payload.contactIds.length, contactIds: payload.contactIds }
       : { type: 'segment' as const, count: payload.total, segmentParams: payload.segmentParams }
 
-    // Persist blast to audit log; actual dispatch handled by notification worker
+    // Enqueue the blast job to the marketing queue
+    const queueName = 'marketing'
+    const jobId = await queueService.enqueue(queueName, {
+      eventId: 'contacts-blast', // Virtual event ID for contact blasts
+      templateId: 'custom',
+      templateName: 'Contact Blast',
+      templateBody: `<p>Halo {{name}},</p><p>Anda diundang untuk menghadiri event kami. Silakan kunjungi: <a href="${payload.eventLink}">${payload.eventLink}</a></p><p>Kami mengharapkan kehadiran Anda.</p><p>Salam hormat,<br>Tim Yorindo</p>`,
+      channel: 'email',
+      contactIds: 'contactIds' in payload ? payload.contactIds : undefined,
+      filters: !('contactIds' in payload) ? payload.segmentParams : undefined,
+      enqueuedBy: actor.sub,
+    })
+
+    // Persist blast to audit log with job ID
     await auditLogRepository.create({
       action: 'contact.blast_initiated',
       actorId: actor.sub,
@@ -994,6 +1009,7 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
       targetId: `blast-${Date.now()}`,
       targetType: 'contact_blast',
       metadata: {
+        jobId,
         target: blastTarget,
         eventLink: payload.eventLink,
         channel: 'email',
@@ -1003,6 +1019,7 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
 
     const responseBody = {
       success: true,
+      jobId,
       message: `Blast queued for ${blastTarget.count} contacts`,
       eventLink: payload.eventLink,
       recipientCount: blastTarget.count,

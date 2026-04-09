@@ -1235,7 +1235,7 @@ components:
           example: Undangan Event
         type:
           type: string
-          enum: [invitation, confirmation, rejection, ticket_delivery]
+          enum: [invitation, confirmation, rejection, ticket_delivery, cancellation, reminder]
           example: invitation
         channel:
           type: string
@@ -1255,13 +1255,13 @@ components:
 
     CreateTemplateBody:
       type: object
-      required: [name, channel, body]
+      required: [name, type, channel, body]
       properties:
         name:
           type: string
         type:
           type: string
-          enum: [invitation, confirmation, rejection, cancellation]
+          enum: [invitation, confirmation, rejection, ticket_delivery, cancellation, reminder]
         channel:
           type: string
           enum: [email, whatsapp]
@@ -1988,6 +1988,36 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Template'
+    put:
+      summary: Update template (full replace)
+      operationId: updateTemplatePut
+      tags: [Blast]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                type: { type: string }
+                channel: { type: string }
+                body: { type: string }
+      responses:
+        '200':
+          description: Template updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
     delete:
       summary: Delete template
       operationId: deleteTemplate
@@ -2578,6 +2608,38 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/IndustrySuggestionsResponse'
+
+  /locations/cities:
+    get:
+      summary: Get list of Indonesian cities for location dropdown
+      operationId: getCities
+      tags: [Locations]
+      security: []
+      responses:
+        '200':
+          description: List of cities with province info
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        value:
+                          type: string
+                          example: "Bandung"
+                        label:
+                          type: string
+                          example: "Bandung, Jawa Barat"
+                        provinceCode:
+                          type: string
+                          example: "32"
+                        cityCode:
+                          type: string
+                          example: "32.73"
         '400':
           description: Validation error
           content:
@@ -2818,10 +2880,12 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [success, message, eventLink, recipientCount]
+                required: [success, jobId, message, eventLink, recipientCount]
                 properties:
                   success:
                     type: boolean
+                  jobId:
+                    type: string
                   message:
                     type: string
                   eventLink:
@@ -3052,7 +3116,8 @@ paths:
     get:
       summary: Get a public event by slug (unauthenticated)
       operationId: getPublicEventBySlug
-      tags: [Events]
+      tags:
+        - Events
       security: []
       parameters:
         - name: slug
@@ -3102,14 +3167,8 @@ paths:
                 properties:
                   available:
                     type: boolean
-        '400':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-        '401':
-          description: Unauthorized
+        '404':
+          description: Event not found
           content:
             application/json:
               schema:
@@ -4563,6 +4622,54 @@ paths:
                 $ref: '#/components/schemas/PaginatedRegistrations'
         '401':
           description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /registrations/confirm/{token}:
+    get:
+      summary: Confirm registration via email token (unauthenticated)
+      operationId: confirmRegistration
+      tags: [Registrations]
+      security: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Registration confirmed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  registration:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      status:
+                        type: string
+                      eventName:
+                        type: string
+                      eventSlug:
+                        type: string
+                      eventDate:
+                        type: string
+                      participantName:
+                        type: string
+                      contactId:
+                        type: string
+                      participantEmail:
+                        type: string
+        '400':
+          description: Invalid or expired token
           content:
             application/json:
               schema:
