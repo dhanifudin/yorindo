@@ -89,10 +89,10 @@ export default function BlastPage({ params }: BlastPageProps) {
     },
   })
 
-  function handleBlastSuccess() {
+  function handleBlastSuccess(jobId?: string) {
     refetchHistory()
     setSelectedContactIds(new Set())
-    setActiveJobId('mock-job-1')
+    setActiveJobId(jobId ?? null)
   }
 
   return (
