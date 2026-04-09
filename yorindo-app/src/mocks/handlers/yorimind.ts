@@ -2,6 +2,7 @@ import { http, HttpResponse, delay } from 'msw'
 import type { YoriMindResult } from '@/types/api'
 
 const mockYoriMindResult: YoriMindResult = {
+  disabled: false,
   analysis:
     'Event menunjukkan tingkat minat awal yang kuat dengan 85% tingkat pendaftaran dalam 3 hari pertama kampanye. ' +
     'Namun, tingkat konversi menurun signifikan pada pertengahan minggu kedua, kemungkinan karena pengumuman acara ' +
