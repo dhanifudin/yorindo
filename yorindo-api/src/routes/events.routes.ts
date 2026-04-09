@@ -503,7 +503,6 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     if (!parsed.success) return replyValidationError(reply, parsed.error.issues, 'Invalid request body')
 
     const payload = parsed.data
-    validateOpenApiRequest({ path: '/events', method: 'post', body: payload })
     const baseSlug = payload.slug || payload.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
     let finalSlug = baseSlug
     let counter = 2
@@ -553,7 +552,6 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     })
 
     const responseBody = toEventDto(event, undefined, registrations.total)
-    validateOpenApiResponse({ path: '/events', method: 'post', status: 201, body: responseBody })
     return reply.status(201).send(responseBody)
   })
 
@@ -577,10 +575,8 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     const allowed = await requireEventAccessOr403(reply, request.user as JwtPayload | undefined, event.id)
     if (!allowed) return
     const surveySchema = await surveyRepository.findByEventId(event.id, 'registration')
-    validateOpenApiRequest({ path: '/events/{id}', method: 'get', params: parsed.data })
     const registrations = await registrationRepository.findByEvent(event.id, { page: 1, pageSize: 1 })
     const responseBody = toEventDto(event, surveySchema?.fields ?? {}, registrations.total)
-    validateOpenApiResponse({ path: '/events/{id}', method: 'get', status: 200, body: responseBody })
     return reply.status(200).send(responseBody)
   })
 
