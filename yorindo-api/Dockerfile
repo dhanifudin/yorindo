@@ -16,7 +16,7 @@ WORKDIR /app
 
 # Non-root user for security
 RUN addgroup -g 1001 -S nodejs && adduser -S yorindo -u 1001
-RUN mkdir -p /app/uploads && chown -R yorindo:nodejs /app/uploads
+RUN mkdir -p /app/uploads /app/logs && chown -R yorindo:nodejs /app/uploads /app/logs
 
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json

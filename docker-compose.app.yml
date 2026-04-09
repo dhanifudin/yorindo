@@ -1,5 +1,6 @@
-# Frontend preview — app.dhanifudin.com
-# Pulls pre-built image from Docker Hub, serves with MSW mocks.
+# EM · U — App preview (app.dhanifudin.com)
+# Pulls pre-built image from Docker Hub.
+# Deployed on every push to main branch affecting yorindo-app.
 #
 # Usage:
 #   make deploy-app    (pull + start)
@@ -11,11 +12,13 @@
 
 services:
   app:
-    container_name: yorindo-preview-app
+    container_name: emu-preview-app
     image: dhanifudin/yorindo-app:${IMAGE_TAG:-preview}
     ports:
       - "127.0.0.1:5173:3000"
-    env_file: .env
+    environment:
+      API_URL: http://api:3000
+      NEXT_PUBLIC_ENABLE_MOCKS: "false"
     restart: unless-stopped
     logging:
       driver: json-file

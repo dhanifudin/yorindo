@@ -17,7 +17,7 @@ export class MailtrapEmailService implements IEmailService {
   async send(payload: EmailPayload): Promise<{ messageId: string }> {
     try {
       const info = await this.transporter.sendMail({
-        from: { name: 'EM · U', address: config.brevoSenderEmail ?? 'noreply@yorindo.app' },
+        from: { name: 'EM · U', address: 'noreply@emu.app' },
         to: payload.to,
         subject: payload.subject,
         html: payload.body,
