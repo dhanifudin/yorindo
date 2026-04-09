@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
 // In Docker, write to /app/logs (which can be a mounted volume).
-// In local dev, write to yorindo-api/logs.
+// In local dev, write to emu-api/logs.
 const LOG_DIR = process.env.NODE_ENV === 'production'
   ? '/app/logs'
   : join(__dirname, '..', '..', 'logs')

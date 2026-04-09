@@ -26,7 +26,7 @@ const SAMPLE_VALUES: Record<string, string> = {
   confirm_url: 'https://example.com/confirm',
   industry: 'Teknologi',
   company: 'PT. Maju Jaya',
-  registration_link: 'https://yorindo.id/register/erp-summit-jakarta-2026',
+  registration_link: 'https://emu.id/register/erp-summit-jakarta-2026',
   days: '7',
   token: 'ABC123XYZ',
 }

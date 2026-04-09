@@ -14,10 +14,10 @@ export class InMemoryUserRepository implements IUserRepository {
 
   private _seed(): void {
     const seedUsers: Array<{ role: UserRole; email: string; name: string }> = [
-      { role: 'admin',  email: 'admin@yorindo.id',  name: 'Admin Yorindo' },
-      { role: 'staff',  email: 'staff@yorindo.id',  name: 'Staff Yorindo' },
-      { role: 'viewer', email: 'viewer@yorindo.id', name: 'Viewer Yorindo' },
-      { role: 'participant', email: 'participant@yorindo.id', name: 'Participant Yorindo' },
+      { role: 'admin',  email: 'admin@yorindo.id',  name: 'Admin EM · U' },
+      { role: 'staff',  email: 'staff@yorindo.id',  name: 'Staff EM · U' },
+      { role: 'viewer', email: 'viewer@yorindo.id', name: 'Viewer EM · U' },
+      { role: 'participant', email: 'participant@yorindo.id', name: 'Participant EM · U' },
     ]
 
     for (const { role, email, name } of seedUsers) {

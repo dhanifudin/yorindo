@@ -993,7 +993,7 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
       eventId: 'contacts-blast', // Virtual event ID for contact blasts
       templateId: 'custom',
       templateName: 'Contact Blast',
-      templateBody: `<p>Halo {{name}},</p><p>Anda diundang untuk menghadiri event kami. Silakan kunjungi: <a href="${payload.eventLink}">${payload.eventLink}</a></p><p>Kami mengharapkan kehadiran Anda.</p><p>Salam hormat,<br>Tim Yorindo</p>`,
+      templateBody: `<p>Halo {{name}},</p><p>Anda diundang untuk menghadiri event kami. Silakan kunjungi: <a href="${payload.eventLink}">${payload.eventLink}</a></p><p>Kami mengharapkan kehadiran Anda.</p><p>Salam hormat,<br>Tim EM · U</p>`,
       channel: 'email',
       contactIds: 'contactIds' in payload ? payload.contactIds : undefined,
       filters: !('contactIds' in payload) ? payload.segmentParams : undefined,

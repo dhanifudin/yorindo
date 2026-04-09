@@ -1,4 +1,4 @@
-// Shared TypeScript types for yorindo-api
+// Shared TypeScript types for emu-api
 // Feature-specific types live in their domain files
 
 export interface PaginatedResult<T> {

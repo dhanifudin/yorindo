@@ -46,7 +46,7 @@ export function BlastEventDialog({
       const url = new URL(val.trim())
       if (!['http:', 'https:'].includes(url.protocol)) return 'Link harus dimulai dengan http:// atau https://'
     } catch {
-      return 'Link tidak valid, contoh: https://event.yorindo.com/xyz'
+      return 'Link tidak valid, contoh: https://event.emu.com/xyz'
     }
     return ''
   }
@@ -122,7 +122,7 @@ export function BlastEventDialog({
             <Input
               id="blast-link"
               type="url"
-              placeholder="https://event.yorindo.com/..."
+              placeholder="https://event.emu.com/..."
               value={link}
               onChange={(e) => {
                 setLink(e.target.value)

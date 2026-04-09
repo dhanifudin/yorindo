@@ -77,9 +77,9 @@ async function seed(): Promise<void> {
     const sharedHash = await bcrypt.hash('Password123!', 10)
     await client.query(`
       INSERT INTO users (id, email, password_hash, role, name) VALUES
-        ($1, 'admin@yorindo.id', $4, 'admin', 'Admin Yorindo'),
-        ($2, 'staff@yorindo.id', $4, 'staff', 'Staff Yorindo'),
-        ($3, 'viewer@yorindo.id', $4, 'viewer', 'Viewer Yorindo')
+        ($1, 'admin@yorindo.id', $4, 'admin', 'Admin EM · U'),
+        ($2, 'staff@yorindo.id', $4, 'staff', 'Staff EM · U'),
+        ($3, 'viewer@yorindo.id', $4, 'viewer', 'Viewer EM · U')
       ON CONFLICT (email) DO NOTHING
     `, [createId(), createId(), createId(), sharedHash])
     console.log('✓ Seeded users (admin + staff + viewer)')
@@ -177,7 +177,7 @@ async function seed(): Promise<void> {
 <div class="container">
   <div class="header"><h1>${title}</h1><p>${accent}</p></div>
   <div class="content">${bodyHtml}</div>
-  ${footer ? '<div class="footer"><p style="font-weight:600;color:#184A9A;margin-bottom:6px">Yorindo Event Management</p><p>Email ini dikirim secara otomatis, mohon tidak membalas.</p><p>&copy; 2026 Yorindo. Hak cipta dilindungi.</p></div>' : ''}
+  ${footer ? '<div class="footer"><p style="font-weight:600;color:#184A9A;margin-bottom:6px">EM · U Event Management</p><p>Email ini dikirim secara otomatis, mohon tidak membalas.</p><p>&copy; 2026 EM · U. Hak cipta dilindungi.</p></div>' : ''}
 </div></body></html>`
 
     await client.query(`

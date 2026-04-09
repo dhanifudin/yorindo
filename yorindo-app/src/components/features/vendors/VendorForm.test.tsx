@@ -57,12 +57,12 @@ describe('VendorForm', () => {
       expect((screen.getByPlaceholderText('https://cdn.perusahaan.com/logo.png') as HTMLInputElement).value).toBe('')
 
       // Catatan (textarea) — pakai queryBy karena mungkin belum dirender di create mode
-      const notesTextarea = screen.queryByPlaceholderText(/Catatan untuk tim Yorindo/i)
+      const notesTextarea = screen.queryByPlaceholderText(/Catatan untuk tim EM · U/i)
 
       if (notesTextarea) {
         expect((notesTextarea as HTMLTextAreaElement).value).toBe('')
       } else {
-        console.warn('⚠️  Notes field (Catatan untuk tim Yorindo) tidak muncul di create mode. Saran: tambahkan field ini agar selalu terlihat.')
+        console.warn('⚠️  Notes field (Catatan untuk tim EM · U) tidak muncul di create mode. Saran: tambahkan field ini agar selalu terlihat.')
       }
 
       // Industri select harus kosong

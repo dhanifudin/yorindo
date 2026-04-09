@@ -26,7 +26,7 @@ const EMAIL_WRAP = (title: string, accent: string, bodyHtml: string) => `<!DOCTY
 <div class="container">
   <div class="header"><h1>${title}</h1><p>${accent}</p></div>
   <div class="content">${bodyHtml}</div>
-  <div class="footer"><p style="font-weight:600;color:#184A9A;margin-bottom:6px">Yorindo Event Management</p><p>Email ini dikirim secara otomatis, mohon tidak membalas.</p><p>&copy; 2026 Yorindo. Hak cipta dilindungi.</p></div>
+  <div class="footer"><p style="font-weight:600;color:#184A9A;margin-bottom:6px">EM · U Event Management</p><p>Email ini dikirim secara otomatis, mohon tidak membalas.</p><p>&copy; 2026 EM · U. Hak cipta dilindungi.</p></div>
 </div></body></html>`
 
 const templates = [

@@ -13,7 +13,7 @@ import OpenAI from 'openai'
 import { config } from '../../../config/index.js'
 import type { IYoriMindService, EventSnapshot, YoriMindResult } from '../../../interfaces/services/IYoriMindService.js'
 
-const SYSTEM_PROMPT = `Anda adalah YoriMind, asisten AI analitik event untuk platform Yorindo di Indonesia.
+const SYSTEM_PROMPT = `Anda adalah YoriMind, asisten AI analitik event untuk platform EM · U di Indonesia.
 Tugas Anda adalah menganalisis data event dan memberikan insight dalam bahasa Indonesia.
 
 Berikan respons dalam format JSON EXACT seperti schema berikut:
