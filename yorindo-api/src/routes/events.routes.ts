@@ -1076,9 +1076,12 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       hasEmail: true,                // Must have email for blast delivery
       hasPhone: true,                // Must have phone for blast delivery
     }
-    if (effectiveFilters.serviceTypes?.length) filters.serviceTypes = effectiveFilters.serviceTypes as string[]
-    if (effectiveFilters.cities?.length) filters.cities = effectiveFilters.cities as string[]
-    if (effectiveFilters.jobTitles?.length) filters.jobTitles = effectiveFilters.jobTitles as string[]
+    const svcTypes = effectiveFilters.serviceTypes as string[] | undefined
+    const cities = effectiveFilters.cities as string[] | undefined
+    const jobTitles = effectiveFilters.jobTitles as string[] | undefined
+    if (svcTypes?.length) filters.serviceTypes = svcTypes
+    if (cities?.length) filters.cities = cities
+    if (jobTitles?.length) filters.jobTitles = jobTitles
 
     // Fetch all matching contacts (use large pageSize, rely on total for accurate count)
     const contacts = await contactRepository.findAll({ page: 1, pageSize: 10000 }, filters)
