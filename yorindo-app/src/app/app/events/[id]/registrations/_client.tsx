@@ -306,16 +306,9 @@ export default function RegistrationsPage({ params }: RegistrationsPageProps) {
           (reg.contactFlagCategory === 'invalid-data' || reg.contactFlagCategory === 'duplicate')
         return (
           <div className="flex flex-col gap-0.5">
-            <button
-              className="text-sm font-medium text-left hover:underline"
-              onClick={(e) => {
-                e.stopPropagation()
-                // row.index is the filtered row index (position in filteredRows)
-                setSheetIndex(row.index)
-              }}
-            >
+            <div className="text-sm font-medium text-left hover:underline">
               {reg.contactName}
-            </button>
+            </div>
             <span className="text-xs text-muted-foreground">{reg.contactEmail}</span>
             {showFlag && (
               <span className="inline-flex items-center gap-1 text-xs text-red-700">

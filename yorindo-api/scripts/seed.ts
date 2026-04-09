@@ -85,17 +85,13 @@ async function seed(): Promise<void> {
     console.log('✓ Seeded users (admin + staff + viewer)')
 
     // Events
-    const now = new Date()
-    const futureDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
-    const pastDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-
     await client.query(`
       INSERT INTO events (id, name, slug, date, city, venue, capacity, status, is_paid, registration_closed) VALUES
-        ($1, 'Workshop Teknologi 2026', 'workshop-teknologi-2026', $4, 'Jakarta', 'Gedung A', 100, 'draft', FALSE, FALSE),
-        ($2, 'Konferensi Kesehatan', 'konferensi-kesehatan', $5, 'Bandung', 'Balai Kota', 200, 'published', FALSE, FALSE),
-        ($3, 'Seminar Inovasi 2025', 'seminar-inovasi-2025', $6, 'Surabaya', 'Hotel Grand', 150, 'completed', FALSE, TRUE)
+        ($1, 'Workshop Teknologi 2026', 'workshop-teknologi-2026', NOW() + INTERVAL '30 days', 'Jakarta', 'Gedung A', 100, 'draft', FALSE, FALSE),
+        ($2, 'Konferensi Kesehatan', 'konferensi-kesehatan', NOW() + INTERVAL '60 days', 'Bandung', 'Balai Kota', 200, 'published', FALSE, FALSE),
+        ($3, 'Seminar Inovasi 2025', 'seminar-inovasi-2025', NOW() - INTERVAL '30 days', 'Surabaya', 'Hotel Grand', 150, 'completed', FALSE, TRUE)
       ON CONFLICT (slug) DO NOTHING
-    `, [createId(), createId(), createId(), futureDate, futureDate, pastDate])
+    `, [createId(), createId(), createId()])
     console.log('✓ Seeded events (draft, published, completed)')
 
     // Contacts — valid status values: provisional | pending | approved | rejected

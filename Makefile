@@ -216,10 +216,12 @@ lint-api:
 	@echo "🔍 Linting yorindo-api..."
 	$(DEV_COMPOSE) exec -T api npm run lint
 
-## Lint app (ESLint)
+## Lint app (ESLint + TypeScript type-check)
 lint-app:
 	@echo "🔍 Linting yorindo-app..."
 	$(DEV_COMPOSE) exec -T app npm run lint
+	@echo "📝 Typechecking yorindo-app..."
+	$(DEV_COMPOSE) exec -T app npx tsc --noEmit
 
 ## Run all tests
 test: test-api test-app

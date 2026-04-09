@@ -35,8 +35,8 @@ export function BlockerStrip({ items, className }: BlockerStripProps) {
           onClick={item.onClick}
           className={cn(
             'h-7 text-xs',
-            item.urgency === 'warning' && 'text-amber-600 hover:text-amber-700',
-            item.urgency === 'critical' && 'text-destructive hover:text-destructive',
+            item.urgency === 'warning' && 'text-amber-700 hover:text-amber-800',
+            item.urgency === 'critical' && 'text-red-700 hover:text-red-800',
           )}
         >
           {item.label}

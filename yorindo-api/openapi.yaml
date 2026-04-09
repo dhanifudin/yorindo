@@ -3116,7 +3116,8 @@ paths:
     get:
       summary: Get a public event by slug (unauthenticated)
       operationId: getPublicEventBySlug
-      tags: [Events]
+      tags:
+        - Events
       security: []
       parameters:
         - name: slug

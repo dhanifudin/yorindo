@@ -17,7 +17,11 @@ export default function LoginPage() {
   const [showSsoDialog, setShowSsoDialog] = useState(false)
 
   useEffect(() => {
-    if (hydrated && accessToken) router.replace('/app')
+    if (hydrated && accessToken) {
+      const redirectUrl = sessionStorage.getItem('loginRedirectUrl')
+      sessionStorage.removeItem('loginRedirectUrl')
+      router.replace(redirectUrl || '/app')
+    }
   }, [hydrated, accessToken, router])
 
   if (!hydrated || accessToken) return <div />
@@ -32,7 +36,11 @@ export default function LoginPage() {
       if (!res.ok) throw new Error('Login gagal')
       const data = await res.json()
 
-           setAuth(data.accessToken, data.user, data.eventKeys ?? {})
+      setAuth(data.accessToken, data.user, data.eventKeys ?? {})
+      // Redirect to the originally intended destination, or /app as fallback
+      const redirectUrl = sessionStorage.getItem('loginRedirectUrl')
+      sessionStorage.removeItem('loginRedirectUrl')
+      router.push(redirectUrl || '/app')
     } catch (err) {
       console.error(err)
       toast.error('Login peserta gagal. Silakan coba lagi.')
