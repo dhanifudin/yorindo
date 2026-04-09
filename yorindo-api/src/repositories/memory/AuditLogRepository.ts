@@ -59,4 +59,12 @@ export class InMemoryAuditLogRepository implements IAuditLogRepository {
   async findAllByTarget(targetId: string): Promise<AuditLog[]> {
     return Array.from(this.logs.values()).filter(log => log.targetId === targetId)
   }
+
+  async findAll(filters?: { action?: string }): Promise<AuditLog[]> {
+    let results = Array.from(this.logs.values())
+    if (filters?.action) {
+      results = results.filter(log => log.action === filters.action)
+    }
+    return results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+  }
 }

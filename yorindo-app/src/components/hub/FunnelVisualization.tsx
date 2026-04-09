@@ -46,29 +46,33 @@ function FunnelBar({ label, count, maxCount, badge, cta }: FunnelBarProps) {
 }
 
 export function FunnelVisualization({ blastCount, registrationCount, approvedCount, attendedCount, eventStatus, eventId }: FunnelData) {
-  const maxCount = Math.max(blastCount, registrationCount, approvedCount, attendedCount, 1)
+  const bc = blastCount ?? 0
+  const rc = registrationCount ?? 0
+  const ac = approvedCount ?? 0
+  const atc = attendedCount ?? 0
+  const maxCount = Math.max(bc, rc, ac, atc, 1)
   const baseHref = `/app/events/${eventId}`
 
   // Conversion rates
-  const blastToReg = blastCount > 0 ? registrationCount / blastCount : null
-  const regToApproval = registrationCount > 0 ? approvedCount / registrationCount : null
-  const approvalToAttend = approvedCount > 0 ? attendedCount / approvedCount : null
+  const blastToReg = bc > 0 ? rc / bc : null
+  const regToApproval = rc > 0 ? ac / rc : null
+  const approvalToAttend = ac > 0 ? atc / ac : null
 
   const isLiveOrDone = eventStatus === 'active' || eventStatus === 'completed'
 
-  const blastHealth: Health = blastCount === 0 ? 'pending' : blastToReg !== null ? getHealth(blastToReg, 'blastToRegistration') : 'pending'
-  const regHealth: Health = registrationCount === 0 ? 'pending' : regToApproval !== null ? getHealth(regToApproval, 'registrationToApproval') : 'pending'
+  const blastHealth: Health = bc === 0 ? 'pending' : blastToReg !== null ? getHealth(blastToReg, 'blastToRegistration') : 'pending'
+  const regHealth: Health = rc === 0 ? 'pending' : regToApproval !== null ? getHealth(regToApproval, 'registrationToApproval') : 'pending'
   const attendHealth: Health = !isLiveOrDone ? 'pending' : approvalToAttend !== null ? getHealth(approvalToAttend, 'approvalToAttendance') : 'pending'
 
   return (
     <div className="space-y-1">
       <FunnelBar
         label="Diundang"
-        count={blastCount}
+        count={bc}
         maxCount={maxCount}
         badge={<ConversionBadge health="pending" rate={null} label="Blast baseline" />}
         cta={
-          blastCount === 0 ? (
+          bc === 0 ? (
             <Link href={`${baseHref}/blast`} className="text-xs text-primary underline underline-offset-2 whitespace-nowrap">
               Belum ada blast — kirim undangan sekarang
             </Link>
@@ -77,19 +81,19 @@ export function FunnelVisualization({ blastCount, registrationCount, approvedCou
       />
       <FunnelBar
         label="Mendaftar"
-        count={registrationCount}
+        count={rc}
         maxCount={maxCount}
         badge={<ConversionBadge health={blastHealth} rate={blastToReg} label="Blast → Registrasi" />}
       />
       <FunnelBar
         label="Disetujui"
-        count={approvedCount}
+        count={ac}
         maxCount={maxCount}
         badge={<ConversionBadge health={regHealth} rate={regToApproval} label="Registrasi → Disetujui" />}
       />
       <FunnelBar
         label="Hadir"
-        count={attendedCount}
+        count={atc}
         maxCount={maxCount}
         badge={<ConversionBadge health={attendHealth} rate={isLiveOrDone ? approvalToAttend : null} label="Disetujui → Hadir" />}
       />

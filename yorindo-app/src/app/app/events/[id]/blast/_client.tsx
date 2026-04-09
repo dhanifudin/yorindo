@@ -5,12 +5,12 @@ import { useQuery } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { AudiencePreviewCard } from '@/components/undangan/AudiencePreviewCard'
+import { AudienceTargetList } from '@/components/undangan/AudienceTargetList'
 import { BlastHistoryList, type BlastRecord } from '@/components/undangan/BlastHistoryList'
 import { BlastConfigSheet } from '@/components/undangan/BlastConfigSheet'
 import { BlastProgressBar, type BlastJobStatus } from '@/components/undangan/BlastProgressBar'
 import { EmergencyBlastSheet } from '@/components/undangan/EmergencyBlastSheet'
-import type { Event } from '@/types/api'
+import type { Event, AudiencePreviewResponse } from '@/types/api'
 
 interface BlastPageProps {
   params: Promise<{ id: string }>
@@ -24,9 +24,10 @@ interface Template {
 
 export default function BlastPage({ params }: BlastPageProps) {
   const { id } = use(params)
-const [sheetOpen, setSheetOpen] = useState(false)
+  const [sheetOpen, setSheetOpen] = useState(false)
   const [showEmergencySheet, setShowEmergencySheet] = useState(false)
   const [activeJobId, setActiveJobId] = useState<string | null>(null)
+  const [selectedContactIds, setSelectedContactIds] = useState<Set<string>>(new Set())
 
   // Fetch event for targetCriteria
   const { data: event } = useQuery<Event>({
@@ -36,7 +37,7 @@ const [sheetOpen, setSheetOpen] = useState(false)
   })
 
   // Fetch audience preview via POST (on mount when event loaded)
-  const { data: audienceData, isLoading: audienceLoading } = useQuery<{ count: number }>({
+  const { data: audienceData, isLoading: audienceLoading } = useQuery<AudiencePreviewResponse>({
     queryKey: ['event', id, 'audience-preview'],
     queryFn: () =>
       fetch(`/api/events/${id}/audience-preview`, {
@@ -47,6 +48,10 @@ const [sheetOpen, setSheetOpen] = useState(false)
     enabled: !!event,
     staleTime: 60_000,
   })
+
+  // Reset selection when audience data changes
+  const contacts = audienceData?.contacts ?? []
+  const totalContacts = audienceData?.totalContacts ?? 0
 
   // Blast history
   const { data: blasts, isLoading: historyLoading, refetch: refetchHistory } = useQuery<BlastRecord[]>({
@@ -86,21 +91,29 @@ const [sheetOpen, setSheetOpen] = useState(false)
 
   function handleBlastSuccess() {
     refetchHistory()
-    // In real flow we'd get jobId from POST response and set it
+    setSelectedContactIds(new Set())
     setActiveJobId('mock-job-1')
   }
 
   return (
     <div className="space-y-4">
-      {/* Audience preview + action */}
-      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-        <div className="flex-1 w-full">
-          <AudiencePreviewCard
-            count={audienceData?.count}
-            isLoading={audienceLoading || !event}
-          />
-        </div>
-        <Button onClick={() => setSheetOpen(true)} className="shrink-0">
+      {/* Audience target list with selection */}
+      <AudienceTargetList
+        contacts={contacts}
+        totalContacts={totalContacts}
+        isLoading={audienceLoading || !event}
+        selectedIds={selectedContactIds}
+        onSelectionChange={setSelectedContactIds}
+      />
+
+      {/* Action bar */}
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-muted-foreground">
+          {selectedContactIds.size > 0
+            ? `${selectedContactIds.size} kontak dipilih`
+            : 'Pilih kontak di atas atau kirim ke semua audiens'}
+        </p>
+        <Button onClick={() => setSheetOpen(true)} disabled={audienceLoading}>
           Kirim Undangan
         </Button>
       </div>
@@ -156,6 +169,7 @@ const [sheetOpen, setSheetOpen] = useState(false)
         onOpenChange={setSheetOpen}
         eventId={id}
         templates={templates}
+        selectedContactIds={selectedContactIds.size > 0 ? Array.from(selectedContactIds) : undefined}
         onSuccess={handleBlastSuccess}
       />
 

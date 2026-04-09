@@ -50,6 +50,7 @@ interface BlastConfigSheetProps {
   onOpenChange: (open: boolean) => void
   eventId: string
   templates: Template[]
+  selectedContactIds?: string[]
   onSuccess: () => void
 }
 
@@ -58,6 +59,7 @@ export function BlastConfigSheet({
   onOpenChange,
   eventId,
   templates,
+  selectedContactIds,
   onSuccess,
 }: BlastConfigSheetProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -75,10 +77,14 @@ export function BlastConfigSheet({
   async function onSubmit(values: BlastFormValues) {
     setIsSubmitting(true)
     try {
-      const res = await fetch('/api/blast', {
+      const body: Record<string, unknown> = { ...values }
+      if (selectedContactIds && selectedContactIds.length > 0) {
+        body.contactIds = selectedContactIds
+      }
+      const res = await fetch(`/api/events/${eventId}/blast`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ eventId, ...values }),
+        body: JSON.stringify(body),
       })
       if (!res.ok) throw new Error('Failed')
       onOpenChange(false)

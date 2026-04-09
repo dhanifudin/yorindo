@@ -127,7 +127,11 @@ export class PostgresContactRepository
       values.push(filters.jobTitles)
       idx++
     }
-    if (filters?.flagCategory) {
+    if (filters?.flagCategory === 'NONE') {
+      conditions.push('flag_category IS NULL')
+    } else if (filters?.flagCategory === 'ANY') {
+      conditions.push('flag_category IS NOT NULL')
+    } else if (filters?.flagCategory) {
       conditions.push(`flag_category = $${idx}`)
       values.push(filters.flagCategory)
       idx++
