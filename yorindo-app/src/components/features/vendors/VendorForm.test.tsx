@@ -1,6 +1,6 @@
 'use client'
 
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { VendorForm } from './VendorForm'
 import type { Vendor } from '@/types/api'
@@ -23,84 +23,102 @@ const mockVendor: Vendor = {
   updated_at: '2026-01-01T00:00:00Z',
 }
 
-describe('VendorForm — edit mode pre-population (AC1)', () => {
-  it('pre-fills all fields with vendor values when opened in edit mode', async () => {
-    render(<VendorForm open={true} onOpenChange={vi.fn()} vendor={mockVendor} />)
+describe('VendorForm', () => {
+  describe('VendorForm — edit mode pre-population (AC1)', () => {
+    it('pre-fills all fields with vendor values when opened in edit mode', async () => {
+      render(<VendorForm open={true} onOpenChange={vi.fn()} vendor={mockVendor} />)
 
-    await waitFor(() => {
-      expect(screen.getByDisplayValue('Alibaba Cloud')).toBeTruthy()
-      expect(screen.getByDisplayValue('contact@alibaba.com')).toBeTruthy()
-      expect(screen.getByDisplayValue('https://alibaba.com')).toBeTruthy()
-      expect(screen.getByDisplayValue('https://cdn.alibaba.com/logo.png')).toBeTruthy()
-      expect(screen.getByDisplayValue('Catatan internal test')).toBeTruthy()
-    })
+      await waitFor(() => {
+        expect(screen.getByDisplayValue('Alibaba Cloud')).toBeInTheDocument()
+        expect(screen.getByDisplayValue('contact@alibaba.com')).toBeInTheDocument()
+        expect(screen.getByDisplayValue('https://alibaba.com')).toBeInTheDocument()
+        expect(screen.getByDisplayValue('https://cdn.alibaba.com/logo.png')).toBeInTheDocument()
+        expect(screen.getByDisplayValue('Catatan internal test')).toBeInTheDocument()
+      })
 
-    const industrySelect = screen.getByRole('combobox')
-    expect((industrySelect as HTMLSelectElement).value).toBe('teknologi')
-  })
-})
-
-describe('VendorForm — create mode (AC2)', () => {
-  it('opens with empty fields when no vendor prop is provided', () => {
-    render(<VendorForm open={true} onOpenChange={vi.fn()} />)
-
-    expect((screen.getByPlaceholderText('Contoh: Alibaba Cloud') as HTMLInputElement).value).toBe('')
-    expect((screen.getByPlaceholderText('sponsor@perusahaan.com') as HTMLInputElement).value).toBe('')
-    expect((screen.getByPlaceholderText('https://perusahaan.com') as HTMLInputElement).value).toBe('')
-    expect((screen.getByPlaceholderText('https://cdn.perusahaan.com/logo.png') as HTMLInputElement).value).toBe('')
-    expect((screen.getByPlaceholderText('Catatan untuk tim Yorindo...') as HTMLTextAreaElement).value).toBe('')
-
-    const industrySelect = screen.getByRole('combobox')
-    expect((industrySelect as HTMLSelectElement).value).toBe('')
-  })
-})
-
-describe('VendorForm — re-open behavior (AC3)', () => {
-  it('shows original vendor values after closing and re-opening', async () => {
-    const { rerender } = render(
-      <VendorForm open={true} onOpenChange={vi.fn()} vendor={mockVendor} />
-    )
-
-    // Close the dialog
-    rerender(<VendorForm open={false} onOpenChange={vi.fn()} vendor={mockVendor} />)
-
-    // Re-open — reset() should fire again and restore vendor values
-    rerender(<VendorForm open={true} onOpenChange={vi.fn()} vendor={mockVendor} />)
-
-    await waitFor(() => {
-      expect(screen.getByDisplayValue('Alibaba Cloud')).toBeTruthy()
-      expect(screen.getByDisplayValue('contact@alibaba.com')).toBeTruthy()
+      const industrySelect = screen.getByRole('combobox')
+      expect((industrySelect as HTMLSelectElement).value).toBe('teknologi')
     })
   })
 
-  it('shows updated values when a different vendor is passed on re-open', async () => {
-    const otherVendor: Vendor = {
-      ...mockVendor,
-      id: 'vendor-002',
-      name: 'Telkom Indonesia',
-      contact_email: 'telkom@telkom.co.id',
-      industry: 'telekomunikasi',
-      notes: '',
-    }
+  describe('VendorForm — create mode (AC2)', () => {
+    it('opens with empty fields when no vendor prop is provided', async () => {
+      render(<VendorForm open={true} onOpenChange={vi.fn()} />)
 
-    const { rerender } = render(
-      <VendorForm open={true} onOpenChange={vi.fn()} vendor={mockVendor} />
-    )
+      // Tunggu form benar-benar muncul (penting karena Dialog + React Hook Form)
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText('Contoh: Alibaba Cloud')).toBeInTheDocument()
+      })
 
-    await waitFor(() => {
-      expect(screen.getByDisplayValue('Alibaba Cloud')).toBeTruthy()
+      // Assertions dengan cara yang lebih aman
+      expect((screen.getByPlaceholderText('Contoh: Alibaba Cloud') as HTMLInputElement).value).toBe('')
+      expect((screen.getByPlaceholderText('sponsor@perusahaan.com') as HTMLInputElement).value).toBe('')
+      expect((screen.getByPlaceholderText('https://perusahaan.com') as HTMLInputElement).value).toBe('')
+      expect((screen.getByPlaceholderText('https://cdn.perusahaan.com/logo.png') as HTMLInputElement).value).toBe('')
+
+      // Catatan (textarea) — pakai regex biar lebih fleksibel
+      const notesTextarea = screen.getByPlaceholderText(/Catatan untuk tim Yorindo/i) as HTMLTextAreaElement
+      expect(notesTextarea).toBeInTheDocument()
+      expect(notesTextarea.value).toBe('')
+
+      const industrySelect = screen.getByRole('combobox')
+      expect((industrySelect as HTMLSelectElement).value).toBe('')
+    })
+  })
+
+  describe('VendorForm — re-open behavior (AC3)', () => {
+    it('shows original vendor values after closing and re-opening', async () => {
+      const onOpenChange = vi.fn()
+      const { rerender } = render(
+        <VendorForm open={true} onOpenChange={onOpenChange} vendor={mockVendor} />
+      )
+
+      await waitFor(() => {
+        expect(screen.getByDisplayValue('Alibaba Cloud')).toBeInTheDocument()
+      })
+
+      // Close dialog
+      rerender(<VendorForm open={false} onOpenChange={onOpenChange} vendor={mockVendor} />)
+
+      // Re-open
+      rerender(<VendorForm open={true} onOpenChange={onOpenChange} vendor={mockVendor} />)
+
+      await waitFor(() => {
+        expect(screen.getByDisplayValue('Alibaba Cloud')).toBeInTheDocument()
+        expect(screen.getByDisplayValue('contact@alibaba.com')).toBeInTheDocument()
+      })
     })
 
-    // Simulate user closing, then clicking Edit on a different vendor
-    rerender(<VendorForm open={false} onOpenChange={vi.fn()} vendor={otherVendor} />)
-    rerender(<VendorForm open={true} onOpenChange={vi.fn()} vendor={otherVendor} />)
+    it('shows updated values when a different vendor is passed on re-open', async () => {
+      const otherVendor: Vendor = {
+        ...mockVendor,
+        id: 'vendor-002',
+        name: 'Telkom Indonesia',
+        contact_email: 'telkom@telkom.co.id',
+        industry: 'telekomunikasi',
+        notes: '',
+      }
 
-    await waitFor(() => {
-      expect(screen.getByDisplayValue('Telkom Indonesia')).toBeTruthy()
-      expect(screen.getByDisplayValue('telkom@telkom.co.id')).toBeTruthy()
+      const onOpenChange = vi.fn()
+      const { rerender } = render(
+        <VendorForm open={true} onOpenChange={onOpenChange} vendor={mockVendor} />
+      )
+
+      await waitFor(() => {
+        expect(screen.getByDisplayValue('Alibaba Cloud')).toBeInTheDocument()
+      })
+
+      // Simulate close then open with different vendor
+      rerender(<VendorForm open={false} onOpenChange={onOpenChange} vendor={otherVendor} />)
+      rerender(<VendorForm open={true} onOpenChange={onOpenChange} vendor={otherVendor} />)
+
+      await waitFor(() => {
+        expect(screen.getByDisplayValue('Telkom Indonesia')).toBeInTheDocument()
+        expect(screen.getByDisplayValue('telkom@telkom.co.id')).toBeInTheDocument()
+      })
+
+      // Pastikan nilai lama tidak muncul lagi
+      expect(screen.queryByDisplayValue('Alibaba Cloud')).not.toBeInTheDocument()
     })
-
-    // Old values must not appear
-    expect(screen.queryByDisplayValue('Alibaba Cloud')).toBeNull()
   })
 })
