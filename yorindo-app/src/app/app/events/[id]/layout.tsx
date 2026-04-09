@@ -47,15 +47,13 @@ type TabConfig = {
   disabledOnDraft?: boolean
 }
 
-// ─── Tab config ───────────────────────────────────────────────────────────────
-
-const TABS: readonly TabConfig[] = [
-  { label: 'Overview', key: 'overview', href: '' },
-  { label: 'Undangan', key: 'blast', href: '/blast', disabledOnDraft: true },
-  { label: 'Registrasi', key: 'registrations', href: '/registrations' },
-  { label: 'Konfirmasi', key: 'confirmation', href: '/confirmation', disabledOnDraft: true },
-  { label: 'Check-in', key: 'checkin', href: '/checkin', disabledOnDraft: true },
-  { label: 'Laporan', key: 'report', href: '/report' },
+const TABS: TabConfig[] = [
+  { label: 'Overview',   key: 'overview',       href: '' },
+  { label: 'Undangan',   key: 'blast',          href: '/blast',          disabledOnDraft: true },
+  { label: 'Registrasi', key: 'registrations',  href: '/registrations' },
+  { label: 'Tiket', key: 'confirmation',   href: '/confirmation',   disabledOnDraft: true },
+  { label: 'Check-in',   key: 'checkin',        href: '/checkin',        disabledOnDraft: true },
+  { label: 'Laporan',    key: 'report',         href: '/report' },
 ]
 
 // ─── Tab key detection ────────────────────────────────────────────────────────

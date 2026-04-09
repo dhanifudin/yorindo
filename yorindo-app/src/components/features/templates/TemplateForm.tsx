@@ -33,6 +33,7 @@ const VARIABLES = [
   { label: 'Industri', value: '{{industry}}' },
   { label: 'Perusahaan', value: '{{company}}' },
   { label: 'Link Konfirmasi', value: '{{confirm_url}}' },
+  { label: 'Link Pendaftaran', value: '{{registration_link}}' },
 ]
 
 export default function TemplateForm({

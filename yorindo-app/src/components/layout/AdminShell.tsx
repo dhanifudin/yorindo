@@ -31,7 +31,7 @@ const NAV_ITEMS = [
   { href: '/app/events',       label: 'Event',     icon: Calendar,        roles: ['admin', 'viewer'] },
   { href: '/app/contacts',     label: 'Kontak',    icon: Users,           roles: ['admin'] },
   { href: '/app/vendors',      label: 'Vendor',    icon: Building2,       roles: ['admin'] },
-  { href: '/app/templates',    label: 'Template',  icon: FileText,        roles: ['admin'] },
+  // { href: '/app/templates',    label: 'Template',  icon: FileText,        roles: ['admin'] }, // Hidden for now
   { href: '/app/users',        label: 'Akun',      icon: UserCog,         roles: ['admin'] },
   { href: '/app/scan',         label: 'Scan',      icon: QrCode,          roles: ['staff', 'admin'] },
 ]

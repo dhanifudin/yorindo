@@ -11,8 +11,9 @@ import {
   yoriMindService,
   vendorRepository,
   eventSponsorRepository,
+  templateRepository,
 } from '../container.js'
-import { findTemplateById } from '../data/templates.js'
+import { blastProgressStore } from '../lib/blast-progress-store.js'
 import { getRedisOptional } from '../lib/redis.js'
 import { requireAdmin, requireAuth, requireRoles, type JwtPayload } from '../middleware/auth.js'
 import type { Event, EventStatus, Registration, TargetCriteria } from '../types/domain.js'
@@ -1262,8 +1263,13 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       { page: 1, pageSize: 500 },
       { ...contactFilters, hasPhone: true, hasEmail: true },
     )).total
-    let templateName = 'Custom Message'
-    let templateBody = body.data.customMessage || 'Mocked template body for ' + (body.data.templateId ?? 'unknown')
+
+    // Look up template from database (not hardcoded)
+    const tmpl = body.data.templateId
+      ? await templateRepository.findById(body.data.templateId)
+      : null
+    const templateName = tmpl?.name ?? 'Custom Message'
+    const templateBody = body.data.customMessage ?? tmpl?.body ?? ''
 
     const queueName = 'marketing'
     const jobId = await queueService.enqueue(queueName, {
@@ -1278,6 +1284,23 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       scheduledAt: body.data.scheduledAt,
       enqueuedBy: payload.sub,
     }, body.data.scheduledAt ? { delay: Math.max(new Date(body.data.scheduledAt).getTime() - Date.now(), 0) } : undefined)
+
+    // Register job in progress store for real-time tracking
+    blastProgressStore.register({
+      jobId,
+      eventId: event.id,
+      channel: body.data.channel,
+      templateId: body.data.templateId ?? 'custom',
+      templateName,
+      totalContacts: recipientCount,
+      sentCount: 0,
+      failedCount: 0,
+      suppressedCount: 0,
+      status: body.data.scheduledAt ? 'scheduled' : 'queued',
+      startedAt: new Date().toISOString(),
+      completedAt: null,
+      scheduledAt: body.data.scheduledAt ?? null,
+    })
 
     await auditLogRepository.create({
       action: 'blast.queued',
@@ -1307,36 +1330,45 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     const url = new URL(request.url, `http://${request.hostname}`)
     const eventId = url.searchParams.get('eventId')
 
-    // Query audit logs for blast actions
-    try {
-      const auditLogs = await auditLogRepository.findAll() ?? []
-      const blastLogs = auditLogs
-        .filter((log) => log.action === 'blast.queued' || log.action === 'blast.send' || log.action === 'contact.blast_initiated')
-        .filter((log) => !eventId || log.eventId === eventId)
-        .map((log) => ({
-          id: log.id,
-          channel: (log.metadata as { channel?: string })?.channel ?? 'whatsapp',
-          recipientCount: (log.metadata as { recipientCount?: number })?.recipientCount ?? 0,
-          sentAt: log.createdAt,
-          status: 'completed' as const,
-        }))
+    const jobs = eventId
+      ? blastProgressStore.getByEventId(eventId)
+      : blastProgressStore.getAll()
 
-      validateOpenApiResponse({ path: '/blast/history', method: 'get', status: 200, body: blastLogs })
-      return reply.status(200).send(blastLogs)
-    } catch (err) {
-      // Return empty list if audit logs table doesn't exist or query fails
-      return reply.status(200).send([])
-    }
+    const results = jobs.map((j) => ({
+      id: j.jobId,
+      channel: j.channel,
+      recipientCount: j.totalContacts,
+      sentCount: j.sentCount,
+      failedCount: j.failedCount,
+      suppressedCount: j.suppressedCount,
+      status: j.status,
+      sentAt: j.startedAt,
+      completedAt: j.completedAt,
+      templateName: j.templateName,
+    }))
+
+    return reply.status(200).send(results)
   })
 
   // ── GET /api/blast/:jobId ────────────────────────────────────────
   fastify.get('/api/blast/:jobId', { preHandler: requireAuth }, async (request, reply) => {
     const { jobId } = request.params as { jobId: string }
+    const job = blastProgressStore.get(jobId)
 
-    // In the current implementation, jobs are processed synchronously
-    // Return a completed status for historical jobs
-    validateOpenApiResponse({ path: '/blast/{jobId}', method: 'get', status: 200, body: { jobId, status: 'completed', sent: 0, total: 0 } })
-    return reply.status(200).send({ jobId, status: 'completed', sent: 0, total: 0 })
+    if (!job) {
+      return reply.status(404).send({
+        error: { code: 'NOT_FOUND', message: 'Job not found', details: [] },
+      })
+    }
+
+    return reply.status(200).send({
+      jobId: job.jobId,
+      status: job.status,
+      sent: job.sentCount,
+      total: job.totalContacts,
+      failed: job.failedCount,
+      suppressed: job.suppressedCount,
+    })
   })
 
   // ── GET /api/events/:id/overview ─────────────────────────────────

@@ -54,7 +54,7 @@ export const config = {
   anthropicApiKey: optional('ANTHROPIC_API_KEY'),
   brevoApiKey: optional('BREVO_API_KEY'),
   everproApiKey: optional('EVERPRO_API_KEY'),
-  brevoSenderEmail: optional('BREVO_SENDER_EMAIL', 'no-reply@yorindo.app'),
+  brevoSenderEmail: optional('BREVO_SENDER_EMAIL', 'no-reply@emu.app'),
 
   // Mailtrap SMTP credentials
   mailtrapHost: optional('MAILTRAP_HOST'),

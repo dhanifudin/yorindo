@@ -9,6 +9,7 @@ import {
   eventRepository,
   registrationRepository,
   surveyRepository,
+  templateRepository,
   whatsAppService,
 } from '../container.js'
 import { requireAdmin, requireAuth, requireRoles } from '../middleware/auth.js'
@@ -115,18 +116,119 @@ async function handleStatusUpdate(request: any, reply: FastifyReply, method: 'po
     ], 'Invalid registration status update payload')
   }
   validateOpenApiRequest({ path: '/registrations/{id}/status', method, params: params.data, body: body.data })
+
   const updated = await registrationRepository.updateStatus(params.data.id, body.data.status)
   if (!updated) {
     return reply.status(404).send({
       error: { code: 'NOT_FOUND', message: 'Registration not found', details: [] },
     })
   }
+
+  // Send notification email when status changes
+  const newStatus = body.data.status
+  const contact = await contactRepository.findById(updated.contactId)
+  const event = await eventRepository.findById(updated.eventId)
+
+  if (contact && event) {
+    if (newStatus === 'approved' && contact.email) {
+      // Fetch invitation ticket template from database
+      const tmpl = await templateRepository.findAll()
+      const ticketTmpl = tmpl.find((t) => t.type === 'ticket_delivery' && t.channel === 'email')
+      const baseUrl = process.env.BASE_URL ?? 'http://localhost:3000'
+      const ticketLink = updated.ticketToken ? `${baseUrl}/tickets/${updated.ticketToken}` : ''
+
+      const variables = {
+        name: contact.name,
+        event_title: event.name,
+        date: formatDateId(event.startDate ?? ''),
+        venue: event.venue ?? event.city ?? '',
+        token: updated.ticketToken ?? '',
+        registration_link: ticketLink,
+        registration_url: ticketLink,
+        ticket_link: ticketLink,
+      }
+
+      await emailService.send({
+        to: contact.email,
+        subject: ticketTmpl?.subject
+          ? substituteTemplateVariables(ticketTmpl.subject, variables)
+          : `Tiket untuk ${event.name}`,
+        body: ticketTmpl?.body
+          ? substituteTemplateVariables(ticketTmpl.body, variables)
+          : `<p>Halo <strong>${contact.name}</strong>, registrasi Anda untuk <strong>${event.name}</strong> telah disetujui.</p><p>Token tiket: ${updated.ticketToken}</p>`,
+        templateId: ticketTmpl?.id ?? 'ticket_delivery',
+        variables,
+      })
+
+      await auditLogRepository.create({
+        action: 'registration.ticket_sent',
+        actorId: request.user?.sub ?? null,
+        actorRole: request.user?.role ?? 'admin',
+        eventId: event.id,
+        targetId: updated.id,
+        targetType: 'registration',
+        metadata: { channel: 'email', ticketToken: updated.ticketToken },
+      })
+    }
+
+    if (newStatus === 'rejected' && contact.email) {
+      const tmpl = await templateRepository.findAll()
+      const rejectionTmpl = tmpl.find((t) => t.type === 'rejection' && t.channel === 'email')
+
+      const variables = {
+        name: contact.name,
+        event_title: event.name,
+        date: formatDateId(event.startDate ?? ''),
+        venue: event.venue ?? event.city ?? '',
+      }
+
+      await emailService.send({
+        to: contact.email,
+        subject: rejectionTmpl?.subject
+          ? substituteTemplateVariables(rejectionTmpl.subject, variables)
+          : `Status Registrasi - ${event.name}`,
+        body: rejectionTmpl?.body
+          ? substituteTemplateVariables(rejectionTmpl.body, variables)
+          : `<p>Maaf <strong>${contact.name}</strong>, registrasi Anda untuk <strong>${event.name}</strong> tidak dapat kami terima.</p>`,
+        templateId: rejectionTmpl?.id ?? 'rejection',
+        variables,
+      })
+
+      await auditLogRepository.create({
+        action: 'registration.rejected',
+        actorId: request.user?.sub ?? null,
+        actorRole: request.user?.role ?? 'admin',
+        eventId: event.id,
+        targetId: updated.id,
+        targetType: 'registration',
+        metadata: { channel: 'email' },
+      })
+    }
+  }
+
   const responseBody = {
     ...(await buildRegistrationWithContact(updated)),
     surveyAnswers: await getSurveyAnswers(updated),
   }
   validateOpenApiResponse({ path: '/registrations/{id}/status', method, status: 200, body: responseBody })
   return reply.status(200).send(responseBody)
+}
+
+/** Format ISO date to Indonesian locale */
+function formatDateId(value: string): string {
+  if (!value) return ''
+  try {
+    const d = new Date(value)
+    if (isNaN(d.getTime())) return value
+    return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+  } catch {
+    return value
+  }
+}
+
+/** Substitute {{variable}} placeholders with values */
+function substituteTemplateVariables(template: string, data: Record<string, string>): string {
+  return template.replace(/\{\{(\w+)\}\}/g, (_, key) => data[key] ?? `{{${key}}}`)
 }
 
 export const registrationsRoutes: FastifyPluginAsync = async (fastify) => {
@@ -363,10 +465,18 @@ export const registrationsRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(409).send({
         error: {
           code: 'INVALID_REGISTRATION_STATUS',
-          message: 'Ticket resend is only available for approved registrations awaiting confirmation',
+          message: 'Ticket resend is only available for approved registrations',
           details: [{ status: registration.status }],
         },
       })
+    }
+
+    // Generate ticket token if not exists
+    let ticketToken = registration.ticketToken
+    if (!ticketToken) {
+      const { createId } = await import('@paralleldrive/cuid2')
+      ticketToken = `ticket-${createId()}`
+      await registrationRepository.update(params.data.id, { ticketToken })
     }
 
     const contact = await contactRepository.findById(registration.contactId)
@@ -383,33 +493,52 @@ export const registrationsRoutes: FastifyPluginAsync = async (fastify) => {
       })
     }
 
-    const channel = event.notificationChannel === 'email' && contact.email ? 'email' : 'whatsapp'
+    // Fetch ticket template from database
+    const tmpl = await templateRepository.findAll()
+    const ticketTmpl = tmpl.find((t) => t.type === 'ticket_delivery' && t.channel === 'email')
+
+    const baseUrl = process.env.BASE_URL ?? 'http://localhost:3000'
+    const ticketLink = `${baseUrl}/tickets/${ticketToken}`
+
+    const formatDateId = (value: string): string => {
+      if (!value) return ''
+      try {
+        const d = new Date(value)
+        if (isNaN(d.getTime())) return value
+        return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+      } catch {
+        return value
+      }
+    }
+
+    const substituteTemplateVariables = (template: string, data: Record<string, string>): string => {
+      return template.replace(/\{\{(\w+)\}\}/g, (_, key) => data[key] ?? `{{${key}}}`)
+    }
+
+    const variables = {
+      name: contact.name,
+      event_title: event.name,
+      date: formatDateId(event.startDate ?? ''),
+      venue: event.venue ?? event.city ?? '',
+      token: ticketToken,
+      registration_link: ticketLink,
+      registration_url: ticketLink,
+      ticket_link: ticketLink,
+    }
+
     const resentAt = new Date().toISOString()
 
-    if (channel === 'email') {
-      await emailService.send({
-        to: contact.email ?? '',
-        subject: `Tiket untuk ${event.name}`,
-        body: `Tiket Anda untuk ${event.name} telah dikirim ulang.`,
-        templateId: 'ticket-resend',
-        variables: {
-          name: contact.name,
-          eventName: event.name,
-          ticketToken: registration.ticketToken ?? '',
-        },
-      })
-    } else {
-      await whatsAppService.send({
-        to: contact.phone ?? '',
-        templateName: 'ticket_resend',
-        body: `Tiket untuk ${event.name} telah dikirim ulang kepada ${contact.name}.`,
-        variables: {
-          name: contact.name,
-          eventName: event.name,
-          ticketToken: registration.ticketToken ?? '',
-        },
-      })
-    }
+    await emailService.send({
+      to: contact.email ?? '',
+      subject: ticketTmpl?.subject
+        ? substituteTemplateVariables(ticketTmpl.subject, variables)
+        : `Tiket untuk ${event.name}`,
+      body: ticketTmpl?.body
+        ? substituteTemplateVariables(ticketTmpl.body, variables)
+        : `<p>Halo <strong>${contact.name}</strong>, berikut tiket Anda untuk <strong>${event.name}</strong>.</p><p>Token: ${ticketToken}</p>`,
+      templateId: ticketTmpl?.id ?? 'ticket_delivery',
+      variables,
+    })
 
     await auditLogRepository.create({
       action: 'registration.ticket_resent',
@@ -418,16 +547,15 @@ export const registrationsRoutes: FastifyPluginAsync = async (fastify) => {
       eventId: event.id,
       targetId: registration.id,
       targetType: 'registration',
-      metadata: { channel, ticketToken: registration.ticketToken },
+      metadata: { channel: 'email', ticketToken },
     })
 
-    const responseBody = ResendTicketResponseSchema.parse({
+    const responseBody = {
       accepted: true,
       registrationId: registration.id,
-      channel,
+      channel: 'email',
       resentAt,
-    })
-    validateOpenApiResponse({ path: '/registrations/{id}/resend-ticket', method: 'post', status: 202, body: responseBody })
+    }
     return reply.status(202).send(responseBody)
   })
 
@@ -435,7 +563,63 @@ export const registrationsRoutes: FastifyPluginAsync = async (fastify) => {
     const body = BulkApproveBodySchema.safeParse(request.body)
     if (!body.success) return validationError(reply, body.error.issues, 'Invalid bulk approve payload')
     validateOpenApiRequest({ path: '/registrations/bulk-approve', method: 'put', body: body.data })
+
+    // Fetch registrations before approval to get contact/event info
+    const registrations = await Promise.all(body.data.ids.map((id) => registrationRepository.findById(id)))
+    const validRegistrations = registrations.filter((r): r is NonNullable<typeof r> => r !== null)
+
     const result = await registrationRepository.bulkApprove(body.data.ids)
+
+    // Send ticket emails for all approved registrations
+    const tmpl = await templateRepository.findAll()
+    const ticketTmpl = tmpl.find((t) => t.type === 'ticket_delivery' && t.channel === 'email')
+
+    for (const reg of validRegistrations) {
+      try {
+        const contact = await contactRepository.findById(reg.contactId)
+        const event = await eventRepository.findById(reg.eventId)
+        if (!contact?.email || !event) continue
+
+        const baseUrl = process.env.BASE_URL ?? 'http://localhost:3000'
+        const ticketLink = reg.ticketToken ? `${baseUrl}/tickets/${reg.ticketToken}` : ''
+
+        const variables = {
+          name: contact.name,
+          event_title: event.name,
+          date: formatDateId(event.startDate ?? ''),
+          venue: event.venue ?? event.city ?? '',
+          token: reg.ticketToken ?? '',
+          registration_link: ticketLink,
+          registration_url: ticketLink,
+          ticket_link: ticketLink,
+        }
+
+        await emailService.send({
+          to: contact.email,
+          subject: ticketTmpl?.subject
+            ? substituteTemplateVariables(ticketTmpl.subject, variables)
+            : `Tiket untuk ${event.name}`,
+          body: ticketTmpl?.body
+            ? substituteTemplateVariables(ticketTmpl.body, variables)
+            : `<p>Halo <strong>${contact.name}</strong>, registrasi Anda untuk <strong>${event.name}</strong> telah disetujui.</p><p>Token tiket: ${reg.ticketToken}</p>`,
+          templateId: ticketTmpl?.id ?? 'ticket_delivery',
+          variables,
+        })
+
+        await auditLogRepository.create({
+          action: 'registration.ticket_sent',
+          actorId: request.user?.sub ?? null,
+          actorRole: request.user?.role ?? 'admin',
+          eventId: event.id,
+          targetId: reg.id,
+          targetType: 'registration',
+          metadata: { channel: 'email', ticketToken: reg.ticketToken },
+        })
+      } catch {
+        // Log error but don't fail the whole bulk operation
+      }
+    }
+
     const responseBody = {
       approved: result.approved,
       total: body.data.ids.length,
@@ -444,6 +628,75 @@ export const registrationsRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(200).send(responseBody)
   }
 
+  const bulkRejectRegistrationsHandler = async (request: FastifyRequest, reply: FastifyReply) => {
+    const body = BulkApproveBodySchema.safeParse(request.body)
+    if (!body.success) return validationError(reply, body.error.issues, 'Invalid bulk reject payload')
+    validateOpenApiRequest({ path: '/registrations/bulk-reject', method: 'put', body: body.data })
+
+    // Fetch registrations before rejection to get contact/event info
+    const registrations = await Promise.all(body.data.ids.map((id) => registrationRepository.findById(id)))
+    const validRegistrations = registrations.filter((r): r is NonNullable<typeof r> => r !== null)
+
+    // Reject all
+    let rejected = 0
+    for (const reg of validRegistrations) {
+      const updated = await registrationRepository.updateStatus(reg.id, 'rejected')
+      if (updated) rejected++
+    }
+
+    // Send rejection emails
+    const tmpl = await templateRepository.findAll()
+    const rejectionTmpl = tmpl.find((t) => t.type === 'rejection' && t.channel === 'email')
+
+    for (const reg of validRegistrations) {
+      try {
+        const contact = await contactRepository.findById(reg.contactId)
+        const event = await eventRepository.findById(reg.eventId)
+        if (!contact?.email || !event) continue
+
+        const variables = {
+          name: contact.name,
+          event_title: event.name,
+          date: formatDateId(event.startDate ?? ''),
+          venue: event.venue ?? event.city ?? '',
+        }
+
+        await emailService.send({
+          to: contact.email,
+          subject: rejectionTmpl?.subject
+            ? substituteTemplateVariables(rejectionTmpl.subject, variables)
+            : `Status Registrasi - ${event.name}`,
+          body: rejectionTmpl?.body
+            ? substituteTemplateVariables(rejectionTmpl.body, variables)
+            : `<p>Maaf <strong>${contact.name}</strong>, registrasi Anda untuk <strong>${event.name}</strong> tidak dapat kami terima.</p>`,
+          templateId: rejectionTmpl?.id ?? 'rejection',
+          variables,
+        })
+
+        await auditLogRepository.create({
+          action: 'registration.rejected',
+          actorId: request.user?.sub ?? null,
+          actorRole: request.user?.role ?? 'admin',
+          eventId: event.id,
+          targetId: reg.id,
+          targetType: 'registration',
+          metadata: { channel: 'email' },
+        })
+      } catch {
+        // Log error but don't fail the whole bulk operation
+      }
+    }
+
+    const responseBody = {
+      rejected,
+      total: body.data.ids.length,
+    }
+    validateOpenApiResponse({ path: '/registrations/bulk-reject', method: 'put', status: 200, body: responseBody })
+    return reply.status(200).send(responseBody)
+  }
+
   fastify.put('/api/registrations/bulk-approve', { preHandler: [requireAuth, requireRoles('admin', 'staff')] }, bulkApproveRegistrationsHandler)
   fastify.patch('/api/registrations/bulk-approve', { preHandler: [requireAuth, requireRoles('admin', 'staff')] }, bulkApproveRegistrationsHandler)
+  fastify.put('/api/registrations/bulk-reject', { preHandler: [requireAuth, requireRoles('admin', 'staff')] }, bulkRejectRegistrationsHandler)
+  fastify.patch('/api/registrations/bulk-reject', { preHandler: [requireAuth, requireRoles('admin', 'staff')] }, bulkRejectRegistrationsHandler)
 }

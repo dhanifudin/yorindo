@@ -1,13 +1,34 @@
 'use client'
 
+function formatDate(value: string): string {
+  // Handle ISO 8601 dates like 2026-04-23T09:00:00.000Z
+  const isoMatch = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value)
+  if (isoMatch) {
+    try {
+      const d = new Date(value)
+      if (!isNaN(d.getTime())) {
+        return d.toLocaleDateString('id-ID', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+        })
+      }
+    } catch { /* fall through */ }
+  }
+  return value
+}
+
 const SAMPLE_VALUES: Record<string, string> = {
   name: 'Budi Santoso',
   event_title: 'ERP Summit Jakarta 2026',
-  date: '15 April 2026',
+  date: '23 April 2026',
   venue: 'JCC Senayan Hall A',
   confirm_url: 'https://example.com/confirm',
   industry: 'Teknologi',
   company: 'PT. Maju Jaya',
+  registration_link: 'https://emu.id/register/erp-summit-jakarta-2026',
+  days: '7',
+  token: 'ABC123XYZ',
 }
 
 interface Props {
@@ -20,7 +41,10 @@ interface Props {
 }
 
 export function TemplatePreview({ body, channel, logoUrl, imageType = 'header', bgOpacity = 40, subject }: Props) {
-  const previewHtml = body.replace(/\{\{(\w+)\}\}/g, (_, key) => SAMPLE_VALUES[key] ?? `{{${key}}}`)
+  const previewHtml = body.replace(/\{\{(\w+)\}\}/g, (_, key) => {
+    const raw = SAMPLE_VALUES[key] ?? `{{${key}}}`
+    return key === 'date' ? formatDate(raw) : raw
+  })
 
   if (channel === 'email') {
     return (

@@ -2,10 +2,26 @@ import type { IAuditLogRepository } from '../interfaces/repositories/IAuditLogRe
 import type { IContactRepository } from '../interfaces/repositories/IContactRepository.js'
 import type { IEventRepository } from '../interfaces/repositories/IEventRepository.js'
 import type { ISuppressionRepository } from '../interfaces/repositories/ISuppressionRepository.js'
+import type { ITemplateRepository } from '../interfaces/repositories/ITemplateRepository.js'
 import type { IEmailService } from '../interfaces/services/IEmailService.js'
 import type { IWhatsAppService } from '../interfaces/services/IWhatsAppService.js'
-import { findTemplateById } from '../data/templates.js'
 import type { Contact } from '../types/domain.js'
+
+/** Format ISO date to Indonesian locale (e.g. "23 April 2026") */
+function formatDateId(value: string): string {
+  if (!value) return ''
+  try {
+    const d = new Date(value)
+    if (isNaN(d.getTime())) return value
+    return d.toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    })
+  } catch {
+    return value
+  }
+}
 
 export interface BlastJobData {
   eventId: string
@@ -65,8 +81,11 @@ export class BlastService {
     private readonly suppressionRepository: ISuppressionRepository,
     private readonly contactRepository: IContactRepository,
     private readonly eventRepository: IEventRepository,
+    private readonly templateRepository: ITemplateRepository,
     private readonly auditLogRepository: IAuditLogRepository,
     private readonly sleep: (ms: number) => Promise<void> = wait,
+    /** Milliseconds to wait between each successful delivery (rate-limit protection) */
+    private readonly sendDelayMs = parseInt(process.env.BLAST_SEND_DELAY_MS ?? '500', 10),
   ) { }
 
   private async resolveRecipients(job: BlastJobData): Promise<Contact[]> {
@@ -168,19 +187,26 @@ export class BlastService {
         channel: job.channel,
         body: job.templateBody,
         createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       }
     } else {
-      template = findTemplateById(job.templateId)
+      template = await this.templateRepository.findById(job.templateId)
       if (!template) {
         throw new Error(`Template not found: ${job.templateId}`)
       }
     }
 
     const event = await this.eventRepository.findById(job.eventId)
+    const originUrl = process.env.BASE_URL ?? 'http://localhost:3000'
+    const eventSlug = event?.slug ?? job.eventId
+    const registrationLink = `${originUrl}/register/${eventSlug}`
+
     const eventVars = {
       event_title: event?.name ?? job.eventId,
-      date: event?.startDate ?? '',
-      venue: event?.city ?? '',
+      date: formatDateId(event?.startDate ?? ''),
+      venue: event?.venue ?? event?.city ?? '',
+      registration_link: registrationLink,
+      registration_url: registrationLink,
     }
 
     // Load contacts based on job filters or direct contactIds
@@ -265,6 +291,10 @@ export class BlastService {
         failures.push(failure)
       } else {
         sentCount++
+        // Throttle: delay between sends to avoid rate limits
+        if (this.sendDelayMs > 0) {
+          await this.sleep(this.sendDelayMs)
+        }
       }
     }
 

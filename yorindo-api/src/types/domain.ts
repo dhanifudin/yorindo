@@ -343,7 +343,11 @@ export interface Template {
   name: string
   type: TemplateType
   channel: TemplateChannel
+  subject?: string
   body: string
+  logoUrl?: string | null
+  imageType?: 'header' | 'background' | null
+  bgOpacity?: number | null
   createdAt: ISODateString
   updatedAt: ISODateString
 }

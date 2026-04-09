@@ -2,14 +2,11 @@ import type { FastifyPluginAsync, FastifyReply } from 'fastify'
 import { z } from 'zod'
 import { validateOpenApiRequest, validateOpenApiResponse } from '../lib/openapi-contract.js'
 import { requireAuth, requireAdmin } from '../middleware/auth.js'
-import { InMemoryTemplateRepository } from '../repositories/memory/TemplateRepository.js'
-import { InMemoryAuditLogRepository } from '../repositories/memory/AuditLogRepository.js'
+import { templateRepository, auditLogRepository } from '../container.js'
 import { Template } from '../types/domain.js'
 
 // Template routes - supports both PATCH and PUT for updates
-// repositories
-export const templateRepo = new InMemoryTemplateRepository()
-export const auditRepo = new InMemoryAuditLogRepository()
+// Uses repositories from container (memory or postgres based on config)
 
 // helper for consistent validation error
 function replyValidationError(reply: FastifyReply, details: unknown, message: string) {
@@ -33,7 +30,7 @@ export const templatesRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get('/api/templates', async (request, reply) => {
     validateOpenApiRequest({ path: '/templates', method: 'get' })
 
-    const templates = await templateRepo.findAll()
+    const templates = await templateRepository.findAll()
 
     validateOpenApiResponse({
       path: '/templates',
@@ -67,9 +64,9 @@ export const templatesRoutes: FastifyPluginAsync = async (fastify) => {
       body: parsed.data,
     })
 
-    const template = await templateRepo.create(parsed.data)
+    const template = await templateRepository.create(parsed.data)
 
-    await auditRepo.create({
+    await auditLogRepository.create({
       action: 'template.created',
       actorId: request.user?.sub ?? null,
       actorRole: request.user?.role ?? 'unknown',
@@ -121,7 +118,7 @@ export const templatesRoutes: FastifyPluginAsync = async (fastify) => {
       body: bodyParsed.data,
     })
 
-    const updated = await templateRepo.update(
+    const updated = await templateRepository.update(
       paramsParsed.data.id,
       bodyParsed.data as Partial<Template>
     )
@@ -136,7 +133,7 @@ export const templatesRoutes: FastifyPluginAsync = async (fastify) => {
       })
     }
 
-    await auditRepo.create({
+    await auditLogRepository.create({
       action: 'template.updated',
       actorId: request.user?.sub ?? null,
       actorRole: request.user?.role ?? 'unknown',
@@ -175,7 +172,7 @@ export const templatesRoutes: FastifyPluginAsync = async (fastify) => {
       params: paramsParsed.data,
     })
 
-    const deleted = await templateRepo.delete(paramsParsed.data.id)
+    const deleted = await templateRepository.delete(paramsParsed.data.id)
 
     if (!deleted) {
       return reply.status(404).send({
@@ -187,7 +184,7 @@ export const templatesRoutes: FastifyPluginAsync = async (fastify) => {
       })
     }
 
-    await auditRepo.create({
+    await auditLogRepository.create({
       action: 'template.deleted',
       actorId: request.user?.sub ?? null,
       actorRole: request.user?.role ?? 'unknown',

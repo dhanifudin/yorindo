@@ -4,8 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import type { ColumnFiltersState } from '@tanstack/react-table'
 
-type StatusFilter = 'all' | 'pending' | 'approved' | 'rejected' | 'waitlisted'
-type FlagFilter = boolean
+type StatusFilter = 'all' | 'pending' | 'approved' | 'rejected'
 
 interface RegistrationFiltersProps {
   columnFilters: ColumnFiltersState
@@ -17,12 +16,10 @@ const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
   { value: 'pending', label: 'Pending' },
   { value: 'approved', label: 'Disetujui' },
   { value: 'rejected', label: 'Ditolak' },
-  { value: 'waitlisted', label: 'Waitlist' },
 ]
 
 export function RegistrationFilters({ columnFilters, onColumnFiltersChange }: RegistrationFiltersProps) {
   const statusFilter = (columnFilters.find((f) => f.id === 'status')?.value as StatusFilter) ?? 'all'
-  const flagFilter = (columnFilters.find((f) => f.id === 'flag')?.value as FlagFilter) ?? false
 
   const activeCount = columnFilters.filter((f) => {
     if (f.id === 'status' && f.value === 'all') return false
@@ -35,15 +32,6 @@ export function RegistrationFilters({ columnFilters, onColumnFiltersChange }: Re
       onColumnFiltersChange(without)
     } else {
       onColumnFiltersChange([...without, { id: 'status', value }])
-    }
-  }
-
-  function toggleFlag() {
-    const without = columnFilters.filter((f) => f.id !== 'flag')
-    if (!flagFilter) {
-      onColumnFiltersChange([...without, { id: 'flag', value: true }])
-    } else {
-      onColumnFiltersChange(without)
     }
   }
 
@@ -65,16 +53,6 @@ export function RegistrationFilters({ columnFilters, onColumnFiltersChange }: Re
           {opt.label}
         </Button>
       ))}
-
-      {/* Flag toggle */}
-      <Button
-        variant={flagFilter ? 'secondary' : 'ghost'}
-        size="sm"
-        className="h-7 text-xs"
-        onClick={toggleFlag}
-      >
-        🚩 Hanya Bermasalah
-      </Button>
 
       {/* Reset */}
       {activeCount > 0 && (

@@ -5,6 +5,7 @@ import { MockWhatsAppService } from '../services/adapters/mock/WhatsAppService.j
 import { InMemorySuppressionRepository } from '../repositories/memory/SuppressionRepository.js'
 import { InMemoryContactRepository } from '../repositories/memory/ContactRepository.js'
 import { InMemoryEventRepository } from '../repositories/memory/EventRepository.js'
+import { InMemoryTemplateRepository } from '../repositories/memory/TemplateRepository.js'
 import type { IAuditLogRepository } from '../interfaces/repositories/IAuditLogRepository.js'
 import type { AuditLog } from '../types/domain.js'
 
@@ -44,6 +45,7 @@ describe('BlastService', () => {
   let suppressionRepo: InMemorySuppressionRepository
   let contactRepo: InMemoryContactRepository
   let eventRepo: InMemoryEventRepository
+  let templateRepo: InMemoryTemplateRepository
   let auditLogRepository: TestAuditLogRepository
   let blastService: BlastService
 
@@ -53,6 +55,7 @@ describe('BlastService', () => {
     suppressionRepo = new InMemorySuppressionRepository()
     contactRepo = new InMemoryContactRepository()
     eventRepo = new InMemoryEventRepository()
+    templateRepo = new InMemoryTemplateRepository()
     auditLogRepository = new TestAuditLogRepository()
     blastService = new BlastService(
       emailService,
@@ -60,8 +63,10 @@ describe('BlastService', () => {
       suppressionRepo,
       contactRepo,
       eventRepo,
+      templateRepo,
       auditLogRepository,
       async () => undefined,
+      0, // no delay in tests
     )
   })
 
@@ -150,8 +155,10 @@ describe('BlastService', () => {
       suppressionRepo,
       contactRepo,
       eventRepo,
+      templateRepo,
       auditLogRepository,
       async () => undefined,
+      0, // no delay in tests
     )
 
     await failingBlastService.processJob(makeJob({ channel: 'email' }))

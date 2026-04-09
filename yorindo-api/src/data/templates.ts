@@ -21,7 +21,7 @@ export const seededTemplates: BlastTemplate[] = [
     name: 'Undangan Event (WhatsApp)',
     type: 'invitation',
     channel: 'whatsapp',
-    body: 'Halo {{name}}, Anda diundang ke {{event_title}} pada {{date}} di {{venue}}.',
+    body: 'Halo {{name}}, Anda diundang ke {{event_title}} pada {{date}} di {{venue}}.\n\nDaftar melalui: {{registration_link}}',
     createdAt: seededAt,
   },
   {
@@ -30,7 +30,7 @@ export const seededTemplates: BlastTemplate[] = [
     type: 'invitation',
     channel: 'email',
     subject: 'Undangan: {{event_title}}',
-    body: '<p>Halo {{name}},</p><p>Anda diundang ke <strong>{{event_title}}</strong> pada {{date}} di {{venue}}.</p>',
+    body: '<p>Halo {{name}},</p><p>Anda diundang ke <strong>{{event_title}}</strong> pada {{date}} di {{venue}}.</p><p>Daftar melalui: <a href="{{registration_link}}">{{registration_link}}</a></p>',
     createdAt: seededAt,
   },
 

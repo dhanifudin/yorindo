@@ -62,7 +62,7 @@ export const userHandlers = [
     const auth = request.headers.get('Authorization') ?? ''
     const token = auth.replace('Bearer ', '')
     const DEV_IDS: Record<string, User> = {
-      [MOCK_USER_IDS.devAdmin]:  { id: MOCK_USER_IDS.devAdmin,  name: 'Admin Yorindo', email: 'admin@yorindo.id', role: 'admin', createdAt: '', updatedAt: '' },
+      [MOCK_USER_IDS.devAdmin]:  { id: MOCK_USER_IDS.devAdmin,  name: 'Admin EM · U', email: 'admin@yorindo.id', role: 'admin', createdAt: '', updatedAt: '' },
       [MOCK_USER_IDS.devStaff]:  { id: MOCK_USER_IDS.devStaff,  name: 'Budi Santoso',  email: 'staff@yorindo.id', role: 'staff', createdAt: '', updatedAt: '' },
       [MOCK_USER_IDS.devViewer]: { id: MOCK_USER_IDS.devViewer, name: 'Sari Viewer',   email: 'viewer@yorindo.id', role: 'viewer', createdAt: '', updatedAt: '' },
     }

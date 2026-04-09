@@ -722,6 +722,19 @@ components:
           description: Total IDs submitted
           example: 8
 
+    BulkRejectResult:
+      type: object
+      required: [rejected, total]
+      properties:
+        rejected:
+          type: integer
+          description: Number of registrations successfully rejected
+          example: 5
+        total:
+          type: integer
+          description: Total IDs submitted
+          example: 5
+
     # ─── User ──────────────────────────────────────────────────────────────────
     User:
       type: object
@@ -1243,12 +1256,12 @@ components:
           example: whatsapp
         body:
           type: string
-          example: "Halo {{name}}, Anda diundang ke {{event_title}} pada {{date}}."
+          example: "Halo {{name}}, Anda diundang ke {{event_title}} pada {{date}} di {{venue}}.\n\nDaftar melalui: {{registration_link}}"
         variables:
           type: array
           items:
             type: string
-          example: [name, event_title, date]
+          example: [name, event_title, date, venue, registration_link]
         createdAt:
           type: string
           format: date-time
@@ -5200,6 +5213,127 @@ paths:
                 $ref: '#/components/schemas/ApiError'
         '403':
           description: Insufficient role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /registrations/bulk-reject:
+    put:
+      summary: Bulk reject registrations and send rejection emails (admin/staff)
+      operationId: bulkRejectRegistrations
+      tags: [Registrations]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkApproveBody'
+      responses:
+        '200':
+          description: Rejection results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkRejectResult'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Insufficient role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+    patch:
+      summary: Bulk reject registrations and send rejection emails (admin/staff)
+      operationId: bulkRejectRegistrationsPatch
+      tags: [Registrations]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkApproveBody'
+      responses:
+        '200':
+          description: Rejection results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkRejectResult'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Insufficient role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # TICKETS
+  # ─────────────────────────────────────────────────────────────────────────────
+  /tickets/{token}:
+    get:
+      summary: Get ticket details by token (public — no auth required)
+      operationId: getTicket
+      description: Returns ticket details including QR payload for display to staff at check-in.
+      tags: [Tickets]
+      security: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Ticket details
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [token, participantName, eventName, eventDate, venue]
+                properties:
+                  token:
+                    type: string
+                  qrPayload:
+                    type: string
+                  participantName:
+                    type: string
+                  eventName:
+                    type: string
+                  eventDate:
+                    type: string
+                    format: date-time
+                  venue:
+                    type: string
+        '404':
+          description: Ticket not found
           content:
             application/json:
               schema:
