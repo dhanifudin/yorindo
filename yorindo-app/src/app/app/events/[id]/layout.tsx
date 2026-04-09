@@ -86,7 +86,7 @@ export default function EventHubShellLayout({ children, params }: HubLayoutProps
     staleTime: 60_000,
   })
 
-  // Shared blockerState query — AC7
+  // Shared blockerState query
   const { data: blockerState } = useQuery<EventOverviewResponse>({
     queryKey: ['event', id, 'blockerState'],
     queryFn: () => fetch(`/api/events/${id}/overview`).then(r => r.json()),
@@ -94,7 +94,8 @@ export default function EventHubShellLayout({ children, params }: HubLayoutProps
     enabled: !!id,
   })
 
-  const pendingCount = registrationStats?.pagination.total ?? 0
+  // FIXED: Gunakan blockerState.pendingApprovals
+  const pendingCount = blockerState?.pendingApprovals ?? 0
 
   const [showEditSheet, setShowEditSheet] = useState(false)
   const [confirmStatus, setConfirmStatus] = useState<Event['status'] | null>(null)
