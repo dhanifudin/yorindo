@@ -129,6 +129,7 @@ export function ConfirmationTable({ registrations, onResend, onPromote, isPendin
       total={registrations.length}
       onPrev={() => setPage((p) => Math.max(0, p - 1))}
       onNext={() => setPage((p) => p + 1)}
+      onPageChange={(p) => setPage(p)}
     />
     </>
   )

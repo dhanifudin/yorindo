@@ -72,7 +72,7 @@ export class InMemoryEventRepository implements IEventRepository {
         endTime: '17:00',
         timezone: i % 3 === 0 ? 'Asia/Makassar' : i % 3 === 1 ? 'Asia/Jayapura' : 'Asia/Jakarta',
         city: CITIES[i % CITIES.length]!,
-        venue: faker.location.streetAddress() + ', ' + CITIES[i % CITIES.length],
+        venue: faker.address.streetAddress() + ', ' + CITIES[i % CITIES.length],
         description: faker.lorem.paragraph(),
         capacity: [50, 100, 150, 200, 250, 300, 75, 120, 80, 400, 60, 500][i]!,
         waitlistBuffer: 10,

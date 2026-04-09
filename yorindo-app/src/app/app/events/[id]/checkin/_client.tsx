@@ -66,19 +66,19 @@ export function CheckinAdminView({ params }: CheckinAdminViewProps) {
     onError: () => toast.error('Gagal melakukan check-in'),
   })
 
-  const allApproved = approvedData?.data ?? []
   const recentAttended = (attendedData?.data ?? []).slice().reverse().slice(0, 20)
 
   const searchResults = useMemo(() => {
     if (!search.trim()) return []
     const q = search.toLowerCase()
-    return allApproved.filter(
+    const approved = approvedData?.data ?? []
+    return approved.filter(
       (r) =>
         r.contactName.toLowerCase().includes(q) ||
         r.contactPhone?.toLowerCase().includes(q) ||
         r.ticketToken?.toLowerCase().includes(q)
     )
-  }, [search, allApproved])
+  }, [search, approvedData?.data])
 
   const isLoading = statsLoading || approvedLoading || attendedLoading
 

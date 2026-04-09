@@ -1,8 +1,8 @@
-'use client'
+ 'use client'
 
-import { use, useState, useRef } from 'react'
+import { use, useState } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
-import Form from '@rjsf/core'
+import Form from '@rjsf/shadcn'
 import validator from '@rjsf/validator-ajv8'
 import type { RJSFSchema, UiSchema } from '@rjsf/utils'
 import { Card, CardContent } from '@/components/ui/card'
@@ -10,9 +10,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
+import { Combobox } from '@/components/ui/combobox'
 import { toast } from 'sonner'
-// Select no longer needed — RJSF renders survey inputs
-import type { Event, Contact } from '@/types/api'
+import type { Event } from '@/types/api'
 import { MockGoogleAuthDialog } from '@/components/auth/MockGoogleAuthDialog'
 import { GoogleIcon } from '@/components/icons/GoogleIcon'
 import { surveyCustomWidgets } from '@/components/features/surveys/widgets'
@@ -25,6 +25,20 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
   webinar: 'Webinar',
 }
 
+const INDUSTRIES = [
+  'Otomotif & Suku Cadang (Auto Parts)',
+  'Elektronik & Peralatan Rumah Tangga',
+  'Fast-Moving Consumer Goods (FMCG)',
+  'Makanan & Minuman (F&B)',
+  'Farmasi & Alat Kesehatan',
+  'Plastik & Kemasan (Packaging)',
+  'Fabrikasi Logam & Mesin Presisi',
+  'Bahan Kimia Industri',
+  'Alat Berat & Karoseri',
+  'Tekstil & Garmen',
+  'Yang lain',
+]
+
 interface RegistrationFormPageProps {
   params: Promise<{ eventSlug: string }>
 }
@@ -32,22 +46,26 @@ interface RegistrationFormPageProps {
 interface FormData {
   name: string
   email: string
+  secondaryEmail: string
   phone: string
+  company: string
+  industry: string
+  title: string
+  location: string
   surveyAnswers: Record<string, string>
   consent: boolean
 }
 
-const STEPS = ['Informasi Kontak', 'Survei', 'Konfirmasi']
+const STEPS = ['Informasi Kontak', 'Survei', 'Checkout', 'Selesai']
 
 export default function RegistrationFormPage({ params }: RegistrationFormPageProps) {
   const { eventSlug } = use(params)
   const [step, setStep] = useState(0)
-  const [form, setForm] = useState<FormData>({ name: '', email: '', phone: '', surveyAnswers: {}, consent: false })
+  const [form, setForm] = useState<FormData>({ name: '', email: '', secondaryEmail: '', phone: '', company: '', industry: '', title: '', location: '', surveyAnswers: {}, consent: false })
   const [submitted, setSubmitted] = useState(false)
   const [regId, setRegId] = useState<string | null>(null)
   const [ssoFilled, setSsoFilled] = useState(false)
   const [showSsoDialog, setShowSsoDialog] = useState(false)
-  const phoneDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const { data: event } = useQuery<Event>({
     queryKey: ['public-event-form', eventSlug],
@@ -60,37 +78,37 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
     enabled: !!event?.id && step === 1,
   })
 
-  const lookupMutation = useMutation({
-    mutationFn: async (phone: string) => {
-      const res = await fetch(`/api/contacts/lookup?phone=${encodeURIComponent(phone)}`)
-      if (!res.ok) return null
-      return res.json() as Promise<Contact | null>
-    },
-    onSuccess: (contact) => {
-      if (contact && !ssoFilled) {
-        setForm((p) => ({
-          ...p,
-          name: contact.name || p.name,
-          email: contact.email || p.email,
-        }))
-        toast.info('Data Anda ditemukan dan sudah diisi otomatis')
-      }
-    },
+  const { data: citiesData } = useQuery<{ data: { value: string; label: string }[] }>({
+    queryKey: ['locations-cities'],
+    queryFn: () => fetch('/api/locations/cities').then((r) => r.json()),
+    staleTime: 24 * 60 * 60 * 1000,
   })
+
+  // Phone lookup removed per updated acceptance criteria (dedup handled server-side)
 
   const submitMutation = useMutation({
     mutationFn: async () => {
       if (!event) throw new Error('Event not found')
+      const body: Record<string, unknown> = {
+        eventId: event.id,
+        name: form.name,
+        email: form.email,
+        secondaryEmail: form.secondaryEmail || undefined,
+        phone: form.phone,
+        company: form.company || undefined,
+        industry: form.industry || undefined,
+        title: form.title || undefined,
+        location: form.location || undefined,
+        surveyAnswers: form.surveyAnswers,
+      }
+      if (event.is_paid === false) {
+        body.order = { subtotal: 0, discount: 0, total: 0, currency: 'IDR', payment_method: null }
+      }
+
       const res = await fetch('/api/registrations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          eventId: event.id,
-          name: form.name,
-          email: form.email,
-          phone: form.phone,
-          surveyAnswers: form.surveyAnswers,
-        }),
+        body: JSON.stringify(body),
       })
       if (!res.ok) {
         const body = await res.json()
@@ -105,18 +123,10 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
     onError: (err) => toast.error(err instanceof Error ? err.message : 'Pendaftaran gagal'),
   })
 
-  const handlePhoneBlur = () => {
-    if (!form.phone || form.phone.length < 8) return
-    if (phoneDebounceRef.current) clearTimeout(phoneDebounceRef.current)
-    phoneDebounceRef.current = setTimeout(() => lookupMutation.mutate(form.phone), 300)
-  }
+  // phone blur/lookup removed
 
-  // Build Google Calendar deep link
-  const calendarLink = event
-    ? `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(event.name)}&dates=${encodeURIComponent(
-        new Date(event.eventDate).toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z'
-      )}/${encodeURIComponent(new Date(new Date(event.eventDate).getTime() + 2 * 3600000).toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z')}&details=${encodeURIComponent(event.description ?? '')}`
-    : '#'
+  // Google Calendar deep link removed — shown only after email confirmation
+  // because registration still requires admin approval at this stage.
 
   if (submitted) {
     const shareUrl = `${window.location.origin}/register/${eventSlug}`
@@ -132,16 +142,6 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
               Terima kasih telah mendaftar. Tim kami akan meninjau pendaftaran Anda.
             </p>
             <Badge className="bg-muted text-muted-foreground">ID: {regId}</Badge>
-            <div>
-              <a
-                href={calendarLink}
-                target="_blank"
-                rel="noreferrer"
-                className="text-primary underline text-sm"
-              >
-                + Tambahkan ke Google Calendar
-              </a>
-            </div>
             <div className="pt-2 space-y-2">
               <p className="text-xs text-muted-foreground font-medium">Bagikan ke teman:</p>
               <div className="flex justify-center gap-2">
@@ -181,13 +181,13 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
         setSsoFilled(true)
       }}
     />
-    <div className="max-w-md mx-auto px-4 py-6">
+    <div className="w-full max-w-2xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
       {/* Event details banner */}
       {event && (
-        <div className="mb-5 rounded-xl border border-border bg-card p-4 space-y-2">
+        <div className="mb-6 rounded-xl border border-border bg-card p-5 space-y-2">
           <div>
-            <h1 className="text-base font-bold leading-snug">{event.name}</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">
+            <h1 className="text-lg font-bold leading-snug">{event.name}</h1>
+            <p className="text-sm text-muted-foreground mt-1">
               {new Date(event.eventDate).toLocaleDateString('id-ID', {
                 weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
                 timeZone: event.timezone,
@@ -195,7 +195,7 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
             </p>
           </div>
           {(event.venue || event.eventType || event.industryTags?.length) && (
-            <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
               {event.venue && <span>{event.venue}</span>}
               {event.venue && (event.eventType || event.industryTags?.length) && <span>·</span>}
               {event.eventType && (
@@ -210,30 +210,30 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
       )}
 
       {/* Step indicator */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-8">
         {STEPS.map((label, idx) => (
-          <div key={label} className="flex items-center">
+          <div key={label} className="flex items-center flex-1">
             <div
-              className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium ${
+              className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-colors ${
                 idx <= step ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
               }`}
             >
               {idx + 1}
             </div>
-            <span className={`ml-1 text-xs hidden sm:block ${idx === step ? 'font-medium' : 'text-muted-foreground'}`}>
+            <span className={`ml-2 text-sm hidden sm:block whitespace-nowrap ${idx === step ? 'font-semibold' : 'text-muted-foreground'}`}>
               {label}
             </span>
             {idx < STEPS.length - 1 && (
-              <div className={`mx-2 h-px w-6 sm:w-12 ${idx < step ? 'bg-primary' : 'bg-muted'}`} />
+              <div className={`flex-1 mx-2 sm:mx-4 h-0.5 rounded ${idx < step ? 'bg-primary' : 'bg-muted'}`} />
             )}
           </div>
         ))}
       </div>
 
       <Card>
-        <CardContent className="pt-6 pb-6">
+        <CardContent className="pt-8 pb-8 px-4 sm:px-8">
           {step === 0 && (
-            <div className="space-y-4">
+            <div className="space-y-5">
               <h2 className="text-lg font-semibold">Informasi Kontak</h2>
 
               {/* Gmail SSO pre-fill */}
@@ -252,64 +252,134 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
                 <div className="flex-1 h-px bg-border" />
               </div>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="phone">
-                  Nomor Telepon <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  value={form.phone}
-                  onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
-                  onBlur={handlePhoneBlur}
-                  placeholder="+628..."
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="name">
-                  Nama Lengkap <span className="text-destructive">*</span>
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="name"
-                    value={form.name}
-                    onChange={(e) => !ssoFilled && setForm((p) => ({ ...p, name: e.target.value }))}
-                    placeholder="Nama lengkap Anda"
-                    readOnly={ssoFilled}
-                    className={ssoFilled ? 'pr-20 bg-muted/40' : ''}
-                  />
-                  {ssoFilled && (
-                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-green-600 font-medium">
-                      ✓ Terisi dari Google
-                    </span>
-                  )}
+              {/* Required fields */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="name">
+                    Nama Lengkap <span className="text-destructive">*</span>
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="name"
+                      value={form.name}
+                      onChange={(e) => !ssoFilled && setForm((p) => ({ ...p, name: e.target.value }))}
+                      placeholder="Nama lengkap Anda"
+                      readOnly={ssoFilled}
+                      className={ssoFilled ? 'pr-20 bg-muted/40' : ''}
+                    />
+                    {ssoFilled && (
+                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-green-600 font-medium">
+                        ✓ Terisi dari Google
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="email">
-                  Email <span className="text-destructive">*</span>
-                </Label>
-                <div className="relative">
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="company">
+                    Nama Perusahaan/Instansi <span className="text-destructive">*</span>
+                  </Label>
                   <Input
-                    id="email"
+                    id="company"
+                    value={form.company}
+                    onChange={(e) => setForm((p) => ({ ...p, company: e.target.value }))}
+                    placeholder="Perusahaan atau instansi"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="email">
+                    Email <span className="text-destructive">*</span>
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="email"
+                      type="email"
+                      value={form.email}
+                      onChange={(e) => !ssoFilled && setForm((p) => ({ ...p, email: e.target.value }))}
+                      placeholder="email@contoh.com"
+                      readOnly={ssoFilled}
+                      className={ssoFilled ? 'pr-20 bg-muted/40' : ''}
+                    />
+                    {ssoFilled && (
+                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-green-600 font-medium">
+                        ✓ Terisi dari Google
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="secondaryEmail">
+                    Email Perusahaan <span className="text-muted-foreground text-xs">(opsional)</span>
+                  </Label>
+                  <Input
+                    id="secondaryEmail"
                     type="email"
-                    value={form.email}
-                    onChange={(e) => !ssoFilled && setForm((p) => ({ ...p, email: e.target.value }))}
-                    placeholder="email@contoh.com"
-                    readOnly={ssoFilled}
-                    className={ssoFilled ? 'pr-20 bg-muted/40' : ''}
+                    value={form.secondaryEmail}
+                    onChange={(e) => setForm((p) => ({ ...p, secondaryEmail: e.target.value }))}
+                    placeholder="email@perusahaan.com"
                   />
-                  {ssoFilled && (
-                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-green-600 font-medium">
-                      ✓ Terisi dari Google
-                    </span>
-                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="phone">
+                    No. Handphone (WA) <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    value={form.phone}
+                    onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
+                    placeholder="+628..."
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="industry">
+                    Jenis Industri Manufaktur <span className="text-destructive">*</span>
+                  </Label>
+                  <Combobox
+                    options={INDUSTRIES.map((ind) => ({ value: ind, label: ind }))}
+                    value={form.industry}
+                    onValueChange={(v) => setForm((p) => ({ ...p, industry: v }))}
+                    placeholder="Pilih industri"
+                    searchPlaceholder="Cari industri..."
+                    emptyText="Industri tidak ditemukan."
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="title">
+                    Jabatan <span className="text-muted-foreground text-xs">(opsional)</span>
+                  </Label>
+                  <Input
+                    id="title"
+                    value={form.title}
+                    onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
+                    placeholder="Jabatan Anda"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="location">
+                    Lokasi Kantor/Pabrik <span className="text-muted-foreground text-xs">(opsional)</span>
+                  </Label>
+                  <Combobox
+                    options={citiesData?.data ?? []}
+                    value={form.location}
+                    onValueChange={(v) => setForm((p) => ({ ...p, location: v }))}
+                    placeholder="Cari kota..."
+                    searchPlaceholder="Ketik nama kota..."
+                    emptyText="Kota tidak ditemukan."
+                  />
                 </div>
               </div>
+
               <Button
                 className="w-full h-11"
                 onClick={() => setStep(1)}
-                disabled={!form.name || !form.email || !form.phone}
+                disabled={!form.name || !form.email || !form.phone || !form.company || !form.industry}
               >
                 Lanjut →
               </Button>
@@ -317,16 +387,16 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
           )}
 
           {step === 1 && (
-            <div className="space-y-4">
+            <div className="space-y-5">
               <h2 className="text-lg font-semibold">Survei Event</h2>
               {surveyLoading ? (
-                <div className="h-24 bg-muted rounded animate-pulse" />
+                <div className="h-32 bg-muted rounded animate-pulse" />
               ) : !survey?.schema?.properties || Object.keys(survey.schema.properties).length === 0 ? (
                 <div className="space-y-4">
                   <p className="text-muted-foreground text-sm">Tidak ada pertanyaan survei untuk event ini.</p>
                   <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => setStep(0)}>← Kembali</Button>
-                    <Button className="flex-1" onClick={() => setStep(2)}>Lanjut →</Button>
+                    <Button variant="outline" className="h-11" onClick={() => setStep(0)}>← Kembali</Button>
+                    <Button className="flex-1 h-11" onClick={() => setStep(2)}>Lanjut →</Button>
                   </div>
                 </div>
               ) : (
@@ -341,11 +411,11 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
                     setStep(2)
                   }}
                 >
-                  <div className="flex gap-2 pt-2">
-                    <Button type="button" variant="outline" onClick={() => setStep(0)}>
+                  <div className="flex gap-2 pt-4">
+                    <Button type="button" variant="outline" className="h-11" onClick={() => setStep(0)}>
                       ← Kembali
                     </Button>
-                    <Button type="submit" className="flex-1">
+                    <Button type="submit" className="flex-1 h-11">
                       Lanjut →
                     </Button>
                   </div>
@@ -355,12 +425,68 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
           )}
 
           {step === 2 && (
-            <div className="space-y-4">
+            <div className="space-y-5">
+              <h2 className="text-lg font-semibold">Checkout</h2>
+              <div className="rounded-lg bg-muted/50 p-5 space-y-3 text-sm">
+                {/* Event banner */}
+                <div className="w-full aspect-video rounded overflow-hidden bg-gradient-to-br from-primary/10 via-muted to-primary/5">
+                  {event?.bannerUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={event.bannerUrl} alt={event?.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-primary-foreground/50 font-medium">{event?.name?.split(' ').slice(0,2).map(s => s[0]).join('')}</div>
+                  )}
+                </div>
+
+                <p className="font-medium">{event?.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {event && new Date(event.eventDate).toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: event.timezone })}
+                </p>
+
+                <div className="rounded-lg bg-white p-3 shadow-sm space-y-1">
+                  <p className="text-xs text-muted-foreground">Peserta</p>
+                  <p className="font-medium">{form.name}</p>
+                  <p className="text-xs text-muted-foreground">{form.company}{form.industry ? ` · ${form.industry}` : ''}</p>
+                  <p className="text-xs text-muted-foreground">{form.email}{form.secondaryEmail ? ` · ${form.secondaryEmail}` : ''}</p>
+                  <p className="text-xs text-muted-foreground">{form.phone}</p>
+                </div>
+
+                {/* Price handling */}
+                {event?.is_paid ? (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Subtotal</span>
+                    <span className="font-medium">Rp {event.price?.toLocaleString('id-ID')}</span>
+                  </div>
+                ) : (
+                  <div>
+                    <span className="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Gratis</span>
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <Button variant="outline" className="h-11" onClick={() => setStep(1)}>← Kembali</Button>
+                  <Button
+                    className="flex-1 h-11"
+                    onClick={() => setStep(3)}
+                  >
+                    Lanjut ke Konfirmasi →
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="space-y-5">
               <h2 className="text-lg font-semibold">Konfirmasi</h2>
-              <div className="rounded-lg bg-muted/50 p-4 space-y-2 text-sm">
+              <div className="rounded-lg bg-muted/50 p-5 space-y-2 text-sm">
                 <p><span className="text-muted-foreground">Nama:</span> {form.name}</p>
-                <p><span className="text-muted-foreground">Email:</span> {form.email}</p>
+                <p><span className="text-muted-foreground">Perusahaan:</span> {form.company || '-'}</p>
+                <p><span className="text-muted-foreground">Industri:</span> {form.industry || '-'}</p>
+                <p><span className="text-muted-foreground">Email:</span> {form.email}{form.secondaryEmail ? `, ${form.secondaryEmail}` : ''}</p>
                 <p><span className="text-muted-foreground">Telepon:</span> {form.phone}</p>
+                {form.title && <p><span className="text-muted-foreground">Jabatan:</span> {form.title}</p>}
+                {form.location && <p><span className="text-muted-foreground">Lokasi:</span> {form.location}</p>}
                 <p><span className="text-muted-foreground">Event:</span> {event?.name}</p>
               </div>
               <label className="flex items-start gap-3 cursor-pointer">
@@ -375,13 +501,13 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
                 </span>
               </label>
               <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setStep(1)}>← Kembali</Button>
+                <Button variant="outline" className="h-11" onClick={() => setStep(2)}>← Kembali</Button>
                 <Button
                   className="flex-1 h-11"
                   onClick={() => submitMutation.mutate()}
                   disabled={!form.consent || submitMutation.isPending}
                 >
-                  {submitMutation.isPending ? 'Mendaftar…' : 'Daftar Sekarang'}
+                  {submitMutation.isPending ? 'Mengirim…' : 'Selesai'}
                 </Button>
               </div>
             </div>

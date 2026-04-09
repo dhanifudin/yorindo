@@ -1,5 +1,7 @@
 import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
 import {
   auditLogRepository,
   contactRepository,
@@ -30,7 +32,12 @@ const CreateRegistrationBodySchema = z.object({
   eventId: z.string().trim().min(1),
   name: z.string().trim().min(1),
   email: z.string().email(),
+  secondaryEmail: z.string().email().optional(),
   phone: z.string().trim().min(8),
+  company: z.string().trim().optional(),
+  industry: z.string().trim().optional(),
+  title: z.string().trim().optional(),
+  location: z.string().trim().optional(),
   surveyAnswers: z.record(z.string(), z.unknown()).optional(),
 })
 
@@ -123,6 +130,26 @@ async function handleStatusUpdate(request: any, reply: FastifyReply, method: 'po
 }
 
 export const registrationsRoutes: FastifyPluginAsync = async (fastify) => {
+
+  // ── GET /api/locations/cities (unauthenticated — used by registration form)
+  fastify.get('/api/locations/cities', async (_request, reply) => {
+    const raw = readFileSync(path.resolve(process.cwd(), 'src/data/wilayah-static.json'), 'utf8')
+    const data = JSON.parse(raw) as Array<{
+      provinceCode: string
+      provinceName: string
+      cityCode: string
+      cityName: string
+    }>
+    const cities = data.map((c) => ({
+      value: c.cityName,
+      label: `${c.cityName}, ${c.provinceName}`,
+      provinceCode: c.provinceCode,
+      cityCode: c.cityCode,
+    }))
+    validateOpenApiResponse({ path: '/locations/cities', method: 'get', status: 200, body: { data: cities } })
+    return reply.status(200).send({ data: cities })
+  })
+
   fastify.post('/api/registrations', {
     config: {
       rateLimit: {
@@ -145,19 +172,26 @@ export const registrationsRoutes: FastifyPluginAsync = async (fastify) => {
 
     const existingContact = await contactRepository.findByPhone(payload.phone)
     const contact = existingContact
-      ? await contactRepository.update(existingContact.id, { name: payload.name, email: payload.email })
+      ? await contactRepository.update(existingContact.id, { 
+          name: payload.name, 
+          email: payload.email,
+          serviceType: payload.industry ?? existingContact.serviceType,
+          company: payload.company ?? existingContact.company,
+          jobTitle: payload.title ?? existingContact.jobTitle,
+          city: payload.location ?? existingContact.city,
+        })
       : await contactRepository.upsert({
           name: payload.name,
           phone: payload.phone,
           email: payload.email,
-          serviceType: null,
-          jobTitle: null,
-          city: null,
+          serviceType: payload.industry ?? null,
+          jobTitle: payload.title ?? null,
+          city: payload.location ?? null,
           provinceCode: null,
           provinceName: null,
           cityCode: null,
           cityName: null,
-          company: null,
+          company: payload.company ?? null,
           department: null,
           eventDate: null,
           source: 'form',
@@ -185,6 +219,37 @@ export const registrationsRoutes: FastifyPluginAsync = async (fastify) => {
     const responseBody = toRegistrationDto(registration, payload.surveyAnswers ?? {})
     validateOpenApiResponse({ path: '/registrations', method: 'post', status: 201, body: responseBody })
     return reply.status(201).send(responseBody)
+  })
+
+  // ── GET /api/registrations/confirm/:token (unauthenticated — email confirmation link)
+  fastify.get('/api/registrations/confirm/:token', async (request, reply) => {
+    const { token } = request.params as { token: string }
+    const registration = await registrationRepository.findByTicketToken(token)
+    if (!registration) {
+      return reply.status(400).send({
+        error: { code: 'INVALID_TOKEN', message: 'Token tidak valid atau sudah kadaluarsa', details: [] },
+      })
+    }
+    const event = await eventRepository.findById(registration.eventId)
+    if (!event) {
+      return reply.status(404).send({
+        error: { code: 'NOT_FOUND', message: 'Event not found', details: [] },
+      })
+    }
+    const contact = await contactRepository.findById(registration.contactId)
+    return reply.status(200).send({
+      message: 'Registrasi berhasil dikonfirmasi',
+      registration: {
+        id: registration.id,
+        status: registration.status,
+        eventName: event.name,
+        eventSlug: event.slug,
+        eventDate: event.startDate,
+        participantName: contact?.name ?? registration.contactId,
+        contactId: registration.contactId,
+        participantEmail: contact?.email ?? '',
+      },
+    })
   })
 
   fastify.get('/api/registrations', { preHandler: requireAuth }, async (request, reply) => {

@@ -9,4 +9,4 @@ As an admin, I want to review flagged duplicate profiles side-by-side and merge 
 - [x] Admin selects which field values to keep per field
 - [x] POST /api/contacts/:id/merge confirms merge
 
-## Status: review
+## Status: done

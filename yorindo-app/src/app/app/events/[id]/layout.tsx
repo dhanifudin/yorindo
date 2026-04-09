@@ -28,6 +28,11 @@ import {
 import { cn } from '@/lib/utils'
 import type { Event, ApiError } from '@/types/api'
 
+interface EventOverviewResponse {
+  pendingApprovals?: number
+  daysUntilEvent?: number
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface HubLayoutProps {
@@ -81,9 +86,11 @@ export default function EventHubShellLayout({ children, params }: HubLayoutProps
     staleTime: 60_000,
   })
 
-  const { data: registrationStats } = useQuery<{ pagination: { total: number } }>({
-    queryKey: ['event-registrations', id, 'pending'],
-    queryFn: () => fetch(`/api/events/${id}/registrations?status=pending&pageSize=1`).then(r => r.json()),
+  // Shared blockerState query — AC7
+  const { data: blockerState } = useQuery<EventOverviewResponse>({
+    queryKey: ['event', id, 'blockerState'],
+    queryFn: () => fetch(`/api/events/${id}/overview`).then(r => r.json()),
+    staleTime: 60_000,
     enabled: !!id,
   })
 

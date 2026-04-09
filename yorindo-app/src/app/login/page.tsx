@@ -19,7 +19,11 @@ export default function LoginPage() {
   const [showSsoDialog, setShowSsoDialog] = useState(false)
 
   useEffect(() => {
-    if (hydrated && accessToken) router.replace('/app')
+    if (hydrated && accessToken) {
+      const redirectUrl = sessionStorage.getItem('loginRedirectUrl')
+      sessionStorage.removeItem('loginRedirectUrl')
+      router.replace(redirectUrl || '/app')
+    }
   }, [hydrated, accessToken, router])
 
   if (!hydrated || accessToken) return null
