@@ -11,8 +11,10 @@ export class DisabledYoriMindService implements IYoriMindService {
     return {
       disabled: true,
       summary: '',
-      insights: [],
+      analysis: '',
+      root_causes: [],
       recommendations: [],
+      tracked_metrics: [],
       generatedAt: new Date().toISOString(),
     }
   }
