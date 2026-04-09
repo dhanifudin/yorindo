@@ -33,7 +33,7 @@ import {
 } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
-import { Flag, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Flag, ChevronLeft, ChevronRight, Zap } from 'lucide-react'
 import { BulkApproveBar } from '@/components/registrasi/BulkApproveBar'
 import { AiScoreBadge } from '@/components/registrasi/AiScoreBadge'
 import { ContactSheet } from '@/components/registrasi/ContactSheet'
@@ -82,6 +82,9 @@ export default function RegistrationsPage({ params }: RegistrationsPageProps) {
   const [sheetIndex, setSheetIndex] = useState<number | null>(null)
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 20 })
   const [cancelTarget, setCancelTarget] = useState<{ id: string; name: string } | null>(null)
+  const [approveTarget, setApproveTarget] = useState<{ id: string; name: string } | null>(null)
+  const [rejectTarget, setRejectTarget] = useState<{ id: string; name: string } | null>(null)
+  const [fastMode, setFastMode] = useState(false)
   const tableContainerRef = useRef<HTMLDivElement>(null)
 
   // Read event capacity from cache (loaded by layout)
@@ -371,7 +374,22 @@ export default function RegistrationsPage({ params }: RegistrationsPageProps) {
                 size="sm"
                 className="h-7 text-xs"
                 variant={quotaFull ? 'outline' : 'default'}
-                onClick={() => quotaFull ? waitlistMutation.mutate(reg.id) : approveMutation.mutate(reg.id)}
+                onClick={() => {
+                  if (quotaFull) {
+                    if (fastMode) {
+                      waitlistMutation.mutate(reg.id)
+                    } else {
+                      // Reuse approve confirmation for waitlist too
+                      setApproveTarget({ id: reg.id, name: reg.contactName })
+                    }
+                  } else {
+                    if (fastMode) {
+                      approveMutation.mutate(reg.id)
+                    } else {
+                      setApproveTarget({ id: reg.id, name: reg.contactName })
+                    }
+                  }
+                }}
                 disabled={approveMutation.isPending || waitlistMutation.isPending}
               >
                 {quotaFull ? 'Waitlist' : 'Setujui'}
@@ -380,7 +398,13 @@ export default function RegistrationsPage({ params }: RegistrationsPageProps) {
                 size="sm"
                 variant="outline"
                 className="h-7 text-xs text-destructive"
-                onClick={() => rejectMutation.mutate(reg.id)}
+                onClick={() => {
+                  if (fastMode) {
+                    rejectMutation.mutate(reg.id)
+                  } else {
+                    setRejectTarget({ id: reg.id, name: reg.contactName })
+                  }
+                }}
                 disabled={rejectMutation.isPending}
               >
                 Tolak
@@ -458,7 +482,7 @@ export default function RegistrationsPage({ params }: RegistrationsPageProps) {
         return null
       },
     },
-  ], [quotaFull, waitlistRanks]) // eslint-disable-line react-hooks/exhaustive-deps
+  ], [quotaFull, waitlistRanks, fastMode, approveMutation, waitlistMutation, rejectMutation, promoteMutation]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
@@ -531,6 +555,25 @@ export default function RegistrationsPage({ params }: RegistrationsPageProps) {
         aiRecommendedIds={aiRecommendedIds}
         selectedIds={selectedIds}
       />
+
+      {/* Fast Mode toggle */}
+      <div className="flex items-center gap-2 px-1">
+        <label className="flex items-center gap-2 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={fastMode}
+            onChange={(e) => setFastMode(e.target.checked)}
+            className="accent-primary h-4 w-4 rounded"
+          />
+          <Zap className={`h-4 w-4 ${fastMode ? 'text-amber-500' : 'text-muted-foreground'}`} />
+          <span className="text-sm font-medium">Mode Cepat</span>
+        </label>
+        {fastMode && (
+          <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-md px-2 py-0.5">
+            ⚠️ Konfirmasi dinonaktifkan — pastikan sebelum mengklik
+          </span>
+        )}
+      </div>
 
       <RegistrationFilters
         columnFilters={columnFilters}
@@ -659,6 +702,70 @@ export default function RegistrationsPage({ params }: RegistrationsPageProps) {
               disabled={cancelMutation.isPending}
             >
               Ya, Batalkan
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Approve / Waitlist confirmation */}
+      <AlertDialog open={approveTarget !== null} onOpenChange={(open: boolean) => { if (!open) setApproveTarget(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {quotaFull ? 'Masukkan ke Waitlist?' : 'Setujui Pendaftaran?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {quotaFull ? (
+                <>
+                  Kuota penuh. Masukkan <strong>{approveTarget?.name}</strong> ke waitlist?
+                </>
+              ) : (
+                <>
+                  Setujui pendaftaran <strong>{approveTarget?.name}</strong>?
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (!approveTarget) return
+                if (quotaFull) {
+                  waitlistMutation.mutate(approveTarget.id)
+                } else {
+                  approveMutation.mutate(approveTarget.id)
+                }
+                setApproveTarget(null)
+              }}
+              disabled={approveMutation.isPending || waitlistMutation.isPending}
+            >
+              {quotaFull ? 'Ya, Waitlist' : 'Ya, Setujui'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reject confirmation */}
+      <AlertDialog open={rejectTarget !== null} onOpenChange={(open: boolean) => { if (!open) setRejectTarget(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tolak Pendaftaran?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tolak pendaftaran <strong>{rejectTarget?.name}</strong>? Tindakan ini tidak dapat dibatalkan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (rejectTarget) rejectMutation.mutate(rejectTarget.id)
+                setRejectTarget(null)
+              }}
+              disabled={rejectMutation.isPending}
+            >
+              Ya, Tolak
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

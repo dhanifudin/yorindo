@@ -63,7 +63,7 @@ export class PostgresRegistrationRepository
 
     if (filters?.contactId) { conditions.push(`contact_id = $${idx++}`); values.push(filters.contactId) }
     if (filters?.eventId) { conditions.push(`event_id = $${idx++}`); values.push(filters.eventId) }
-    if (filters?.status) { conditions.push(`status = $${idx++}`); values.push(filters.status) }
+    if (filters?.status) { conditions.push(`status = $${idx++}::reg_status`); values.push(filters.status) }
     if (filters?.aiScoreMin != null) { conditions.push(`ai_score >= $${idx++}`); values.push(filters.aiScoreMin) }
     if (filters?.aiScoreMax != null) { conditions.push(`ai_score <= $${idx++}`); values.push(filters.aiScoreMax) }
     if (filters?.flagged) { conditions.push('flag_override = TRUE') }
@@ -179,8 +179,8 @@ export class PostgresRegistrationRepository
 
   async updateStatus(id: EntityId, status: RegistrationStatus): Promise<Registration | null> {
     const { rows } = await this.query<RegistrationRow>(
-      `UPDATE registrations SET status = $2,
-         approved_at = CASE WHEN $2 = 'approved' THEN NOW() ELSE approved_at END
+      `UPDATE registrations SET status = $2::reg_status,
+         approved_at = CASE WHEN $2::reg_status = 'approved' THEN NOW() ELSE approved_at END
        WHERE id = $1 RETURNING *`,
       [id, status],
     )
