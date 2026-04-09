@@ -58,20 +58,21 @@ export const blastHandlers = [
     )
   }),
 
-  // POST /api/blast
-  http.post('/api/blast', async ({ request }) => {
+  // POST /api/events/:id/blast
+  http.post('/api/events/:id/blast', async ({ request, params }) => {
     await delay(500)
     const body = await request.json() as {
-      eventId: string
+      eventId?: string
       channel: 'whatsapp' | 'email'
       templateId: string
       contactIds?: string[]
       scheduledAt?: string
     }
+    const eventId = (params.id as string) || (body.eventId as string) || 'unknown-event'
     const recipientCount = body.contactIds?.length ?? 247
     const job: BlastJob = {
       jobId: 'mock-job-1',
-      eventId: body.eventId,
+      eventId: eventId,
       channel: body.channel,
       templateId: body.templateId,
       scheduledAt: body.scheduledAt,
