@@ -87,7 +87,7 @@ export default function ErasurePage() {
           <CardContent className="pt-5">
             <h1 className="text-xl font-bold text-destructive mb-2">⚠️ Peringatan: Penghapusan Data Permanen</h1>
             <p className="text-sm text-destructive/90 leading-relaxed">
-              Tindakan ini akan menganonimkan seluruh data pribadi Anda secara permanen di semua catatan Yorindo.
+              Tindakan ini akan menganonimkan seluruh data pribadi Anda secara permanen di semua catatan EM · U.
               <strong className="font-semibold"> Tindakan ini tidak dapat dibatalkan.</strong>
             </p>
           </CardContent>

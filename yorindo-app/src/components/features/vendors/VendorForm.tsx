@@ -188,7 +188,7 @@ export function VendorForm({ open, onOpenChange, vendor }: VendorFormProps) {
               id="vendor-notes"
               {...register('notes')}
               rows={2}
-              placeholder="Catatan untuk tim Yorindo..."
+              placeholder="Catatan untuk tim EM · U..."
             />
           </div>
 
