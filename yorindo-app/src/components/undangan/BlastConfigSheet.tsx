@@ -31,7 +31,9 @@ const blastSchema = z.object({
   channel: z.enum(['whatsapp', 'email']),
   templateId: z.string().optional(),
   customMessage: z.string().max(MAX_CUSTOM_MESSAGE).optional(),
-  scheduledAt: z.string().optional(),
+  scheduledAt: z.string().optional(),       // Computed ISO 8601 UTC from date + time
+  scheduledDate: z.string().optional(),      // YYYY-MM-DD
+  scheduledTime: z.string().optional(),      // HH:MM (24hr)
 }).refine(
   (data) => !!data.templateId || !!data.customMessage?.trim(),
   { message: 'Pilih template atau tulis pesan kustom', path: ['templateId'] }
@@ -50,7 +52,8 @@ interface BlastConfigSheetProps {
   onOpenChange: (open: boolean) => void
   eventId: string
   templates: Template[]
-  onSuccess: () => void
+  selectedContactIds?: string[]
+  onSuccess: (jobId?: string) => void
 }
 
 export function BlastConfigSheet({
@@ -58,6 +61,7 @@ export function BlastConfigSheet({
   onOpenChange,
   eventId,
   templates,
+  selectedContactIds,
   onSuccess,
 }: BlastConfigSheetProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -75,16 +79,28 @@ export function BlastConfigSheet({
   async function onSubmit(values: BlastFormValues) {
     setIsSubmitting(true)
     try {
-      const res = await fetch('/api/blast', {
+      const body: Record<string, unknown> = { eventId }
+      if (values.channel) body.channel = values.channel
+      if (values.templateId) body.templateId = values.templateId
+      if (values.customMessage?.trim()) body.customMessage = values.customMessage
+      // Only send scheduledAt if both date and time were provided
+      if (values.scheduledAt && values.scheduledDate && values.scheduledTime) {
+        body.scheduledAt = values.scheduledAt
+      }
+      if (selectedContactIds && selectedContactIds.length > 0) {
+        body.contactIds = selectedContactIds
+      }
+      const res = await fetch(`/api/events/${eventId}/blast`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ eventId, ...values }),
+        body: JSON.stringify(body),
       })
       if (!res.ok) throw new Error('Failed')
+      const data = await res.json() as { jobId?: string }
       onOpenChange(false)
-      form.reset()
+      form.reset({ channel: 'whatsapp', scheduledDate: undefined, scheduledTime: undefined, scheduledAt: undefined })
       toast.success('Blast dijadwalkan')
-      onSuccess()
+      onSuccess(data.jobId)
     } catch {
       toast.error('Gagal mengirim blast — coba lagi')
     } finally {
@@ -176,14 +192,47 @@ export function BlastConfigSheet({
               </div>
             </div>
 
-            {/* Optional scheduled at */}
+            {/* Optional scheduled date & time */}
             <div className="space-y-2">
-              <Label htmlFor="scheduledAt">Jadwalkan (opsional)</Label>
-              <Input
-                id="scheduledAt"
-                type="datetime-local"
-                {...form.register('scheduledAt')}
-              />
+              <Label>Jadwalkan (opsional)</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="scheduledDate" className="text-xs text-muted-foreground">Tanggal</Label>
+                  <Input
+                    id="scheduledDate"
+                    type="date"
+                    min={new Date().toISOString().split('T')[0]}
+                    {...form.register('scheduledDate')}
+                    onChange={(e) => {
+                      form.setValue('scheduledDate', e.target.value, { shouldValidate: true })
+                      // Recompute scheduledAt from date + time
+                      const date = e.target.value
+                      const time = form.getValues('scheduledTime') ?? '09:00'
+                      if (date) {
+                        form.setValue('scheduledAt', `${date}T${time}:00.000Z`, { shouldValidate: true })
+                      }
+                    }}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="scheduledTime" className="text-xs text-muted-foreground">Waktu (24 jam)</Label>
+                  <Input
+                    id="scheduledTime"
+                    type="time"
+                    defaultValue="09:00"
+                    {...form.register('scheduledTime')}
+                    onChange={(e) => {
+                      form.setValue('scheduledTime', e.target.value, { shouldValidate: true })
+                      // Recompute scheduledAt from date + time
+                      const date = form.getValues('scheduledDate')
+                      const time = e.target.value
+                      if (date) {
+                        form.setValue('scheduledAt', `${date}T${time}:00.000Z`, { shouldValidate: true })
+                      }
+                    }}
+                  />
+                </div>
+              </div>
             </div>
           </form>
         </div>

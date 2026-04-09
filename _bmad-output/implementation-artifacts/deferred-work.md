@@ -36,3 +36,9 @@
 ## Deferred from spec-contacts-drop-unique-phone-email (2026-04-08)
 
 **Concurrent upsert race condition:** Two simultaneous `upsert` calls with the same phone/email can both pass the SELECT collision check before either INSERT completes, producing two non-flagged duplicate rows. Fix requires `SELECT ... FOR UPDATE` or a PostgreSQL advisory lock in the `upsert` transaction. Low risk in current single-instance deployment; revisit before horizontal scaling.
+
+## Deferred from fix-audience-preview-flagcategory-and-seed-criteria (2026-04-09)
+
+**`flagCategory` sentinel strings undocumented:** `'NONE'` (→ IS NULL) and `'ANY'` (→ IS NOT NULL) are magic sentinel values in `ContactFilters.flagCategory`. They are handled in both the memory and Postgres repos but not documented in the `ContactFilters` interface or `IContactRepository`. A future developer passing a literal value `'NONE'` for a real flag category would silently get wrong behavior. Consider replacing with typed `excludeFlagged?: boolean` and `requireFlagged?: boolean` fields.
+
+**`EVENT_CRITERIA` map in seed-demo.ts is not self-updating:** New events added to the `EVENTS` array with `status: 'active'` or `'published'` silently fall through to a generic teknologi fallback if their slug is not in `EVENT_CRITERIA`. No warning is logged when the fallback is used. Consider adding a console.warn when a slug is missing from the map.

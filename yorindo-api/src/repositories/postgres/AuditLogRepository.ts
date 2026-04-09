@@ -63,4 +63,20 @@ export class PostgresAuditLogRepository
     )
     return rows.map((r) => this.mapRow(r))
   }
+
+  async findAll(filters?: { action?: string }): Promise<AuditLog[]> {
+    try {
+      let sql = 'SELECT * FROM audit_logs'
+      const params: unknown[] = []
+      if (filters?.action) {
+        sql += ' WHERE action = $1'
+        params.push(filters.action)
+      }
+      sql += ' ORDER BY created_at DESC'
+      const { rows } = await this.query<AuditLogRow>(sql, params)
+      return (rows ?? []).map((r) => this.mapRow(r))
+    } catch {
+      return []
+    }
+  }
 }

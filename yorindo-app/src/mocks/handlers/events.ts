@@ -659,7 +659,17 @@ export const eventHandlers = [
     let count = 247
     if (body.serviceType) count = Math.floor(count * 0.3)
     if (body.city) count = Math.floor(count * 0.4)
-    return HttpResponse.json({ count })
+    const contacts = Array.from({ length: Math.min(count, 100) }, (_, i) => ({
+      id: `contact-preview-${i}`,
+      name: `Kontak ${i + 1}`,
+      email: `kontak${i + 1}@example.com`,
+      phone: `+628120000${String(1000 + i).padStart(4, '0')}`,
+      city: ['Jakarta', 'Bandung', 'Surabaya'][i % 3],
+      company: `PT Contoh ${i + 1}`,
+      serviceType: ['teknologi', 'kesehatan', 'keuangan'][i % 3],
+      jobTitle: null,
+    }))
+    return HttpResponse.json({ matchCount: count, breakdown: {}, contacts, totalContacts: count })
   }),
 
   http.post('/api/events/:id/blast/emergency', async () => {

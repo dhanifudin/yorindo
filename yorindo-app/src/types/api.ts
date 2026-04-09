@@ -226,6 +226,24 @@ export interface UpdateContactFlagBody {
 
 // ─── AI Audience Recommendations ─────────────────────────────────────────────
 
+export interface AudiencePreviewContact {
+  id: string
+  name: string
+  email: string | null
+  phone: string | null
+  city: string | null
+  company: string | null
+  serviceType: string | null
+  jobTitle: string | null
+}
+
+export interface AudiencePreviewResponse {
+  matchCount: number
+  breakdown: Record<string, number>
+  contacts: AudiencePreviewContact[]
+  totalContacts: number
+}
+
 export interface AudienceRecommendation {
   contactId: string
   name: string

@@ -4583,6 +4583,89 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
 
+  /blast/history:
+    get:
+      summary: Get blast history, optionally filtered by event (authenticated)
+      operationId: getBlastHistory
+      tags: [Blast]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: eventId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of blast records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    channel:
+                      type: string
+                    recipientCount:
+                      type: integer
+                    sentAt:
+                      type: string
+                      format: date-time
+                    status:
+                      type: string
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /blast/{jobId}:
+    get:
+      summary: Get blast job status (authenticated)
+      operationId: getBlastJobStatus
+      tags: [Blast]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Blast job status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  jobId:
+                    type: string
+                  status:
+                    type: string
+                  sent:
+                    type: integer
+                  total:
+                    type: integer
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Job not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
   # ─────────────────────────────────────────────────────────────────────────────
   # REGISTRATIONS
   # ─────────────────────────────────────────────────────────────────────────────

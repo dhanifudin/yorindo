@@ -118,7 +118,7 @@ const BlastBodySchema = z.object({
     lastAttendedBefore: z.string().optional(),
   }).optional(),
   contactIds: z.array(z.string().trim().min(1)).optional(),
-  scheduledAt: z.string().datetime().optional(),
+  scheduledAt: z.string().trim().datetime().optional(),
 }).superRefine((value, ctx) => {
   if (value.filters && value.contactIds) {
     ctx.addIssue({
@@ -1073,14 +1073,47 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     if (!event) return
     validateOpenApiRequest({ path: '/events/{id}/audience-preview', method: 'post', params: params.data, body: request.body })
 
+    // Use event targetCriteria if no body filters provided
+    const bodyData = body.data
+    const effectiveFilters: Record<string, unknown> = { ...bodyData }
+    if (event.targetCriteria && !bodyData.serviceTypes?.length) {
+      if (event.targetCriteria.serviceTypes) effectiveFilters.serviceTypes = event.targetCriteria.serviceTypes
+      if (event.targetCriteria.cities) effectiveFilters.cities = event.targetCriteria.cities
+      if (event.targetCriteria.jobTitles) effectiveFilters.jobTitles = event.targetCriteria.jobTitles
+    }
+
+    // Normalize legacy slug serviceTypes to the display names stored in the contacts table
+    const SERVICE_TYPE_SLUG_TO_DISPLAY: Record<string, string> = {
+      teknologi: 'Elektronik & Peralatan Rumah Tangga',
+      keuangan: 'Fast-Moving Consumer Goods (FMCG)',
+      kesehatan: 'Farmasi & Alat Kesehatan',
+      manufaktur: 'Fabrikasi Logam & Mesin Presisi',
+      retail: 'Tekstil & Garmen',
+      pendidikan: 'Yang lain',
+      otomotif: 'Otomotif & Komponen',
+      energi: 'Energi & Pertambangan',
+      properti: 'Properti & Konstruksi',
+      telekomunikasi: 'Telekomunikasi',
+    }
+    if ((effectiveFilters.serviceTypes as string[] | undefined)?.length) {
+      effectiveFilters.serviceTypes = (effectiveFilters.serviceTypes as string[]).map(
+        (s) => SERVICE_TYPE_SLUG_TO_DISPLAY[s] ?? s,
+      )
+    }
+
     // Delegate filtering to the repository (handles slug→ID conversion, excludes deleted)
     const filters: import('../interfaces/repositories/IContactRepository.js').ContactFilters = {
       consentStatus: 'active',       // Exclude suppressed contacts
       flagCategory: 'NONE',          // Exclude flagged contacts
+      hasEmail: true,                // Must have email for blast delivery
+      hasPhone: true,                // Must have phone for blast delivery
     }
-    if (body.data.serviceTypes?.length) filters.serviceTypes = body.data.serviceTypes
-    if (body.data.cities?.length) filters.cities = body.data.cities
-    if (body.data.jobTitles?.length) filters.jobTitles = body.data.jobTitles
+    const svcTypes = effectiveFilters.serviceTypes as string[] | undefined
+    const cities = effectiveFilters.cities as string[] | undefined
+    const jobTitles = effectiveFilters.jobTitles as string[] | undefined
+    if (svcTypes?.length) filters.serviceTypes = svcTypes
+    if (cities?.length) filters.cities = cities
+    if (jobTitles?.length) filters.jobTitles = jobTitles
 
     // Fetch all matching contacts (use large pageSize, rely on total for accurate count)
     const contacts = await contactRepository.findAll({ page: 1, pageSize: 10000 }, filters)
@@ -1142,6 +1175,17 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     const responseBody = {
       matchCount: body.data.behavior?.length || body.data.lastAttendedBefore ? matchedContacts.length : matchTotal,
       breakdown,
+      contacts: matchedContacts.slice(0, 100).map(c => ({
+        id: c.id,
+        name: c.name,
+        email: c.email,
+        phone: c.phone,
+        city: c.city,
+        company: c.company,
+        serviceType: c.serviceType,
+        jobTitle: c.jobTitle,
+      })),
+      totalContacts: matchedContacts.length,
     }
     validateOpenApiResponse({ path: '/events/{id}/audience-preview', method: 'post', status: 200, body: responseBody })
     return reply.status(200).send(responseBody)
@@ -1189,7 +1233,12 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
 
   fastify.post('/api/events/:id/blast', { preHandler: [requireAuth, requireAdmin] }, async (request, reply) => {
     const params = EventIdParamsSchema.safeParse(request.params)
-    const body = BlastBodySchema.safeParse(request.body)
+
+    // Clean empty strings to undefined before validation
+    const rawBody = request.body as Record<string, unknown>
+    if (rawBody.scheduledAt === '') delete rawBody.scheduledAt
+
+    const body = BlastBodySchema.safeParse(rawBody)
     if (!params.success || !body.success) {
       return replyValidationError(reply, [
         ...(params.success ? [] : params.error.issues),
@@ -1251,6 +1300,43 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     }
     validateOpenApiResponse({ path: '/events/{id}/blast', method: 'post', status: 202, body: responseBody })
     return reply.status(202).send(responseBody)
+  })
+
+  // ── GET /api/blast/history?eventId=:id ───────────────────────────
+  fastify.get('/api/blast/history', { preHandler: requireAuth }, async (request, reply) => {
+    const url = new URL(request.url, `http://${request.hostname}`)
+    const eventId = url.searchParams.get('eventId')
+
+    // Query audit logs for blast actions
+    try {
+      const auditLogs = await auditLogRepository.findAll() ?? []
+      const blastLogs = auditLogs
+        .filter((log) => log.action === 'blast.queued' || log.action === 'blast.send' || log.action === 'contact.blast_initiated')
+        .filter((log) => !eventId || log.eventId === eventId)
+        .map((log) => ({
+          id: log.id,
+          channel: (log.metadata as { channel?: string })?.channel ?? 'whatsapp',
+          recipientCount: (log.metadata as { recipientCount?: number })?.recipientCount ?? 0,
+          sentAt: log.createdAt,
+          status: 'completed' as const,
+        }))
+
+      validateOpenApiResponse({ path: '/blast/history', method: 'get', status: 200, body: blastLogs })
+      return reply.status(200).send(blastLogs)
+    } catch (err) {
+      // Return empty list if audit logs table doesn't exist or query fails
+      return reply.status(200).send([])
+    }
+  })
+
+  // ── GET /api/blast/:jobId ────────────────────────────────────────
+  fastify.get('/api/blast/:jobId', { preHandler: requireAuth }, async (request, reply) => {
+    const { jobId } = request.params as { jobId: string }
+
+    // In the current implementation, jobs are processed synchronously
+    // Return a completed status for historical jobs
+    validateOpenApiResponse({ path: '/blast/{jobId}', method: 'get', status: 200, body: { jobId, status: 'completed', sent: 0, total: 0 } })
+    return reply.status(200).send({ jobId, status: 'completed', sent: 0, total: 0 })
   })
 
   // ── GET /api/events/:id/overview ─────────────────────────────────

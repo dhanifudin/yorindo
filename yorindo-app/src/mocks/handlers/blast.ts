@@ -65,8 +65,10 @@ export const blastHandlers = [
       eventId: string
       channel: 'whatsapp' | 'email'
       templateId: string
+      contactIds?: string[]
       scheduledAt?: string
     }
+    const recipientCount = body.contactIds?.length ?? 247
     const job: BlastJob = {
       jobId: 'mock-job-1',
       eventId: body.eventId,
@@ -75,11 +77,11 @@ export const blastHandlers = [
       scheduledAt: body.scheduledAt,
       status: body.scheduledAt ? 'scheduled' : 'queued',
       sent: 0,
-      total: 247,
+      total: recipientCount,
       sentAt: new Date().toISOString(),
     }
     blastJobsStore.push(job)
-    return HttpResponse.json({ jobId: job.jobId, status: job.status }, { status: 202 })
+    return HttpResponse.json({ jobId: job.jobId, status: job.status, recipientCount }, { status: 202 })
   }),
 
   // POST /api/events/:id/blast/emergency — emergency blast to approved registrants

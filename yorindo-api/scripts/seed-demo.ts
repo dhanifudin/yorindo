@@ -191,6 +191,30 @@ export async function seedDemo(pool: Pool): Promise<void> {
     }
     console.log(`✓ Seeded ${EVENTS.length} events`)
 
+    // ── Set targetCriteria on active/published events ──
+    // Each event gets domain-appropriate criteria matching its theme and city
+    const EVENT_CRITERIA: Record<string, { cities: string[]; serviceTypes: string[] }> = {
+      'techconf-jakarta-2026':           { cities: ['Jakarta'],  serviceTypes: [INDUSTRY_DISPLAY_NAMES.teknologi] },
+      'ai-summit-bandung':               { cities: ['Bandung'],  serviceTypes: [INDUSTRY_DISPLAY_NAMES.teknologi] },
+      'erp-workshop-surabaya':           { cities: ['Surabaya'], serviceTypes: [INDUSTRY_DISPLAY_NAMES.manufaktur] },
+      'fintech-networking-bali':         { cities: ['Denpasar'], serviceTypes: [INDUSTRY_DISPLAY_NAMES.keuangan] },
+      'konferensi-kesehatan-digital-2026': { cities: ['Jakarta'], serviceTypes: [INDUSTRY_DISPLAY_NAMES.kesehatan] },
+    }
+    for (let i = 0; i < EVENTS.length; i++) {
+      const ev = EVENTS[i]
+      if (['active', 'published'].includes(ev.status)) {
+        const targetCriteria = EVENT_CRITERIA[ev.slug] ?? {
+          cities: [ev.city],
+          serviceTypes: [INDUSTRY_DISPLAY_NAMES.teknologi],
+        }
+        await client.query(
+          `UPDATE events SET target_criteria = $2 WHERE slug = $1`,
+          [ev.slug, JSON.stringify(targetCriteria)]
+        )
+      }
+    }
+    console.log('✓ Seeded targetCriteria on events (domain-specific per event)')
+
     // ── Assign staff to active/published events ──
     const activePublishedEventIds = eventIds.filter((_, i) => ['active', 'published'].includes(EVENTS[i].status))
     for (const eid of activePublishedEventIds) {
