@@ -5,7 +5,7 @@
  * Idempotent — safe to run multiple times (uses IF NOT EXISTS throughout).
  *
  * Usage: npx tsx scripts/migrate.ts
- * Requires: DATABASE_URL environment variable
+ * Requires: DATABASE_URL or individual POSTGRES_* variables
  */
 
 import { Pool } from 'pg'
@@ -15,12 +15,17 @@ import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-const databaseUrl = process.env.DATABASE_URL
-if (!databaseUrl) {
-  console.error('Error: DATABASE_URL environment variable is required')
-  process.exit(1)
+function buildDatabaseUrl(): string {
+  if (process.env.DATABASE_URL) return process.env.DATABASE_URL
+  const user = process.env.POSTGRES_USER ?? 'yorindo'
+  const password = process.env.POSTGRES_PASSWORD ?? ''
+  const host = process.env.POSTGRES_HOST ?? 'localhost'
+  const port = process.env.POSTGRES_PORT ?? '5432'
+  const db = process.env.POSTGRES_DB ?? 'yorindo'
+  return `postgresql://${user}:${encodeURIComponent(password)}@${host}:${port}/${db}`
 }
 
+const databaseUrl = buildDatabaseUrl()
 const pool = new Pool({ connectionString: databaseUrl })
 
 const migrations = [
