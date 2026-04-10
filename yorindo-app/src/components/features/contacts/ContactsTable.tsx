@@ -17,8 +17,6 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Skeleton } from '@/components/ui/skeleton'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Label } from '@/components/ui/label'
 import {
   Table,
   TableBody,
@@ -140,25 +138,6 @@ export function ContactsTable({
       : duplicateGroup.primary
   }, [duplicateGroup, detailContact])
 
-  const mergeMutation = useMutation({
-    mutationFn: async ({ keepId, removeId }: { keepId: string; removeId: string }) => {
-      const res = await fetch(`/api/contacts/${keepId}/merge`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mergeIntoId: keepId, removeId }),
-      })
-      if (!res.ok) throw new Error('Merge gagal')
-      return res.json()
-    },
-    onSuccess: (contact: Contact) => {
-      queryClient.invalidateQueries({ queryKey: ['contacts'] })
-      queryClient.invalidateQueries({ queryKey: ['contacts-duplicates'] })
-      setDetailContact(contact)
-      toast.success('Duplikat berhasil digabungkan')
-    },
-    onError: () => toast.error('Gagal menggabungkan duplikat'),
-  })
-
   const flagMutation = useMutation({
     mutationFn: async ({ id, flagCategory }: { id: string; flagCategory: FlagCategory }) => {
       const res = await fetch(`/api/contacts/${id}`, {
@@ -177,21 +156,30 @@ export function ContactsTable({
   })
 
   const resolveDuplicatesMutation = useMutation({
-    mutationFn: async ({ keepId, deleteIds }: { keepId: string; deleteIds: string[] }) => {
-      const res = await fetch('/api/contacts/resolve-duplicates', {
+    mutationFn: async ({ primaryId, keepId }: { primaryId: string; keepId: string }) => {
+      // If keeping the duplicate, use fieldSelections to pick all fields from duplicate
+      const fieldSelections = keepId !== primaryId
+        ? { name: 'duplicate', phone: 'duplicate', email: 'duplicate', serviceType: 'duplicate', jobTitle: 'duplicate', city: 'duplicate', company: 'duplicate', department: 'duplicate' }
+        : undefined
+
+      const res = await fetch(`/api/contacts/${primaryId}/merge`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ keepId, deleteIds }),
+        body: JSON.stringify({ mergeIntoId: keepId, fieldSelections }),
       })
-      if (!res.ok) throw new Error('Resolve duplikat gagal')
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body?.error?.message ?? 'Resolve duplikat gagal')
+      }
       return res.json()
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contacts'] })
+      queryClient.invalidateQueries({ queryKey: ['contacts-duplicates'] })
       setDetailContact(null)
       toast.success('Duplikat berhasil diselesaikan')
     },
-    onError: () => toast.error('Gagal menyelesaikan duplikat'),
+    onError: (err) => toast.error(err instanceof Error ? err.message : 'Gagal menyelesaikan duplikat'),
   })
 
   const columns: ColumnDef<Contact>[] = [
@@ -257,16 +245,20 @@ export function ContactsTable({
   ]
 
   const handleResolveDuplicates = () => {
-    if (!selectedKeepId || !detailContact || !duplicateGroups?.data) return
-    const allDuplicates = [detailContact, ...(duplicateGroups.data.find(
-      (g) => g.primary.id === detailContact.id || g.duplicate.id === detailContact.id,
-    )?.primary.id === detailContact.id 
-      ? [duplicateGroups.data.find((g) => g.primary.id === detailContact.id)?.duplicate] 
-      : [duplicateGroups.data.find((g) => g.duplicate.id === detailContact.id)?.primary]
-    ).filter(Boolean) as Contact[]]
-    
-    const deleteIds = allDuplicates.map((d) => d.id).filter(id => id !== selectedKeepId)
-    resolveDuplicatesMutation.mutate({ keepId: selectedKeepId, deleteIds })
+    if (!selectedKeepId || !duplicateGroup) return
+    resolveDuplicatesMutation.mutate({ primaryId: duplicateGroup.primary.id, keepId: selectedKeepId })
+  }
+
+  const handleDismissDuplicates = () => {
+    if (!duplicateGroup) return
+    // Mark the pair as resolved (dismissed) without merging
+    fetch(`/api/contacts/duplicates/${duplicateGroup.id}`, { method: 'DELETE' })
+      .then(() => {
+        queryClient.invalidateQueries({ queryKey: ['contacts-duplicates'] })
+        setDetailContact(null)
+        toast.success('Duplikat berhasil diabaikan')
+      })
+      .catch(() => toast.error('Gagal mengabaikan duplikat'))
   }
 
   const table = useReactTable({
@@ -309,7 +301,7 @@ export function ContactsTable({
           }
         }}
       >
-        <SheetContent side="right" className="flex flex-col sm:max-w-lg w-full overflow-y-auto">
+        <SheetContent side="right" className="flex flex-col w-[calc(100vw-4rem)] sm:max-w-2xl overflow-y-auto">
           <SheetHeader>
             <SheetTitle>{detailContact?.name}</SheetTitle>
           </SheetHeader>
@@ -392,55 +384,118 @@ export function ContactsTable({
                 {detailContact?.flagCategory === 'duplicate' && (
                   <>
                     <Separator className="my-4" />
-                    <div className="space-y-2">
-                      <p className="text-xs text-muted-foreground font-medium">Selesaikan Duplikat</p>
-                      <p className="text-xs">Kontak ini ditandai sebagai duplikat. Pilih kontak yang ingin disimpan. Kontak lainnya akan dihapus.</p>
+                    <div className="space-y-3">
+                      <p className="text-sm font-medium">Selesaikan Duplikat</p>
+                      <p className="text-xs text-muted-foreground">Pilih kontak yang akan disimpan. Kontak yang tidak dipilih akan dihapus.</p>
                       {duplicateLoading ? (
                         <div className="space-y-2">
                           {Array.from({ length: 3 }).map((_, i) => (
-                            <Skeleton key={i} className="h-8" />
+                            <Skeleton key={i} className="h-20" />
                           ))}
                         </div>
                       ) : duplicateGroup ? (
                         <>
-                          <p className="text-xs text-muted-foreground">Alasan duplikat: Data serupa ditemukan</p>
-                          <RadioGroup value={selectedKeepId} onValueChange={setSelectedKeepId}>
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem value={detailContact.id} id={`keep-${detailContact.id}`} />
-                              <Label htmlFor={`keep-${detailContact.id}`} className="text-xs cursor-pointer">
-                                <p className="font-medium">{detailContact.name}</p>
-                                <p className="text-muted-foreground">{detailContact.phone || '—'} · {detailContact.email || '—'}</p>
-                              </Label>
-                            </div>
-                            {duplicatePartner && (
-                              <div className="flex items-center space-x-2">
-                                <RadioGroupItem value={duplicatePartner.id} id={`keep-${duplicatePartner.id}`} />
-                                <Label htmlFor={`keep-${duplicatePartner.id}`} className="text-xs cursor-pointer">
-                                  <p className="font-medium">{duplicatePartner.name}</p>
-                                  <p className="text-muted-foreground">{duplicatePartner.phone || '—'} · {duplicatePartner.email || '—'}</p>
-                                </Label>
+                          {/* Comparison cards */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {/* Primary contact card */}
+                            <button
+                              type="button"
+                              onClick={() => setSelectedKeepId(duplicateGroup.primary.id)}
+                              className={cn(
+                                'rounded-lg border-2 p-3 text-left transition-all',
+                                selectedKeepId === duplicateGroup.primary.id
+                                  ? 'border-primary bg-primary/5'
+                                  : 'border-border bg-muted/30 hover:bg-muted/50',
+                              )}
+                            >
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className={cn(
+                                  'w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0',
+                                  selectedKeepId === duplicateGroup.primary.id
+                                    ? 'border-primary bg-primary'
+                                    : 'border-muted-foreground',
+                                )}>
+                                  {selectedKeepId === duplicateGroup.primary.id && (
+                                    <span className="text-[8px] text-primary-foreground font-bold">✓</span>
+                                  )}
+                                </div>
+                                <span className="text-xs font-semibold">Kontak A</span>
                               </div>
-                            )}
-                          </RadioGroup>
+                              <div className="space-y-1 text-xs">
+                                <p className="font-medium break-words">{duplicateGroup.primary.name}</p>
+                                <p className="text-muted-foreground break-all">{duplicateGroup.primary.phone || '—'}</p>
+                                <p className="text-muted-foreground break-all">{duplicateGroup.primary.email || '—'}</p>
+                                {duplicateGroup.primary.serviceType && (
+                                  <p className="text-muted-foreground">{duplicateGroup.primary.serviceType}</p>
+                                )}
+                                {duplicateGroup.primary.company && (
+                                  <p className="text-muted-foreground">{duplicateGroup.primary.company}</p>
+                                )}
+                              </div>
+                            </button>
+
+                            {/* Duplicate contact card */}
+                            <button
+                              type="button"
+                              onClick={() => setSelectedKeepId(duplicateGroup.duplicate.id)}
+                              className={cn(
+                                'rounded-lg border-2 p-3 text-left transition-all',
+                                selectedKeepId === duplicateGroup.duplicate.id
+                                  ? 'border-primary bg-primary/5'
+                                  : 'border-border bg-muted/30 hover:bg-muted/50',
+                              )}
+                            >
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className={cn(
+                                  'w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0',
+                                  selectedKeepId === duplicateGroup.duplicate.id
+                                    ? 'border-primary bg-primary'
+                                    : 'border-muted-foreground',
+                                )}>
+                                  {selectedKeepId === duplicateGroup.duplicate.id && (
+                                    <span className="text-[8px] text-primary-foreground font-bold">✓</span>
+                                  )}
+                                </div>
+                                <span className="text-xs font-semibold">Kontak B</span>
+                                <Badge className="bg-yellow-100 text-yellow-700 text-[9px] px-1 py-0 shrink-0">Duplikat</Badge>
+                              </div>
+                              <div className="space-y-1 text-xs">
+                                <p className="font-medium break-words">{duplicateGroup.duplicate.name}</p>
+                                <p className="text-muted-foreground break-all">{duplicateGroup.duplicate.phone || '—'}</p>
+                                <p className="text-muted-foreground break-all">{duplicateGroup.duplicate.email || '—'}</p>
+                                {duplicateGroup.duplicate.serviceType && (
+                                  <p className="text-muted-foreground">{duplicateGroup.duplicate.serviceType}</p>
+                                )}
+                                {duplicateGroup.duplicate.company && (
+                                  <p className="text-muted-foreground">{duplicateGroup.duplicate.company}</p>
+                                )}
+                              </div>
+                            </button>
+                          </div>
+
+                          {/* Match reason */}
+                          <p className="text-xs text-muted-foreground">
+                            Kecocokan: {duplicateGroup.matchReasons.map(r =>
+                              r === 'same_phone' ? 'Telepon sama' : r === 'same_email' ? 'Email sama' : r
+                            ).join(', ')}
+                          </p>
+
+                          {/* Action buttons */}
                           <div className="flex gap-2">
                             <Button
                               size="sm"
                               onClick={handleResolveDuplicates}
                               disabled={!selectedKeepId || resolveDuplicatesMutation.isPending}
                             >
-                              {resolveDuplicatesMutation.isPending ? 'Menyelesaikan...' : 'Selesaikan'}
+                              {resolveDuplicatesMutation.isPending ? 'Menyelesaikan...' : 'Gabungkan'}
                             </Button>
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => {
-                                if (duplicatePartner) {
-                                  resolveDuplicatesMutation.mutate({ keepId: '', deleteIds: [detailContact.id, duplicatePartner.id] })
-                                }
-                              }}
+                              onClick={handleDismissDuplicates}
                               disabled={resolveDuplicatesMutation.isPending}
                             >
-                              Hapus Semua
+                              Abaikan
                             </Button>
                           </div>
                         </>
