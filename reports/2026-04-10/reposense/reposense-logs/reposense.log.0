@@ -1,0 +1,130 @@
+Apr 10, 2026 10:44:49 AM reposense.system.LogsManager addFileHandler
+INFO: Log temp folder has been successfully created
+Apr 10, 2026 10:44:50 AM reposense.parser.ReportConfigYamlParser parse
+INFO: Parsing report-config.yaml file...
+Apr 10, 2026 10:44:50 AM reposense.parser.ReportConfigYamlParser parse
+INFO: report-config.yaml file parsed successfully!
+Apr 10, 2026 10:44:50 AM reposense.model.OneStopConfigRunConfiguration getRepoConfigurations
+INFO: Parsing https://github.com/dhanifudin/yorindo.git...
+Apr 10, 2026 10:44:50 AM reposense.model.OneStopConfigRunConfiguration getRepoConfigurations
+INFO: Parsing main...
+Apr 10, 2026 10:44:50 AM reposense.model.OneStopConfigRunConfiguration getRepoConfigurations
+INFO: Parsing adyatma7...
+Apr 10, 2026 10:44:50 AM reposense.model.AuthorConfiguration checkDuplicateAliases
+WARNING: Duplicate alias adyatma7 found. The alias will belong to the last author - adyatma7
+Apr 10, 2026 10:44:50 AM reposense.model.OneStopConfigRunConfiguration getRepoConfigurations
+INFO: Parsing Adzky...
+Apr 10, 2026 10:44:50 AM reposense.model.AuthorConfiguration checkDuplicateAliases
+WARNING: Duplicate alias adzky found. The alias will belong to the last author - Adzky
+Apr 10, 2026 10:44:50 AM reposense.model.OneStopConfigRunConfiguration getRepoConfigurations
+INFO: Parsing azizaja5953...
+Apr 10, 2026 10:44:50 AM reposense.model.AuthorConfiguration checkDuplicateAliases
+WARNING: Duplicate alias azizaja5953 found. The alias will belong to the last author - azizaja5953
+Apr 10, 2026 10:44:50 AM reposense.model.OneStopConfigRunConfiguration getRepoConfigurations
+INFO: Parsing bogyramadhan-afk...
+Apr 10, 2026 10:44:50 AM reposense.model.AuthorConfiguration checkDuplicateAliases
+WARNING: Duplicate alias bogyramadhan-afk found. The alias will belong to the last author - bogyramadhan-afk
+Apr 10, 2026 10:44:50 AM reposense.model.OneStopConfigRunConfiguration getRepoConfigurations
+INFO: Parsing dimlat...
+Apr 10, 2026 10:44:50 AM reposense.model.AuthorConfiguration checkDuplicateAliases
+WARNING: Duplicate alias dimlat found. The alias will belong to the last author - dimlat
+Apr 10, 2026 10:44:50 AM reposense.model.OneStopConfigRunConfiguration getRepoConfigurations
+INFO: Parsing dhanifudin...
+Apr 10, 2026 10:44:50 AM reposense.model.OneStopConfigRunConfiguration getRepoConfigurations
+INFO: Parsing erick-surbakti...
+Apr 10, 2026 10:44:50 AM reposense.model.OneStopConfigRunConfiguration getRepoConfigurations
+INFO: Parsing GiovanniDimas...
+Apr 10, 2026 10:44:50 AM reposense.model.AuthorConfiguration checkDuplicateAliases
+WARNING: Duplicate alias giovannidimas found. The alias will belong to the last author - GiovanniDimas
+Apr 10, 2026 10:44:50 AM reposense.model.OneStopConfigRunConfiguration getRepoConfigurations
+INFO: Parsing lanleimeng...
+Apr 10, 2026 10:44:50 AM reposense.model.AuthorConfiguration checkDuplicateAliases
+WARNING: Duplicate alias lanleimeng found. The alias will belong to the last author - lanleimeng
+Apr 10, 2026 10:44:50 AM reposense.model.OneStopConfigRunConfiguration getRepoConfigurations
+INFO: Parsing ninditya...
+Apr 10, 2026 10:44:50 AM reposense.model.AuthorConfiguration checkDuplicateAliases
+WARNING: Duplicate alias ninditya found. The alias will belong to the last author - ninditya
+Apr 10, 2026 10:44:50 AM reposense.model.OneStopConfigRunConfiguration getRepoConfigurations
+INFO: Parsing raquellajuvabel...
+Apr 10, 2026 10:44:50 AM reposense.model.AuthorConfiguration checkDuplicateAliases
+WARNING: Duplicate alias raquellajuvabel found. The alias will belong to the last author - raquellajuvabel
+Apr 10, 2026 10:44:50 AM reposense.model.OneStopConfigRunConfiguration getRepoConfigurations
+INFO: Parsing Rinaaa13...
+Apr 10, 2026 10:44:50 AM reposense.model.AuthorConfiguration checkDuplicateAliases
+WARNING: Duplicate alias rinaaa13 found. The alias will belong to the last author - Rinaaa13
+Apr 10, 2026 10:44:50 AM reposense.model.OneStopConfigRunConfiguration getRepoConfigurations
+INFO: Parsing thisiselysa...
+Apr 10, 2026 10:44:50 AM reposense.model.AuthorConfiguration checkDuplicateAliases
+WARNING: Duplicate alias thisiselysa found. The alias will belong to the last author - thisiselysa
+Apr 10, 2026 10:44:50 AM reposense.model.OneStopConfigRunConfiguration getRepoConfigurations
+INFO: Parsing yohanesjuliantino12...
+Apr 10, 2026 10:44:50 AM reposense.model.AuthorConfiguration checkDuplicateAliases
+WARNING: Duplicate alias yohanesjuliantino12 found. The alias will belong to the last author - yohanesjuliantino12
+Apr 10, 2026 10:44:50 AM reposense.model.OneStopConfigRunConfiguration getRepoConfigurations
+INFO: Merging author, group and repo configurations...
+Apr 10, 2026 10:44:50 AM reposense.model.AuthorConfiguration checkDuplicateAliases
+WARNING: Duplicate alias adyatma7 found. The alias will belong to the last author - adyatma7
+Apr 10, 2026 10:44:50 AM reposense.model.AuthorConfiguration checkDuplicateAliases
+WARNING: Duplicate alias adzky found. The alias will belong to the last author - Adzky
+Apr 10, 2026 10:44:50 AM reposense.model.AuthorConfiguration checkDuplicateAliases
+WARNING: Duplicate alias azizaja5953 found. The alias will belong to the last author - azizaja5953
+Apr 10, 2026 10:44:50 AM reposense.model.AuthorConfiguration checkDuplicateAliases
+WARNING: Duplicate alias bogyramadhan-afk found. The alias will belong to the last author - bogyramadhan-afk
+Apr 10, 2026 10:44:50 AM reposense.model.AuthorConfiguration checkDuplicateAliases
+WARNING: Duplicate alias dimlat found. The alias will belong to the last author - dimlat
+Apr 10, 2026 10:44:50 AM reposense.model.AuthorConfiguration checkDuplicateAliases
+WARNING: Duplicate alias giovannidimas found. The alias will belong to the last author - GiovanniDimas
+Apr 10, 2026 10:44:50 AM reposense.model.AuthorConfiguration checkDuplicateAliases
+WARNING: Duplicate alias lanleimeng found. The alias will belong to the last author - lanleimeng
+Apr 10, 2026 10:44:50 AM reposense.model.AuthorConfiguration checkDuplicateAliases
+WARNING: Duplicate alias ninditya found. The alias will belong to the last author - ninditya
+Apr 10, 2026 10:44:50 AM reposense.model.AuthorConfiguration checkDuplicateAliases
+WARNING: Duplicate alias raquellajuvabel found. The alias will belong to the last author - raquellajuvabel
+Apr 10, 2026 10:44:50 AM reposense.model.AuthorConfiguration checkDuplicateAliases
+WARNING: Duplicate alias rinaaa13 found. The alias will belong to the last author - Rinaaa13
+Apr 10, 2026 10:44:50 AM reposense.model.AuthorConfiguration checkDuplicateAliases
+WARNING: Duplicate alias thisiselysa found. The alias will belong to the last author - thisiselysa
+Apr 10, 2026 10:44:50 AM reposense.model.AuthorConfiguration checkDuplicateAliases
+WARNING: Duplicate alias yohanesjuliantino12 found. The alias will belong to the last author - yohanesjuliantino12
+Apr 10, 2026 10:44:50 AM reposense.model.OneStopConfigRunConfiguration getRepoConfigurations
+INFO: Finished parsing OneStopConfigRunConfiguration!
+Apr 10, 2026 10:44:50 AM reposense.git.GitConfig getGlobalGitLfsConfig
+WARNING: Could not get global git lfs config
+java.lang.RuntimeException: reposense.system.CommandRunnerProcessException: Error returned from command git config --global --list on path . :
+fatal: unable to read config file '/home/runner/.gitconfig': No such file or directory
+
+	at reposense.system.CommandRunner.runCommand(CommandRunner.java:23)
+	at reposense.git.GitConfig.getGitGlobalConfig(GitConfig.java:90)
+	at reposense.git.GitConfig.getGlobalGitLfsConfig(GitConfig.java:44)
+	at reposense.RepoSense.main(RepoSense.java:79)
+Caused by: reposense.system.CommandRunnerProcessException: Error returned from command git config --global --list on path . :
+fatal: unable to read config file '/home/runner/.gitconfig': No such file or directory
+
+	at reposense.system.CommandRunnerProcess.waitForProcess(CommandRunnerProcess.java:46)
+	at reposense.system.CommandRunner.runCommand(CommandRunner.java:21)
+	... 3 more
+
+Apr 10, 2026 10:44:51 AM reposense.report.RepoCloner spawnCloneProcess
+INFO: Cloning in parallel from https://github.com/dhanifudin/yorindo.git...
+Apr 10, 2026 10:44:51 AM reposense.report.RepoCloner waitForCloneProcess
+INFO: Waiting for cloning of https://github.com/dhanifudin/yorindo.git to complete...
+Apr 10, 2026 10:44:53 AM reposense.report.RepoCloner waitForCloneProcess
+INFO: Cloning of https://github.com/dhanifudin/yorindo.git completed!
+Apr 10, 2026 10:44:53 AM reposense.report.ReportGenerator analyzeRepos
+INFO: [1/1] Analyzing https://github.com/dhanifudin/yorindo.git (main)...
+Apr 10, 2026 10:44:53 AM reposense.report.ReportGenerator updateRepoConfig
+INFO: https://github.com/dhanifudin/yorindo.git (main) does not contain a standalone config file.
+Apr 10, 2026 10:44:53 AM reposense.authorship.FileInfoExtractor extractTextFileInfos
+INFO: Extracting relevant file info from https://github.com/dhanifudin/yorindo.git (main)...
+Apr 10, 2026 10:44:54 AM reposense.authorship.FileInfoExtractor generateFileInfo
+WARNING: File "docs/Project Brief Yorindo - KADA.pdf" has 11390144B size. The file size limit is set at 1000000B. Exact line diffs will be excluded from report...
+Apr 10, 2026 10:45:24 AM reposense.commits.CommitInfoExtractor extractCommitInfos
+INFO: Extracting commits info for https://github.com/dhanifudin/yorindo.git (main)...
+Apr 10, 2026 10:45:25 AM reposense.commits.CommitInfoAnalyzer analyzeCommits
+INFO: Analyzing commits info for https://github.com/dhanifudin/yorindo.git (main)...
+Apr 10, 2026 10:45:26 AM reposense.report.ReportGenerator analyzeRepo
+INFO: Analysis of https://github.com/dhanifudin/yorindo.git (main) completed!
+Apr 10, 2026 10:45:26 AM reposense.report.ReportGenerator generateReposReport
+INFO: The report is generated at /home/runner/work/yorindo/yorindo/reposense-output/reposense-tmp/reposense-report
+Apr 10, 2026 10:45:27 AM reposense.RepoSense main
+INFO: Elapsed processing time: 36.99 second(s)
