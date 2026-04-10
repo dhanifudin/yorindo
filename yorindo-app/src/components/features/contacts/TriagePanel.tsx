@@ -133,7 +133,7 @@ function MergeDiffSheet({
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Klik nilai yang ingin disimpan. Nilai yang disorot <span className="bg-primary text-primary-foreground rounded px-1">biru</span> akan digunakan pada kontak hasil gabungan.
+        Klik nilai yang ingin disimpan. Hanya field yang berbeda yang dapat dipilih.
       </p>
 
       <div className="flex gap-2 pt-2 border-t">

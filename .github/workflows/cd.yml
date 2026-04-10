@@ -57,6 +57,8 @@ jobs:
           tags: |
             ${{ env.IMAGE_APP }}:${{ steps.tag.outputs.value }}
             ${{ env.IMAGE_APP }}:latest
+          build-args: |
+            API_URL=http://api:3000
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -219,6 +221,7 @@ jobs:
             ${{ env.IMAGE_APP }}:preview
           build-args: |
             NEXT_PUBLIC_ENABLE_MOCKS=false
+            API_URL=http://api:3000
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
