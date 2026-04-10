@@ -29,9 +29,6 @@ deploy-demo:
 	@echo ""
 	@echo "📂 Starting api and app..."
 	$(DEMO_COMPOSE) up -d api app nginx
-	@echo "⏳ Waiting for api to be ready..."
-	@until $(API_EXEC) wget -qO- http://localhost:3000/api/health > /dev/null 2>&1; do printf "."; sleep 2; done
-	@echo ""
 	@echo "🔄 Running migrations..."
 	$(DEMO_COMPOSE) exec -T api node_modules/.bin/tsx scripts/migrate.ts
 	@echo "🌱 Running seed..."

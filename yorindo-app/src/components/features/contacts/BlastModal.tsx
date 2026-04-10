@@ -13,42 +13,40 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
+import { TemplatePreview } from '@/components/features/templates/TemplatePreview'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command'
+import { Check, ChevronsUpDown } from 'lucide-react'
 
 // ─── Schema ──────────────────────────────────────────────────────────────────
 
 const blastSchema = z.object({
   eventId: z.string().min(1, 'Pilih event'),
-  channel: z.enum(['whatsapp', 'email']),
-  messageType: z.enum(['template', 'custom']),
-  templateId: z.string().optional(),
-  customMessage: z.string().optional(),
-}).refine(
-  (data) => {
-    if (data.messageType === 'template') return !!data.templateId
-    if (data.messageType === 'custom') return (data.customMessage?.trim().length ?? 0) >= 10
-    return false
-  },
-  {
-    message: 'Isi pesan wajib diisi (minimal 10 karakter untuk pesan kustom)',
-    path: ['templateId'],
-  },
-)
+  templateId: z.string().min(1, 'Pilih template undangan'),
+  scheduleMode: z.enum(['now', 'later']),
+  scheduledDate: z.string().optional(),
+  scheduledTime: z.string().optional(),
+})
 
 type BlastFormValues = z.infer<typeof blastSchema>
 
@@ -112,36 +110,20 @@ export function BlastModal({
   selectedNames = [],
   segmentFilters,
 }: BlastModalProps) {
-  const [activeTab, setActiveTab] = useState<'template' | 'custom'>('template')
+  const [selectedTemplate, setSelectedTemplate] = useState<TemplateItem | null>(null)
+  const [eventPopoverOpen, setEventPopoverOpen] = useState(false)
+  const [templatePopoverOpen, setTemplatePopoverOpen] = useState(false)
 
   const form = useForm<BlastFormValues>({
     resolver: zodResolver(blastSchema),
     defaultValues: {
       eventId: '',
-      channel: 'whatsapp',
-      messageType: 'template',
       templateId: '',
-      customMessage: '',
+      scheduleMode: 'now',
     },
   })
 
-  // eslint-disable-next-line react-hooks/incompatible-library
-  const channel = form.watch('channel')
-  const templateId = form.watch('templateId')
-
-  useEffect(() => {
-    form.setValue('templateId', '')
-  }, [channel, form])
-
-  useEffect(() => {
-    form.setValue('messageType', activeTab)
-  }, [activeTab, form])
-
-  const handleClose = useCallback(() => {
-    form.reset()
-    setActiveTab('template')
-    onClose()
-  }, [form, onClose])
+  const scheduleMode = form.watch('scheduleMode')
 
   // ── Queries ────────────────────────────────────────────────────────────────
 
@@ -169,32 +151,57 @@ export function BlastModal({
     (a, b) => new Date(a.date ?? 0).getTime() - new Date(b.date ?? 0).getTime(),
   )
 
-  const filteredTemplates = (allTemplates ?? [])
-    .filter((t) => t.channel === channel && t.type === 'invitation')
-  const selectedTemplate = filteredTemplates.find((t) => t.id === templateId)
+  // Email invitation templates only
+  const invitationTemplates = (allTemplates ?? [])
+    .filter((t) => t.channel === 'email' && t.type === 'invitation')
+
+  const selectedEvent = sortedEvents.find((e) => e.id === form.watch('eventId'))
+
+  // Auto-select first template on open
+  useEffect(() => {
+    if (open && invitationTemplates.length > 0 && !selectedTemplate) {
+      const first = invitationTemplates[0]
+      form.setValue('templateId', first.id, { shouldValidate: true })
+      setSelectedTemplate(first)
+    }
+  }, [open, invitationTemplates, selectedTemplate, form])
+
+  // Reset on close
+  const handleClose = useCallback(() => {
+    form.reset()
+    setSelectedTemplate(null)
+    setEventPopoverOpen(false)
+    setTemplatePopoverOpen(false)
+    onClose()
+  }, [form, onClose])
 
   // ── Mutation ───────────────────────────────────────────────────────────────
 
   const { mutate: sendBlast, isPending } = useMutation({
     mutationFn: async (values: BlastFormValues) => {
+      const body: Record<string, unknown> = {
+        channel: 'email',
+        templateId: values.templateId,
+      }
+
+      if (values.scheduleMode === 'later' && values.scheduledDate && values.scheduledTime) {
+        body.scheduledAt = `${values.scheduledDate}T${values.scheduledTime}:00.000Z`
+      }
+
+      if (mode === 'selection') {
+        body.contactIds = selectedIds
+      } else if (segmentFilters && Object.values(segmentFilters).some((v) => v?.length)) {
+        body.filters = segmentFilters
+      }
+
       const res = await fetch(`/api/events/${encodeURIComponent(values.eventId)}/blast`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          channel: values.channel,
-          ...(values.messageType === 'template'
-            ? { templateId: values.templateId }
-            : { customMessage: values.customMessage }),
-          ...(mode === 'selection'
-            ? { contactIds: selectedIds }
-            : segmentFilters && Object.values(segmentFilters).some((v) => v?.length)
-              ? { filters: segmentFilters }
-              : {}),
-        }),
+        body: JSON.stringify(body),
       })
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}))
-        throw new Error(body?.error?.message ?? 'Blast gagal')
+        const errBody = await res.json().catch(() => ({}))
+        throw new Error(errBody?.error?.message ?? 'Blast gagal')
       }
       return res.json()
     },
@@ -214,189 +221,256 @@ export function BlastModal({
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) handleClose() }}>
-      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
+        <DialogHeader className="px-0 pt-0">
           <DialogTitle className="flex items-center gap-2">
             <Send className="w-4 h-4" />
             Kirim Blast
           </DialogTitle>
+          <DialogDescription>
+            Pilih event, template, dan jadwal pengiriman blast
+          </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
+        <div className="flex-1 overflow-y-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 px-1">
+            {/* Left column — Controls */}
+            <div className="space-y-5">
 
-          {/* Contact preview */}
-          <div className="space-y-1.5">
-            <Label className="text-sm text-muted-foreground">
-              {mode === 'selection'
-                ? `Penerima (${recipientCount} kontak dipilih)`
-                : `Penerima (${recipientCount} kontak di segmen)`}
-            </Label>
-            {mode === 'selection' && selectedNames.length > 0 ? (
-              <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-2 rounded-md border bg-muted/30">
-                {selectedNames.map((name, i) => (
-                  <Badge key={selectedIds[i] ?? i} variant="secondary" className="text-xs font-normal">
-                    {name}
-                  </Badge>
-                ))}
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <Badge variant="secondary">{recipientCount} kontak</Badge>
-                {mode === 'segment' && (
-                  <span className="text-xs text-muted-foreground">dari filter aktif</span>
+              {/* Event selector */}
+              <div className="space-y-2">
+                <Label>Event *</Label>
+                <Popover open={eventPopoverOpen} onOpenChange={setEventPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={eventPopoverOpen}
+                      className="w-full justify-between font-normal"
+                    >
+                      {selectedEvent
+                        ? selectedEvent.name
+                        : 'Pilih event…'}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                    <Command>
+                      <CommandInput placeholder="Cari event…" />
+                      <CommandEmpty>Tidak ada event dipublikasikan</CommandEmpty>
+                      <CommandList>
+                        <CommandGroup>
+                          {eventsLoading ? (
+                            <div className="py-2 px-3 space-y-2">
+                              <Skeleton className="h-10 w-full" />
+                              <Skeleton className="h-10 w-full" />
+                            </div>
+                          ) : sortedEvents.length === 0 ? (
+                            <p className="py-4 text-center text-sm text-muted-foreground">
+                              Tidak ada event
+                            </p>
+                          ) : (
+                            sortedEvents.map((e) => (
+                              <CommandItem
+                                key={e.id}
+                                value={e.id}
+                                onSelect={() => {
+                                  form.setValue('eventId', e.id, { shouldValidate: true })
+                                  setEventPopoverOpen(false)
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    'mr-2 h-4 w-4',
+                                    selectedEvent?.id === e.id ? 'opacity-100' : 'opacity-0'
+                                  )}
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm truncate">{e.name}</p>
+                                  <p className="text-xs text-muted-foreground">{formatDate(e.date)}</p>
+                                </div>
+                              </CommandItem>
+                            ))
+                          )}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                {form.formState.errors.eventId && (
+                  <p className="text-xs text-destructive">{form.formState.errors.eventId.message}</p>
                 )}
               </div>
-            )}
-          </div>
 
-          {/* Event card list */}
-          <div className="space-y-1.5">
-            <Label>Event *</Label>
-            <Controller
-              name="eventId"
-              control={form.control}
-              render={({ field }) => (
-                <div className="max-h-48 overflow-y-auto space-y-2 rounded-md border p-2">
-                  {eventsLoading ? (
-                    <>
-                      <Skeleton className="h-14 w-full rounded-md" />
-                      <Skeleton className="h-14 w-full rounded-md" />
-                      <Skeleton className="h-14 w-full rounded-md" />
-                    </>
-                  ) : sortedEvents.length === 0 ? (
-                    <p className="py-6 text-center text-sm text-muted-foreground">
-                      Tidak ada event yang dipublikasikan
-                    </p>
-                  ) : (
-                    sortedEvents.map((e) => (
-                      <button
-                        key={e.id}
-                        type="button"
-                        onClick={() => field.onChange(e.id)}
-                        className={cn(
-                          'w-full text-left rounded-md border px-3 py-2.5 transition-all',
-                          field.value === e.id
-                            ? 'ring-2 ring-primary border-primary bg-primary/5'
-                            : 'hover:bg-muted/50',
-                        )}
-                      >
-                        <p className="text-sm font-medium">{e.name}</p>
-                        <p className="text-xs text-muted-foreground">{formatDate(e.date)}</p>
-                      </button>
-                    ))
-                  )}
-                </div>
-              )}
-            />
-            {form.formState.errors.eventId && (
-              <p className="text-xs text-destructive">{form.formState.errors.eventId.message}</p>
-            )}
-          </div>
+              {/* Template selector */}
+              <div className="space-y-2">
+                <Label>Template Undangan *</Label>
+                <Popover open={templatePopoverOpen} onOpenChange={setTemplatePopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={templatePopoverOpen}
+                      className="w-full justify-between font-normal"
+                    >
+                      {selectedTemplate
+                        ? selectedTemplate.name
+                        : 'Pilih template…'}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                    <Command>
+                      <CommandInput placeholder="Cari template…" />
+                      <CommandEmpty>Tidak ada template undangan email</CommandEmpty>
+                      <CommandList>
+                        <CommandGroup>
+                          {invitationTemplates.map((t) => (
+                            <CommandItem
+                              key={t.id}
+                              value={t.id}
+                              onSelect={() => {
+                                form.setValue('templateId', t.id, { shouldValidate: true })
+                                setSelectedTemplate(t)
+                                setTemplatePopoverOpen(false)
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  'mr-2 h-4 w-4',
+                                  selectedTemplate?.id === t.id ? 'opacity-100' : 'opacity-0'
+                                )}
+                              />
+                              {t.name}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                {form.formState.errors.templateId && (
+                  <p className="text-xs text-destructive">{form.formState.errors.templateId.message}</p>
+                )}
+              </div>
 
-          {/* Channel radio */}
-          <div className="space-y-1.5">
-            <Label>Channel *</Label>
-            <Controller
-              name="channel"
-              control={form.control}
-              render={({ field }) => (
-                <RadioGroup value={field.value} onValueChange={field.onChange} className="flex gap-4">
+              {/* Schedule mode */}
+              <div className="space-y-2">
+                <Label>Jadwal Pengiriman</Label>
+                <RadioGroup
+                  value={scheduleMode}
+                  onValueChange={(val) =>
+                    form.setValue('scheduleMode', val as 'now' | 'later', { shouldValidate: true })
+                  }
+                  className="flex flex-col gap-3"
+                >
                   <div className="flex items-center gap-2">
-                    <RadioGroupItem value="whatsapp" id="ch-wa" />
-                    <label htmlFor="ch-wa" className="text-sm cursor-pointer">WhatsApp</label>
+                    <RadioGroupItem value="now" id="schedule-now" />
+                    <Label htmlFor="schedule-now" className="cursor-pointer font-normal">
+                      Kirim Sekarang
+                    </Label>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <RadioGroupItem value="email" id="ch-email" />
-                    <label htmlFor="ch-email" className="text-sm cursor-pointer">Email</label>
+                  <div className="flex items-start gap-2">
+                    <RadioGroupItem value="later" id="schedule-later" className="mt-1" />
+                    <div className="flex-1 space-y-2">
+                      <Label htmlFor="schedule-later" className="cursor-pointer font-normal">
+                        Jadwalkan
+                      </Label>
+                      {scheduleMode === 'later' && (
+                        <div className="grid grid-cols-2 gap-3 mt-1">
+                          <div>
+                            <Label htmlFor="scheduledDate" className="text-xs text-muted-foreground">
+                              Tanggal
+                            </Label>
+                            <Input
+                              id="scheduledDate"
+                              type="date"
+                              min={new Date().toISOString().split('T')[0]}
+                              {...form.register('scheduledDate')}
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="scheduledTime" className="text-xs text-muted-foreground">
+                              Waktu
+                            </Label>
+                            <Input
+                              id="scheduledTime"
+                              type="time"
+                              defaultValue="09:00"
+                              {...form.register('scheduledTime')}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </RadioGroup>
-              )}
-            />
-          </div>
+              </div>
+            </div>
 
-          {/* Message tabs */}
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'template' | 'custom')}>
-            <TabsList className="w-full">
-              <TabsTrigger value="template" className="flex-1">Template Undangan</TabsTrigger>
-              <TabsTrigger value="custom" className="flex-1">Pesan Kustom</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="template" className="mt-3 space-y-2">
-              <Controller
-                name="templateId"
-                control={form.control}
-                render={({ field }) => (
-                  <Select
-                    value={field.value}
-                    onValueChange={field.onChange}
-                    disabled={filteredTemplates.length === 0}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={
-                        filteredTemplates.length === 0
-                          ? `Tidak ada template ${channel === 'whatsapp' ? 'WhatsApp' : 'Email'}`
-                          : 'Pilih template'
-                      } />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {filteredTemplates.map((t) => (
-                        <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+            {/* Right column — Preview + Recipients */}
+            <div className="space-y-4">
+              {/* Recipients */}
+              <div className="space-y-2">
+                <Label className="text-sm text-muted-foreground">
+                  {mode === 'selection'
+                    ? `Penerima (${recipientCount} kontak)`
+                    : `Penerima (${recipientCount} kontak dari filter)`}
+                </Label>
+                {mode === 'selection' && selectedNames.length > 0 && selectedNames.length <= 20 ? (
+                  <div className="flex flex-wrap gap-1.5 p-2 rounded-md border bg-muted/30 max-h-20 overflow-y-auto">
+                    {selectedNames.map((name, i) => (
+                      <Badge key={selectedIds[i] ?? i} variant="secondary" className="text-xs font-normal">
+                        {name}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary">{recipientCount} kontak</Badge>
+                    {mode === 'segment' && (
+                      <span className="text-xs text-muted-foreground">dari filter aktif</span>
+                    )}
+                  </div>
                 )}
-              />
+              </div>
 
               {/* Template preview */}
-              {selectedTemplate && (
-                <div className="rounded-md border bg-muted/40 p-3 space-y-1">
-                  <p className="text-xs font-medium text-muted-foreground">Preview</p>
-                  {selectedTemplate.subject && (
-                    <p className="text-xs text-muted-foreground">
-                      <span className="font-medium">Subjek:</span> {selectedTemplate.subject}
-                    </p>
+              <div className="space-y-2">
+                <Label>Pratinjau Template</Label>
+                <div className="border border-border rounded-lg bg-muted/30 overflow-y-auto max-h-[320px]">
+                  {selectedTemplate ? (
+                    <TemplatePreview
+                      body={selectedTemplate.body ?? ''}
+                      channel={selectedTemplate.channel}
+                      subject={selectedTemplate.subject}
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">
+                      Pilih template untuk melihat pratinjau
+                    </div>
                   )}
-                  <p className="text-sm whitespace-pre-wrap">{selectedTemplate.body}</p>
                 </div>
-              )}
-
-              {form.formState.errors.templateId && (
-                <p className="text-xs text-destructive">{form.formState.errors.templateId.message}</p>
-              )}
-            </TabsContent>
-
-            <TabsContent value="custom" className="mt-3 space-y-1.5">
-              <Controller
-                name="customMessage"
-                control={form.control}
-                render={({ field }) => (
-                  <Textarea
-                    {...field}
-                    placeholder="Tulis pesan blast kustom Anda..."
-                    rows={5}
-                  />
-                )}
-              />
-              <p className="text-xs text-muted-foreground">
-                Variabel: <code className="bg-muted px-1 rounded">{'{{name}}'}</code>{' '}
-                <code className="bg-muted px-1 rounded">{'{{event_title}}'}</code>
-              </p>
-            </TabsContent>
-          </Tabs>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <DialogFooter>
-          <Button variant="ghost" onClick={handleClose} disabled={isPending}>
+        <DialogFooter className="pt-4">
+          <Button variant="outline" onClick={handleClose} disabled={isPending} type="button">
             Batal
           </Button>
           <Button
             onClick={form.handleSubmit(onSubmit)}
             disabled={!form.formState.isValid || isPending}
+            type="button"
             className="gap-2"
           >
             {isPending
-              ? <><Loader2 className="h-4 w-4 animate-spin" />Mengirim...</>
-              : <><Send className="h-4 w-4" />Kirim Blast</>}
+              ? <><Loader2 className="h-4 w-4 animate-spin" />Mengirim…</>
+              : scheduleMode === 'now'
+                ? <><Send className="h-4 w-4" />Kirim Blast</>
+                : <><Send className="h-4 w-4" />Jadwalkan Blast</>}
           </Button>
         </DialogFooter>
       </DialogContent>
