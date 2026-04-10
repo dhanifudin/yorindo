@@ -1,6 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 
-vi.mock('dotenv/config', () => ({}))
+// Mock dotenv so tests can manipulate env vars without .env file interference
+vi.mock('dotenv', () => ({
+  default: { config: () => {} },
+}))
 
 describe('config validation', () => {
   const savedEnv: Record<string, string | undefined> = {}

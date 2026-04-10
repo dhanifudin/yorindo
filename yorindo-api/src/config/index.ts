@@ -1,4 +1,10 @@
-import 'dotenv/config'
+import dotenv from 'dotenv'
+
+// Only load .env if the vars aren't already set (e.g., by vitest or docker compose)
+// Skip in test mode so config.test.ts can manipulate env vars freely
+if (process.env.NODE_ENV !== 'test') {
+  dotenv.config({ override: false })
+}
 
 function required(key: string): string {
   const val = process.env[key]

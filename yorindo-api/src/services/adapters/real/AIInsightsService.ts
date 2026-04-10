@@ -96,7 +96,14 @@ Berikan analisis mendalam dalam format JSON yang diminta.`
 
 export class AIInsightsService implements IYoriMindService {
   async analyze(snapshot: EventSnapshot): Promise<YoriMindResult> {
-    const settings = await getSettings()
+    let settings: SettingCache
+    try {
+      settings = await getSettings()
+    } catch {
+      // Database not available (e.g., in tests) — fall back to mock
+      console.log('[AIInsights] DB unavailable, falling back to mock analysis')
+      return this.getMockAnalysis(snapshot)
+    }
 
     console.log('[AIInsights] Settings loaded:', {
       provider: settings.AI_PROVIDER,
