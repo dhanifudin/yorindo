@@ -171,6 +171,10 @@ jobs:
             fi
             echo "✅ Demo deployed — HTTP $response"
 
+            # Cleanup unused Docker images/volumes to prevent disk full
+            docker image prune -f
+            docker volume prune -f
+
 # ─── APP PREVIEW — deployed on main push ───────────────────────────────
   build-and-push-app:
     if: github.ref == 'refs/heads/main'
@@ -287,3 +291,7 @@ jobs:
               exit 1
             fi
             echo "✅ App preview deployed — HTTP $response"
+
+            # Cleanup unused Docker images/volumes to prevent disk full
+            docker image prune -f
+            docker volume prune -f

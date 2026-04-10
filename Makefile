@@ -80,6 +80,13 @@ stop-demo:
 	$(DEMO_COMPOSE) down
 	@echo "✅ Demo stopped. Data preserved in volumes."
 
+## Cleanup unused Docker images/volumes (frees disk space)
+docker-cleanup:
+	@echo "🧹 Cleaning up unused Docker images and volumes..."
+	docker image prune -f
+	docker volume prune -f
+	@echo "✅ Docker cleanup complete."
+
 ## Follow demo logs
 logs-demo:
 	$(DEMO_COMPOSE) logs -f
