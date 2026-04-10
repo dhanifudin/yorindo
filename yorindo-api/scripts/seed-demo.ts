@@ -410,35 +410,133 @@ export async function seedDemo(pool: Pool): Promise<void> {
     }
     console.log(`✓ Seeded ${totalRegs} registrations`)
 
-    // ── Survey responses for completed/archived events ──
-    let totalSurveys = 0
+    // ── Survey Schemas (Registration forms) for each event ──
+    // Schemas are stored in events table as registration_survey_schema / post_survey_schema JSONB
     for (let ei = 0; ei < EVENTS.length; ei++) {
       const ev = EVENTS[ei]
-      if (ev.surveyCount === 0) continue
       const eventId = eventIds[ei]
 
-      // Get registration IDs for this event
-      const regRows = await client.query(
-        `SELECT id FROM registrations WHERE event_id = $1 AND attendance_status = 'attended' LIMIT $2`,
-        [eventId, ev.surveyCount]
+      // Registration survey schema
+      const regSchema = {
+        title: 'Formulir Registrasi',
+        type: 'object',
+        properties: {
+          namaLengkap: { type: 'string', title: 'Nama Lengkap' },
+          email: { type: 'string', title: 'Email', format: 'email' },
+          perusahaan: { type: 'string', title: 'Nama Perusahaan' },
+          jabatan: { type: 'string', title: 'Jabatan' },
+          nomorTelepon: { type: 'string', title: 'Nomor Telepon / WhatsApp' },
+          industri: {
+            type: 'string',
+            title: 'Industri',
+            enum: ['Teknologi', 'Keuangan', 'Kesehatan', 'Manufaktur', 'Pendidikan'],
+          },
+          bagaimanaTahu: {
+            type: 'string',
+            title: 'Bagaimana Anda mengetahui event ini?',
+            enum: ['Media Sosial', 'Email', 'Rekomendasi Teman', 'Website', 'Lainnya'],
+          },
+          ekspektasi: { type: 'string', title: 'Apa ekspektasi Anda dari event ini?', maxLength: 500 },
+        },
+        required: ['namaLengkap', 'email', 'perusahaan', 'jabatan', 'nomorTelepon'],
+      }
+
+      await client.query(
+        `UPDATE events SET registration_survey_schema = $1 WHERE id = $2`,
+        [JSON.stringify(regSchema), eventId],
       )
 
-      for (const reg of regRows.rows) {
+      // Post-event survey schema (only for active/completed events)
+      if (['active', 'completed', 'archived'].includes(ev.status)) {
+        const postSchema = {
+          title: 'Survei Kepuasan Peserta',
+          type: 'object',
+          properties: {
+            ratingKeseluruhan: { type: 'integer', title: 'Rating Keseluruhan Event', minimum: 1, maximum: 5 },
+            topikFavorit: {
+              type: 'string',
+              title: 'Topik mana yang paling Anda sukai?',
+              enum: ['AI & Machine Learning', 'Cloud Native', 'DevOps', 'Data Engineering', 'Security', 'Lainnya'],
+            },
+            kualitasPenyajian: { type: 'integer', title: 'Kualitas Penyajian Materi', minimum: 1, maximum: 5 },
+            saranPerbaikan: { type: 'string', title: 'Saran Perbaikan untuk Event Berikutnya', maxLength: 500 },
+            akanHadirLagi: {
+              type: 'string',
+              title: 'Apakah Anda akan hadir di event berikutnya?',
+              enum: ['Ya', 'Mungkin', 'Tidak'],
+            },
+          },
+          required: ['ratingKeseluruhan', 'topikFavorit', 'kualitasPenyajian'],
+        }
+
+        await client.query(
+          `UPDATE events SET post_survey_schema = $1 WHERE id = $2`,
+          [JSON.stringify(postSchema), eventId],
+        )
+      }
+    }
+    console.log('✓ Seeded survey schemas on events (registration + post-event for active events)')
+
+    // ── Survey responses (registration + post-event) ──
+    let totalRegSurveys = 0
+    let totalPostSurveys = 0
+    for (let ei = 0; ei < EVENTS.length; ei++) {
+      const ev = EVENTS[ei]
+      if (ev.regCount === 0) continue
+      const eventId = eventIds[ei]
+
+      // Registration survey responses (for approved/attended registrations)
+      const regSurveyRows = await client.query(
+        `SELECT id FROM registrations WHERE event_id = $1 AND status IN ('approved', 'attended') ORDER BY id LIMIT $2`,
+        [eventId, Math.min(ev.regCount, 20)]
+      )
+
+      for (const reg of regSurveyRows.rows) {
         await client.query(`
           INSERT INTO survey_responses (id, event_id, registration_id, survey_type, answers)
-          VALUES ($1, $2, $3, 'post-event', $4)
+          VALUES ($1, $2, $3, 'registration', $4)
         `, [
           createId(), eventId, reg.id,
           JSON.stringify({
-            rating: Math.floor(Math.random() * 3) + 3, // 3-5
-            topik_favorit: pick(['AI & ML', 'Cloud Native', 'DevOps', 'Data Engineering', 'Security']),
-            saran: pick(['Sangat bermanfaat', 'Perlu lebih banyak sesi networking', 'Topik sangat relevan', 'Waktu kurang panjang']),
+            namaLengkap: pick(['Andi Pratama', 'Dewi Lestari', 'Fajar Nugroho', 'Maya Putri', 'Roni Hermawan']),
+            email: pick(['andi@mail.com', 'dewi@mail.com', 'fajar@mail.com']),
+            perusahaan: pick(['PT Telkom', 'Bank Mandiri', 'Gojek', 'Tokopedia', 'Pertamina']),
+            jabatan: pick(['Software Engineer', 'Product Manager', 'Data Analyst', 'DevOps Engineer']),
+            nomorTelepon: pick(['+6281234567890', '+6289876543210']),
+            industri: pick(['Teknologi', 'Keuangan', 'Kesehatan']),
+            bagaimanaTahu: pick(['Media Sosial', 'Email', 'Rekomendasi Teman', 'Website']),
+            ekspektasi: pick(['Ingin belajar hal baru', 'Networking dengan profesional', 'Meningkatkan skill']),
           }),
         ])
-        totalSurveys++
+        totalRegSurveys++
+      }
+
+      // Post-event survey responses (only for attended registrations on active/completed events)
+      if (['active', 'completed', 'archived'].includes(ev.status) && ev.surveyCount > 0) {
+        const postSurveyRows = await client.query(
+          `SELECT id FROM registrations WHERE event_id = $1 AND attendance_status = 'attended' LIMIT $2`,
+          [eventId, ev.surveyCount]
+        )
+
+        for (const reg of postSurveyRows.rows) {
+          await client.query(`
+            INSERT INTO survey_responses (id, event_id, registration_id, survey_type, answers)
+            VALUES ($1, $2, $3, 'post-event', $4)
+          `, [
+            createId(), eventId, reg.id,
+            JSON.stringify({
+              ratingKeseluruhan: Math.floor(Math.random() * 3) + 3,
+              topikFavorit: pick(['AI & Machine Learning', 'Cloud Native', 'DevOps', 'Data Engineering', 'Security']),
+              kualitasPenyajian: Math.floor(Math.random() * 3) + 3,
+              saranPerbaikan: pick(['Sangat bermanfaat', 'Perlu lebih banyak sesi networking', 'Topik sangat relevan', 'Waktu kurang panjang', 'Tempat terlalu kecil']),
+              akanHadirLagi: pick(['Ya', 'Mungkin', 'Tidak']),
+            }),
+          ])
+          totalPostSurveys++
+        }
       }
     }
-    console.log(`✓ Seeded ${totalSurveys} survey responses`)
+    console.log(`✓ Seeded ${totalRegSurveys} registration survey responses + ${totalPostSurveys} post-event survey responses`)
 
     // ── Flagged records (ETL-stage records with data quality issues) ──
     const FLAGGED_RECORDS = [
