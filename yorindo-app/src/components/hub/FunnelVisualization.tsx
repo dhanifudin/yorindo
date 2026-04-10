@@ -2,6 +2,8 @@ import Link from "next/link";
 import { ConversionBadge } from "./ConversionBadge";
 import { getHealth, type Health } from "@/lib/benchmarks";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Send } from "lucide-react";
 
 export interface FunnelData {
   blastCount: number;
@@ -108,6 +110,16 @@ export function FunnelVisualization({
             rate={null}
             label="Blast baseline"
           />
+        }
+        cta={
+          bc === 0 ? (
+            <Link href={`${baseHref}/blast`}>
+              <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5">
+                <Send size={12} />
+                Kirim Undangan
+              </Button>
+            </Link>
+          ) : undefined
         }
       />
       <FunnelBar
