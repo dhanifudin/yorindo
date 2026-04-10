@@ -514,6 +514,28 @@ function BannerUpload({ value, onChange }: BannerUploadProps) {
 
   // Preview jika sudah ada banner
   if (value) {
+    const isBlobUrl = value.startsWith('blob:')
+
+    if (isBlobUrl) {
+      // Blob URLs dari session sebelumnya sudah tidak valid — minta upload ulang
+      return (
+        <div className="space-y-2">
+          <div className="rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted p-8 text-center">
+            <p className="text-sm text-muted-foreground mb-2">Gambar sebelumnya tidak tersedia</p>
+            <p className="text-xs text-muted-foreground mb-4">URL gambar lama sudah kedaluwarsa. Silakan upload ulang.</p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={clearBanner}
+            >
+              Upload Ulang
+            </Button>
+          </div>
+        </div>
+      )
+    }
+
     return (
       <div className="space-y-2">
         <div className="relative rounded-lg overflow-hidden border border-border bg-muted">
