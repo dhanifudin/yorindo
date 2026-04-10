@@ -27,6 +27,7 @@ export default function ReportPage({ params }: ReportPageProps) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Laporan Kehadiran</h1>
+        {/* TODO: Re-enable download buttons when backend integration is ready
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => handleDownload('Excel')}>
             Download Excel
@@ -35,6 +36,7 @@ export default function ReportPage({ params }: ReportPageProps) {
             Download PDF
           </Button>
         </div>
+        */}
       </div>
 
       {downloadMsg && (

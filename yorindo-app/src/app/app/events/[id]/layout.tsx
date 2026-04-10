@@ -56,6 +56,17 @@ const TABS: TabConfig[] = [
   { label: 'Laporan',    key: 'report',         href: '/report' },
 ]
 
+// ─── Reorder tabs for completed events (Laporan first) ────────────────────────
+
+function getOrderedTabs(eventStatus?: string): TabConfig[] {
+  if (eventStatus === 'completed' || eventStatus === 'archived') {
+    const report = TABS.find((t) => t.key === 'report')!
+    const rest = TABS.filter((t) => t.key !== 'report')
+    return [report, ...rest]
+  }
+  return TABS
+}
+
 // ─── Tab key detection ────────────────────────────────────────────────────────
 
 function getActiveTab(pathname: string): string {
@@ -203,7 +214,7 @@ export default function EventHubShellLayout({ children, params }: HubLayoutProps
         {/* Tab bar */}
         <TooltipProvider>
           <nav className="flex border-b border-border bg-background px-6 overflow-x-auto">
-            {TABS.map((tab) => {
+            {getOrderedTabs(event?.status).map((tab) => {
               const isActive = activeTab === tab.key
               const isDisabled = isDraftEvent && !!tab.disabledOnDraft
               const href = `${baseHref}${tab.href}`
