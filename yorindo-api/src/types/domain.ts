@@ -100,6 +100,7 @@ export interface Event {
   city: string | null
   venue: string | null
   description: string | null
+  bannerUrl: string | null
   capacity: number | null
   waitlistBuffer: number
   approvalMode: ApprovalMode

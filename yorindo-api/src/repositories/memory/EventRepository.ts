@@ -74,6 +74,7 @@ export class InMemoryEventRepository implements IEventRepository {
         city: CITIES[i % CITIES.length]!,
         venue: faker.address.streetAddress() + ', ' + CITIES[i % CITIES.length],
         description: faker.lorem.paragraph(),
+        bannerUrl: i % 3 === 0 ? `https://images.unsplash.com/photo-${1540575467063 + i}-w1200-h675-fit=crop` : null,
         capacity: [50, 100, 150, 200, 250, 300, 75, 120, 80, 400, 60, 500][i]!,
         waitlistBuffer: 10,
         approvalMode: i % 3 === 0 ? 'auto' : i % 3 === 1 ? 'hybrid' : 'manual',

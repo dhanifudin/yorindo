@@ -17,6 +17,7 @@ interface EventRow extends QueryResultRow {
   city: string | null
   venue: string | null
   description: string | null
+  banner_url: string | null
   capacity: number | null
   waitlist_buffer: number
   approval_mode: string
@@ -56,6 +57,7 @@ export class PostgresEventRepository
       city: row.city,
       venue: row.venue,
       description: row.description,
+      bannerUrl: row.banner_url,
       capacity: row.capacity,
       waitlistBuffer: row.waitlist_buffer ?? 0,
       approvalMode: row.approval_mode as Event['approvalMode'],
@@ -152,11 +154,11 @@ export class PostgresEventRepository
     const { rows } = await this.query<EventRow>(
       `INSERT INTO events (
          id, name, slug, date, start_time, end_date, end_time, timezone,
-         city, venue, description, capacity, waitlist_buffer,
+         city, venue, description, banner_url, capacity, waitlist_buffer,
          approval_mode, notification_channel, scan_format,
          target_criteria, registration_survey_schema, vendor_id, status,
          is_paid, price, payment_method, deleted_at
-       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)
+       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25)
        RETURNING *`,
       [
         createId(),
@@ -170,6 +172,7 @@ export class PostgresEventRepository
         data.city,
         data.venue,
         data.description,
+        data.bannerUrl,
         data.capacity,
         data.waitlistBuffer,
         data.approvalMode,
@@ -204,6 +207,7 @@ export class PostgresEventRepository
       ['city', 'city'],
       ['venue', 'venue'],
       ['description', 'description'],
+      ['bannerUrl', 'banner_url'],
       ['capacity', 'capacity'],
       ['waitlistBuffer', 'waitlist_buffer'],
       ['approvalMode', 'approval_mode'],

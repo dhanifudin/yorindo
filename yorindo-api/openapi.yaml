@@ -303,6 +303,10 @@ components:
         description:
           type: string
           example: Seminar tentang implementasi ERP di industri manufaktur
+        bannerUrl:
+          type: string
+          example: https://images.unsplash.com/photo-1540575467063?w=1200&h=675&fit=crop
+          description: Event banner image URL
         status:
           type: string
           enum: [draft, published, active, completed, cancelled, archived]
@@ -6171,6 +6175,97 @@ paths:
                     additionalProperties:
                       type: string
                       nullable: true
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # UPLOADS
+  # ─────────────────────────────────────────────────────────────────────────────
+  /uploads/image:
+    post:
+      summary: Upload an image file (event banners, etc.)
+      operationId: uploadImage
+      tags: [Uploads]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Image file (JPEG, PNG, WebP, GIF, SVG, AVIF — max 5MB)
+      responses:
+        '201':
+          description: Image uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [url]
+                properties:
+                  url:
+                    type: string
+                    description: URL to access the uploaded image
+                    example: /api/uploads/abc123.png
+        '400':
+          description: Validation error or unsupported file type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /uploads/{filename}:
+    get:
+      summary: Serve an uploaded image
+      operationId: getUploadedImage
+      tags: [Uploads]
+      parameters:
+        - in: path
+          name: filename
+          required: true
+          schema:
+            type: string
+          description: Filename of the uploaded image
+      responses:
+        '200':
+          description: Image file
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/webp:
+              schema:
+                type: string
+                format: binary
+            image/gif:
+              schema:
+                type: string
+                format: binary
+            image/svg+xml:
+              schema:
+                type: string
+                format: binary
+            image/avif:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: File not found
         '401':
           description: Unauthorized
           content:
@@ -6205,3 +6300,5 @@ tags:
     description: User account and access management
   - name: Settings
     description: External service configuration management
+  - name: Uploads
+    description: Image file upload and serving
