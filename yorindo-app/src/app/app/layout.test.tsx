@@ -28,7 +28,7 @@ describe('AppLayout role guard', () => {
     useAuthStore.setState({ accessToken: null, user: null, eventKeys: {} })
   })
 
-  it('does not render unauthorized content for staff on /app/users and redirects to /app/scan', async () => {
+  it('does not render unauthorized content for staff on /app/users and redirects to /app', async () => {
     useAuthStore.setState({
       accessToken: 'mock-token-staff',
       user: { id: 'staff-001', role: 'staff', name: 'Staff' },
@@ -44,7 +44,7 @@ describe('AppLayout role guard', () => {
     expect(queryByTestId('protected-content')).toBeNull()
 
     await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith('/app/scan')
+      expect(mockReplace).toHaveBeenCalledWith('/app')
     })
   })
 
