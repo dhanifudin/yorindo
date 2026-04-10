@@ -86,6 +86,7 @@ jobs:
             "JWT_SECRET=${JWT_SECRET}" \
             "JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}" \
             "IMAGE_TAG=${{ needs.build-and-push-demo.outputs.image_tag }}" \
+            "API_URL=http://api:3000" \
             "REPOSITORY_IMPL=postgres" \
             "EMAIL_PROVIDER=${EMAIL_PROVIDER}" \
             "MAILTRAP_HOST=${MAILTRAP_HOST}" \
@@ -231,6 +232,7 @@ jobs:
         run: |
           printf '%s\n' \
             "IMAGE_TAG=${{ needs.build-and-push-app.outputs.image_tag }}" \
+            "API_URL=http://api:3000" \
             "NEXT_PUBLIC_ENABLE_MOCKS=false" \
             "NEXT_PUBLIC_BASE_PATH=" \
             > .deploy.env
