@@ -42,6 +42,7 @@ const migrations = [
   '011_drop_contacts_unique_phone_email.sql',
   '012_fix_template_type_constraint.sql',
   '013_template_branding_columns.sql',
+  '014_drop_audit_logs_fk_constraints.sql',
 ]
 
 async function migrate(): Promise<void> {

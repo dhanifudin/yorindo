@@ -71,6 +71,8 @@ export default function SurveyBuilderClient({ id }: SurveyBuilderClientProps) {
     setPreviewOpen(true)
   }
 
+  const isEditable = event?.status === 'draft'
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -103,6 +105,22 @@ export default function SurveyBuilderClient({ id }: SurveyBuilderClientProps) {
         </div>
       </div>
 
+      {/* Locked banner for non-draft events */}
+      {!isEditable && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+          <div className="flex items-start gap-3">
+            <span className="text-amber-600 text-lg">🔒</span>
+            <div>
+              <p className="text-sm font-medium text-amber-800">Survei Terkunci</p>
+              <p className="text-xs text-amber-700 mt-0.5">
+                Survei tidak dapat diubah karena event sudah dipublikasikan.
+                Pendaftaran peserta mungkin sudah menggunakan formulir ini.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Tabs */}
       <Tabs
         value={activeTab}
@@ -117,17 +135,19 @@ export default function SurveyBuilderClient({ id }: SurveyBuilderClientProps) {
               activeTab === 'registration'
                 ? 'border-primary text-foreground'
                 : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border',
+              !isEditable && 'opacity-60 pointer-events-none',
             )}
           >
             Survei Registrasi
           </button>
           <button
-            onClick={() => setActiveTab('post-event')}
+            onClick={() => isEditable && setActiveTab('post-event')}
             className={cn(
               'inline-flex items-center px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors',
               activeTab === 'post-event'
                 ? 'border-primary text-foreground'
                 : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border',
+              !isEditable && 'opacity-60 pointer-events-none',
             )}
           >
             Survei Post-Event
@@ -138,25 +158,27 @@ export default function SurveyBuilderClient({ id }: SurveyBuilderClientProps) {
         </nav>
 
         <TabsContent value="registration" className="m-0 focus-visible:outline-none">
-          <SurveyBuilderTab 
-            eventId={id} 
-            type="registration" 
+          <SurveyBuilderTab
+            eventId={id}
+            type="registration"
             onPreview={handlePreview}
+            readOnly={!isEditable}
           />
         </TabsContent>
 
         <TabsContent value="post-event" className="m-0 focus-visible:outline-none">
-          <SurveyBuilderTab 
-            eventId={id} 
-            type="post-event" 
+          <SurveyBuilderTab
+            eventId={id}
+            type="post-event"
             postSurveyEnabled={event?.postSurveyEnabled}
             onTogglePostSurvey={(enabled) => togglePostSurveyMutation.mutate(enabled)}
             onPreview={handlePreview}
+            readOnly={!isEditable}
           />
         </TabsContent>
       </Tabs>
 
-      <FormPreviewModal 
+      <FormPreviewModal
         open={previewOpen}
         onOpenChange={setPreviewOpen}
         registrationFields={regPreviewFields}

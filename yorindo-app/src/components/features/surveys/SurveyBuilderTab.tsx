@@ -41,6 +41,7 @@ interface SurveyBuilderTabProps {
   postSurveyEnabled?: boolean
   onTogglePostSurvey?: (enabled: boolean) => void
   onPreview: (fields: SurveyField[]) => void
+  readOnly?: boolean
 }
 
 const FIELD_TYPES: { value: SurveyFieldType; label: string }[] = [
@@ -63,7 +64,7 @@ interface SortableFieldProps {
   onRemove: () => void
 }
 
-function SortableField({ field, onChange, onRemove }: SortableFieldProps) {
+function SortableField({ field, onChange, onRemove, readOnly }: SortableFieldProps & { readOnly?: boolean }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: field.id })
 
@@ -81,6 +82,7 @@ function SortableField({ field, onChange, onRemove }: SortableFieldProps) {
         onChange={onChange}
         onRemove={onRemove}
         dragHandleProps={{ ...attributes, ...listeners }}
+        readOnly={readOnly}
       />
     </div>
   )
@@ -92,6 +94,7 @@ export function SurveyBuilderTab({
   postSurveyEnabled,
   onTogglePostSurvey,
   onPreview,
+  readOnly = false,
 }: SurveyBuilderTabProps) {
   const [selectedType, setSelectedType] = useState<SurveyFieldType>('text')
 
@@ -215,7 +218,7 @@ export function SurveyBuilderTab({
       <div className={`space-y-6 ${isDisabled ? 'opacity-50 pointer-events-none' : ''}`}>
         <div className="flex flex-wrap items-center justify-between gap-4 sticky top-0 bg-background/95 backdrop-blur z-20 py-3 px-1">
           <div className="flex items-center gap-2">
-            <Select value={selectedType} onValueChange={(val) => setSelectedType(val as SurveyFieldType)}>
+            <Select value={selectedType} onValueChange={(val) => setSelectedType(val as SurveyFieldType)} disabled={readOnly}>
               <SelectTrigger className="w-[180px] h-9">
                 <SelectValue placeholder="Pilih tipe" />
               </SelectTrigger>
@@ -227,7 +230,7 @@ export function SurveyBuilderTab({
                 ))}
               </SelectContent>
             </Select>
-            <Button size="sm" onClick={handleAddField}>
+            <Button size="sm" onClick={handleAddField} disabled={readOnly}>
               <Plus size={16} className="mr-1" /> Tambah Pertanyaan
             </Button>
           </div>
@@ -239,7 +242,7 @@ export function SurveyBuilderTab({
             <Button
               size="sm"
               onClick={handleSave}
-              disabled={saveMutation.isPending}
+              disabled={saveMutation.isPending || readOnly}
             >
               {saveMutation.isPending ? (
                 <Loader2 size={16} className="animate-spin mr-1" />
@@ -267,6 +270,7 @@ export function SurveyBuilderTab({
                     field={field}
                     onChange={(updated) => handleUpdateField(index, updated)}
                     onRemove={() => handleRemoveField(index)}
+                    readOnly={readOnly}
                   />
                 ))}
               </div>

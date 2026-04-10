@@ -33,14 +33,14 @@ describe('FunnelVisualization', () => {
     })
   })
 
-  it('shows "Belum ada blast — kirim undangan sekarang" CTA when blastCount = 0', async () => {
+  it('shows CTA button when blastCount = 0', async () => {
     render(<FunnelVisualization {...defaultProps} blastCount={0} />)
-    await waitFor(() => expect(screen.getByText('Belum ada blast — kirim undangan sekarang')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('Kirim Undangan')).toBeTruthy())
   })
 
-  it('does NOT show CTA when blastCount > 0', async () => {
+  it('does NOT show CTA button when blastCount > 0', async () => {
     render(<FunnelVisualization {...defaultProps} />)
-    await waitFor(() => expect(screen.queryByText('Belum ada blast — kirim undangan sekarang')).toBeNull())
+    await waitFor(() => expect(screen.queryByText('Kirim Undangan')).toBeNull())
   })
 
   it('renders role="meter" for each bar', async () => {

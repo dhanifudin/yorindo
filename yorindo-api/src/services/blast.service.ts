@@ -121,12 +121,26 @@ export class BlastService {
   ): Promise<void> {
     await this.auditLogRepository.create({
       action,
-      actorId: job.enqueuedBy,
-      actorRole,
+      actorId: job.enqueuedBy || null,
+      actorRole: job.enqueuedBy ? actorRole : 'system',
       eventId: job.eventId,
       targetId,
       targetType,
       metadata,
+    }).catch((err) => {
+      // If FK constraint fails (e.g., actor doesn't exist), retry without actorId
+      if (err?.code === '23503') {
+        return this.auditLogRepository.create({
+          action,
+          actorId: null,
+          actorRole: 'system',
+          eventId: job.eventId,
+          targetId,
+          targetType,
+          metadata,
+        })
+      }
+      throw err
     })
   }
 

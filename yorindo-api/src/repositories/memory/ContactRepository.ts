@@ -188,7 +188,10 @@ export class InMemoryContactRepository implements IContactRepository {
 
   async findByPhone(phone: string | null): Promise<Contact | null> {
     if (!phone) return null
-    return Array.from(this.contacts.values()).find(c => c.phone === phone) ?? null
+    return Array.from(this.contacts.values())
+      .filter(c => c.deletedAt === null)
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+      .find(c => c.phone === phone) ?? null
   }
 
   async findDuplicates(params: PaginationParams): Promise<{ data: DuplicatePair[]; total: number }> {
@@ -255,28 +258,54 @@ export class InMemoryContactRepository implements IContactRepository {
   }
 
   async upsert(data: Omit<Contact, 'id' | 'createdAt' | 'updatedAt'>): Promise<Contact> {
-    let existing: Contact | null = null
-    
+    // Detect collision: phone first (stronger signal), then email
+    let existingMatch: Contact | null = null
+    let matchReasons: DuplicateMatchReason[] = []
+
     if (data.phone) {
-      existing = await this.findByPhone(data.phone)
-    }
-    
-    if (!existing && data.email) {
-      existing = Array.from(this.contacts.values()).find(c => c.email === data.email) ?? null
+      const byPhone = await this.findByPhone(data.phone)
+      if (byPhone) {
+        existingMatch = byPhone
+        matchReasons = ['same_phone']
+      }
     }
 
-    if (existing) {
-      const updated = { ...existing, ...data, updatedAt: new Date().toISOString() }
-      this.contacts.set(existing.id, updated)
-      return updated
+    if (!existingMatch && data.email) {
+      const byEmail = Array.from(this.contacts.values()).find(
+        c => c.email?.toLowerCase() === data.email?.toLowerCase() && c.deletedAt === null
+      )
+      if (byEmail) {
+        existingMatch = byEmail
+        matchReasons = ['same_email']
+      }
     }
+
+    const flagCategory = existingMatch ? 'duplicate' as const : (data.flagCategory ?? null)
+    const newId = createId()
+
     const newContact: Contact = {
       ...data,
-      id: createId(),
+      id: newId,
+      flagCategory,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
-    this.contacts.set(newContact.id, newContact)
+    this.contacts.set(newId, newContact)
+
+    // Register duplicate pair if collision found
+    if (existingMatch) {
+      const matchScore = matchReasons.includes('same_phone') ? 0.95 : 0.85
+      const pairId = createId()
+      this.duplicatePairs.set(pairId, {
+        id: pairId,
+        primaryId: existingMatch.id,
+        duplicateId: newId,
+        matchScore,
+        matchReasons,
+        resolvedAt: null,
+      })
+    }
+
     return newContact
   }
 
