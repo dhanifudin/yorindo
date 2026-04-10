@@ -201,13 +201,16 @@ setup-dev:
 
 # ─────────────────────────────────────────────
 # App Preview (app.dhanifudin.com)
-# Deployed on push to main (yorindo-app path).
+# Deployed on push to main (yorindo-app/**).
+# Full standalone stack with its own API.
 # ─────────────────────────────────────────────
 
 ## Deploy app preview (pull + start)
 deploy-app:
 	$(APP_COMPOSE) pull
-	$(APP_COMPOSE) up -d
+	$(APP_COMPOSE) up -d postgres redis
+	@sleep 5
+	$(APP_COMPOSE) up -d api app
 	@echo "App preview deployed — https://app.dhanifudin.com"
 
 ## Stop app preview

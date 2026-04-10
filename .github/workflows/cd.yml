@@ -193,6 +193,17 @@ jobs:
         id: tag
         run: echo "value=preview-${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
 
+      - name: Build and push API preview image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./yorindo-api
+          push: true
+          tags: |
+            ${{ env.IMAGE_API }}:${{ steps.tag.outputs.value }}
+            ${{ env.IMAGE_API }}:preview
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
       - name: Build and push App preview image
         uses: docker/build-push-action@v5
         with:
@@ -214,11 +225,11 @@ jobs:
 
       - name: Prepare deploy env file
         run: |
-          cat > .deploy.env <<EOF
-          NEXT_PUBLIC_ENABLE_MOCKS=false
-          NEXT_PUBLIC_BASE_PATH=
-          IMAGE_TAG=${{ needs.build-and-push-app.outputs.image_tag }}
-          EOF
+          printf '%s\n' \
+            "IMAGE_TAG=${{ needs.build-and-push-app.outputs.image_tag }}" \
+            "NEXT_PUBLIC_ENABLE_MOCKS=false" \
+            "NEXT_PUBLIC_BASE_PATH=" \
+            > .deploy.env
 
       - name: Upload compose and env to VPS
         uses: appleboy/scp-action@v0.1.7
@@ -257,13 +268,17 @@ jobs:
               restore_previous
               exit 1
             fi
-            if ! docker compose -f docker-compose.app.yml up -d; then
-              restore_previous
-              docker compose -f docker-compose.app.yml up -d
-              exit 1
-            fi
+            docker compose -f docker-compose.app.yml up -d postgres redis
+            sleep 5
+            until docker compose -f docker-compose.app.yml exec -T postgres pg_isready -U yorindo -d yorindo > /dev/null 2>&1; do sleep 1; done
+            docker compose -f docker-compose.app.yml up -d api app
+            sleep 10
 
-            sleep 15
+            # Migrate and seed preview
+            docker compose -f docker-compose.app.yml exec -T -e ALLOW_SEED=true api npx tsx scripts/migrate.ts
+            docker compose -f docker-compose.app.yml exec -T -e ALLOW_SEED=true api npx tsx scripts/seed.ts
+
+            sleep 5
             response=$(curl -s -o /dev/null -w "%{http_code}" https://app.dhanifudin.com)
             if [ "$response" != "200" ]; then
               restore_previous

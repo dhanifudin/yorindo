@@ -1,6 +1,7 @@
 # EM · U — App preview (app.dhanifudin.com)
-# Pulls pre-built image from Docker Hub.
-# Deployed on every push to main branch affecting yorindo-app.
+# Full standalone stack: api + app + postgres + redis
+# Deployed on every push to main branch.
+# Uses mock services by default — set env vars to enable real providers.
 #
 # Usage:
 #   make deploy-app    (pull + start)
@@ -11,6 +12,58 @@
 #   app.dhanifudin.com → localhost:5173
 
 services:
+  postgres:
+    container_name: emu-preview-db
+    image: postgres:16-alpine
+    expose:
+      - "5432"
+    environment:
+      POSTGRES_DB: yorindo
+      POSTGRES_USER: yorindo
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-preview123}
+    volumes:
+      - postgres_preview_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  api:
+    container_name: emu-preview-api
+    image: dhanifudin/yorindo-api:${IMAGE_TAG:-preview}
+    expose:
+      - "3000"
+    environment:
+      NODE_ENV: production
+      BASE_URL: https://app.dhanifudin.com
+      CORS_ORIGIN: https://app.dhanifudin.com
+
+      # Auth
+      JWT_SECRET: ${JWT_SECRET:-preview-jwt-secret-change-me}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-preview-jwt-refresh-secret-change-me}
+
+      # Database
+      REPOSITORY_IMPL: postgres
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: yorindo
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-preview123}
+      POSTGRES_DB: yorindo
+      REDIS_URL: redis://redis:6379
+
+      # Service providers (mock by default for preview)
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-mock}
+      MAILTRAP_HOST: ${MAILTRAP_HOST:-}
+      MAILTRAP_PORT: ${MAILTRAP_PORT:-2525}
+      MAILTRAP_USER: ${MAILTRAP_USER:-}
+      MAILTRAP_PASS: ${MAILTRAP_PASS:-}
+      WHATSAPP_PROVIDER: mock
+      AI_PROVIDER: disabled
+    volumes:
+      - api_preview_uploads:/app/uploads
+      - api_preview_logs:/app/logs
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+
   app:
     container_name: emu-preview-app
     image: dhanifudin/yorindo-app:${IMAGE_TAG:-preview}
@@ -19,9 +72,22 @@ services:
     environment:
       API_URL: http://api:3000
       NEXT_PUBLIC_ENABLE_MOCKS: "false"
+    depends_on:
+      - api
     restart: unless-stopped
-    logging:
-      driver: json-file
-      options:
-        max-size: "50m"
-        max-file: "5"
+
+  redis:
+    container_name: emu-preview-redis
+    image: redis:7-alpine
+    expose:
+      - "6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_preview_data:/data
+    restart: unless-stopped
+
+volumes:
+  postgres_preview_data:
+  api_preview_uploads:
+  api_preview_logs:
+  redis_preview_data:
