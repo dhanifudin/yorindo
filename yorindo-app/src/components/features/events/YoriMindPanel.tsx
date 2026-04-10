@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Sparkles } from 'lucide-react'
 import type { YoriMindResult } from '@/types/api'
 
 interface YoriMindPanelProps {
@@ -22,7 +23,7 @@ export function YoriMindPanel({ eventId }: YoriMindPanelProps) {
   const [isExpanded, setIsExpanded] = useState(false)
 
   const { data, isLoading, isFetching } = useQuery<YoriMindResult>({
-    queryKey: ['yorimind', eventId],
+    queryKey: ['ai-insights', eventId],
     queryFn: () => fetch(`/api/events/${eventId}/yorimind`).then((r) => r.json()),
     enabled: isExpanded,
     staleTime: 24 * 60 * 60 * 1000, // 24h cache
@@ -32,8 +33,8 @@ export function YoriMindPanel({ eventId }: YoriMindPanelProps) {
     // Invalidate backend Redis cache first
     await fetch(`/api/events/${eventId}/yorimind/cache`, { method: 'DELETE' })
     // Then invalidate React Query cache and refetch
-    queryClient.invalidateQueries({ queryKey: ['yorimind', eventId] })
-    queryClient.refetchQueries({ queryKey: ['yorimind', eventId] })
+    queryClient.invalidateQueries({ queryKey: ['ai-insights', eventId] })
+    queryClient.refetchQueries({ queryKey: ['ai-insights', eventId] })
   }
 
   return (
@@ -41,8 +42,8 @@ export function YoriMindPanel({ eventId }: YoriMindPanelProps) {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-base font-semibold">YoriMind</span>
-            <Badge className="bg-purple-100 text-purple-700 text-xs">AI Insights</Badge>
+            <Sparkles className="h-4 w-4 text-purple-600" />
+            <span className="text-base font-semibold">AI Insights</span>
           </div>
           <div className="flex gap-2">
             {isExpanded && (
@@ -66,7 +67,7 @@ export function YoriMindPanel({ eventId }: YoriMindPanelProps) {
           {data?.disabled ? (
             <div className="py-8 text-center space-y-2">
               <p className="text-sm text-muted-foreground">
-                Fitur YoriMind tidak aktif pada konfigurasi saat ini
+                Fitur AI Insights tidak aktif pada konfigurasi saat ini
               </p>
             </div>
           ) : isLoading || isFetching ? (
@@ -111,7 +112,7 @@ export function YoriMindPanel({ eventId }: YoriMindPanelProps) {
                       <div className="flex items-start justify-between gap-2">
                         <p className="text-sm font-medium flex-1">{rec.action}</p>
                         <Badge className={`${PRIORITY_BADGE[rec.priority]} text-xs shrink-0`}>
-                          {rec.priority}
+                          {rec.priority === 'high' ? 'Tinggi' : rec.priority === 'medium' ? 'Sedang' : 'Rendah'}
                         </Badge>
                       </div>
                       <p className="text-xs text-muted-foreground">{rec.impact}</p>
@@ -131,7 +132,7 @@ export function YoriMindPanel({ eventId }: YoriMindPanelProps) {
               </div>
             </>
           ) : (
-            <p className="text-sm text-muted-foreground">Gagal memuat analisis YoriMind.</p>
+            <p className="text-sm text-muted-foreground">Gagal memuat analisis AI Insights.</p>
           )}
         </CardContent>
       )}

@@ -130,7 +130,6 @@ async function seed(): Promise<void> {
           province_code, province_name, city_code, city_name
         )
         VALUES ($1, $2, $3, $4, $5, $6, $7, 'manual', 'active', $8, $9, $10, $11, $12, $13, $14)
-        ON CONFLICT (phone) DO NOTHING
       `, [
         createId(),
         `Contact ${i}`,
@@ -165,13 +164,11 @@ async function seed(): Promise<void> {
       await client.query(`
         INSERT INTO contacts (id, name, phone, email, city, company, company_size, source, consent_status, industry_id, job_title_id, service_type, province_code, province_name, city_code, city_name)
         VALUES ($1,$2,$3,$4,'Jakarta','PT Dev Corp','50-200','manual','active',$5,$6,'Elektronik & Peralatan Rumah Tangga',$7,$8,$9,$10)
-        ON CONFLICT (phone) DO NOTHING
       `, [primaryId, pair.nameA, pair.phoneA, pair.emailA, industryId0, jobTitleId0,
           location0?.province_code, location0?.province_name, location0?.city_code, location0?.city_name])
       await client.query(`
         INSERT INTO contacts (id, name, phone, email, city, company, company_size, source, consent_status, industry_id, job_title_id, service_type, flag_category, province_code, province_name, city_code, city_name)
         VALUES ($1,$2,$3,$4,'Jakarta','PT Dev Corp','<50','form','active',$5,$6,'Elektronik & Peralatan Rumah Tangga','duplicate',$7,$8,$9,$10)
-        ON CONFLICT (phone) DO NOTHING
       `, [duplicateId, pair.nameB, pair.phoneB, pair.emailB, industryId0, jobTitleId0,
           location0?.province_code, location0?.province_name, location0?.city_code, location0?.city_name])
       await client.query(`
