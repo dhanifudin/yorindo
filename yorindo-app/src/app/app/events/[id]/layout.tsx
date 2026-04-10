@@ -1,8 +1,8 @@
 'use client'
 
-import { use, useState } from 'react'
+import { use, useState, useEffect } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
@@ -53,28 +53,15 @@ const TABS: TabConfig[] = [
   { label: 'Registrasi', key: 'registrations',  href: '/registrations' },
   { label: 'Tiket', key: 'confirmation',   href: '/confirmation',   disabledOnDraft: true },
   { label: 'Check-in',   key: 'checkin',        href: '/checkin',        disabledOnDraft: true },
-  { label: 'Laporan',    key: 'report',         href: '/report' },
 ]
 
-// ─── Reorder tabs for completed events (Laporan first) ────────────────────────
-
-function getOrderedTabs(eventStatus?: string): TabConfig[] {
-  if (eventStatus === 'completed' || eventStatus === 'archived') {
-    const report = TABS.find((t) => t.key === 'report')!
-    const rest = TABS.filter((t) => t.key !== 'report')
-    return [report, ...rest]
-  }
-  return TABS
-}
-
-// ─── Tab key detection ────────────────────────────────────────────────────────
+// ─── Redirect /report to Overview (merged) ───────────────────────────────────
 
 function getActiveTab(pathname: string): string {
   if (pathname.endsWith('/blast')) return 'blast'
   if (pathname.includes('/registrations')) return 'registrations'
   if (pathname.endsWith('/confirmation')) return 'confirmation'
   if (pathname.endsWith('/checkin')) return 'checkin'
-  if (pathname.endsWith('/report')) return 'report'
   return 'overview'
 }
 
@@ -83,6 +70,7 @@ function getActiveTab(pathname: string): string {
 export default function EventHubShellLayout({ children, params }: HubLayoutProps) {
   const { id } = use(params)
   const pathname = usePathname()
+  const router = useRouter()
   const queryClient = useQueryClient()
 
   const baseHref = `/app/events/${id}`
@@ -94,6 +82,13 @@ export default function EventHubShellLayout({ children, params }: HubLayoutProps
     queryFn: () => fetch(`/api/events/${id}`).then(r => r.json()),
     staleTime: 60_000,
   })
+
+  // Redirect /report to Overview (tabs merged)
+  useEffect(() => {
+    if (pathname.includes('/report')) {
+      router.replace(baseHref)
+    }
+  }, [pathname, router, baseHref])
 
   // Shared blockerState query
   const { data: blockerState } = useQuery<EventOverviewResponse>({
@@ -214,7 +209,7 @@ export default function EventHubShellLayout({ children, params }: HubLayoutProps
         {/* Tab bar */}
         <TooltipProvider>
           <nav className="flex border-b border-border bg-background px-6 overflow-x-auto">
-            {getOrderedTabs(event?.status).map((tab) => {
+            {TABS.map((tab) => {
               const isActive = activeTab === tab.key
               const isDisabled = isDraftEvent && !!tab.disabledOnDraft
               const href = `${baseHref}${tab.href}`

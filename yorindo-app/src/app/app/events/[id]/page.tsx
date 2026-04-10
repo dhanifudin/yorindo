@@ -1,4 +1,5 @@
 import ClientPage from './_client'
+import { redirect } from 'next/navigation'
 
 export const dynamic = 'force-static'
 

@@ -43,6 +43,7 @@ const migrations = [
   '012_fix_template_type_constraint.sql',
   '013_template_branding_columns.sql',
   '014_drop_audit_logs_fk_constraints.sql',
+  '015_settings_table.sql',
 ]
 
 async function migrate(): Promise<void> {

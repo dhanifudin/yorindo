@@ -50,8 +50,7 @@ import { MockOtpService } from './services/adapters/mock/OtpService.js'
 import { MockQueueService } from './services/adapters/mock/QueueService.js'
 import { MockWhatsAppService } from './services/adapters/mock/WhatsAppService.js'
 import { MockYoriMindService } from './services/adapters/mock/YoriMindService.js'
-import { DisabledYoriMindService } from './services/adapters/disabled/YoriMindService.js'
-import { OpenAiProxyYoriMindService } from './services/adapters/real/OpenAiProxyYoriMindService.js'
+import { AIInsightsService } from './services/adapters/real/AIInsightsService.js'
 import { BrevoEmailService } from './services/adapters/real/BrevoEmailService.js'
 import { MailtrapEmailService } from './services/adapters/real/MailtrapEmailService.js'
 import { BullQueueService } from './services/adapters/real/BullQueueService.js'
@@ -138,15 +137,9 @@ function resolveEmailService(): IEmailService {
 }
 
 function resolveYoriMindService(): IYoriMindService {
-  switch (config.yorimindAiProvider) {
-    case 'disabled':
-      return new DisabledYoriMindService()
-    case 'openai-proxy':
-      return new OpenAiProxyYoriMindService()
-    case 'mock':
-    default:
-      return new MockYoriMindService()
-  }
+  // Always use AIInsightsService which reads AI provider settings from database
+  // This allows admin to configure AI provider (openai, groq, mock, disabled) from /app/settings
+  return new AIInsightsService()
 }
 
 function resolveServices(): {

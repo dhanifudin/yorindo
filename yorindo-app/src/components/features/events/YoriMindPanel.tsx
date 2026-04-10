@@ -5,7 +5,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Sparkles } from 'lucide-react'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Sparkles, ChevronDown, ChevronUp } from 'lucide-react'
 import type { YoriMindResult } from '@/types/api'
 
 interface YoriMindPanelProps {
@@ -47,17 +48,26 @@ export function YoriMindPanel({ eventId }: YoriMindPanelProps) {
           </div>
           <div className="flex gap-2">
             {isExpanded && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRefresh}
-                disabled={isFetching}
-              >
-                {isFetching ? 'Memuat…' : '↻ Refresh'}
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleRefresh}
+                      disabled={isFetching}
+                    >
+                      {isFetching ? 'Memuat…' : '↻ Refresh'}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Muat ulang untuk mendapatkan analisis terbaru dari AI</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
-            <Button variant="outline" size="sm" onClick={() => setIsExpanded((v) => !v)}>
-              {isExpanded ? 'Tutup' : 'Buka Analisis'}
+            <Button variant="ghost" size="icon" onClick={() => setIsExpanded((v) => !v)}>
+              {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             </Button>
           </div>
         </div>
