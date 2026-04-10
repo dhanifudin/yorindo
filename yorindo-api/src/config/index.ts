@@ -1,4 +1,10 @@
-import 'dotenv/config'
+import dotenv from 'dotenv'
+
+// Only load .env if the vars aren't already set (e.g., by vitest or docker compose)
+// Skip in test mode so config.test.ts can manipulate env vars freely
+if (process.env.NODE_ENV !== 'test') {
+  dotenv.config({ override: false })
+}
 
 function required(key: string): string {
   const val = process.env[key]
@@ -37,12 +43,7 @@ export const config = {
 
   // AI provider selection
   etlAiProvider: optional('ETL_AI_PROVIDER', 'disabled'),
-  yorimindAiProvider: optional('YORIMIND_AI_PROVIDER', 'mock'),
   smartFilterAiProvider: optional('SMART_FILTER_AI_PROVIDER', 'mock'),
-
-  // YoriMind AI proxy config (mlapi.run OpenAI-compatible)
-  yorimindAiBaseUrl: optional('YORIMIND_AI_BASE_URL'),
-  yorimindAiApiKey: optional('YORIMIND_AI_API_KEY'),
 
   // Database
   databaseUrl: buildDatabaseUrl(),

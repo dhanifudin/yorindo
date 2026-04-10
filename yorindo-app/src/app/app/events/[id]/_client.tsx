@@ -11,6 +11,12 @@ import { FunnelVisualization } from '@/components/hub/FunnelVisualization'
 import { ActionCard } from '@/components/hub/ActionCard'
 import { SponsorPanel } from '@/components/features/vendors/SponsorPanel'
 import { getHealth } from '@/lib/benchmarks'
+import { MetricCards, MetricCardsSkeleton } from '@/components/features/reports/MetricCards'
+import { AttendanceFunnelChart } from '@/components/features/reports/AttendanceFunnelChart'
+import { DemographicsCharts } from '@/components/features/reports/DemographicsCharts'
+import { AnalyticsDashboard } from '@/components/features/events/AnalyticsDashboard'
+import { YoriMindPanel } from '@/components/features/events/YoriMindPanel'
+import { useReport } from '@/hooks/useReport'
 import Link from 'next/link'
 import Image from 'next/image'
 import type { Event } from '@/types/api'
@@ -55,6 +61,10 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
     staleTime: 60_000,
     enabled: !!id,
   })
+
+  // Load report data when event is completed/archived
+  const isCompleted = ['completed', 'archived'].includes(event?.status ?? '')
+  const { data: report } = useReport(isCompleted ? id : undefined)
 
   if (isLoading || !metrics || !event) {
     return (
@@ -103,26 +113,28 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
       </div>
 
       {/* Main funnel grid */}
-      <div className="grid lg:grid-cols-[2fr_1fr] gap-4">
-        {/* Left: Funnel visualization */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Pipeline Funnel</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <FunnelVisualization
-              blastCount={metrics.blastCount}
-              registrationCount={metrics.registrationCount}
-              approvedCount={metrics.approvedCount}
-              attendedCount={metrics.attendedCount}
-              eventStatus={event.status}
-              eventId={id}
-            />
-          </CardContent>
-        </Card>
+      {!isCompleted && (
+        <>
+          <div className="grid lg:grid-cols-[2fr_1fr] gap-4">
+          {/* Left: Funnel visualization */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Pipeline Funnel</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <FunnelVisualization
+                blastCount={metrics.blastCount}
+                registrationCount={metrics.registrationCount}
+                approvedCount={metrics.approvedCount}
+                attendedCount={metrics.attendedCount}
+                eventStatus={event.status}
+                eventId={id}
+              />
+            </CardContent>
+          </Card>
 
-        {/* Right: Stats + Action card */}
-        <div className="space-y-3">
+          {/* Right: Stats + Action card */}
+          <div className="space-y-3">
           <Card>
             <CardContent className="pt-4 space-y-3">
               {/* Pending approvals */}
@@ -208,7 +220,12 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
           </Card>
         </div>
       </div>
-      {/* Survey quick actions */}
+        </>
+      )}
+
+      {/* Survey quick actions — hide for completed events */}
+      {!isCompleted && (
+      <>
       <div className="grid md:grid-cols-2 gap-4">
         <Card>
           <CardHeader className="pb-3">
@@ -248,6 +265,54 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
           </CardContent>
         </Card>
       </div>
+      </>
+      )}
+
+      {/* ── Report Section (shown only for completed/archived events) ── */}
+      {isCompleted && (
+        <div className="mt-8 pt-6 border-t space-y-6">
+          <div>
+            <h2 className="text-xl font-bold mb-1">Laporan Kehadiran</h2>
+            <p className="text-sm text-muted-foreground">Analisis lengkap setelah event selesai</p>
+          </div>
+
+          {report ? (
+            <>
+              <MetricCards
+                totalInvited={report.totalInvited}
+                registered={report.registered}
+                approved={report.approved}
+                attended={report.attended}
+                attendanceRate={report.attendanceRate}
+                noShowRate={report.noShowRate}
+              />
+              <AttendanceFunnelChart
+                totalInvited={report.totalInvited}
+                registered={report.registered}
+                approved={report.approved}
+                attended={report.attended}
+              />
+              <DemographicsCharts
+                industryBreakdown={report.industryBreakdown}
+                cityBreakdown={report.cityBreakdown}
+                jobTitleBreakdown={report.jobTitleBreakdown}
+              />
+              <AnalyticsDashboard eventId={id} />
+              <YoriMindPanel eventId={id} />
+            </>
+          ) : (
+            <>
+              <MetricCardsSkeleton />
+              <div className="bg-muted rounded-lg h-64 animate-pulse" />
+              <div className="grid grid-cols-3 gap-4">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="bg-muted rounded-lg h-56 animate-pulse" />
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      )}
     </div>
   )
 }

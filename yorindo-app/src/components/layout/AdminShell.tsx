@@ -19,6 +19,7 @@ import {
   Bell,
   Plus,
   Building2,
+  Settings,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -33,6 +34,7 @@ const NAV_ITEMS = [
   { href: '/app/vendors',      label: 'Vendor',    icon: Building2,       roles: ['admin'] },
   // { href: '/app/templates',    label: 'Template',  icon: FileText,        roles: ['admin'] }, // Hidden for now
   { href: '/app/users',        label: 'Akun',      icon: UserCog,         roles: ['admin'] },
+  { href: '/app/settings',     label: 'Settings',  icon: Settings,        roles: ['admin'] },
   // { href: '/app/scan',         label: 'Scan',      icon: QrCode,          roles: ['staff', 'admin'] }, // Hidden until implementation is ready
 ]
 
