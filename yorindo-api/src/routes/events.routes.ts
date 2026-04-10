@@ -37,7 +37,7 @@ const EventCreateBodySchema = z.object({
   name: z.string().trim().min(1),
   slug: z.string().trim().optional(),
   description: z.string().trim().optional(),
-  bannerUrl: z.string().url().optional().nullable(),
+  bannerUrl: z.string().min(1).optional().nullable(),
   eventDate: z.string().datetime(), // keep backward compatible openapi
   startDate: z.string().datetime().optional(),
   startTime: z.string().regex(/^([0-1]\d|2[0-3]):[0-5]\d$/).optional(),
@@ -73,7 +73,7 @@ const EventUpdateBodySchema = z.object({
   name: z.string().trim().min(1).optional(),
   slug: z.string().trim().optional(),
   description: z.string().trim().optional(),
-  bannerUrl: z.string().url().optional().nullable(),
+  bannerUrl: z.string().min(1).optional().nullable(),
   eventDate: z.string().datetime().optional(),
   startDate: z.string().datetime().optional(),
   startTime: z.string().regex(/^([0-1]\d|2[0-3]):[0-5]\d$/).optional(),
