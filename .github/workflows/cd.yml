@@ -285,7 +285,7 @@ jobs:
 
             # Migrate and seed preview
             docker compose -f docker-compose.app.yml exec -T -e ALLOW_SEED=true api npx tsx scripts/migrate.ts
-            docker compose -f docker-compose.app.yml exec -T -e ALLOW_SEED=true api npx tsx scripts/seed.ts
+            docker compose -f docker-compose.app.yml exec -T -e ALLOW_SEED=true api npx tsx scripts/seed.ts --demo
 
             sleep 5
             response=$(curl -s -o /dev/null -w "%{http_code}" https://app.dhanifudin.com)
