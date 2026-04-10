@@ -3,8 +3,6 @@ import { z } from 'zod'
 import { requireAuth, requireAdmin } from '../middleware/auth.js'
 import { getPool } from '../lib/postgres.js'
 
-const pool = getPool()
-
 const SettingKeySchema = z.object({
   key: z.string().min(1),
 })
@@ -22,6 +20,7 @@ export const settingsRoutes: FastifyPluginAsync = async (fastify) => {
 
   // GET /api/settings
   fastify.get('/api/settings', adminOnly, async (request, reply) => {
+    const pool = getPool()
     const { category } = SettingsListSchema.parse(request.query ?? {})
 
     let query = 'SELECT * FROM settings'
@@ -40,6 +39,7 @@ export const settingsRoutes: FastifyPluginAsync = async (fastify) => {
 
   // GET /api/settings/:key
   fastify.get('/api/settings/:key', adminOnly, async (request, reply) => {
+    const pool = getPool()
     const { key } = SettingKeySchema.parse(request.params)
     const { rows } = await pool.query('SELECT * FROM settings WHERE key = $1', [key])
 
@@ -60,6 +60,7 @@ export const settingsRoutes: FastifyPluginAsync = async (fastify) => {
 
   // PUT /api/settings/:key
   fastify.put('/api/settings/:key', adminOnly, async (request, reply) => {
+    const pool = getPool()
     const { key } = SettingKeySchema.parse(request.params)
     const { value } = SettingValueSchema.parse(request.body)
 
@@ -90,6 +91,7 @@ export const settingsRoutes: FastifyPluginAsync = async (fastify) => {
     // Keys that should be treated as secrets (masked when retrieved)
     const SECRET_KEYS = ['AI_API_KEY', 'GROQ_API_KEY', 'OPENAI_API_KEY', 'EVERPRO_API_KEY', 'MAILTRAP_PASS', 'MAILTRAP_USER', 'BREVO_API_KEY']
 
+    const pool = getPool()
     const client = await pool.connect()
     try {
       await client.query('BEGIN')
@@ -127,6 +129,7 @@ export const settingsRoutes: FastifyPluginAsync = async (fastify) => {
   // GET /api/settings/providers
   fastify.get('/api/settings/providers', adminOnly, async (_request, reply) => {
     // Returns ALL settings grouped by category
+    const pool = getPool()
     const { rows } = await pool.query(
       `SELECT key, value, category, is_secret FROM settings ORDER BY category, key`,
     )
