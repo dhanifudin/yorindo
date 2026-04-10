@@ -19,6 +19,9 @@ ENV NEXT_PUBLIC_SENTRY_DSN=$NEXT_PUBLIC_SENTRY_DSN
 #   docker build --build-arg NEXT_PUBLIC_ENABLE_MOCKS=true ...
 ARG NEXT_PUBLIC_ENABLE_MOCKS=false
 ENV NEXT_PUBLIC_ENABLE_MOCKS=$NEXT_PUBLIC_ENABLE_MOCKS
+# API URL — baked into Next.js rewrites at build time.
+ARG API_URL
+ENV API_URL=$API_URL
 RUN npm run build
 
 # Stage 3: Production runner (Next.js standalone output)
