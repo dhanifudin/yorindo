@@ -37,12 +37,7 @@ export const config = {
 
   // AI provider selection
   etlAiProvider: optional('ETL_AI_PROVIDER', 'disabled'),
-  yorimindAiProvider: optional('YORIMIND_AI_PROVIDER', 'mock'),
   smartFilterAiProvider: optional('SMART_FILTER_AI_PROVIDER', 'mock'),
-
-  // YoriMind AI proxy config (mlapi.run OpenAI-compatible)
-  yorimindAiBaseUrl: optional('YORIMIND_AI_BASE_URL'),
-  yorimindAiApiKey: optional('YORIMIND_AI_API_KEY'),
 
   // Database
   databaseUrl: buildDatabaseUrl(),

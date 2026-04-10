@@ -14,7 +14,6 @@ describe('config validation', () => {
     savedEnv.EMAIL_PROVIDER = process.env.EMAIL_PROVIDER
     savedEnv.WHATSAPP_PROVIDER = process.env.WHATSAPP_PROVIDER
     savedEnv.ETL_AI_PROVIDER = process.env.ETL_AI_PROVIDER
-    savedEnv.YORIMIND_AI_PROVIDER = process.env.YORIMIND_AI_PROVIDER
     savedEnv.SMART_FILTER_AI_PROVIDER = process.env.SMART_FILTER_AI_PROVIDER
     // Clear module cache so re-import re-evaluates the config module
     vi.resetModules()
@@ -56,11 +55,6 @@ describe('config validation', () => {
       delete process.env.ETL_AI_PROVIDER
     } else {
       process.env.ETL_AI_PROVIDER = savedEnv.ETL_AI_PROVIDER
-    }
-    if (savedEnv.YORIMIND_AI_PROVIDER === undefined) {
-      delete process.env.YORIMIND_AI_PROVIDER
-    } else {
-      process.env.YORIMIND_AI_PROVIDER = savedEnv.YORIMIND_AI_PROVIDER
     }
     if (savedEnv.SMART_FILTER_AI_PROVIDER === undefined) {
       delete process.env.SMART_FILTER_AI_PROVIDER
