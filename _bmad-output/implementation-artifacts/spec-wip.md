@@ -1,177 +1,76 @@
 ---
-status: done
-title: Fix event management — remove mock data dependency, add banner_url persistence, image upload
-slug: fix-event-mgmt-banner-upload
-created: 2026-04-11
-baseline_commit: c8190e9b7af127795f6f3ae10e5ede5f18611281
+title: 'Fix banner gallery — replace mock data with real API calls'
+type: 'bugfix'
+created: '2026-04-11'
+status: 'in-progress'
+context: []
+baseline_commit: e982e379f7018441f76824eb581d351ec6cb1a42
 ---
 
-<frozen-after-approval>
+<frozen-after-approval reason="human-owned intent — do not modify unless human renegotiates">
 
-# Spec: Fix Event Management — Banner URL Persistence & Real Data Flows
+## Intent
 
-## Problem
+**Problem:** The "Database Gallery" tab in the event banner picker displays 6 hardcoded Unsplash images (`MOCK_EXISTING_IMAGES` constant) instead of loading real uploaded images from the backend. The file upload also uses a local `mockUploadImage()` that creates blob URLs instead of calling `POST /api/uploads/image`.
 
-1. **MSW already disabled in `.env`** (`NEXT_PUBLIC_ENABLE_MOCKS=false`) and all production docker-compose files. No code change needed for (a).
-2. **`bannerUrl` missing from backend**: The frontend `Event` type has `bannerUrl?: string`, but the backend domain type, PostgreSQL Event repository, and `toEventDto()` all omit it. Banner URLs only work because MSW maintains its own in-memory store.
-3. **No image upload endpoint in backend**: Frontend `EventCreateForm` calls `POST /api/uploads/image` but the backend only has ETL file upload (`POST /api/etl/upload`). Need a general image upload endpoint for event banners.
-4. **Event create/update routes don't accept `bannerUrl`**: The Zod schemas and handlers in `events.routes.ts` don't include banner URL fields.
+**Approach:** Add a `GET /api/uploads` backend endpoint to list previously uploaded images. Replace the mock gallery with a real API fetch. Wire the file upload to call the real `POST /api/uploads/image` endpoint.
 
-## Acceptance Criteria
+## Boundaries & Constraints
 
-### AC1: Backend domain type includes bannerUrl
-**Given** the Event domain type in `yorindo-api/src/types/domain.ts`
-**When** I read the Event interface
-**Then** it includes `bannerUrl: string | null`
+**Always:**
+- Keep backward compatibility — if the gallery API fails, show an empty state (not a crash)
+- Use React Query for data fetching (consistent with existing hooks pattern)
+- Preserve the three-tab UI (Device, Database Gallery, URL Input)
 
-### AC2: PostgreSQL Event repository maps banner_url
-**Given** the PostgreSQL Event repository
-**When** an event is created/updated with a bannerUrl
-**Then** it is persisted to a `banner_url` column in the `events` table
-**And** the `mapRow()` function maps `banner_url` → `bannerUrl`
+**Never:**
+- Do not remove MSW mock handlers — they should still work when `NEXT_PUBLIC_ENABLE_MOCKS=true`
+- Do not change the visual design or UX of the gallery dialog
 
-### AC3: Database migration adds banner_url column
-**Given** the events table exists
-**When** the migration runs
-**Then** a `banner_url TEXT` column is added (nullable)
+## I/O & Edge-Case Matrix
 
-### AC4: toEventDto includes bannerUrl
-**Given** an Event entity with a bannerUrl value
-**When** toEventDto() is called
-**Then** the returned DTO includes `bannerUrl` with the correct value
+| Scenario | Input / State | Expected Output / Behavior | Error Handling |
+|----------|--------------|---------------------------|----------------|
+| Gallery opens | Dialog mounts | Fetches `GET /api/uploads`, displays returned images | Shows empty state if no images; loading spinner during fetch |
+| Upload succeeds | `POST /api/uploads/image` returns `{ url }` | New image appears in gallery after upload | On error, shows toast with error message |
+| Network error on gallery fetch | API returns 500 or unreachable | Shows empty gallery with "Failed to load" message | Non-blocking — user can still use URL input or device upload |
+| No images uploaded yet | `GET /api/uploads` returns `[]` | Shows empty state with "No images yet — upload one" | N/A |
 
-### AC5: Event create/update routes accept bannerUrl
-**Given** the event creation and update endpoints
-**When** a request includes `bannerUrl` in the body
-**Then** the value is validated, stored, and returned in the response
+</frozen-after-approval>
 
-### AC6: Image upload endpoint exists
-**Given** an admin user wants to upload an event banner image
-**When** they POST to `/api/uploads/image` with a multipart form containing an image file
-**Then** the file is saved to the uploads directory
-**And** a JSON response returns `{ url: "/uploads/<filename>" }`
-**And** the endpoint serves uploaded images via `/api/uploads/:filename` or static file serving
+## Code Map
 
-### AC7: Existing tests still pass
-**Given** the full test suite
-**When** `npm test` runs
-**Then** all 195+ tests pass
+- `yorindo-api/src/routes/uploads.routes.ts` -- Add `GET /api/uploads` list endpoint
+- `yorindo-api/openapi.yaml` -- Document the new endpoint
+- `yorindo-app/src/mocks/handlers/uploads.ts` -- Add mock `GET /api/uploads` handler
+- `yorindo-app/src/components/features/events/EventCreateForm.tsx` -- Replace `MOCK_EXISTING_IMAGES` with API fetch, replace `mockUploadImage()` with real upload call
 
-## Implementation Plan
+## Tasks & Acceptance
 
-### [x] Task 1: Add `bannerUrl` to backend domain type
-**File**: `yorindo-api/src/types/domain.ts`
-**Action**: Add `bannerUrl: string | null` to the `Event` interface (after `description`, before `capacity`)
+**Execution:**
+- [x] `yorindo-api/src/routes/uploads.routes.ts` -- Add `GET /api/uploads` endpoint that scans uploads directory and returns `{ files: [{ filename, url, uploadedAt, size }] }` -- Gallery needs a real data source
+- [x] `yorindo-api/openapi.yaml` -- Document `GET /api/uploads` endpoint in OpenAPI spec -- Contract validation requires it
+- [x] `yorindo-app/src/mocks/handlers/uploads.ts` -- Add `GET /api/uploads` mock handler returning realistic test data -- Dev experience with MSW enabled
+- [x] `yorindo-app/src/components/features/events/EventCreateForm.tsx` -- Replace `MOCK_EXISTING_IMAGES.map()` with API fetch via `fetch('/api/uploads')`, replace `mockUploadImage()` with `fetch('/api/uploads/image')` POST -- Real data flows
 
-### [x] Task 2: Create database migration for banner_url column
-**File**: `yorindo-api/migrations/016_banner_url.sql`
-**Action**: Add `ALTER TABLE events ADD COLUMN IF NOT EXISTS banner_url TEXT;` to the migration function
+**Acceptance Criteria:**
+- Given the banner dialog is open, when the "Database Gallery" tab is selected, then images are fetched from `GET /api/uploads` and displayed (not hardcoded)
+- Given a user uploads a file via the "Dari Device" tab, when the upload completes, then the file is sent to `POST /api/uploads/image` and the returned URL is used as the banner
+- Given the gallery API returns no images, when the gallery tab is open, then an empty state is shown (not the 6 mock images)
+- Given the gallery API fails, when the gallery tab is open, then an error state is shown but the user can still use the other tabs
 
-### [x] Task 3: Update PostgreSQL Event repository
-**File**: `yorindo-api/src/repositories/postgres/EventRepository.ts`
-**Action**:
-- Add `banner_url: string | null` to `EventRow` interface
-- Map `bannerUrl: row.banner_url` in `mapRow()`
-- Update `create()` and `update()` methods to include `banner_url` in INSERT/UPDATE queries
+## Spec Change Log
 
-### [x] Task 4: Update InMemory Event repository
-**File**: `yorindo-api/src/repositories/memory/EventRepository.ts`
-**Action**: Ensure `bannerUrl` is included in seeded events and create/update operations
+## Design Notes
 
-### [x] Task 5: Update `toEventDto()` in events routes
-**File**: `yorindo-api/src/routes/events.routes.ts`
-**Action**: Add `bannerUrl: event.bannerUrl` to the DTO return object
+The `GET /api/uploads` endpoint will use `fs.readdirSync()` on the uploads directory to list files, returning metadata (filename, URL, size, mtime). No database tracking needed for Phase 1 — filesystem is the source of truth.
 
-### [x] Task 6: Update event create/update Zod schemas and handlers
-**File**: `yorindo-api/src/routes/events.routes.ts`
-**Action**:
-- Add `bannerUrl: z.string().url().nullable().optional()` to create/update schemas
-- Pass `bannerUrl` through to repository create/update calls
+## Verification
 
-### [x] Task 7: Add image upload endpoint
-**File**: `yorindo-api/src/routes/uploads.routes.ts` (new file)
-**Action**:
-- Create `POST /api/uploads/image` endpoint using `@fastify/multipart`
-- Accept image file, validate type (jpg/png/webp/gif/svg/avif), save to uploads dir with unique filename
-- Return `{ url: "/uploads/<filename>" }`
-- Register static file serving for `/uploads/` path via `@fastify/static`
-- Register route in `server.ts`
+**Commands:**
+- `cd yorindo-api && npm test` -- expected: all 195+ tests pass
+- `cd yorindo-api && npx tsc --noEmit` -- expected: zero type errors
+- `cd yorindo-app && npx tsc --noEmit` -- expected: zero type errors
 
-### [x] Task 8: Update frontend type alignment
-**File**: `yorindo-app/src/types/api.ts`
-**Action**: Verify `CreateEventBody.bannerUrl` and `Event.bannerUrl` are correctly typed (should already be fine)
-
-### [x] Task 9: Run tests
-**Command**: `cd yorindo-api && npm test`
-**Action**: Verify all tests pass
-
-## Dependencies & Order
-
-1. Task 1 (domain type) → prerequisite for all others
-2. Task 2 (migration) → can run in parallel with Task 3
-3. Task 3 (postgres repo) → depends on Task 1
-4. Task 4 (memory repo) → depends on Task 1
-5. Task 5 (DTO) → depends on Task 1
-6. Task 6 (routes) → depends on Tasks 3, 4, 5
-7. Task 7 (upload endpoint) → independent, can do in parallel
-8. Task 8 (frontend types) → independent, verify only
-9. Task 9 (tests) → depends on all above
-
-## Risks
-
-- **Memory repo faker seeding**: May need to update faker generation to include bannerUrl
-- **Event clone**: Should deep-copy bannerUrl when cloning events
-- **Static file serving**: Need to ensure `@fastify/static` is configured to serve from uploads dir
-
-## Suggested Review Order
-
-**Domain & Schema (entry point)**
-
-- Event domain type now includes bannerUrl field
-  [`domain.ts:102`](../../yorindo-api/src/types/domain.ts#L102)
-
-- Database migration adds banner_url + payment columns
-  [`016_banner_url.sql:6`](../../yorindo-api/migrations/016_banner_url.sql#L6)
-
-**Persistence layer**
-
-- PostgreSQL repo maps banner_url column to bannerUrl domain field
-  [`EventRepository.ts:60`](../../yorindo-api/src/repositories/postgres/EventRepository.ts#L60)
-
-- Memory repo seeds bannerUrl for every 3rd event
-  [`EventRepository.ts:77`](../../yorindo-api/src/repositories/memory/EventRepository.ts#L77)
-
-**API routes & DTO**
-
-- Event create/update Zod schemas accept bannerUrl
-  [`events.routes.ts:40`](../../yorindo-api/src/routes/events.routes.ts#L40)
-
-- toEventDto includes bannerUrl in response
-  [`events.routes.ts:196`](../../yorindo-api/src/routes/events.routes.ts#L196)
-
-- Event create handler passes bannerUrl to repository
-  [`events.routes.ts:527`](../../yorindo-api/src/routes/events.routes.ts#L527)
-
-- Event clone copies bannerUrl from source event
-  [`events.routes.ts:721`](../../yorindo-api/src/routes/events.routes.ts#L721)
-
-**Upload endpoint (new)**
-
-- POST /api/uploads/image handler with validation & cleanup
-  [`uploads.routes.ts:32`](../../yorindo-api/src/routes/uploads.routes.ts#L32)
-
-- Static file serving registered after OpenAPI validation
-  [`server.ts:156`](../../yorindo-api/src/server.ts#L156)
-
-**OpenAPI contract**
-
-- Event schema includes bannerUrl property
-  [`openapi.yaml:307`](../../yorindo-api/openapi.yaml#L307)
-
-- Upload routes documented with multipart request schema
-  [`openapi.yaml:6183`](../../yorindo-api/openapi.yaml#L6183)
-
-**Tests (verified)**
-
-- All 195 tests pass, TypeScript type-checks clean
-  [npm test](../../yorindo-api/package.json#L13)
+**Manual checks:**
+- Open event create form → click banner upload → open Database Gallery tab → should show real uploaded images or empty state (not 6 hardcoded Unsplash images)
+- Upload a file via "Dari Device" tab → should call real API and return `/api/uploads/<filename>` URL

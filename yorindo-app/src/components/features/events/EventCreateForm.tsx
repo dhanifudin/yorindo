@@ -66,52 +66,6 @@ const ALLOWED_IMAGE_TYPES: ReadonlySet<string> = new Set([
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024 // 5 MB
 
-// ─── Mock Existing Images (Simulasi database admin sebelumnya) ─────────────────
-const MOCK_EXISTING_IMAGES = [
-  {
-    id: 'img-1',
-    name: 'Tech Summit 2024',
-    url: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=400&h=250&fit=crop',
-    uploadedBy: 'Admin Budi',
-    uploadedAt: '2024-01-15',
-  },
-  {
-    id: 'img-2',
-    name: 'Business Conference',
-    url: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=250&fit=crop',
-    uploadedBy: 'Admin Siti',
-    uploadedAt: '2024-01-20',
-  },
-  {
-    id: 'img-3',
-    name: 'Workshop Series 2024',
-    url: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=400&h=250&fit=crop',
-    uploadedBy: 'Admin Budi',
-    uploadedAt: '2024-02-01',
-  },
-  {
-    id: 'img-4',
-    name: 'Networking Event',
-    url: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=400&h=250&fit=crop',
-    uploadedBy: 'Admin Rini',
-    uploadedAt: '2024-02-10',
-  },
-  {
-    id: 'img-5',
-    name: 'Corporate Meeting',
-    url: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=400&h=250&fit=crop',
-    uploadedBy: 'Admin Budi',
-    uploadedAt: '2024-02-15',
-  },
-  {
-    id: 'img-6',
-    name: 'Seminar Digital',
-    url: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=250&fit=crop',
-    uploadedBy: 'Admin Siti',
-    uploadedAt: '2024-02-20',
-  },
-]
-
 // ─── Zod Schema ───────────────────────────────────────────────────────────────
 
 const schema = z.object({
@@ -169,12 +123,24 @@ function validateImageUrl(url: string): string | null {
 }
 
 /**
- * MOCK upload — tidak perlu backend.
- * Simulate delay jaringan, lalu return blob URL lokal dari file yang dipilih.
+ * Upload image to backend — returns { url }.
  */
-async function mockUploadImage(file: File): Promise<string> {
-  await new Promise((resolve) => setTimeout(resolve, 900))
-  return URL.createObjectURL(file)
+async function uploadImage(file: File): Promise<string> {
+  const formData = new FormData()
+  formData.append('file', file)
+
+  const res = await fetch('/api/uploads/image', {
+    method: 'POST',
+    body: formData,
+  })
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ error: { message: 'Upload failed' } }))
+    throw new Error(error.error?.message ?? 'Upload failed')
+  }
+
+  const data = await res.json()
+  return data.url
 }
 
 // ─── ImageSourceSelector Component (Modal untuk memilih sumber gambar) ────────
@@ -202,6 +168,33 @@ function ImageSourceSelector({
 }: ImageSourceSelectorProps) {
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'device' | 'gallery' | 'url'>('device')
+  const [galleryFiles, setGalleryFiles] = useState<Array<{ filename: string; url: string; size: number; uploadedAt: string }>>([])
+  const [galleryLoading, setGalleryLoading] = useState(false)
+  const [galleryError, setGalleryError] = useState<string | null>(null)
+
+  // Fetch gallery images when dialog opens and gallery tab is active
+  const fetchGalleryImages = async () => {
+    setGalleryLoading(true)
+    setGalleryError(null)
+    try {
+      const res = await fetch('/api/uploads')
+      if (!res.ok) throw new Error('Failed to load gallery')
+      const data = await res.json()
+      setGalleryFiles(data.files ?? [])
+    } catch {
+      setGalleryError('Gagal memuat galeri')
+      setGalleryFiles([])
+    } finally {
+      setGalleryLoading(false)
+    }
+  }
+
+  // Refetch when gallery tab becomes active
+  useEffect(() => {
+    if (isOpen && activeTab === 'gallery') {
+      fetchGalleryImages()
+    }
+  }, [isOpen, activeTab])
 
   const handleSelectImage = (imageUrl: string) => {
     onSelectExisting(imageUrl)
@@ -256,7 +249,7 @@ function ImageSourceSelector({
               )}
             >
               <Database className="w-4 h-4 inline mr-2" />
-              Database Gallery ({MOCK_EXISTING_IMAGES.length})
+              Database Gallery ({galleryFiles.length})
             </button>
             <button
               type="button"
@@ -296,57 +289,90 @@ function ImageSourceSelector({
               </div>
             </div>
           ) : activeTab === 'gallery' ? (
-            // Tab Gallery (sama seperti sebelumnya)
+            // Tab Gallery
             <div className="space-y-4">
               <div className="flex items-center gap-2 mb-4">
                 <Database className="w-5 h-5 text-primary" />
                 <h3 className="font-semibold text-base">Galeri Database</h3>
-                <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full font-medium">
-                  {MOCK_EXISTING_IMAGES.length} gambar
-                </span>
+                {galleryLoading ? (
+                  <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full font-medium">Memuat...</span>
+                ) : (
+                  <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full font-medium">
+                    {galleryFiles.length} gambar
+                  </span>
+                )}
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {MOCK_EXISTING_IMAGES.map((img) => (
-                  <div
-                    key={img.id}
-                    onClick={() => {
-                      setSelectedImageId(img.id)
-                      handleSelectImage(img.url)
-                    }}
-                    className={cn(
-                      'group relative rounded-lg overflow-hidden border-2 cursor-pointer transition-all',
-                      selectedImageId === img.id
-                        ? 'border-primary ring-2 ring-primary/30'
-                        : 'border-border hover:border-primary/50'
-                    )}
-                  >
-                    <div className="relative w-full h-40 bg-muted overflow-hidden">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={img.url}
-                        alt={img.name}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform"
-                        onError={(e) => {
-                          ;(e.target as HTMLImageElement).style.opacity = '0.2'
-                        }}
-                      />
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100">
-                        <div className="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center">
-                          <Check className="w-6 h-6" />
+              {galleryLoading ? (
+                <div className="flex items-center justify-center py-16">
+                  <div className="text-center">
+                    <div className="w-12 h-12 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                    <p className="text-sm text-muted-foreground">Memuat galeri...</p>
+                  </div>
+                </div>
+              ) : galleryError ? (
+                <div className="flex items-center justify-center py-16">
+                  <div className="text-center">
+                    <p className="text-sm text-destructive mb-2">{galleryError}</p>
+                    <button
+                      type="button"
+                      onClick={fetchGalleryImages}
+                      className="text-sm text-primary hover:underline"
+                    >
+                      Coba lagi
+                    </button>
+                  </div>
+                </div>
+              ) : galleryFiles.length === 0 ? (
+                <div className="flex items-center justify-center py-16">
+                  <div className="text-center">
+                    <Database className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-sm text-muted-foreground mb-1">Belum ada gambar</p>
+                    <p className="text-xs text-muted-foreground">Upload gambar dari device untuk memulai</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {galleryFiles.map((img) => (
+                    <div
+                      key={img.filename}
+                      onClick={() => {
+                        setSelectedImageId(img.filename)
+                        handleSelectImage(img.url)
+                      }}
+                      className={cn(
+                        'group relative rounded-lg overflow-hidden border-2 cursor-pointer transition-all',
+                        selectedImageId === img.filename
+                          ? 'border-primary ring-2 ring-primary/30'
+                          : 'border-border hover:border-primary/50'
+                      )}
+                    >
+                      <div className="relative w-full h-40 bg-muted overflow-hidden">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={img.url}
+                          alt={img.filename}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                          onError={(e) => {
+                            ;(e.target as HTMLImageElement).style.opacity = '0.2'
+                          }}
+                        />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100">
+                          <div className="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center">
+                            <Check className="w-6 h-6" />
+                          </div>
                         </div>
                       </div>
-                      <div className="absolute top-2 right-2 px-2 py-1 bg-black/60 text-white text-xs rounded">
-                        {img.uploadedBy}
+                      <div className="p-3 bg-card">
+                        <h4 className="font-medium text-sm line-clamp-2">{img.filename}</h4>
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(img.uploadedAt).toLocaleDateString('id-ID')}
+                        </span>
                       </div>
                     </div>
-                    <div className="p-3 bg-card">
-                      <h4 className="font-medium text-sm line-clamp-2">{img.name}</h4>
-                      <span className="text-xs text-muted-foreground">{img.uploadedAt}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           ) : (
             // Tab URL
@@ -408,11 +434,11 @@ function BannerUpload({ value, onChange }: BannerUploadProps) {
       }
 
       try {
-        const url = await mockUploadImage(file)
+        const url = await uploadImage(file)
         onChange(url)
         toast.success('Gambar berhasil diupload')
-      } catch {
-        toast.error('Upload gagal, silakan coba lagi')
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Upload gagal, silakan coba lagi')
       }
     },
     [onChange]

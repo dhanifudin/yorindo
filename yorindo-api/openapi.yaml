@@ -6179,6 +6179,48 @@ paths:
   # ─────────────────────────────────────────────────────────────────────────────
   # UPLOADS
   # ─────────────────────────────────────────────────────────────────────────────
+  /uploads:
+    get:
+      summary: List all uploaded images
+      operationId: listUploads
+      tags: [Uploads]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of uploaded image files
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [files]
+                properties:
+                  files:
+                    type: array
+                    items:
+                      type: object
+                      required: [filename, url, size, uploadedAt]
+                      properties:
+                        filename:
+                          type: string
+                          description: Original filename
+                        url:
+                          type: string
+                          description: URL to access the uploaded file
+                        size:
+                          type: integer
+                          description: File size in bytes
+                        uploadedAt:
+                          type: string
+                          format: date-time
+                          description: Upload timestamp
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
   /uploads/image:
     post:
       summary: Upload an image file (event banners, etc.)

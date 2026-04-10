@@ -1,6 +1,34 @@
 import { http, HttpResponse, delay } from 'msw'
 
+// Mock uploaded files for the gallery
+const mockUploadedFiles = [
+  {
+    filename: 'tech-summit-2024.jpg',
+    url: '/api/uploads/tech-summit-2024.jpg',
+    size: 245000,
+    uploadedAt: '2024-01-15T10:30:00.000Z',
+  },
+  {
+    filename: 'business-conference.png',
+    url: '/api/uploads/business-conference.png',
+    size: 312000,
+    uploadedAt: '2024-01-20T14:15:00.000Z',
+  },
+  {
+    filename: 'workshop-series.webp',
+    url: '/api/uploads/workshop-series.webp',
+    size: 189000,
+    uploadedAt: '2024-02-01T09:00:00.000Z',
+  },
+]
+
 export const uploadHandlers = [
+  // GET /api/uploads — list uploaded images
+  http.get('/api/uploads', async () => {
+    await delay(300)
+    return HttpResponse.json({ files: mockUploadedFiles })
+  }),
+
   http.post('/api/uploads/image', async ({ request }) => {
     // Simulate upload delay
     await delay(1000)

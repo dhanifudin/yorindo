@@ -29,6 +29,33 @@ const UPLOADS_DIR = config.uploadsDir || 'uploads'
 fs.mkdirSync(UPLOADS_DIR, { recursive: true })
 
 export const uploadsRoutes: FastifyPluginAsync = async (fastify) => {
+  // GET /api/uploads — list all uploaded images
+  fastify.get('/api/uploads', { preHandler: [requireAuth] }, async (_request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      fs.mkdirSync(UPLOADS_DIR, { recursive: true })
+      const files = fs.readdirSync(UPLOADS_DIR)
+      const imageFiles = files.filter(f => ALLOWED_EXTENSIONS.has(path.extname(f).toLowerCase()))
+
+      const fileDetails = imageFiles.map(f => {
+        const stat = fs.statSync(path.join(UPLOADS_DIR, f))
+        return {
+          filename: f,
+          url: `/api/uploads/${f}`,
+          size: stat.size,
+          uploadedAt: stat.mtime.toISOString(),
+        }
+      })
+
+      // Sort by newest first
+      fileDetails.sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime())
+
+      return reply.status(200).send({ files: fileDetails })
+    } catch {
+      // If directory read fails, return empty list (non-blocking)
+      return reply.status(200).send({ files: [] })
+    }
+  })
+
   // POST /api/uploads/image
   fastify.post('/api/uploads/image', { preHandler: [requireAuth, requireAdmin] }, async (request: FastifyRequest, reply: FastifyReply) => {
     const file = await request.file({
