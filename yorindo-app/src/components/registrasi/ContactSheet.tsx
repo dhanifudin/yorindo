@@ -26,7 +26,8 @@ interface ContactSheetRegistration {
   contactPhone: string
   status: Registration['status']
   createdAt: string
-  // Survey data from the form the user filled; optional because some rows may not include it yet
+  // Survey answers from the form the user filled; can be Record<string, unknown> or SurveyResponse[]
+  surveyAnswers?: Record<string, unknown>
   surveyResponses?: SurveyResponse[]
 }
 
@@ -78,19 +79,21 @@ export function ContactSheet({
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [handleKeyDown])
 
-  // Mock survey responses (for demo purposes)
-  const mockSurveyResponses: SurveyResponse[] = [
-    { question: 'Nama Lengkap', answer: registration?.contactName || '—' },
-    { question: 'Email', answer: registration?.contactEmail || '—' },
-    { question: 'Nomor Telepon / WhatsApp', answer: registration?.contactPhone || '—' },
-    { question: 'Apakah Anda pernah menghadiri event serupa?', answer: 'Ya, 2 kali' },
-    { question: 'Mengapa Anda ingin mengikuti event ini?', answer: 'Saya ingin belajar tentang digital marketing dan networking dengan profesional lain.' },
-    { question: 'Apa harapan Anda setelah mengikuti event?', answer: 'Dapat menerapkan ilmu yang didapat dan membangun koneksi baru.' },
-    { question: 'Apakah Anda punya kendala datang ke venue?', answer: 'Tidak ada' },
-    { question: 'Preferensi makanan', answer: 'Vegetarian' },
-  ]
+  // Convert surveyAnswers (Record<string, unknown>) to SurveyResponse[] format
+  const answersFromApi = registration?.surveyAnswers
+  const responsesFromApi: SurveyResponse[] | null = answersFromApi && Object.keys(answersFromApi).length > 0
+    ? Object.entries(answersFromApi)
+        .filter(([, value]) => value !== null && value !== undefined && value !== '')
+        .map(([key, value]) => ({
+          question: key
+            .replace(/([A-Z])/g, ' $1')
+            .replace(/_/g, ' ')
+            .replace(/^./, (s) => s.toUpperCase()),
+          answer: Array.isArray(value) ? value : String(value),
+        }))
+    : null
 
-  const displayResponses = registration?.surveyResponses || mockSurveyResponses
+  const displayResponses = responsesFromApi || (registration?.surveyResponses ?? [])
 
   return (
     <Sheet open={!!registration} onOpenChange={(v) => !v && onClose()}>
@@ -159,28 +162,34 @@ export function ContactSheet({
               </div>
 
               {/* Survey Responses - Main Section */}
-              <div>
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  📋 Jawaban Formulir Pendaftaran
-                </h3>
-                <div className="space-y-4">
-                  {displayResponses.map((item, index) => (
-                    <div
-                      key={index}
-                      className="bg-muted/50 rounded-lg p-4 border"
-                    >
-                      <p className="text-xs text-muted-foreground mb-1 font-medium">
-                        {item.question}
-                      </p>
-                      <p className="text-sm leading-relaxed">
-                        {Array.isArray(item.answer)
-                          ? item.answer.join(', ')
-                          : item.answer?.toString() || '—'}
-                      </p>
-                    </div>
-                  ))}
+              {displayResponses.length > 0 ? (
+                <div>
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    📋 Jawaban Formulir Pendaftaran
+                  </h3>
+                  <div className="space-y-4">
+                    {displayResponses.map((item, index) => (
+                      <div
+                        key={index}
+                        className="bg-muted/50 rounded-lg p-4 border"
+                      >
+                        <p className="text-xs text-muted-foreground mb-1 font-medium">
+                          {item.question}
+                        </p>
+                        <p className="text-sm leading-relaxed">
+                          {Array.isArray(item.answer)
+                            ? item.answer.join(', ')
+                            : item.answer?.toString() || '—'}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground text-sm">
+                  Tidak ada jawaban formulir untuk pendaftaran ini.
+                </div>
+              )}
             </div>
           )}
         </div>

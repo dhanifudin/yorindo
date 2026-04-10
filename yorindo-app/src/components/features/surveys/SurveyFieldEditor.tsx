@@ -7,12 +7,14 @@ import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { Trash2, GripVertical, Plus, X } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface SurveyFieldEditorProps {
   field: SurveyField
   onChange: (updated: SurveyField) => void
   onRemove: () => void
   dragHandleProps?: React.HTMLAttributes<HTMLElement>
+  readOnly?: boolean
 }
 
 const FIELD_TYPE_LABELS: Record<SurveyFieldType, string> = {
@@ -29,7 +31,7 @@ const FIELD_TYPE_LABELS: Record<SurveyFieldType, string> = {
   section: 'Bagian Baru',
 }
 
-export function SurveyFieldEditor({ field, onChange, onRemove, dragHandleProps }: SurveyFieldEditorProps) {
+export function SurveyFieldEditor({ field, onChange, onRemove, dragHandleProps, readOnly = false }: SurveyFieldEditorProps) {
   const updateField = (updates: Partial<SurveyField>) => {
     onChange({ ...field, ...updates })
   }
@@ -65,8 +67,9 @@ export function SurveyFieldEditor({ field, onChange, onRemove, dragHandleProps }
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+          className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 disabled:opacity-50 disabled:pointer-events-none"
           onClick={onRemove}
+          disabled={readOnly}
         >
           <Trash2 size={16} />
         </Button>
@@ -78,8 +81,9 @@ export function SurveyFieldEditor({ field, onChange, onRemove, dragHandleProps }
             <Input
               placeholder="Masukkan pertanyaan..."
               value={field.label}
-              onChange={(e) => updateField({ label: e.target.value })}
+              onChange={(e) => !readOnly && updateField({ label: e.target.value })}
               className="h-9"
+              disabled={readOnly}
             />
           </div>
 
@@ -89,9 +93,10 @@ export function SurveyFieldEditor({ field, onChange, onRemove, dragHandleProps }
                 <Switch
                   id={`required-${field.id}`}
                   checked={field.required}
-                  onCheckedChange={(checked: boolean) => updateField({ required: checked })}
+                  onCheckedChange={(checked: boolean) => !readOnly && updateField({ required: checked })}
+                  disabled={readOnly}
                 />
-                <Label htmlFor={`required-${field.id}`} className="text-xs cursor-pointer">Wajib diisi</Label>
+                <Label htmlFor={`required-${field.id}`} className={cn("text-xs", !readOnly && "cursor-pointer")}>Wajib diisi</Label>
               </>
             )}
           </div>
@@ -108,12 +113,14 @@ export function SurveyFieldEditor({ field, onChange, onRemove, dragHandleProps }
                     value={opt.label}
                     onChange={(e) => handleUpdateOption(i, e.target.value)}
                     className="h-8 text-sm"
+                    disabled={readOnly}
                   />
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    className="h-8 w-8 text-muted-foreground hover:text-destructive disabled:opacity-50 disabled:pointer-events-none"
                     onClick={() => handleRemoveOption(i)}
+                    disabled={readOnly}
                   >
                     <X size={14} />
                   </Button>
@@ -122,8 +129,9 @@ export function SurveyFieldEditor({ field, onChange, onRemove, dragHandleProps }
               <Button
                 variant="outline"
                 size="sm"
-                className="w-full h-8 border-dashed text-xs text-muted-foreground hover:text-violet-600 hover:border-violet-300"
+                className="w-full h-8 border-dashed text-xs text-muted-foreground hover:text-violet-600 hover:border-violet-300 disabled:opacity-50 disabled:pointer-events-none"
                 onClick={handleAddOption}
+                disabled={readOnly}
               >
                 <Plus size={14} className="mr-1" /> Tambah Opsi
               </Button>
@@ -141,6 +149,7 @@ export function SurveyFieldEditor({ field, onChange, onRemove, dragHandleProps }
                 value={field.minimum ?? 1}
                 onChange={(e) => updateField({ minimum: parseInt(e.target.value, 10) })}
                 className="h-9"
+                disabled={readOnly}
               />
             </div>
             <div className="space-y-2">
@@ -150,6 +159,7 @@ export function SurveyFieldEditor({ field, onChange, onRemove, dragHandleProps }
                 value={field.maximum ?? 5}
                 onChange={(e) => updateField({ maximum: parseInt(e.target.value, 10) })}
                 className="h-9"
+                disabled={readOnly}
               />
             </div>
           </div>
@@ -165,6 +175,7 @@ export function SurveyFieldEditor({ field, onChange, onRemove, dragHandleProps }
                 onChange={(e) => updateField({ rows: e.target.value.split('\n').filter(Boolean) })}
                 className="h-24 text-sm"
                 placeholder={'Baris 1\nBaris 2'}
+                disabled={readOnly}
               />
             </div>
             <div className="space-y-2">
@@ -174,6 +185,7 @@ export function SurveyFieldEditor({ field, onChange, onRemove, dragHandleProps }
                 onChange={(e) => updateField({ columns: e.target.value.split('\n').filter(Boolean) })}
                 className="h-24 text-sm"
                 placeholder={'Kolom 1\nKolom 2'}
+                disabled={readOnly}
               />
             </div>
           </div>
@@ -188,6 +200,7 @@ export function SurveyFieldEditor({ field, onChange, onRemove, dragHandleProps }
               onChange={(e) => updateField({ description: e.target.value })}
               className="h-20 text-sm"
               placeholder="Berikan konteks tambahan untuk bagian ini..."
+              disabled={readOnly}
             />
           </div>
         )}

@@ -53,6 +53,7 @@ export function getLifecycleActions(
       actions.push({ label: 'Batalkan', nextStatus: 'cancelled', hint: 'Batalkan rencana event ini', variant: 'outline', requireConfirm: true })
       break
     case 'published':
+      actions.push({ label: 'Unpublikasi', nextStatus: 'draft', hint: 'Kembalikan event ke status draft' })
       actions.push({ label: 'Mulai Live', nextStatus: 'active', hint: 'Aktifkan event dan buka fitur check-in' })
       actions.push({ label: 'Batalkan', nextStatus: 'cancelled', hint: 'Batalkan event yang sudah dipublikasi', variant: 'outline', requireConfirm: true })
       break
