@@ -40,7 +40,7 @@ export const uploadsRoutes: FastifyPluginAsync = async (fastify) => {
         const stat = fs.statSync(path.join(UPLOADS_DIR, f))
         return {
           filename: f,
-          url: `${config.baseUrl}/api/uploads/${f}`,
+          url: `/api/uploads/${f}`,
           size: stat.size,
           uploadedAt: stat.mtime.toISOString(),
         }
@@ -112,7 +112,7 @@ export const uploadsRoutes: FastifyPluginAsync = async (fastify) => {
         })
     })
 
-    const url = `${config.baseUrl}/api/uploads/${filename}`
+    const url = `/api/uploads/${filename}`
 
     fastify.log.info({ filename, mimetype: file.mimetype, uploadedBy: request.user?.sub }, 'Image uploaded')
 
