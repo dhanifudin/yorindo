@@ -101,11 +101,11 @@ export function EventHubLayout({
   const isEditable = ['draft', 'published', 'cancelled'].includes(event.status)
 
   return (
-    <div className="px-6 py-4 border-b border-border bg-background">
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
+    <div className="px-4 py-3 sm:px-6 sm:py-4 border-b border-border bg-background">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <h1 className="text-2xl font-bold truncate">{event.name}</h1>
+            <h1 className="text-lg sm:text-2xl font-bold truncate">{event.name}</h1>
             <Badge className={STATUS_BADGE[event.status] ?? 'bg-muted text-muted-foreground'}>
               {event.status}
             </Badge>
@@ -118,7 +118,7 @@ export function EventHubLayout({
               <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
             ))}
           </div>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-xs sm:text-sm text-muted-foreground">
             {new Date(event.eventDate).toLocaleDateString('id-ID', {
               weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
             })}
@@ -130,7 +130,7 @@ export function EventHubLayout({
             )}
           </p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
           <EventCloneDialog event={event} />
           {isEditable && (
             <Button

@@ -162,7 +162,8 @@ export function CheckinAdminView({ params }: CheckinAdminViewProps) {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => router.push(`/app/scan?eventId=${id}`)}
+          onClick={() => {/* TODO: Re-enable when scan is ready */}}
+          disabled
           className="gap-2 shrink-0"
         >
           <QrCode className="h-4 w-4" />

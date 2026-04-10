@@ -9,7 +9,7 @@ import { PWAInstallBanner } from '@/components/features/scan/PWAInstallBanner'
 
 // Routes that viewers (read-only) are allowed to access
 const VIEWER_ALLOWED_PATHS = ['/app', '/app/events']
-const STAFF_ALLOWED_PATHS = ['/app', '/app/scan']
+const STAFF_ALLOWED_PATHS = ['/app']
 
 function isViewerAllowed(pathname: string): boolean {
   if (VIEWER_ALLOWED_PATHS.includes(pathname)) return true
@@ -84,7 +84,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
 
     if (user.role === 'staff' && !isStaffAllowed(pathname)) {
-      router.replace('/app/scan')
+      router.replace('/app')
       return
     }
   }, [mounted, accessToken, user, router, pathname, isAuthorized])

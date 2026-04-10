@@ -33,7 +33,7 @@ const NAV_ITEMS = [
   { href: '/app/vendors',      label: 'Vendor',    icon: Building2,       roles: ['admin'] },
   // { href: '/app/templates',    label: 'Template',  icon: FileText,        roles: ['admin'] }, // Hidden for now
   { href: '/app/users',        label: 'Akun',      icon: UserCog,         roles: ['admin'] },
-  { href: '/app/scan',         label: 'Scan',      icon: QrCode,          roles: ['staff', 'admin'] },
+  // { href: '/app/scan',         label: 'Scan',      icon: QrCode,          roles: ['staff', 'admin'] }, // Hidden until implementation is ready
 ]
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
@@ -64,14 +64,14 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   const visible = NAV_ITEMS.filter((item) => item.roles.includes(user?.role ?? 'viewer'))
 
-  // Fetch duplicate count for badge (admin only)
-  const { data: dupData } = useQuery<{ data: Array<unknown> }>({
-    queryKey: ['contacts', 'duplicates-count'],
-    queryFn: () => fetch('/api/contacts/duplicates').then((r) => r.json()),
+  // Fetch flagged contacts count for badge (admin only)
+  const { data: healthData } = useQuery<{ flagged: number }>({
+    queryKey: ['contacts', 'health'],
+    queryFn: () => fetch('/api/contacts/health').then((r) => r.json()),
     enabled: user?.role === 'admin',
     refetchInterval: 60_000,
   })
-  const duplicateCount = dupData?.data?.length ?? 0
+  const flaggedCount = healthData?.flagged ?? 0
 
   const handleLogout = async () => {
     try {
@@ -155,16 +155,16 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               {!collapsed && (
                 <>
                   {item.label}
-                  {item.href === '/app/contacts' && duplicateCount > 0 && (
+                  {item.href === '/app/contacts' && flaggedCount > 0 && (
                     <span className="ml-auto inline-flex items-center justify-center size-5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold">
-                      {duplicateCount}
+                      {flaggedCount}
                     </span>
                   )}
                 </>
               )}
-              {collapsed && item.href === '/app/contacts' && duplicateCount > 0 && (
+              {collapsed && item.href === '/app/contacts' && flaggedCount > 0 && (
                 <span className="absolute top-0 right-0 inline-flex items-center justify-center size-3.5 rounded-full bg-destructive text-destructive-foreground text-[7px] font-bold">
-                  {duplicateCount}
+                  {flaggedCount}
                 </span>
               )}
             </Link>
@@ -224,7 +224,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           </header>
         )}
 
-        <main className="mx-auto w-full max-w-[1440px] min-w-0 px-4 py-6 pb-24 md:px-6 md:pb-6 xl:px-8">
+        <main className="mx-auto w-full max-w-[1440px] min-w-0 px-4 py-4 pb-24 sm:px-6 sm:py-6 md:px-8 md:pb-8 lg:px-10 xl:px-12">
           {children}
         </main>
       </div>
@@ -244,9 +244,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           >
             <item.icon className="size-5" />
             <span>{item.label}</span>
-            {item.href === '/app/contacts' && duplicateCount > 0 && (
+            {item.href === '/app/contacts' && flaggedCount > 0 && (
               <span className="absolute top-1 right-0 inline-flex items-center justify-center size-4 rounded-full bg-destructive text-destructive-foreground text-[8px] font-bold">
-                {duplicateCount}
+                {flaggedCount}
               </span>
             )}
           </Link>

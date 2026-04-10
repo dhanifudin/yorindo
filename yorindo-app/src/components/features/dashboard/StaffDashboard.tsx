@@ -38,8 +38,9 @@ function EventCard({ event }: { event: Event }) {
           <span>Check-in: {stats?.attended ?? 0} / {event.capacity ?? stats?.total ?? 0}</span>
         )}
       </div>
-      <Button asChild size="sm" className="w-full">
-        <Link href={`/app/scan?eventId=${event.id}`}>Mulai Scan</Link>
+      <Button size="sm" className="w-full" disabled>
+        {/* TODO: Re-enable when scan is ready */}
+        Mulai Scan
       </Button>
     </div>
   )
