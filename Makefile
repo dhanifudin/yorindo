@@ -33,9 +33,9 @@ deploy-demo:
 	@until $(API_EXEC) wget -qO- http://localhost:3000/api/health > /dev/null 2>&1; do printf "."; sleep 2; done
 	@echo ""
 	@echo "🔄 Running migrations..."
-	$(API_EXEC_TTY) npm run migrate
+	$(DEMO_COMPOSE) exec -T api node_modules/.bin/tsx scripts/migrate.ts
 	@echo "🌱 Running seed..."
-	$(API_EXEC_TTY) npm run seed -- --demo
+	$(DEMO_COMPOSE) exec -T -e ALLOW_SEED=true api node_modules/.bin/tsx scripts/seed.ts --demo
 	@echo ""
 	@echo "🧪 Running seed validation tests..."
 	$(API_EXEC_TTY) npx vitest run scripts/seed.test.ts --reporter=verbose || (echo "❌ Seed validation failed!" && exit 1)
@@ -65,9 +65,9 @@ reset-demo:
 	@until $(API_EXEC) wget -qO- http://localhost:3000/api/health > /dev/null 2>&1; do printf "."; sleep 2; done
 	@echo ""
 	@echo "🔄 Running migrations..."
-	$(API_EXEC_TTY) npm run migrate
-	@echo "🌱 Running seed..."
-	$(API_EXEC_TTY) npm run seed -- --demo
+	$(DEMO_COMPOSE) exec -T api node_modules/.bin/tsx scripts/migrate.ts
+	@echo "🌱 Running demo seed..."
+	$(DEMO_COMPOSE) exec -T -e ALLOW_SEED=true api node_modules/.bin/tsx scripts/seed.ts --demo
 	@echo ""
 	@echo "🧪 Running seed validation tests..."
 	$(API_EXEC_TTY) npx vitest run scripts/seed.test.ts --reporter=verbose || (echo "❌ Seed validation failed!" && exit 1)
@@ -90,12 +90,25 @@ logs-demo:
 ## Run migrations only
 migrate-demo:
 	@echo "🔄 Running migrations..."
-	$(API_EXEC_TTY) npm run migrate
+	$(DEMO_COMPOSE) exec -T -e ALLOW_SEED=true api node_modules/.bin/tsx scripts/migrate.ts
 
 ## Run seed only (uses --demo for comprehensive demo data)
 seed-demo:
-	@echo "🌱 Running seed..."
-	$(API_EXEC_TTY) npm run seed -- --demo
+	@echo "🌱 Running demo seed..."
+	$(DEMO_COMPOSE) exec -T -e ALLOW_SEED=true api node_modules/.bin/tsx scripts/seed.ts --demo
+
+## Force re-seed demo (wipe data, migrate, seed) — use with caution
+reset-demo-data:
+	@echo "⚠️  WARNING: This will WIPE ALL demo data and re-seed from scratch."
+	@echo "Press Ctrl+C within 5 seconds to cancel..."
+	@sleep 5
+	@echo "🗑️  Truncating all data..."
+	$(DEMO_COMPOSE) exec -T postgres psql -U yorindo -d yorindo -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;" > /dev/null 2>&1 || true
+	@echo "🔄 Running migrations..."
+	$(DEMO_COMPOSE) exec -T -e ALLOW_SEED=true api node_modules/.bin/tsx scripts/migrate.ts
+	@echo "🌱 Running demo seed..."
+	$(DEMO_COMPOSE) exec -T -e ALLOW_SEED=true api node_modules/.bin/tsx scripts/seed.ts --demo
+	@echo "✅ Demo data re-seeded successfully!"
 
 # ─────────────────────────────────────────────
 # Local Development (docker-compose.dev.yml)

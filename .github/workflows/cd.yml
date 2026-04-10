@@ -159,8 +159,8 @@ jobs:
             docker compose up -d api app nginx
             sleep 15
 
-            docker compose exec -T api npx tsx scripts/migrate.ts
-            docker compose exec -T api npx tsx scripts/seed.ts --demo
+            docker compose exec -T -e ALLOW_SEED=true api npx tsx scripts/migrate.ts
+            docker compose exec -T -e ALLOW_SEED=true api npx tsx scripts/seed.ts --demo
 
             response=$(curl -s -o /dev/null -w "%{http_code}" https://demo.dhanifudin.com/api/health)
             if [ "$response" != "200" ]; then

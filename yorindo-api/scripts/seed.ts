@@ -2,13 +2,14 @@
  * Database Seed Script (Phase 2)
  *
  * Inserts realistic dev data for local development.
- * Guards against running in production.
+ * Guards against accidental production runs — override with ALLOW_SEED=true.
  *
  * Usage:
  *   npx tsx scripts/seed.ts          # basic seed (10 contacts, 3 events)
  *   npx tsx scripts/seed.ts --demo   # comprehensive demo seed (500 contacts, 10 events)
  *
- * Requires: DATABASE_URL environment variable, NODE_ENV != production
+ * Requires: DATABASE_URL or POSTGRES_* variables
+ *   ALLOW_SEED=true — required when NODE_ENV=production
  */
 
 import { Pool } from 'pg'
@@ -16,17 +17,30 @@ import bcrypt from 'bcrypt'
 import { createId } from '@paralleldrive/cuid2'
 import { seedDemo } from './seed-demo'
 
-if (process.env.NODE_ENV === 'production') {
-  console.error('Seed script must not run in production.')
+if (process.env.NODE_ENV === 'production' && process.env.ALLOW_SEED !== 'true') {
+  console.error('Seed script blocked in production to prevent accidental data loss.')
+  console.error('')
+  console.error('To force-run the seed in production, set ALLOW_SEED=true:')
+  console.error('  docker compose exec -T -e ALLOW_SEED=true api node_modules/.bin/tsx scripts/seed.ts')
+  console.error('  docker compose exec -T -e ALLOW_SEED=true api node_modules/.bin/tsx scripts/seed.ts --demo')
+  console.error('')
+  console.error('Or use make targets:')
+  console.error('  make seed-demo          # seed without wiping')
+  console.error('  make reset-demo-data    # wipe all data and re-seed')
   process.exit(1)
 }
 
-const databaseUrl = process.env.DATABASE_URL
-if (!databaseUrl) {
-  console.error('Error: DATABASE_URL environment variable is required')
-  process.exit(1)
+function buildDatabaseUrl(): string {
+  if (process.env.DATABASE_URL) return process.env.DATABASE_URL
+  const user = process.env.POSTGRES_USER ?? 'yorindo'
+  const password = process.env.POSTGRES_PASSWORD ?? ''
+  const host = process.env.POSTGRES_HOST ?? 'localhost'
+  const port = process.env.POSTGRES_PORT ?? '5432'
+  const db = process.env.POSTGRES_DB ?? 'yorindo'
+  return `postgresql://${user}:${encodeURIComponent(password)}@${host}:${port}/${db}`
 }
 
+const databaseUrl = buildDatabaseUrl()
 const pool = new Pool({ connectionString: databaseUrl })
 
 const isDemo = process.argv.includes('--demo')
