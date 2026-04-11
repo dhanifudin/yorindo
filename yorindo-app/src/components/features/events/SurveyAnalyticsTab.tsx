@@ -55,7 +55,7 @@ function RangeChart({ aggregate }: { aggregate: SurveyAggregate }) {
 }
 
 function SingleChoiceChart({ aggregate }: { aggregate: SurveyAggregate }) {
-  const data = aggregate.optionCounts ?? []
+  const data = [...(aggregate.optionCounts ?? [])].sort((a, b) => b.count - a.count)
 
   return (
     <div className="space-y-3">
