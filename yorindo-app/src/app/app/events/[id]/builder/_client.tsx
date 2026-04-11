@@ -22,16 +22,18 @@ interface SurveyBuilderClientProps {
 export default function SurveyBuilderClient({ id }: SurveyBuilderClientProps) {
   const queryClient = useQueryClient()
   const [previewOpen, setPreviewOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState<'registration' | 'post-event'>('post-event')
-  
-  // Registration and Post-Event preview fields
-  const [regPreviewFields, setRegPreviewFields] = useState<SurveyField[]>([])
-  const [postPreviewFields, setPostPreviewFields] = useState<SurveyField[]>([])
 
+  // Active events: Post-Event first. Draft: Registration first.
   const { data: event } = useQuery<Event>({
     queryKey: ['events', id],
     queryFn: () => fetch(`/api/events/${id}`).then((r) => r.json()),
   })
+
+  const isActive = event?.status === 'active'
+  const defaultTab = isActive ? 'post-event' : 'registration'
+  const [activeTab, setActiveTab] = useState<'registration' | 'post-event'>(defaultTab)
+  const [regPreviewFields, setRegPreviewFields] = useState<SurveyField[]>([])
+  const [postPreviewFields, setPostPreviewFields] = useState<SurveyField[]>([])
 
   // Separate query for each survey type to keep logic clean
   const { data: regSchema } = useSurveySchema(id, 'registration')
@@ -121,45 +123,86 @@ export default function SurveyBuilderClient({ id }: SurveyBuilderClientProps) {
         </div>
       )}
 
-      {/* Tabs — Post-Event first, then Registration */}
+      {/* Tabs — order swaps based on event status */}
       <Tabs
         value={activeTab}
         onValueChange={(val) => setActiveTab(val as 'registration' | 'post-event')}
         className="space-y-6"
       >
         <nav className="flex border-b border-border bg-background overflow-x-auto">
-          <button
-            onClick={() => setActiveTab('post-event')}
-            className={cn(
-              'inline-flex items-center px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors',
-              activeTab === 'post-event'
-                ? 'border-primary text-foreground'
-                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border',
-              !event?.postSurveyEnabled && 'opacity-60 pointer-events-none',
-            )}
-          >
-            Survei Post-Event
-            {event?.postSurveyEnabled && (
-              <span className="ml-2 w-2 h-2 rounded-full bg-green-500" />
-            )}
-          </button>
-          <button
-            onClick={() => !isPreSurveyLocked && setActiveTab('registration')}
-            className={cn(
-              'inline-flex items-center px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors',
-              activeTab === 'registration'
-                ? 'border-primary text-foreground'
-                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border',
-              isPreSurveyLocked && 'opacity-60 pointer-events-none cursor-not-allowed',
-            )}
-            disabled={isPreSurveyLocked}
-            title={isPreSurveyLocked ? 'Survei registrasi tidak dapat diubah setelah event dibuat' : ''}
-          >
-            Survei Registrasi
-            {isPreSurveyLocked && (
-              <span className="ml-2 text-xs text-muted-foreground">(terkunci)</span>
-            )}
-          </button>
+          {isActive ? (
+            // Active: Post-Event first
+            <>
+              <button
+                onClick={() => setActiveTab('post-event')}
+                className={cn(
+                  'inline-flex items-center px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors',
+                  activeTab === 'post-event'
+                    ? 'border-primary text-foreground'
+                    : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border',
+                  !event?.postSurveyEnabled && 'opacity-60 pointer-events-none',
+                )}
+              >
+                Survei Post-Event
+                {event?.postSurveyEnabled && (
+                  <span className="ml-2 w-2 h-2 rounded-full bg-green-500" />
+                )}
+              </button>
+              <button
+                onClick={() => !isPreSurveyLocked && setActiveTab('registration')}
+                className={cn(
+                  'inline-flex items-center px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors',
+                  activeTab === 'registration'
+                    ? 'border-primary text-foreground'
+                    : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border',
+                  isPreSurveyLocked && 'opacity-60 pointer-events-none cursor-not-allowed',
+                )}
+                disabled={isPreSurveyLocked}
+                title={isPreSurveyLocked ? 'Survei registrasi tidak dapat diubah setelah event dibuat' : ''}
+              >
+                Survei Registrasi
+                {isPreSurveyLocked && (
+                  <span className="ml-2 text-xs text-muted-foreground">(terkunci)</span>
+                )}
+              </button>
+            </>
+          ) : (
+            // Draft: Registration first
+            <>
+              <button
+                onClick={() => !isPreSurveyLocked && setActiveTab('registration')}
+                className={cn(
+                  'inline-flex items-center px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors',
+                  activeTab === 'registration'
+                    ? 'border-primary text-foreground'
+                    : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border',
+                  isPreSurveyLocked && 'opacity-60 pointer-events-none cursor-not-allowed',
+                )}
+                disabled={isPreSurveyLocked}
+                title={isPreSurveyLocked ? 'Survei registrasi tidak dapat diubah setelah event dibuat' : ''}
+              >
+                Survei Registrasi
+                {isPreSurveyLocked && (
+                  <span className="ml-2 text-xs text-muted-foreground">(terkunci)</span>
+                )}
+              </button>
+              <button
+                onClick={() => setActiveTab('post-event')}
+                className={cn(
+                  'inline-flex items-center px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors',
+                  activeTab === 'post-event'
+                    ? 'border-primary text-foreground'
+                    : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border',
+                  !event?.postSurveyEnabled && 'opacity-60 pointer-events-none',
+                )}
+              >
+                Survei Post-Event
+                {event?.postSurveyEnabled && (
+                  <span className="ml-2 w-2 h-2 rounded-full bg-green-500" />
+                )}
+              </button>
+            </>
+          )}
         </nav>
 
         {/* Post-Event Survey — always editable when enabled */}
