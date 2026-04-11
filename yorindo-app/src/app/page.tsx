@@ -60,7 +60,7 @@ const MODULES = [
   { icon: Send, name: 'Blast & Notifikasi', description: 'Kirim undangan tersegmentasi via WhatsApp dan Email secara terjadwal.', badge: 'Blast' },
   { icon: QrCode, name: 'Check-in QR Code', description: 'Aplikasi check-in PWA offline — scan QR peserta cepat di hari-H.', badge: 'Scan' },
   { icon: BarChart3, name: 'Laporan & Analitik', description: 'Pantau kehadiran real-time, unduh Excel/PDF, dan visualisasi funnel.', badge: 'Analytics' },
-  { icon: Sparkles, name: 'YoriMind AI', description: 'Insight otomatis pasca-event: ringkasan, normalisasi data, dan rekomendasi.', badge: 'AI' },
+  { icon: Sparkles, name: 'AI Insights', description: 'Insight otomatis pasca-event: ringkasan, normalisasi data, dan rekomendasi.', badge: 'AI' },
 ];
 
 const STEPS = [

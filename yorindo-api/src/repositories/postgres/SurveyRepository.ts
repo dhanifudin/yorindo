@@ -30,7 +30,7 @@ export class PostgresSurveyRepository
     const col = SURVEY_COL[type]
     const { rows } = await this.query<{
       id: string
-      schema_json: string | null
+      schema_json: Record<string, unknown> | null
       created_at: Date
       updated_at: Date
     }>(
@@ -40,21 +40,32 @@ export class PostgresSurveyRepository
     const row = rows[0]
     if (!row?.schema_json) return null
 
-    try {
-      // pg auto-parses JSONB columns, so schema_json may already be an object
-      const parsed = typeof row.schema_json === 'string'
-        ? JSON.parse(row.schema_json) as SurveySchema
-        : row.schema_json as SurveySchema
+    const json = row.schema_json
+
+    // If stored as full SurveySchema format (has .schema property)
+    if (json.schema || json.uiSchema) {
       return {
-        ...parsed,
-        id: parsed.id ?? row.id,
+        id: (json.id as string) ?? row.id,
         eventId,
         type,
+        fields: (json.fields as SurveySchema['fields']) ?? [],
+        schema: json.schema as Record<string, unknown>,
+        uiSchema: json.uiSchema as Record<string, unknown>,
         createdAt: this.toIso(row.created_at),
         updatedAt: this.toIso(row.updated_at),
       }
-    } catch {
-      return null
+    }
+
+    // If stored as raw JSON Schema (has .properties) — wrap it
+    return {
+      id: row.id,
+      eventId,
+      type,
+      fields: [],
+      schema: json as Record<string, unknown>,
+      uiSchema: {},
+      createdAt: this.toIso(row.created_at),
+      updatedAt: this.toIso(row.updated_at),
     }
   }
 
@@ -132,5 +143,18 @@ export class PostgresSurveyRepository
     }))
 
     return { responses, total }
+  }
+
+  async getContactForRegistration(regId: string): Promise<{ name: string; phone: string } | null> {
+    const { rows } = await this.query<{ name: string; phone: string | null }>(
+      `SELECT c.name, c.phone
+       FROM registrations r
+       JOIN contacts c ON c.id = r.contact_id
+       WHERE r.id = $1`,
+      [regId],
+    )
+    const row = rows[0]
+    if (!row) return null
+    return { name: row.name, phone: row.phone ?? '' }
   }
 }

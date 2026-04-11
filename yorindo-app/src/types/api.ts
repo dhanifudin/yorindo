@@ -109,7 +109,7 @@ export interface ScanResult {
   message?: string
 }
 
-export interface YoriMindResult {
+export interface InsightsResult {
   disabled?: boolean
   analysis: string
   root_causes: string[]
@@ -398,4 +398,19 @@ export interface PublicEventSponsor {
   logo_url?: string
   website?: string
   display_order: number
+}
+
+export interface CompletionStats {
+  demography: {
+    cities:     { name: string; count: number }[]
+    industries: { name: string; count: number }[]
+    jobTitles:  { name: string; count: number }[]
+  }
+  segmentOverlap: {
+    industry: string
+    city:     string
+    attended: number
+    approved: number
+    rate:     number
+  }[]
 }

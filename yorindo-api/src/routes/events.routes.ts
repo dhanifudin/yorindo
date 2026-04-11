@@ -2,19 +2,21 @@ import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import {
   auditLogRepository,
+  blastLogRecipientRepository,
   contactRepository,
   eventRepository,
   queueService,
   registrationRepository,
   surveyRepository,
   userRepository,
-  yoriMindService,
+  insightsService,
   vendorRepository,
   eventSponsorRepository,
   templateRepository,
 } from '../container.js'
 import { blastProgressStore } from '../lib/blast-progress-store.js'
 import { getRedisOptional } from '../lib/redis.js'
+import { getPool } from '../lib/postgres.js'
 import { requireAdmin, requireAuth, requireRoles, type JwtPayload } from '../middleware/auth.js'
 import type { Event, EventStatus, Registration, TargetCriteria } from '../types/domain.js'
 import { validateOpenApiRequest, validateOpenApiResponse } from '../lib/openapi-contract.js'
@@ -920,18 +922,85 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(200).send(responseBody)
   })
 
-  fastify.get('/api/events/:id/yorimind', { preHandler: [requireAuth, requireRoles('admin', 'viewer')] }, async (request, reply) => {
+  // ── GET /api/events/:id/completion-stats ──────────────────────────────────
+  fastify.get('/api/events/:id/completion-stats', { preHandler: [requireAuth, requireRoles('admin', 'viewer')] }, async (request, reply) => {
     const params = EventIdParamsSchema.safeParse(request.params)
     if (!params.success) return replyValidationError(reply, params.error.issues, 'Invalid event id')
     const event = await requireEventOr404(reply, params.data.id)
     if (!event) return
     const allowed = await requireEventAccessOr403(reply, request.user as JwtPayload | undefined, event.id)
     if (!allowed) return
-    validateOpenApiRequest({ path: '/events/{id}/yorimind', method: 'get', params: params.data })
+
+    const pool = (eventRepository as unknown as { pool: import('pg').Pool }).pool
+    const eventId = params.data.id
+
+    const attendeeFilter = `(r.status = 'attended' OR (r.status = 'approved' AND r.attended_at IS NOT NULL))`
+
+    const [citiesRes, industriesRes, jobTitlesRes, segmentRes] = await Promise.all([
+      pool.query<{ name: string; count: string }>(
+        `SELECT c.city AS name, COUNT(*) AS count
+         FROM registrations r JOIN contacts c ON c.id = r.contact_id
+         WHERE r.event_id = $1 AND ${attendeeFilter} AND c.city IS NOT NULL
+         GROUP BY c.city ORDER BY count DESC LIMIT 3`,
+        [eventId],
+      ),
+      pool.query<{ name: string; count: string }>(
+        `SELECT c.service_type AS name, COUNT(*) AS count
+         FROM registrations r JOIN contacts c ON c.id = r.contact_id
+         WHERE r.event_id = $1 AND ${attendeeFilter} AND c.service_type IS NOT NULL
+         GROUP BY c.service_type ORDER BY count DESC LIMIT 3`,
+        [eventId],
+      ),
+      pool.query<{ name: string; count: string }>(
+        `SELECT c.job_title AS name, COUNT(*) AS count
+         FROM registrations r JOIN contacts c ON c.id = r.contact_id
+         WHERE r.event_id = $1 AND ${attendeeFilter} AND c.job_title IS NOT NULL
+         GROUP BY c.job_title ORDER BY count DESC LIMIT 3`,
+        [eventId],
+      ),
+      pool.query<{ industry: string; city: string; attended: string; approved: string; rate: string }>(
+        `SELECT c.service_type AS industry, c.city,
+           COUNT(*) FILTER (WHERE ${attendeeFilter}) AS attended,
+           COUNT(*) FILTER (WHERE r.status IN ('approved','attended')) AS approved,
+           ROUND(COUNT(*) FILTER (WHERE ${attendeeFilter})::numeric /
+             NULLIF(COUNT(*) FILTER (WHERE r.status IN ('approved','attended')), 0) * 100) AS rate
+         FROM registrations r JOIN contacts c ON c.id = r.contact_id
+         WHERE r.event_id = $1
+         GROUP BY c.service_type, c.city
+         HAVING COUNT(*) FILTER (WHERE r.status IN ('approved','attended')) >= 3
+         ORDER BY rate DESC, attended DESC LIMIT 10`,
+        [eventId],
+      ),
+    ])
+
+    return reply.status(200).send({
+      demography: {
+        cities:     citiesRes.rows.map((r) => ({ name: r.name, count: parseInt(r.count, 10) })),
+        industries: industriesRes.rows.map((r) => ({ name: r.name, count: parseInt(r.count, 10) })),
+        jobTitles:  jobTitlesRes.rows.map((r) => ({ name: r.name, count: parseInt(r.count, 10) })),
+      },
+      segmentOverlap: segmentRes.rows.map((r) => ({
+        industry: r.industry,
+        city:     r.city,
+        attended: parseInt(r.attended, 10),
+        approved: parseInt(r.approved, 10),
+        rate:     parseInt(r.rate, 10),
+      })),
+    })
+  })
+
+  fastify.get('/api/events/:id/insights', { preHandler: [requireAuth, requireRoles('admin', 'viewer')] }, async (request, reply) => {
+    const params = EventIdParamsSchema.safeParse(request.params)
+    if (!params.success) return replyValidationError(reply, params.error.issues, 'Invalid event id')
+    const event = await requireEventOr404(reply, params.data.id)
+    if (!event) return
+    const allowed = await requireEventAccessOr403(reply, request.user as JwtPayload | undefined, event.id)
+    if (!allowed) return
+    validateOpenApiRequest({ path: '/events/{id}/insights', method: 'get', params: params.data })
 
     // Check Redis cache first (TTL 7 days)
     const redis = getRedisOptional()
-    const cacheKey = `yorimind:event:${params.data.id}`
+    const cacheKey = `insights:event:${params.data.id}`
     if (redis) {
       const cached = await redis.get(cacheKey)
       if (cached) {
@@ -956,7 +1025,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
         aiScore: registration.aiScore,
       }))),
     }
-    const result = await yoriMindService.analyze(snapshot)
+    const result = await insightsService.analyze(snapshot)
     const responseBody = {
       disabled: result.disabled ?? false,
       summary: result.summary,
@@ -966,7 +1035,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       tracked_metrics: result.tracked_metrics,
       generatedAt: result.generatedAt,
     }
-    validateOpenApiResponse({ path: '/events/{id}/yorimind', method: 'get', status: 200, body: responseBody })
+    validateOpenApiResponse({ path: '/events/{id}/insights', method: 'get', status: 200, body: responseBody })
 
     // Cache in Redis for 7 days
     if (redis) {
@@ -976,7 +1045,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(200).send(responseBody)
   })
 
-  fastify.delete('/api/events/:id/yorimind/cache', { preHandler: [requireAuth, requireRoles('admin', 'viewer')] }, async (request, reply) => {
+  fastify.delete('/api/events/:id/insights/cache', { preHandler: [requireAuth, requireRoles('admin', 'viewer')] }, async (request, reply) => {
     const params = EventIdParamsSchema.safeParse(request.params)
     if (!params.success) return replyValidationError(reply, params.error.issues, 'Invalid event id')
     const event = await requireEventOr404(reply, params.data.id)
@@ -986,7 +1055,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
 
     const redis = getRedisOptional()
     if (redis) {
-      await redis.del(`yorimind:event:${params.data.id}`)
+      await redis.del(`insights:event:${params.data.id}`)
     }
 
     return reply.status(204).send()
@@ -1304,11 +1373,37 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       contactFilters.topicTags = event.topicTags
     }
 
-    // Always exclude contacts missing phone or email — they can't receive any blast channel
-    const recipientCount = body.data.contactIds?.length ?? (await contactRepository.findAll(
-      { page: 1, pageSize: 500 },
-      { ...contactFilters, hasPhone: true, hasEmail: true },
-    )).total
+    // Fetch actual contacts for recipient tracking
+    let contactIds: string[]
+    if (body.data.contactIds?.length) {
+      contactIds = body.data.contactIds
+    } else {
+      const result = await contactRepository.findAll(
+        { page: 1, pageSize: 500 },
+        { ...contactFilters, hasPhone: true, hasEmail: true },
+      )
+      contactIds = result.data.map(c => c.id)
+    }
+    const recipientCount = contactIds.length
+
+    // Create blast_logs entry and record recipients for registration source tracking
+    try {
+      const pool = getPool()
+      const blastLogId = `blast-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+      await pool.query(
+        `INSERT INTO blast_logs (id, event_id, template_id, channel, recipient_count, status, sent_at)
+         VALUES ($1, $2, $3, $4, $5, 'queued', NOW())`,
+        [blastLogId, event.id, body.data.templateId ?? null, body.data.channel, recipientCount],
+      )
+      if (contactIds.length > 0) {
+        await blastLogRecipientRepository.insertRecipients(blastLogId, event.id, contactIds, body.data.channel)
+      }
+    } catch {
+      // Pool not available (tests or non-Postgres mode) — still track recipients
+      if (contactIds.length > 0) {
+        await blastLogRecipientRepository.insertRecipients(`blast-${Date.now()}`, event.id, contactIds, body.data.channel)
+      }
+    }
 
     // Look up template from database (not hardcoded)
     const tmpl = body.data.templateId
@@ -1431,6 +1526,8 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       approvedCount:    metrics.approved,
       attendedCount:    metrics.attended,
       otsCount:         metrics.otsCount,
+      blastRegistered:  metrics.blastRegistered ?? 0,
+      organicRegistered: metrics.organicRegistered ?? 0,
       pendingApprovals: metrics.registered - metrics.approved,
       seatsRemaining:   Math.max((event.capacity ?? 0) - metrics.approved, 0),
       daysUntilEvent:   Math.ceil((new Date(event.startDate).getTime() - Date.now()) / 86400000),
@@ -1651,7 +1748,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(500).send({ error: { code: 'INTERNAL_ERROR', message: 'Failed to create contact', details: [] } })
     }
 
-    // Create registration — auto-approved AND marked as attended
+    // Create registration — auto-approved AND marked as attended (OTS)
     const registration = await registrationRepository.create({
       contactId: contact.id,
       eventId: event.id,
@@ -1661,6 +1758,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       aiScore: null,
       flagOverride: false,
       approvedAt: new Date().toISOString(),
+      registrationSource: 'ots',
     })
 
     const token = request.user as JwtPayload

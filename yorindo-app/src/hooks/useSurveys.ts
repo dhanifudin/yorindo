@@ -7,7 +7,7 @@ export function useSurveySchema(eventId: string | undefined, type: 'registration
   return useQuery({
     queryKey: ['surveys', eventId, type],
     queryFn: async () => {
-      const res = await fetch(`/api/events/${eventId}/survey/${type}`)
+      const res = await fetch(`/api/events/${eventId}/surveys/${type}`)
       if (!res.ok) throw new Error('Gagal memuat skema survei')
       return res.json() as Promise<SurveySchema>
     },
@@ -21,7 +21,7 @@ export function useSaveSurveySchema(eventId: string) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ type, schema, uiSchema }: { type: 'registration' | 'post-event'; schema: unknown; uiSchema: unknown }) => {
-      const res = await fetch(`/api/events/${eventId}/survey/${type}`, {
+      const res = await fetch(`/api/events/${eventId}/surveys/${type}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ schema, uiSchema }),
@@ -52,7 +52,7 @@ export function useSurveyResponses(
   return useQuery({
     queryKey: ['survey-responses', eventId, { type, search }],
     queryFn: async () => {
-      const res = await fetch(`/api/events/${eventId}/survey/responses?type=${type}${search ? `&search=${encodeURIComponent(search)}` : ''}`)
+      const res = await fetch(`/api/events/${eventId}/surveys/responses?type=${type}${search ? `&search=${encodeURIComponent(search)}` : ''}`)
       if (!res.ok) throw new Error('Gagal memuat respons survei')
       return res.json() as Promise<SurveyResponsesApiResponse>
     },

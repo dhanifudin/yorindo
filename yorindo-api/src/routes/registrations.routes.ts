@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import {
   auditLogRepository,
+  blastLogRecipientRepository,
   contactRepository,
   emailService,
   eventRepository,
@@ -274,8 +275,8 @@ export const registrationsRoutes: FastifyPluginAsync = async (fastify) => {
 
     const existingContact = await contactRepository.findByPhone(payload.phone)
     const contact = existingContact
-      ? await contactRepository.update(existingContact.id, { 
-          name: payload.name, 
+      ? await contactRepository.update(existingContact.id, {
+          name: payload.name,
           email: payload.email,
           serviceType: payload.industry ?? existingContact.serviceType,
           company: payload.company ?? existingContact.company,
@@ -304,6 +305,11 @@ export const registrationsRoutes: FastifyPluginAsync = async (fastify) => {
           deletedAt: null,
         })
 
+    // Determine registration source: 'blast' if contact was invited, 'organic' otherwise
+    const contactId = contact?.id ?? existingContact?.id
+    const wasInvited = contactId ? await blastLogRecipientRepository.wasContactInvited(contactId, payload.eventId) : false
+    const registrationSource = wasInvited ? 'blast' : 'organic'
+
     const registration = await registrationRepository.create({
       contactId: (contact ?? existingContact)!.id,
       eventId: event.id,
@@ -313,6 +319,7 @@ export const registrationsRoutes: FastifyPluginAsync = async (fastify) => {
       flagOverride: false,
       approvedAt: null,
       attendedAt: null,
+      registrationSource,
     })
 
     if (payload.surveyAnswers && Object.keys(payload.surveyAnswers).length > 0) {

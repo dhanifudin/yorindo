@@ -892,8 +892,8 @@ components:
               count:
                 type: integer
 
-    # ─── YoriMind ──────────────────────────────────────────────────────────────
-    YoriMindResult:
+    # ─── Insights ──────────────────────────────────────────────────────────────
+    InsightsResult:
       type: object
       required: [analysis, root_causes, recommendations, summary, tracked_metrics]
       properties:
@@ -3912,6 +3912,99 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
 
+  /events/{id}/completion-stats:
+    get:
+      summary: Get completion analytics (demography + segment overlap) for a completed event
+      operationId: getEventCompletionStats
+      tags: [Events, Reports]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Completion stats
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [demography, segmentOverlap]
+                properties:
+                  demography:
+                    type: object
+                    required: [cities, industries, jobTitles]
+                    properties:
+                      cities:
+                        type: array
+                        items:
+                          type: object
+                          required: [name, count]
+                          properties:
+                            name:
+                              type: string
+                            count:
+                              type: integer
+                      industries:
+                        type: array
+                        items:
+                          type: object
+                          required: [name, count]
+                          properties:
+                            name:
+                              type: string
+                            count:
+                              type: integer
+                      jobTitles:
+                        type: array
+                        items:
+                          type: object
+                          required: [name, count]
+                          properties:
+                            name:
+                              type: string
+                            count:
+                              type: integer
+                  segmentOverlap:
+                    type: array
+                    items:
+                      type: object
+                      required: [industry, city, attended, approved, rate]
+                      properties:
+                        industry:
+                          type: string
+                          nullable: true
+                        city:
+                          type: string
+                          nullable: true
+                        attended:
+                          type: integer
+                        approved:
+                          type: integer
+                        rate:
+                          type: integer
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
   /events/{id}/report:
     get:
       summary: Get post-event attendance report (admin/viewer)
@@ -4211,11 +4304,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
 
-  /events/{id}/yorimind:
+  /events/{id}/insights:
     get:
-      summary: Get YoriMind AI analysis for event (admin/viewer)
-      operationId: getYoriMindAnalysis
-      tags: [Events, YoriMind]
+      summary: Get AI analysis for event (admin/viewer)
+      operationId: getInsightsAnalysis
+      tags: [Events, AI]
       security:
         - BearerAuth: []
       parameters:
@@ -4226,11 +4319,11 @@ paths:
             type: string
       responses:
         '200':
-          description: YoriMind AI analysis result
+          description: AI analysis result
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/YoriMindResult'
+                $ref: '#/components/schemas/InsightsResult'
         '401':
           description: Unauthorized
           content:
@@ -4250,11 +4343,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
 
-  /events/{id}/yorimind/cache:
+  /events/{id}/insights/cache:
     delete:
-      summary: Invalidate YoriMind cache for event (admin/viewer)
-      operationId: deleteYoriMindCache
-      tags: [Events, YoriMind]
+      summary: Invalidate AI insights cache for event (admin/viewer)
+      operationId: deleteInsightsCache
+      tags: [Events, AI]
       security:
         - BearerAuth: []
       parameters:
@@ -4363,7 +4456,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
 
-  /events/{id}/survey/{type}:
+  /events/{id}/surveys/{type}:
     get:
       summary: Get survey schema for event by type (registration or post-event)
       operationId: getSurveySchemaByType
@@ -4459,7 +4552,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
 
-  /events/{id}/survey/responses:
+  /events/{id}/surveys/responses:
     get:
       summary: Get survey responses with per-question aggregates (admin + viewer)
       operationId: getSurveyResponses
@@ -4514,7 +4607,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
 
-  /events/{id}/survey/responses/download:
+  /events/{id}/surveys/responses/download:
     get:
       summary: Export survey responses to CSV/XLSX (admin + viewer)
       operationId: downloadSurveyResponses
@@ -6512,7 +6605,7 @@ tags:
     description: Invitation blast and notifications
   - name: Analytics
     description: Event analytics and reporting
-  - name: YoriMind
+  - name: AI
     description: AI-powered event analysis
   - name: Users
     description: User account and access management

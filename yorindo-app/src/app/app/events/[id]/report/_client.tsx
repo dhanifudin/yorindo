@@ -6,7 +6,7 @@ import { MetricCards, MetricCardsSkeleton } from '@/components/features/reports/
 import { AttendanceFunnelChart } from '@/components/features/reports/AttendanceFunnelChart'
 import { DemographicsCharts } from '@/components/features/reports/DemographicsCharts'
 import { AnalyticsDashboard } from '@/components/features/events/AnalyticsDashboard'
-import { YoriMindPanel } from '@/components/features/events/YoriMindPanel'
+import { InsightsPanel } from '@/components/features/events/InsightsPanel'
 import { Button } from '@/components/ui/button'
 
 interface ReportPageProps {
@@ -78,7 +78,7 @@ export default function ReportPage({ params }: ReportPageProps) {
             jobTitleBreakdown={report.jobTitleBreakdown}
           />
           <AnalyticsDashboard eventId={id} />
-          <YoriMindPanel eventId={id} />
+          <InsightsPanel eventId={id} />
         </>
       ) : (
         <p className="text-muted-foreground">Laporan tidak tersedia.</p>

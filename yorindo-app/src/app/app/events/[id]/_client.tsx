@@ -11,12 +11,7 @@ import { FunnelVisualization } from '@/components/hub/FunnelVisualization'
 import { ActionCard } from '@/components/hub/ActionCard'
 import { SponsorPanel } from '@/components/features/vendors/SponsorPanel'
 import { getHealth } from '@/lib/benchmarks'
-import { MetricCards, MetricCardsSkeleton } from '@/components/features/reports/MetricCards'
-import { AttendanceFunnelChart } from '@/components/features/reports/AttendanceFunnelChart'
-import { DemographicsCharts } from '@/components/features/reports/DemographicsCharts'
-import { AnalyticsDashboard } from '@/components/features/events/AnalyticsDashboard'
-import { YoriMindPanel } from '@/components/features/events/YoriMindPanel'
-import { useReport } from '@/hooks/useReport'
+import { CompletedEventDashboard } from '@/components/features/events/CompletedEventDashboard'
 import Link from 'next/link'
 import Image from 'next/image'
 import type { Event } from '@/types/api'
@@ -30,6 +25,9 @@ interface OverviewMetrics {
   pendingApprovals: number
   seatsRemaining: number | null
   daysUntilEvent: number
+  otsCount: number
+  blastRegistered: number
+  organicRegistered: number
 }
 
 interface EventDetailPageProps {
@@ -62,9 +60,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
     enabled: !!id,
   })
 
-  // Load report data when event is completed/archived
   const isCompleted = ['completed', 'archived'].includes(event?.status ?? '')
-  const { data: report } = useReport(isCompleted ? id : undefined)
 
   if (isLoading || !metrics || !event) {
     return (
@@ -90,7 +86,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   return (
     <div className="space-y-4">
       {/* Banner image — Story 4.7 */}
-      <div className="relative aspect-video lg:aspect-[21/9] w-full rounded-xl overflow-hidden border bg-muted">
+      <div className="relative h-32 md:h-40 w-full rounded-xl overflow-hidden border bg-muted">
         {event.bannerUrl ? (
           <Image
             src={event.bannerUrl}
@@ -106,9 +102,9 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
-        <div className="absolute bottom-4 left-6 right-6">
-          <h1 className="text-3xl font-bold text-white drop-shadow-md">{event.name}</h1>
-          <p className="text-white/80 line-clamp-1">{event.venue ?? 'Venue belum ditentukan'}</p>
+        <div className="absolute bottom-3 left-4 right-4">
+          <h1 className="text-xl md:text-2xl font-bold text-white drop-shadow-md">{event.name}</h1>
+          <p className="text-white/80 text-sm line-clamp-1">{event.venue ?? 'Venue belum ditentukan'}</p>
         </div>
       </div>
 
@@ -137,18 +133,20 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
           <div className="space-y-3">
           <Card>
             <CardContent className="pt-4 space-y-3">
-              {/* Pending approvals */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase font-medium">Menunggu Persetujuan</p>
-                  <p className="text-2xl font-bold">{metrics.pendingApprovals}</p>
+              {/* Pending approvals — only show for published events */}
+              {event.status === 'published' && (
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase font-medium">Menunggu Persetujuan</p>
+                    <p className="text-2xl font-bold">{metrics.pendingApprovals}</p>
+                  </div>
+                  {metrics.pendingApprovals > 0 && (
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href={`${baseHref}/registrations`}>Review</Link>
+                    </Button>
+                  )}
                 </div>
-                {metrics.pendingApprovals > 0 && (
-                  <Button variant="outline" size="sm" asChild>
-                    <Link href={`${baseHref}/registrations`}>Review</Link>
-                  </Button>
-                )}
-              </div>
+              )}
 
               <div className="border-t pt-3 space-y-2 text-sm">
                 {/* Days until */}
@@ -258,7 +256,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
           </CardHeader>
           <CardContent>
             <Button asChild variant="outline" className="w-full">
-              <Link href={`/app/events/${id}/survey-responses`}>
+              <Link href={`/app/events/${id}/survey`}>
                 Lihat Dashboard Respons
               </Link>
             </Button>
@@ -268,51 +266,19 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
       </>
       )}
 
-      {/* ── Report Section (shown only for completed/archived events) ── */}
       {isCompleted && (
-        <div className="mt-8 pt-6 border-t space-y-6">
-          <div>
-            <h2 className="text-xl font-bold mb-1">Laporan Kehadiran</h2>
-            <p className="text-sm text-muted-foreground">Analisis lengkap setelah event selesai</p>
-          </div>
-
-          {report ? (
-            <>
-              <MetricCards
-                totalInvited={report.totalInvited}
-                registered={report.registered}
-                approved={report.approved}
-                attended={report.attended}
-                otsCount={report.otsCount ?? 0}
-                attendanceRate={report.attendanceRate}
-                noShowRate={report.noShowRate}
-              />
-              <AttendanceFunnelChart
-                totalInvited={report.totalInvited}
-                registered={report.registered}
-                approved={report.approved}
-                attended={report.attended}
-              />
-              <DemographicsCharts
-                industryBreakdown={report.industryBreakdown}
-                cityBreakdown={report.cityBreakdown}
-                jobTitleBreakdown={report.jobTitleBreakdown}
-              />
-              <AnalyticsDashboard eventId={id} />
-              <YoriMindPanel eventId={id} />
-            </>
-          ) : (
-            <>
-              <MetricCardsSkeleton />
-              <div className="bg-muted rounded-lg h-64 animate-pulse" />
-              <div className="grid grid-cols-3 gap-4">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="bg-muted rounded-lg h-56 animate-pulse" />
-                ))}
-              </div>
-            </>
-          )}
-        </div>
+        <CompletedEventDashboard
+          eventId={id}
+          overview={{
+            blastCount: metrics.blastCount,
+            registrationCount: metrics.registrationCount,
+            approvedCount: metrics.approvedCount,
+            attendedCount: metrics.attendedCount,
+            otsCount: metrics.otsCount,
+            blastRegistered: metrics.blastRegistered ?? 0,
+            organicRegistered: metrics.organicRegistered ?? 0,
+          }}
+        />
       )}
     </div>
   )

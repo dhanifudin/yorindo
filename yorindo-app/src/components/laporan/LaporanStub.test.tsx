@@ -24,14 +24,14 @@ describe('LaporanStub', () => {
     })
   })
 
-  it('shows YoriMind section when completed', async () => {
+  it('shows AI insights section when completed', async () => {
     render(<LaporanStub isCompleted={true} />)
-    await waitFor(() => expect(screen.getByText(/Analisis YoriMind/)).toBeTruthy())
+    await waitFor(() => expect(screen.getByText(/Analisis AI/)).toBeTruthy())
   })
 
-  it('shows YoriMind fallback (no component implemented yet)', async () => {
+  it('shows AI insights fallback (no component implemented yet)', async () => {
     render(<LaporanStub isCompleted={true} />)
-    // Suspense resolves with fallback content since YoriMindPanel doesn't exist
+    // Suspense resolves with fallback content since InsightsPanel doesn't exist at lazy path
     // Give Suspense time to resolve the lazy import + error boundary
     await new Promise((r) => setTimeout(r, 100))
     // Either the fallback text or a skeleton is shown — just ensure no crash

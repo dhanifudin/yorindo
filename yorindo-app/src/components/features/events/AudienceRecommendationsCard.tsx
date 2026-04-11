@@ -62,7 +62,7 @@ export function AudienceRecommendationsCard({ eventId }: AudienceRecommendations
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-base font-semibold">Rekomendasi Audiens</span>
-            <Badge className="bg-blue-100 text-blue-700 text-xs">YoriMind AI</Badge>
+            <Badge className="bg-blue-100 text-blue-700 text-xs">AI</Badge>
           </div>
           <Button variant="outline" size="sm" onClick={() => setIsExpanded((v) => !v)}>
             {isExpanded ? 'Tutup' : 'Lihat Rekomendasi'}

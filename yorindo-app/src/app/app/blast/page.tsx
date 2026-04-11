@@ -205,7 +205,7 @@ export default function BlastPage() {
             {prefilledAudience ? (
               <div className="rounded-md bg-blue-50 border border-blue-200 p-4">
                 <p className="text-sm font-medium text-blue-800 mb-1">
-                  🤖 Audiens dari rekomendasi YoriMind: <strong>{prefilledAudience.count} kontak terpilih</strong>
+                  🤖 Audiens dari rekomendasi AI: <strong>{prefilledAudience.count} kontak terpilih</strong>
                 </p>
                 <Button
                   size="sm"

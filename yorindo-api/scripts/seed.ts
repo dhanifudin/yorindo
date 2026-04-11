@@ -114,7 +114,7 @@ async function seed(): Promise<void> {
     const sizes = ['<50', '50-200', '200-1000', '>1000']
     const industrySlugs = ['teknologi', 'kesehatan']
     const jobSlugs = ['software-engineer', 'product-manager']
-    const industryNames = ['Elektronik & Peralatan Rumah Tangga', 'Farmasi & Alat Kesehatan']
+    const industryNames = ['Teknologi Informasi & Software', 'Farmasi & Alat Kesehatan']
 
     for (let i = 1; i <= 10; i++) {
       const city = cities[i % cities.length]
@@ -164,12 +164,12 @@ async function seed(): Promise<void> {
       const duplicateId = createId()
       await client.query(`
         INSERT INTO contacts (id, name, phone, email, city, company, company_size, source, consent_status, industry_id, job_title_id, service_type, province_code, province_name, city_code, city_name)
-        VALUES ($1,$2,$3,$4,'Jakarta','PT Dev Corp','50-200','manual','active',$5,$6,'Elektronik & Peralatan Rumah Tangga',$7,$8,$9,$10)
+        VALUES ($1,$2,$3,$4,'Jakarta','PT Dev Corp','50-200','manual','active',$5,$6,'Teknologi Informasi & Software',$7,$8,$9,$10)
       `, [primaryId, pair.nameA, pair.phoneA, pair.emailA, industryId0, jobTitleId0,
           location0?.province_code, location0?.province_name, location0?.city_code, location0?.city_name])
       await client.query(`
         INSERT INTO contacts (id, name, phone, email, city, company, company_size, source, consent_status, industry_id, job_title_id, service_type, flag_category, province_code, province_name, city_code, city_name)
-        VALUES ($1,$2,$3,$4,'Jakarta','PT Dev Corp','<50','form','active',$5,$6,'Elektronik & Peralatan Rumah Tangga','duplicate',$7,$8,$9,$10)
+        VALUES ($1,$2,$3,$4,'Jakarta','PT Dev Corp','<50','form','active',$5,$6,'Teknologi Informasi & Software','duplicate',$7,$8,$9,$10)
       `, [duplicateId, pair.nameB, pair.phoneB, pair.emailB, industryId0, jobTitleId0,
           location0?.province_code, location0?.province_name, location0?.city_code, location0?.city_name])
       await client.query(`

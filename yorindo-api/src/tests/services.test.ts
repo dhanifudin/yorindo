@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { MockEmailService } from '../services/adapters/mock/EmailService.js'
 import { MockWhatsAppService } from '../services/adapters/mock/WhatsAppService.js'
 import { MockEtlNormalizationService } from '../services/adapters/mock/EtlNormalizationService.js'
-import { MockYoriMindService } from '../services/adapters/mock/YoriMindService.js'
+import { MockInsightsService } from '../services/adapters/mock/MockInsightsService.js'
 import { MockQueueService } from '../services/adapters/mock/QueueService.js'
 import { MockOtpService } from '../services/adapters/mock/OtpService.js'
 
@@ -87,14 +87,14 @@ describe('MockEtlNormalizationService', () => {
   })
 })
 
-// ─── MockYoriMindService ──────────────────────────────────────────────────────
+// ─── MockInsightsService ──────────────────────────────────────────────────────
 
-describe('MockYoriMindService', () => {
-  let svc: MockYoriMindService
+describe('MockInsightsService', () => {
+  let svc: MockInsightsService
 
-  beforeEach(() => { svc = new MockYoriMindService() })
+  beforeEach(() => { svc = new MockInsightsService() })
 
-  it('returns a YoriMindResult in Indonesian', async () => {
+  it('returns a InsightsResult in Indonesian', async () => {
     const result = await svc.analyze({
       eventId: '1',
       eventName: 'Test Event',

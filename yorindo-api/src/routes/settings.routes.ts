@@ -109,11 +109,11 @@ export const settingsRoutes: FastifyPluginAsync = async (fastify) => {
 
       await client.query('COMMIT')
 
-      // Clear the AIInsightsService settings cache so it picks up new values
+      // Clear the InsightsService settings cache so it picks up new values
       try {
-        const { clearSettingsCache } = await import('../services/adapters/real/AIInsightsService.js')
+        const { clearSettingsCache } = await import('../services/adapters/real/InsightsService.js')
         clearSettingsCache()
-        console.log('[Settings] Cache cleared for AIInsightsService')
+        console.log('[Settings] Cache cleared for InsightsService')
       } catch {
         // Ignore if function doesn't exist
       }

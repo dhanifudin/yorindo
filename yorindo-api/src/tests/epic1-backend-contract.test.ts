@@ -108,10 +108,10 @@ describe('Epic 1 backend contract routes', () => {
     expect(body.data[0]).toHaveProperty('contactName')
   })
 
-  it('returns YoriMind analysis for an event', async () => {
+  it('returns AI insights analysis for an event', async () => {
     const response = await app.inject({
       method: 'GET',
-      url: `/api/events/${seededActiveEventId}/yorimind`,
+      url: `/api/events/${seededActiveEventId}/insights`,
       headers: { authorization: `Bearer ${adminToken}` },
     })
 

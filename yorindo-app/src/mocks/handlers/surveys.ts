@@ -28,7 +28,7 @@ eventSurveysStore.set('event-001', {
 
 export const surveysHandlers = [
   // 1. Save registration schema
-  http.put('/api/events/:id/survey/registration', async ({ params, request }) => {
+  http.put('/api/events/:id/surveys/registration', async ({ params, request }) => {
     await delay(300)
     const id = params.id as string
     const body = await request.json() as SurveySchema
@@ -50,7 +50,7 @@ export const surveysHandlers = [
   }),
 
   // 2. Save post-event schema
-  http.put('/api/events/:id/survey/post-event', async ({ params, request }) => {
+  http.put('/api/events/:id/surveys/post-event', async ({ params, request }) => {
     await delay(300)
     const id = params.id as string
     const body = await request.json() as SurveySchema
@@ -71,7 +71,7 @@ export const surveysHandlers = [
   }),
 
   // 3. Export responses (Static route BEFORE dynamic :type)
-  http.get('/api/events/:id/survey/responses/download', async () => {
+  http.get('/api/events/:id/surveys/responses/download', async () => {
     await delay(800)
     // Return a mock Excel blob
     const buffer = new TextEncoder().encode('mock-excel-content')
@@ -84,7 +84,7 @@ export const surveysHandlers = [
   }),
 
   // 4. Get aggregate + individual responses (Static route BEFORE dynamic :type)
-  http.get('/api/events/:id/survey/responses', async ({ params, request }) => {
+  http.get('/api/events/:id/surveys/responses', async ({ params, request }) => {
     await delay(500)
     const url = new URL(request.url)
     const _type = url.searchParams.get('type') ?? 'registration'
@@ -151,7 +151,7 @@ export const surveysHandlers = [
   }),
 
   // 5. Get schema by type (Dynamic route LAST)
-  http.get('/api/events/:id/survey/:type', async ({ params }) => {
+  http.get('/api/events/:id/surveys/:type', async ({ params }) => {
     await delay(300)
     const id = params.id as string
     const type = params.type as 'registration' | 'post-event'

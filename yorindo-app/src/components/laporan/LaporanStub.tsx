@@ -1,23 +1,9 @@
 'use client'
 
-import React, { Suspense } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { LaporanPlaceholderChart } from './LaporanPlaceholderChart'
-
-// Graceful lazy import — will fall back silently if Epic 8 not yet implemented
-const YORIMIND_PATH = '/src/components/yorimind/YoriMindPanel'
-const YoriMindPanel = React.lazy(() =>
-  /* @vite-ignore */
-  import(/* @vite-ignore */ YORIMIND_PATH).catch(() => ({
-    default: () => (
-      <div className="rounded border p-4 text-sm text-muted-foreground">
-        Analisis tersedia setelah event selesai
-      </div>
-    ),
-  })) as Promise<{ default: React.ComponentType }>
-)
 
 interface LaporanStubProps {
   eventDate?: string
@@ -68,13 +54,17 @@ export function LaporanStub({ eventDate, isCompleted }: LaporanStubProps) {
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm text-muted-foreground">
-            Analisis YoriMind
+            Analisis AI
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Suspense fallback={<Skeleton className="h-48 w-full animate-none" />}>
-            <YoriMindPanel />
-          </Suspense>
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-3/4 animate-none" />
+            <Skeleton className="h-4 w-1/2 animate-none" />
+            <Skeleton className="h-4 w-2/3 animate-none" />
+            <Skeleton className="h-4 w-1/3 animate-none" />
+            <Skeleton className="h-4 w-1/2 animate-none" />
+          </div>
         </CardContent>
       </Card>
     </div>

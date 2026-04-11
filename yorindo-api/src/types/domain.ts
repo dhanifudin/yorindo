@@ -128,6 +128,8 @@ export interface EventOverviewMetrics {
   approved: number
   attended: number
   otsCount: number
+  blastRegistered: number
+  organicRegistered: number
   conversionRate: number
 }
 
@@ -162,6 +164,7 @@ export interface Registration {
   uploadSource?: 'etl_import' | 'onsite_import' | 'form'
   eventDate?: string | null
   eventNameRaw?: string | null
+  registrationSource?: 'blast' | 'organic' | 'ots' | null
   createdAt: ISODateString
 }
 
