@@ -10,6 +10,10 @@
 -- ─────────────────────────────────────────────
 ALTER TABLE events ADD COLUMN IF NOT EXISTS banner_url TEXT;
 
+-- Clean up any stale blob: URLs from previous mockUploadImage sessions
+-- Blob URLs are session-scoped and become invalid after page reload
+UPDATE events SET banner_url = NULL WHERE banner_url LIKE 'blob:%';
+
 -- ─────────────────────────────────────────────
 -- events: payment fields (required by domain type & routes)
 -- ─────────────────────────────────────────────
