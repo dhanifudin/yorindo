@@ -117,6 +117,7 @@ const BlastBodySchema = z.object({
     serviceTypes: z.array(z.string()).optional(),
     cities: z.array(z.string()).optional(),
     jobTitles: z.array(z.string()).optional(),
+    topicTags: z.array(z.string()).optional(),
     behavior: z.array(z.enum(['most_active', 'low_attendance', 'never_attended'])).optional(),
     lastAttendedBefore: z.string().optional(),
   }).optional(),
@@ -1271,12 +1272,37 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     if (!event) return
     validateOpenApiRequest({ path: '/events/{id}/blast', method: 'post', params: params.data, body: body.data })
     const payload = request.user as JwtPayload
+
+    // Fall back to event targetCriteria if no body filters provided
+    const bodyFilters = body.data.filters
+    const hasBodyFilters = bodyFilters && (
+      bodyFilters.serviceTypes?.length ||
+      bodyFilters.cities?.length ||
+      bodyFilters.jobTitles?.length ||
+      bodyFilters.behavior?.length
+    )
+
     const contactFilters: TargetCriteria = {}
-    if (body.data.filters?.serviceTypes) contactFilters.serviceTypes = body.data.filters.serviceTypes
-    if (body.data.filters?.cities) contactFilters.cities = body.data.filters.cities
-    if (body.data.filters?.jobTitles) contactFilters.jobTitles = body.data.filters.jobTitles
-    if (body.data.filters?.behavior) contactFilters.behavior = body.data.filters.behavior
-    if (body.data.filters?.lastAttendedBefore) contactFilters.lastAttendedBefore = body.data.filters.lastAttendedBefore
+    if (!hasBodyFilters && event.targetCriteria) {
+      if (event.targetCriteria.serviceTypes) contactFilters.serviceTypes = event.targetCriteria.serviceTypes
+      if (event.targetCriteria.cities) contactFilters.cities = event.targetCriteria.cities
+      if (event.targetCriteria.jobTitles) contactFilters.jobTitles = event.targetCriteria.jobTitles
+      if (event.targetCriteria.topicTags) contactFilters.topicTags = event.targetCriteria.topicTags
+      if (event.targetCriteria.behavior) contactFilters.behavior = event.targetCriteria.behavior
+      if (event.targetCriteria.lastAttendedBefore) contactFilters.lastAttendedBefore = event.targetCriteria.lastAttendedBefore
+    } else if (bodyFilters) {
+      if (bodyFilters.serviceTypes) contactFilters.serviceTypes = bodyFilters.serviceTypes
+      if (bodyFilters.cities) contactFilters.cities = bodyFilters.cities
+      if (bodyFilters.jobTitles) contactFilters.jobTitles = bodyFilters.jobTitles
+      if (bodyFilters.topicTags) contactFilters.topicTags = bodyFilters.topicTags
+      if (bodyFilters.behavior) contactFilters.behavior = bodyFilters.behavior
+      if (bodyFilters.lastAttendedBefore) contactFilters.lastAttendedBefore = bodyFilters.lastAttendedBefore
+    }
+
+    // Apply event topicTags as secondary filter when no explicit topicTags in body
+    if (!contactFilters.topicTags && event.topicTags?.length) {
+      contactFilters.topicTags = event.topicTags
+    }
 
     // Always exclude contacts missing phone or email — they can't receive any blast channel
     const recipientCount = body.data.contactIds?.length ?? (await contactRepository.findAll(
