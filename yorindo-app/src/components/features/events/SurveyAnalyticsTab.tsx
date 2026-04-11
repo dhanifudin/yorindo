@@ -104,7 +104,7 @@ function TextResponses({ aggregate }: { aggregate: SurveyAggregate }) {
 export function SurveyAnalyticsTab({ eventId }: { eventId: string }) {
   const { data, isLoading } = useQuery<SurveyResponsesData>({
     queryKey: ['survey-analytics-post-event', eventId],
-    queryFn: () => fetch(`/api/events/${eventId}/surveys/responses?type=post-event&pageSize=200`).then(r => r.json()),
+    queryFn: () => fetch(`/api/events/${eventId}/surveys/responses?type=post-event&pageSize=100`).then(r => r.json()),
     staleTime: 60_000,
   })
 
