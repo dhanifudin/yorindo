@@ -53,6 +53,7 @@ const TABS: TabConfig[] = [
   { label: 'Tiket',       key: 'confirmation',  href: '/confirmation' },
   { label: 'Check-in',    key: 'checkin',       href: '/checkin' },
   { label: 'On the spot', key: 'ots',           href: '/ots' },
+  { label: 'Survei',      key: 'survey',        href: '/survey' },
 ]
 
 // ─── Visible tabs based on event status ───────────────────────────────────────
@@ -69,7 +70,7 @@ function getVisibleTabs(eventStatus?: string): TabConfig[] {
       return TABS.filter(t => ['overview', 'checkin', 'ots'].includes(t.key))
     case 'completed':
     case 'archived':
-      return TABS.filter(t => ['overview'].includes(t.key))
+      return TABS.filter(t => ['overview', 'survey'].includes(t.key))
     default:
       return TABS.filter(t => ['overview'].includes(t.key))
   }
@@ -83,6 +84,7 @@ function getActiveTab(pathname: string): string {
   if (pathname.endsWith('/confirmation')) return 'confirmation'
   if (pathname.endsWith('/checkin')) return 'checkin'
   if (pathname.endsWith('/ots')) return 'ots'
+  if (pathname.endsWith('/survey')) return 'survey'
   return 'overview'
 }
 
