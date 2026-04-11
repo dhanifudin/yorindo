@@ -25,7 +25,6 @@ import {
 } from '@/components/ui/command'
 import {
   Card,
-  CardContent,
 } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -654,9 +653,6 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
   const { data: existingSponsors } = useEventSponsors(event?.id ?? '')
 
   const [bannerUrl, setBannerUrl] = useState(event?.bannerUrl ?? '')
-  const [blastTemplateId, setBlastTemplateId] = useState('')
-  const [confirmationTemplateId, setConfirmationTemplateId] = useState('')
-  const [rejectionTemplateId, setRejectionTemplateId] = useState('')
   const [industryTags, setIndustryTags] = useState<string[]>(event?.industryTags ?? [])
   const [selectedVendorIds, setSelectedVendorIds] = useState<string[]>([])
   const [vendorPopoverOpen, setVendorPopoverOpen] = useState(false)
@@ -742,52 +738,6 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
     ])
   }
 
-  // ─── MOCK TEMPLATES ────────────────────────────────────────────────────────
-  const mockInvitationTemplates = [
-    {
-      id: 'template-inv-1',
-      name: 'Undangan Standar',
-      description:
-        'Template undangan sederhana dengan format teks yang jelas, cocok untuk event umum. Termasuk detail event, lokasi, dan tombol RSVP.',
-    },
-    {
-      id: 'template-inv-2',
-      name: 'Undangan Kreatif',
-      description:
-        'Template undangan dengan desain modern dan elemen visual menarik. Cocok untuk event teknologi atau kreatif.',
-    },
-  ]
-
-  const mockConfirmationTemplates = [
-    {
-      id: 'template-conf-1',
-      name: 'Konfirmasi Kehadiran',
-      description:
-        'Template konfirmasi otomatis yang dikirim setelah peserta mendaftar. Berisi terima kasih dan detail tiket/event.',
-    },
-    {
-      id: 'template-conf-2',
-      name: 'Konfirmasi VIP',
-      description:
-        'Template khusus untuk peserta VIP dengan informasi tambahan dan akses eksklusif.',
-    },
-  ]
-
-  const mockRejectionTemplates = [
-    {
-      id: 'template-rej-1',
-      name: 'Penolakan Standar',
-      description:
-        'Template penolakan sopan untuk pendaftaran yang tidak disetujui atau kuota penuh.',
-    },
-    {
-      id: 'template-rej-2',
-      name: 'Penolakan Alternatif',
-      description:
-        'Template yang menawarkan alternatif seperti event berikutnya atau waitlist.',
-    },
-  ]
-
   const onSubmit = (values: FormValues) => {
     const capacity = values.capacity ? parseInt(values.capacity, 10) : undefined
     const topicTags = values.topicTagsRaw
@@ -806,9 +756,6 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
       ...(eventType && { eventType }),
       ...(industryTags.length && { industryTags }),
       ...(topicTags?.length && { topicTags }),
-      ...(blastTemplateId && { blastTemplateId }),
-      ...(confirmationTemplateId && { confirmationTemplateId }),
-      ...(rejectionTemplateId && { rejectionTemplateId }),
     }
 
     if (isEdit) {
@@ -1074,160 +1021,6 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
         </div>
       </div>
 
-      {/* Templates */}
-      <fieldset className="space-y-6 border border-border rounded-lg p-4">
-        <legend className="text-sm font-medium text-foreground px-1">Template (Opsional)</legend>
-
-        {/* Template Undangan */}
-        <div>
-          <Label className="mb-3 block">Template Undangan</Label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {mockInvitationTemplates.map((template) => {
-              const isSelected = blastTemplateId === template.id
-              const handleSelect = () => {
-                setBlastTemplateId(template.id)
-                toast.success(`Template Undangan dipilih: ${template.name}`)
-              }
-
-              return (
-                <Popover key={template.id}>
-                  <PopoverTrigger asChild>
-                    <Card
-                      className={cn(
-                        'cursor-pointer transition-all hover:shadow-md active:scale-[0.98]',
-                        isSelected && 'border-primary bg-primary/5 ring-1 ring-primary/30'
-                      )}
-                    >
-                      <CardContent className="p-5">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <h4 className="font-semibold text-base">{template.name}</h4>
-                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                              Klik untuk lihat deskripsi lengkap
-                            </p>
-                          </div>
-                          {isSelected && <Check className="h-5 w-5 text-primary mt-0.5" />}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </PopoverTrigger>
-                  <PopoverContent side="bottom" align="start" className="w-80 p-5">
-                    <div className="space-y-4">
-                      <h4 className="font-semibold text-lg">{template.name}</h4>
-                      <p className="text-sm text-muted-foreground leading-relaxed">
-                        {template.description}
-                      </p>
-                      <Button type="button" onClick={handleSelect} className="w-full">
-                        Pilih Template Ini
-                      </Button>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Template Konfirmasi */}
-        <div>
-          <Label className="mb-3 block">Template Konfirmasi</Label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {mockConfirmationTemplates.map((template) => {
-              const isSelected = confirmationTemplateId === template.id
-              const handleSelect = () => {
-                setConfirmationTemplateId(template.id)
-                toast.success(`Template Konfirmasi dipilih: ${template.name}`)
-              }
-
-              return (
-                <Popover key={template.id}>
-                  <PopoverTrigger asChild>
-                    <Card
-                      className={cn(
-                        'cursor-pointer transition-all hover:shadow-md active:scale-[0.98]',
-                        isSelected && 'border-primary bg-primary/5 ring-1 ring-primary/30'
-                      )}
-                    >
-                      <CardContent className="p-5">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <h4 className="font-semibold text-base">{template.name}</h4>
-                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                              Klik untuk lihat deskripsi lengkap
-                            </p>
-                          </div>
-                          {isSelected && <Check className="h-5 w-5 text-primary mt-0.5" />}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </PopoverTrigger>
-                  <PopoverContent side="bottom" align="start" className="w-80 p-5">
-                    <div className="space-y-4">
-                      <h4 className="font-semibold text-lg">{template.name}</h4>
-                      <p className="text-sm text-muted-foreground leading-relaxed">
-                        {template.description}
-                      </p>
-                      <Button type="button" onClick={handleSelect} className="w-full">
-                        Pilih Template Ini
-                      </Button>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Template Penolakan */}
-        <div>
-          <Label className="mb-3 block">Template Penolakan</Label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {mockRejectionTemplates.map((template) => {
-              const isSelected = rejectionTemplateId === template.id
-              const handleSelect = () => {
-                setRejectionTemplateId(template.id)
-                toast.success(`Template Penolakan dipilih: ${template.name}`)
-              }
-
-              return (
-                <Popover key={template.id}>
-                  <PopoverTrigger asChild>
-                    <Card
-                      className={cn(
-                        'cursor-pointer transition-all hover:shadow-md active:scale-[0.98]',
-                        isSelected && 'border-primary bg-primary/5 ring-1 ring-primary/30'
-                      )}
-                    >
-                      <CardContent className="p-5">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <h4 className="font-semibold text-base">{template.name}</h4>
-                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                              Klik untuk lihat deskripsi lengkap
-                            </p>
-                          </div>
-                          {isSelected && <Check className="h-5 w-5 text-primary mt-0.5" />}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </PopoverTrigger>
-                  <PopoverContent side="bottom" align="start" className="w-80 p-5">
-                    <div className="space-y-4">
-                      <h4 className="font-semibold text-lg">{template.name}</h4>
-                      <p className="text-sm text-muted-foreground leading-relaxed">
-                        {template.description}
-                      </p>
-                      <Button type="button" onClick={handleSelect} className="w-full">
-                        Pilih Template Ini
-                      </Button>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              )
-            })}
-          </div>
-        </div>
-      </fieldset>
 
       {/* Error global */}
       {isError && (
