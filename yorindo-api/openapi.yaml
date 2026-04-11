@@ -6320,6 +6320,36 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiError'
+    get:
+      summary: List recent on-the-spot walk-in registrations for an event
+      operationId: otsRegistrations
+      tags: [Events]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Recent OTS registrations sorted by most recent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        contactName: { type: string }
+                        contactEmail: { type: string }
+                        contactCompany: { type: string, nullable: true }
+                        attendedAt: { type: string }
 
   # ─────────────────────────────────────────────────────────────────────────────
   # UPLOADS

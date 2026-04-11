@@ -1656,11 +1656,50 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       contactName: contact.name ?? '',
       contactPhone: contact.phone ?? '',
       contactEmail: contact.email ?? '',
+      contactCompany: contact.company ?? null,
       contactIndustry: contact.serviceType ?? null,
       contactJobTitle: contact.jobTitle ?? null,
       status: registration.status,
       attendedAt: registration.attendedAt,
       createdAt: registration.createdAt,
     })
+  })
+
+  // ─────────────────────────────────────────────────────────────────────
+  // Recent OTS Registrations for an event
+  // ─────────────────────────────────────────────────────────────────────
+  fastify.get('/api/events/:id/ots', { preHandler: [requireAuth] }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const params = EventIdParamsSchema.safeParse(request.params)
+    if (!params.success) return replyValidationError(reply, params.error.issues, 'Invalid event id')
+
+    const event = await requireEventOr404(reply, params.data.id)
+    if (!event) return
+
+    // Fetch recent approved+attended registrations (OTS walk-ins)
+    const registrations = await registrationRepository.findByEvent(event.id, { page: 1, pageSize: 15 })
+
+    // Filter to only OTS (approved + attended) and enrich with contact data
+    const otsRegistrations = registrations.data
+      .filter(r => r.status === 'approved' && r.attendedAt)
+      .slice(0, 10)
+
+    const enriched = []
+    for (const reg of otsRegistrations) {
+      const contact = await contactRepository.findById(reg.contactId)
+      if (contact) {
+        enriched.push({
+          id: reg.id,
+          contactName: contact.name,
+          contactEmail: contact.email ?? '',
+          contactCompany: contact.company ?? null,
+          attendedAt: reg.attendedAt,
+        })
+      }
+    }
+
+    // Sort by most recent (attendedAt descending)
+    enriched.sort((a, b) => new Date(b.attendedAt).getTime() - new Date(a.attendedAt).getTime())
+
+    return reply.status(200).send({ data: enriched })
   })
 }

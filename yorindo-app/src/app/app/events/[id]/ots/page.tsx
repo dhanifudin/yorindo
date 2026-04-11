@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Combobox } from '@/components/ui/combobox'
-import { Badge } from '@/components/ui/badge'
 import {
   Table,
   TableBody,
@@ -18,7 +17,6 @@ import {
 } from '@/components/ui/table'
 import { toast } from 'sonner'
 import { UserPlus, Loader2, Users } from 'lucide-react'
-import type { RegistrationWithContact } from '@/types/api'
 
 const INDUSTRIES = [
   'Otomotif & Suku Cadang (Auto Parts)',
@@ -33,16 +31,6 @@ const INDUSTRIES = [
   'Tekstil & Garmen',
   'Lainnya',
 ]
-
-const STATUS_BADGE_CLASS: Record<string, string> = {
-  pending: 'bg-orange-100 text-orange-700',
-  confirmed: 'bg-blue-100 text-blue-700',
-  approved: 'bg-green-100 text-green-700',
-  rejected: 'bg-destructive/10 text-destructive',
-  waitlisted: 'bg-muted text-muted-foreground',
-  attended: 'bg-purple-100 text-purple-700',
-  cancelled: 'bg-muted text-muted-foreground',
-}
 
 export default function OnTheSpotPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -95,10 +83,19 @@ export default function OnTheSpotPage({ params }: { params: Promise<{ id: string
     return () => clearTimeout(timer)
   }, [form.email, hasAutoFilled])
 
-  const { data: registrationsData, isLoading: isLoadingRegs } = useQuery<{ data: RegistrationWithContact[] }>({
-    queryKey: ['event-registrations', id],
-    queryFn: () => fetch(`/api/registrations?eventId=${id}&pageSize=10`).then(r => r.json()),
+interface OtsRegistration {
+  id: string
+  contactName: string
+  contactEmail: string
+  contactCompany: string | null
+  attendedAt: string
+}
+
+  const { data: otsRegistrations, isLoading: isLoadingOts } = useQuery<{ data: OtsRegistration[] }>({
+    queryKey: ['ots-registrations', id],
+    queryFn: () => fetch(`/api/events/${id}/ots`).then(r => r.json()),
     enabled: !!id,
+    refetchInterval: 5000, // Refresh every 5 seconds
   })
 
   const registerMutation = useMutation({
@@ -123,7 +120,7 @@ export default function OnTheSpotPage({ params }: { params: Promise<{ id: string
     },
     onSuccess: () => {
       toast.success('Pendaftaran berhasil! Peserta langsung tercatat hadir.')
-      queryClient.invalidateQueries({ queryKey: ['event-registrations', id] })
+      queryClient.invalidateQueries({ queryKey: ['ots-registrations', id] })
       setForm({
         name: '',
         email: '',
@@ -276,13 +273,13 @@ export default function OnTheSpotPage({ params }: { params: Promise<{ id: string
                 <Users className="w-5 h-5 text-blue-600" />
               </div>
               <div>
-                <CardTitle className="text-lg">Recent Registrations</CardTitle>
+                <CardTitle className="text-lg">Pendaftaran On The Spot Terbaru</CardTitle>
                 <CardDescription>
-                  Peserta yang baru saja terdaftar (10 terakhir)
+                  Peserta yang baru saja terdaftar via OTS (10 terakhir)
                 </CardDescription>
               </div>
             </div>
-            {isLoadingRegs && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+            {isLoadingOts && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
           </div>
         </CardHeader>
         <CardContent>
@@ -290,32 +287,31 @@ export default function OnTheSpotPage({ params }: { params: Promise<{ id: string
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50">
-                  <TableHead>Nama Peserta</TableHead>
-                  <TableHead>Industri/Jabatan</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Nama</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Perusahaan</TableHead>
                   <TableHead className="text-right">Waktu</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {registrationsData?.data && registrationsData.data.length > 0 ? (
-                  registrationsData.data.map((reg) => (
+                {otsRegistrations?.data && otsRegistrations.data.length > 0 ? (
+                  otsRegistrations.data.map((reg) => (
                     <TableRow key={reg.id}>
                       <TableCell>
                         <div className="font-medium text-sm">{reg.contactName}</div>
-                        <div className="text-xs text-muted-foreground">{reg.contactEmail}</div>
                       </TableCell>
                       <TableCell>
-                        <div className="text-xs font-medium">{reg.contactIndustry ?? '-'}</div>
-                        <div className="text-xs text-muted-foreground">{reg.contactJobTitle ?? '-'}</div>
+                        <div className="text-xs text-muted-foreground">{reg.contactEmail || '-'}</div>
                       </TableCell>
                       <TableCell>
-                        <Badge className={`${STATUS_BADGE_CLASS[reg.status]} text-[10px] px-1.5 py-0`}>
-                          {reg.status.charAt(0).toUpperCase() + reg.status.slice(1)}
-                        </Badge>
+                        <div className="text-xs text-muted-foreground">{reg.contactCompany || '-'}</div>
                       </TableCell>
                       <TableCell className="text-right text-xs text-muted-foreground">
-                        {new Date(reg.createdAt).toLocaleTimeString('id-ID', {
-                          hour: '2-digit', minute: '2-digit'
+                        {new Date(reg.attendedAt).toLocaleString('id-ID', {
+                          day: '2-digit',
+                          month: 'short',
+                          hour: '2-digit',
+                          minute: '2-digit'
                         })}
                       </TableCell>
                     </TableRow>
@@ -323,7 +319,7 @@ export default function OnTheSpotPage({ params }: { params: Promise<{ id: string
                 ) : (
                   <TableRow>
                     <TableCell colSpan={4} className="h-24 text-center text-muted-foreground text-sm">
-                      {isLoadingRegs ? 'Memuat data...' : 'Belum ada pendaftaran.'}
+                      {isLoadingOts ? 'Memuat data...' : 'Belum ada pendaftaran OTS.'}
                     </TableCell>
                   </TableRow>
                 )}
