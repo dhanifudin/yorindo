@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
+import { getUserFriendlyError } from '@/lib/error-messages'
 import Link from 'next/link'
 import { CalendarDays, MapPin, Users, CheckCircle2, Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
@@ -57,7 +58,7 @@ export default function BlastEventPage() {
       router.push('/app/contacts')
     },
     onError: (err: Error) => {
-      toast.error(err.message ?? 'Blast gagal')
+      toast.error(getUserFriendlyError(err))
     },
   })
 

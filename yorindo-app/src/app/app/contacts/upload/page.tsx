@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
+import { getUserFriendlyError } from '@/lib/error-messages'
 import Link from 'next/link'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -157,7 +158,7 @@ export default function UploadPage() {
       setSelectedFile(null)
       if (inputRef.current) inputRef.current.value = ''
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Upload gagal'
+      const msg = getUserFriendlyError(err)
       setFileError(msg)
       toast.error('Upload gagal', { description: msg })
     } finally {

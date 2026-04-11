@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { getUserFriendlyError } from '@/lib/error-messages'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { BlockerStrip } from '@/components/hub/BlockerStrip'
 import { EventHubLayout, LifecycleAction } from '@/components/hub/EventHubLayout'
@@ -139,7 +140,7 @@ export default function EventHubShellLayout({ children, params }: HubLayoutProps
       toast.success(`Status diubah ke "${updated.status}"`)
       setConfirmStatus(null)
     },
-    onError: (err: Error) => toast.error(err.message || 'Gagal mengubah status event'),
+    onError: (err: Error) => toast.error(getUserFriendlyError(err)),
   })
 
   const handleAction = (action: LifecycleAction) => {
