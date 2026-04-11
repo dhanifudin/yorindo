@@ -43,6 +43,8 @@ import { PostgresSurveyRepository } from './repositories/postgres/SurveyReposito
 import { PostgresVendorRepository } from './repositories/postgres/VendorRepository.js'
 import { PostgresEventSponsorRepository } from './repositories/postgres/EventSponsorRepository.js'
 import { PostgresTemplateRepository } from './repositories/postgres/TemplateRepository.js'
+import { SmtpEmailService } from './services/adapters/real/SmtpEmailService.js'
+import { getProviderConfig, clearProviderConfigCache } from './lib/email-provider-config.js'
 import { FuzzyDeduplicationService } from './services/FuzzyDeduplicationService.js'
 import { MockEmailService } from './services/adapters/mock/EmailService.js'
 import { MockEtlNormalizationService } from './services/adapters/mock/EtlNormalizationService.js'
@@ -125,14 +127,27 @@ function resolveEtlNormalizationService(): IEtlNormalizationService {
   }
 }
 
-function resolveEmailService(): IEmailService {
-  switch (config.emailProvider) {
-    case 'brevo':
-      return new BrevoEmailService()
-    case 'mailtrap':
-      return new MailtrapEmailService()
-    default:
-      return new MockEmailService()
+async function resolveEmailService(): Promise<IEmailService> {
+  try {
+    const emailConfig = await getProviderConfig()
+    switch (emailConfig.provider) {
+      case 'brevo':
+        return new BrevoEmailService()
+      case 'smtp':
+        return new SmtpEmailService()
+      default:
+        return new MockEmailService()
+    }
+  } catch {
+    // Fallback to env-var based resolution if DB is unavailable
+    switch (config.emailProvider) {
+      case 'brevo':
+        return new BrevoEmailService()
+      case 'mailtrap':
+        return new MailtrapEmailService()
+      default:
+        return new MockEmailService()
+    }
   }
 }
 
@@ -142,7 +157,7 @@ function resolveYoriMindService(): IYoriMindService {
   return new AIInsightsService()
 }
 
-function resolveServices(): {
+async function resolveServices(): Promise<{
   emailService: IEmailService
   whatsAppService: IWhatsAppService
   etlNormalizationService: IEtlNormalizationService
@@ -150,7 +165,7 @@ function resolveServices(): {
   queueService: IQueueService
   otpService: IOtpService
   deduplicationService: IDeduplicationService
-} {
+}> {
   const queueService = config.nodeEnv === 'test' || !config.redisUrl
     ? new MockQueueService()
     : new BullQueueService()
@@ -158,7 +173,7 @@ function resolveServices(): {
   const yoriMindService = resolveYoriMindService()
   const deduplicationService = new FuzzyDeduplicationService(repos.contactRepository)
 
-  const emailService = resolveEmailService()
+  const emailService = await resolveEmailService()
 
   if (config.serviceImpl === 'mock') {
     return {
@@ -187,7 +202,7 @@ function resolveServices(): {
   throw new Error(`Unknown SERVICE_IMPL: ${config.serviceImpl}`)
 }
 
-const svcs = resolveServices()
+const svcs = await resolveServices()
 
 export const contactRepository: IContactRepository = repos.contactRepository
 export const eventRepository: IEventRepository = repos.eventRepository
@@ -209,6 +224,9 @@ export const yoriMindService: IYoriMindService = svcs.yoriMindService
 export const queueService: IQueueService = svcs.queueService
 export const otpService: IOtpService = svcs.otpService
 export const deduplicationService: IDeduplicationService = svcs.deduplicationService
+
+// Re-export for settings route cache invalidation
+export { clearProviderConfigCache }
 
 export const _repositoryImpl = config.repositoryImpl
 export const _serviceImpl = config.serviceImpl

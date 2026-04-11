@@ -62,6 +62,15 @@ export function startBlastWorker() {
   const worker = new Worker('marketing', processBlastJob, {
     connection: redis,
     concurrency: 2,
+    settings: {
+      backoffStrategies: {
+        exponential: (attempts: number) => Math.pow(2, attempts) * 1000,
+      },
+    },
+    limiter: {
+      max: 10,
+      duration: 1000,
+    },
   } as ConstructorParameters<typeof Worker>[2])
 
   worker.on('completed', (job, result) => {

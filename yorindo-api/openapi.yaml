@@ -6176,6 +6176,56 @@ paths:
                       type: string
                       nullable: true
 
+  /settings/test-email:
+    post:
+      summary: Send a test email to verify email provider configuration
+      operationId: testEmail
+      tags: [Settings]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [to]
+              properties:
+                to:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Test email sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success]
+                properties:
+                  success:
+                    type: boolean
+                  messageId:
+                    type: string
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: Email delivery failed
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, error]
+                properties:
+                  success:
+                    type: boolean
+                  error:
+                    type: string
+
   # ─────────────────────────────────────────────────────────────────────────────
   # UPLOADS
   # ─────────────────────────────────────────────────────────────────────────────
