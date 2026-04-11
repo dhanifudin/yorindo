@@ -1430,6 +1430,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       registrationCount: metrics.registered,
       approvedCount:    metrics.approved,
       attendedCount:    metrics.attended,
+      otsCount:         metrics.otsCount,
       pendingApprovals: metrics.registered - metrics.approved,
       seatsRemaining:   Math.max((event.capacity ?? 0) - metrics.approved, 0),
       daysUntilEvent:   Math.ceil((new Date(event.startDate).getTime() - Date.now()) / 86400000),
