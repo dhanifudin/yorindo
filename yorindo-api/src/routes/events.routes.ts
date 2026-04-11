@@ -199,7 +199,7 @@ function toEventDto(event: Event, surveySchema?: unknown, registeredCount: numbe
     venue: event.venue ?? '',
     industryTags: event.targetCriteria?.serviceTypes ?? [],
     eventType: 'conference',
-    topicTags: [],
+    topicTags: event.topicTags ?? [],
     deletedAt: event.deletedAt,
     createdAt: event.createdAt,
     updatedAt: event.updatedAt,
@@ -536,6 +536,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       targetCriteria: payload.targetCriteria ? { ...payload.targetCriteria } : {
         serviceTypes: payload.industryTags ?? [],
       },
+      topicTags: payload.topicTags ?? null,
       surveySchemaId: null,
       vendorId: null,
       status: 'draft',
@@ -729,6 +730,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       notificationChannel: event.notificationChannel,
       scanFormat: event.scanFormat,
       targetCriteria: event.targetCriteria ? JSON.parse(JSON.stringify(event.targetCriteria)) : null,
+      topicTags: event.topicTags ? [...event.topicTags] : null,
       surveySchemaId: null, // we will recreate survey below
       vendorId: event.vendorId,
       status: 'draft',
@@ -1084,12 +1086,19 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     validateOpenApiRequest({ path: '/events/{id}/audience-preview', method: 'post', params: params.data, body: request.body })
 
     // Use event targetCriteria if no body filters provided
-    const bodyData = body.data
+    const bodyData = body.data as Record<string, unknown>
     const effectiveFilters: Record<string, unknown> = { ...bodyData }
-    if (event.targetCriteria && !bodyData.serviceTypes?.length) {
+    const hasBodyServiceTypes = Array.isArray(bodyData.serviceTypes) && bodyData.serviceTypes.length > 0
+    const hasBodyTopicTags = Array.isArray(bodyData.topicTags) && bodyData.topicTags.length > 0
+    if (event.targetCriteria && !hasBodyServiceTypes) {
       if (event.targetCriteria.serviceTypes) effectiveFilters.serviceTypes = event.targetCriteria.serviceTypes
       if (event.targetCriteria.cities) effectiveFilters.cities = event.targetCriteria.cities
       if (event.targetCriteria.jobTitles) effectiveFilters.jobTitles = event.targetCriteria.jobTitles
+    }
+
+    // Apply event topicTags as secondary filter (contacts must have at least one matching tag)
+    if (event.topicTags?.length && !hasBodyTopicTags) {
+      effectiveFilters.topicTags = event.topicTags
     }
 
     // Normalize legacy slug serviceTypes to the display names stored in the contacts table
@@ -1121,9 +1130,11 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     const svcTypes = effectiveFilters.serviceTypes as string[] | undefined
     const cities = effectiveFilters.cities as string[] | undefined
     const jobTitles = effectiveFilters.jobTitles as string[] | undefined
+    const topicTags = effectiveFilters.topicTags as string[] | undefined
     if (svcTypes?.length) filters.serviceTypes = svcTypes
     if (cities?.length) filters.cities = cities
     if (jobTitles?.length) filters.jobTitles = jobTitles
+    if (topicTags?.length) filters.topicTags = topicTags
 
     // Fetch all matching contacts (use large pageSize, rely on total for accurate count)
     const contacts = await contactRepository.findAll({ page: 1, pageSize: 10000 }, filters)

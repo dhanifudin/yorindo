@@ -90,6 +90,7 @@ export class InMemoryEventRepository implements IEventRepository {
         isPaid: i % 2 === 0,
         price: i % 2 === 0 ? 500000 : null,
         paymentMethod: i % 2 === 0 ? 'bank_transfer' : null,
+        topicTags: i % 2 === 0 ? ['ai', 'digital'] : null,
         deletedAt: null,
         createdAt: new Date(now - (12 - i) * 10 * 86400000).toISOString(),
         updatedAt: new Date(now - i * 86400000).toISOString(),

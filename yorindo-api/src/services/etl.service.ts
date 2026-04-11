@@ -453,6 +453,7 @@ export class EtlService {
                 company: validatedRow.company,
                 department: validatedRow.department,
                 eventDate: validatedRow.eventDate,
+                topicTags: null,
                 source: toContactSource(uploadSource),
                 completenessScore: computeCompletenessScore(validatedRow),
                 consentStatus: 'legacy_unverified',
