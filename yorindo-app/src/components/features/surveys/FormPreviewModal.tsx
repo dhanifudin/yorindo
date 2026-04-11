@@ -1,16 +1,29 @@
-import React from 'react'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import Form from '@rjsf/shadcn'
-import validator from '@rjsf/validator-ajv8'
-import type { RJSFSchema } from '@rjsf/utils'
+import React, { useState } from 'react'
+import { Tabs, TabsContent } from '@/components/ui/tabs'
 import { SurveyField } from '@/types/surveys'
-import { buildSurveySchema } from './surveySchemaBuilder'
-import { surveyCustomWidgets } from './widgets'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Label } from '@/components/ui/label'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Checkbox } from '@/components/ui/checkbox'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Separator } from '@/components/ui/separator'
 import { X, Eye, ClipboardCheck, MessageSquare } from 'lucide-react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Card, CardContent } from '@/components/ui/card'
-import { Theme as ShadcnTheme } from '@rjsf/shadcn'
+import { cn } from '@/lib/utils'
 
 interface FormPreviewModalProps {
   open: boolean
@@ -18,6 +31,167 @@ interface FormPreviewModalProps {
   registrationFields: SurveyField[]
   postEventFields: SurveyField[]
   postSurveyEnabled: boolean
+  eventStatus?: string
+}
+
+const FIXED_REGISTRATION_FIELDS: { id: string; label: string; required: boolean }[] = [
+  { id: 'name', label: 'Nama Lengkap', required: true },
+  { id: 'email', label: 'Email', required: true },
+  { id: 'phone', label: 'Nomor Telepon', required: true },
+  { id: 'company_name', label: 'Nama Perusahaan', required: false },
+  { id: 'position', label: 'Jabatan', required: false },
+  { id: 'industry_type', label: 'Industri', required: false },
+]
+
+function FieldPreview({ field }: { field: SurveyField | { id: string; label: string; required: boolean } }) {
+  const isFixed = 'id' in field && !('type' in field)
+  const f = isFixed ? field : field
+  const type = isFixed ? 'text' : (field as SurveyField).type
+  const required = isFixed ? field.required : (field as SurveyField).required
+  const label = f.label
+
+  if (type === 'section') {
+    const sf = field as SurveyField
+    return (
+      <div className="space-y-2 py-4">
+        <h3 className="text-lg font-semibold text-foreground">{sf.label}</h3>
+        {sf.description && (
+          <p className="text-sm text-muted-foreground">{sf.description}</p>
+        )}
+        <Separator />
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-2">
+      <Label className="text-sm font-medium">
+        {label}
+        {required && <span className="text-destructive ml-1">*</span>}
+      </Label>
+
+      {type === 'text' && (
+        <Input placeholder="Ketik jawaban..." disabled className="bg-muted/30" />
+      )}
+
+      {type === 'textarea' && (
+        <Textarea placeholder="Ketik paragraf..." disabled className="bg-muted/30 min-h-[80px]" />
+      )}
+
+      {type === 'radio' && (
+        <RadioGroup disabled>
+          {(field as SurveyField).options?.map((opt, i) => (
+            <div key={i} className="flex items-center space-x-2">
+              <RadioGroupItem value={opt.value} id={`radio-${f.id}-${i}`} />
+              <Label htmlFor={`radio-${f.id}-${i}`} className="text-sm font-normal cursor-default">
+                {opt.label}
+              </Label>
+            </div>
+          ))}
+        </RadioGroup>
+      )}
+
+      {type === 'select' && (
+        <Select disabled>
+          <SelectTrigger className="bg-muted/30">
+            <SelectValue placeholder="Pilih salah satu..." />
+          </SelectTrigger>
+          <SelectContent>
+            {(field as SurveyField).options?.map((opt, i) => (
+              <SelectItem key={i} value={opt.value}>{opt.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+
+      {type === 'checkboxes' && (
+        <div className="space-y-2">
+          {(field as SurveyField).options?.map((opt, i) => (
+            <div key={i} className="flex items-center space-x-2">
+              <Checkbox id={`cb-${f.id}-${i}`} disabled />
+              <Label htmlFor={`cb-${f.id}-${i}`} className="text-sm font-normal cursor-default">
+                {opt.label}
+              </Label>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {type === 'range' && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>{(field as SurveyField).minimum ?? 1}</span>
+            <span>{(field as SurveyField).maximum ?? 5}</span>
+          </div>
+          <div className="flex gap-1">
+            {Array.from({ length: (field as SurveyField).maximum ?? 5 }, (_, i) => (
+              <button
+                key={i}
+                type="button"
+                className="flex-1 h-8 rounded-md border bg-muted/30 hover:bg-primary/10 transition-colors disabled:opacity-50"
+                disabled
+              >
+                {i + 1}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {type === 'date' && (
+        <Input type="date" disabled className="bg-muted/30" />
+      )}
+
+      {type === 'time' && (
+        <Input type="time" disabled className="bg-muted/30" />
+      )}
+    </div>
+  )
+}
+
+function SurveyPreview({ fields, title, description, fixedFields, submitLabel }: {
+  fields: SurveyField[]
+  title: string
+  description: string
+  fixedFields?: { id: string; label: string; required: boolean }[]
+  submitLabel: string
+}) {
+  return (
+    <div className="max-w-2xl mx-auto">
+      <Card className="border shadow-sm">
+        <CardHeader className="space-y-3 pb-6">
+          <CardTitle className="text-xl">{title}</CardTitle>
+          <CardDescription>{description}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {fixedFields?.map((f) => (
+            <FieldPreview key={f.id} field={f} />
+          ))}
+
+          {fixedFields && fixedFields.length > 0 && fields.length > 0 && (
+            <Separator className="my-4" />
+          )}
+
+          {fields.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <p className="text-sm">Belum ada pertanyaan survei ditambahkan.</p>
+            </div>
+          ) : (
+            fields.map((field, i) => (
+              <React.Fragment key={field.id}>
+                <FieldPreview field={field} />
+              </React.Fragment>
+            ))
+          )}
+
+          <Separator className="my-4" />
+          <Button className="w-full h-11 pointer-events-none" disabled>
+            {submitLabel}
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  )
 }
 
 export function FormPreviewModal({
@@ -26,156 +200,148 @@ export function FormPreviewModal({
   registrationFields,
   postEventFields,
   postSurveyEnabled,
+  eventStatus,
 }: FormPreviewModalProps) {
-  // Build schemas
-  const regSurvey = buildSurveySchema(registrationFields)
-  const postSurvey = buildSurveySchema(postEventFields)
+  const isActive = eventStatus === 'active'
+  const defaultTab = isActive ? 'post-event' : 'registration'
+  const [activeTab, setActiveTab] = useState(defaultTab)
 
-  // Merge registration fixed fields with survey fields
-  const FIXED_REGISTRATION_PROPERTIES: Record<string, RJSFSchema> = {
-    name: { type: 'string', title: 'Nama Lengkap' },
-    email: { type: 'string', title: 'Email' },
-    phone: { type: 'string', title: 'Nomor Telepon' },
-    company_name: { type: 'string', title: 'Nama Perusahaan' },
-    position: { type: 'string', title: 'Jabatan' },
-    industry_type: { type: 'string', title: 'Industri' },
-  }
-
-  const FIXED_REGISTRATION_ORDER = ['name', 'email', 'phone', 'company_name', 'position', 'industry_type']
-
-  const mergedRegSchema: RJSFSchema = {
-    type: 'object',
-    properties: {
-      ...FIXED_REGISTRATION_PROPERTIES,
-      ...(regSurvey.schema.properties as Record<string, RJSFSchema>),
-    },
-    required: ['name', 'email', 'phone', ...((regSurvey.schema.required as string[]) || [])],
-  }
-
-  const mergedRegUiSchema = {
-    ...regSurvey.uiSchema,
-    'ui:order': [
-      ...FIXED_REGISTRATION_ORDER,
-      ...((regSurvey.uiSchema['ui:order'] as string[]) || []),
-    ],
-  }
-
-  // Merge custom widgets with shadcn theme widgets
-  const customWidgets = {
-    ...ShadcnTheme.widgets,
-    ...surveyCustomWidgets,
-  }
+  // Reset tab when modal opens
+  React.useEffect(() => {
+    if (open) setActiveTab(defaultTab)
+  }, [open, defaultTab])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl w-[95vw] sm:max-w-5xl max-h-[90vh] overflow-hidden flex flex-col p-0">
-        <DialogHeader className="p-6 border-b">
+      <DialogContent className="max-w-4xl w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0">
+        {/* Header */}
+        <DialogHeader className="px-6 py-4 border-b bg-muted/30">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-              <Eye className="w-5 h-5 text-primary" />
+            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Eye className="w-4 h-4 text-primary" />
             </div>
             <div>
-              <p className="uppercase text-xs tracking-[2px] text-muted-foreground font-medium">
-                PREVIEW FORMULIR
+              <DialogTitle className="text-sm font-semibold">Preview Formulir</DialogTitle>
+              <p className="text-xs text-muted-foreground">
+                Tampilan formulir sesuai yang akan dilihat peserta
               </p>
-              <DialogTitle className="text-2xl mt-0.5">Preview Formulir</DialogTitle>
             </div>
           </div>
         </DialogHeader>
 
-        <Tabs defaultValue="registration" className="flex-1 flex flex-col overflow-hidden">
-          <div className="px-6 border-b bg-muted/30">
-            <TabsList className="bg-transparent h-auto p-0 gap-6">
-              <TabsTrigger
-                value="registration"
-                className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none pb-3 pt-0 px-0 text-sm font-semibold transition-all relative overflow-visible"
-              >
-                <ClipboardCheck size={16} className="mr-2" />
-                Formulir Registrasi
-              </TabsTrigger>
-              <TabsTrigger
-                value="post-event"
-                className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none pb-3 pt-0 px-0 text-sm font-semibold transition-all relative overflow-visible"
-              >
-                <MessageSquare size={16} className="mr-2" />
-                Survei Post-Event
-              </TabsTrigger>
-            </TabsList>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-6 bg-background">
-            <TabsContent value="registration" className="m-0 focus-visible:outline-none">
-              <Card className="border border-border shadow-sm overflow-hidden">
-                <CardContent className="pt-10 pb-12">
-                  {registrationFields.length === 0 ? (
-                    <div className="text-center py-12 text-muted-foreground space-y-2">
-                      <p className="text-sm font-medium">Formulir Registrasi</p>
-                      <p className="text-sm">Berisi field wajib: Nama Lengkap, Email, Nomor Telepon, Nama Perusahaan, Jabatan, dan Industri.</p>
-                      <p className="text-xs">Tambahkan pertanyaan survei untuk melihat preview lengkap di sini.</p>
-                    </div>
-                  ) : (
-                    <div className="max-w-3xl mx-auto">
-                      <Form
-                        schema={mergedRegSchema}
-                        uiSchema={mergedRegUiSchema}
-                        validator={validator}
-                        widgets={customWidgets}
-                        templates={ShadcnTheme.templates}
-                        disabled={true}
-                        formContext={{ isPreview: true }}
-                      >
-                        <Button type="button" className="w-full h-11 pointer-events-none mt-8 bg-primary text-primary-foreground rounded-md" disabled>
-                          Daftar Sekarang
-                        </Button>
-                      </Form>
-                    </div>
+        {/* Tabs — order swaps based on event status, matching builder tab style */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
+          <nav className="flex border-b border-border bg-background px-6 overflow-x-auto">
+            {isActive ? (
+              // Active: Post-Event first
+              <>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('post-event')}
+                  className={cn(
+                    'inline-flex items-center px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors',
+                    activeTab === 'post-event'
+                      ? 'border-primary text-foreground'
+                      : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border',
+                    !postSurveyEnabled && 'opacity-60 pointer-events-none',
                   )}
-                </CardContent>
-              </Card>
+                  disabled={!postSurveyEnabled}
+                >
+                  <MessageSquare size={14} className="mr-2" />
+                  Survei Post-Event
+                  {postSurveyEnabled && (
+                    <span className="ml-2 w-2 h-2 rounded-full bg-green-500" />
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('registration')}
+                  className={cn(
+                    'inline-flex items-center px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors',
+                    activeTab === 'registration'
+                      ? 'border-primary text-foreground'
+                      : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border',
+                  )}
+                >
+                  <ClipboardCheck size={14} className="mr-2" />
+                  Formulir Registrasi
+                </button>
+              </>
+            ) : (
+              // Draft: Registration first
+              <>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('registration')}
+                  className={cn(
+                    'inline-flex items-center px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors',
+                    activeTab === 'registration'
+                      ? 'border-primary text-foreground'
+                      : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border',
+                  )}
+                >
+                  <ClipboardCheck size={14} className="mr-2" />
+                  Formulir Registrasi
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('post-event')}
+                  className={cn(
+                    'inline-flex items-center px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors',
+                    activeTab === 'post-event'
+                      ? 'border-primary text-foreground'
+                      : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border',
+                    !postSurveyEnabled && 'opacity-60 pointer-events-none',
+                  )}
+                  disabled={!postSurveyEnabled}
+                >
+                  <MessageSquare size={14} className="mr-2" />
+                  Survei Post-Event
+                  {postSurveyEnabled && (
+                    <span className="ml-2 w-2 h-2 rounded-full bg-green-500" />
+                  )}
+                </button>
+              </>
+            )}
+          </nav>
+
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto p-6 bg-background/50">
+            <TabsContent value="registration" className="m-0 focus-visible:outline-none">
+              <SurveyPreview
+                fields={registrationFields}
+                title="Formulir Pendaftaran Event"
+                description="Lengkapi data diri Anda untuk mendaftar event ini."
+                fixedFields={FIXED_REGISTRATION_FIELDS}
+                submitLabel="Daftar Sekarang"
+              />
             </TabsContent>
 
             <TabsContent value="post-event" className="m-0 focus-visible:outline-none">
-              <div className="max-w-3xl mx-auto">
-                {!postSurveyEnabled ? (
-                  <Card className="border border-dashed border-muted-foreground/25">
+              {!postSurveyEnabled ? (
+                <div className="max-w-2xl mx-auto">
+                  <Card className="border border-dashed">
                     <CardContent className="pt-10 pb-12 text-center space-y-4">
-                      <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto text-muted-foreground">
-                        <X size={32} />
+                      <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mx-auto text-muted-foreground">
+                        <X size={28} />
                       </div>
                       <div className="space-y-1">
-                        <h4 className="font-semibold text-lg">Survei Belum Diaktifkan</h4>
+                        <h4 className="font-semibold">Survei Belum Diaktifkan</h4>
                         <p className="text-sm text-muted-foreground max-w-xs mx-auto">
-                          Aktifkan survei post-event di tab builder untuk melihat preview di sini.
+                          Aktifkan survei post-event di Survey Builder untuk melihat preview di sini.
                         </p>
                       </div>
                     </CardContent>
                   </Card>
-                ) : (
-                  <Card className="border border-border shadow-sm overflow-hidden">
-                    <CardContent className="pt-10 pb-12">
-                      {postEventFields.length === 0 ? (
-                        <div className="text-center py-12 text-muted-foreground">
-                          <p className="text-sm">Belum ada pertanyaan survei ditambahkan.</p>
-                        </div>
-                      ) : (
-                        <Form
-                          schema={postSurvey.schema as RJSFSchema}
-                          uiSchema={postSurvey.uiSchema}
-                          validator={validator}
-                          widgets={customWidgets}
-                          templates={ShadcnTheme.templates}
-                          disabled={true}
-                          formContext={{ isPreview: true }}
-                        >
-                          <Button type="button" className="w-full h-11 pointer-events-none mt-8 bg-primary text-primary-foreground rounded-md" disabled>
-                            Kirim Jawaban
-                          </Button>
-                        </Form>
-                      )}
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
+                </div>
+              ) : (
+                <SurveyPreview
+                  fields={postEventFields}
+                  title="Survei Kepuasan Peserta"
+                  description="Bantu kami meningkatkan kualitas event dengan mengisi survei berikut."
+                  submitLabel="Kirim Jawaban"
+                />
+              )}
             </TabsContent>
           </div>
         </Tabs>

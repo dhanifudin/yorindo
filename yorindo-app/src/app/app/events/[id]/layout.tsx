@@ -44,24 +44,45 @@ type TabConfig = {
   label: string
   key: string
   href: string
-  disabledOnDraft?: boolean
 }
 
 const TABS: TabConfig[] = [
-  { label: 'Overview',   key: 'overview',       href: '' },
-  { label: 'Undangan',   key: 'blast',          href: '/blast',          disabledOnDraft: true },
-  { label: 'Registrasi', key: 'registrations',  href: '/registrations' },
-  { label: 'Tiket', key: 'confirmation',   href: '/confirmation',   disabledOnDraft: true },
-  { label: 'Check-in',   key: 'checkin',        href: '/checkin',        disabledOnDraft: true },
+  { label: 'Overview',    key: 'overview',      href: '' },
+  { label: 'Undangan',    key: 'blast',         href: '/blast' },
+  { label: 'Registrasi',  key: 'registrations', href: '/registrations' },
+  { label: 'Tiket',       key: 'confirmation',  href: '/confirmation' },
+  { label: 'Check-in',    key: 'checkin',       href: '/checkin' },
+  { label: 'On the spot', key: 'ots',           href: '/ots' },
 ]
 
-// ─── Redirect /report to Overview (merged) ───────────────────────────────────
+// ─── Visible tabs based on event status ───────────────────────────────────────
+
+function getVisibleTabs(eventStatus?: string): TabConfig[] {
+  if (!eventStatus) return [TABS[0]] // Overview safely
+
+  switch (eventStatus) {
+    case 'draft':
+      return TABS.filter(t => ['overview'].includes(t.key))
+    case 'published':
+      return TABS.filter(t => ['overview', 'blast', 'registrations', 'confirmation'].includes(t.key))
+    case 'active':
+      return TABS.filter(t => ['overview', 'checkin', 'ots'].includes(t.key))
+    case 'completed':
+    case 'archived':
+      return TABS.filter(t => ['overview'].includes(t.key))
+    default:
+      return TABS.filter(t => ['overview'].includes(t.key))
+  }
+}
+
+// ─── Tab key detection ────────────────────────────────────────────────────────
 
 function getActiveTab(pathname: string): string {
   if (pathname.endsWith('/blast')) return 'blast'
   if (pathname.includes('/registrations')) return 'registrations'
   if (pathname.endsWith('/confirmation')) return 'confirmation'
   if (pathname.endsWith('/checkin')) return 'checkin'
+  if (pathname.endsWith('/ots')) return 'ots'
   return 'overview'
 }
 
@@ -82,13 +103,6 @@ export default function EventHubShellLayout({ children, params }: HubLayoutProps
     queryFn: () => fetch(`/api/events/${id}`).then(r => r.json()),
     staleTime: 60_000,
   })
-
-  // Redirect /report to Overview (tabs merged)
-  useEffect(() => {
-    if (pathname.includes('/report')) {
-      router.replace(baseHref)
-    }
-  }, [pathname, router, baseHref])
 
   // Shared blockerState query
   const { data: blockerState } = useQuery<EventOverviewResponse>({
@@ -134,7 +148,7 @@ export default function EventHubShellLayout({ children, params }: HubLayoutProps
     }
   }
 
-  // Blocker strip items
+  // Blocker strip items — hide pending approvals when event is active
   const blockerItems: Array<{
     id: string
     label: string
@@ -142,7 +156,9 @@ export default function EventHubShellLayout({ children, params }: HubLayoutProps
     urgency?: 'default' | 'warning'
   }> = []
 
-  if (pendingCount > 0) {
+  const isActiveEvent = event?.status === 'active'
+
+  if (pendingCount > 0 && !isActiveEvent) {
     blockerItems.push({
       id: 'pending',
       label: `${pendingCount} pendaftar menunggu persetujuan`,
@@ -151,7 +167,7 @@ export default function EventHubShellLayout({ children, params }: HubLayoutProps
     })
   }
 
-  const isDraftEvent = event?.status === 'draft'
+  const visibleTabs = getVisibleTabs(event?.status)
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -195,8 +211,8 @@ export default function EventHubShellLayout({ children, params }: HubLayoutProps
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Admin Chrome — hidden on mobile for Check-in tab */}
-      <div className={cn(isCheckinTab ? 'hidden lg:block' : 'block')}>
+      {/* Admin Chrome — visible on all screen sizes */}
+      <div className="block">
         <EventHubLayout
           event={event}
           isLoading={isLoading}
@@ -208,43 +224,26 @@ export default function EventHubShellLayout({ children, params }: HubLayoutProps
 
         {/* Tab bar */}
         <TooltipProvider>
-          <nav className="flex border-b border-border bg-background px-6 overflow-x-auto">
-            {TABS.map((tab) => {
+          <nav className="flex border-b border-border bg-background px-4 sm:px-6 overflow-x-auto">
+            {visibleTabs.map((tab) => {
               const isActive = activeTab === tab.key
-              const isDisabled = isDraftEvent && !!tab.disabledOnDraft
               const href = `${baseHref}${tab.href}`
 
-              const TabLink = (
+              return (
                 <Link
                   key={tab.key}
-                  href={isDisabled ? '#' : href}
+                  href={href}
                   className={cn(
-                    'inline-flex items-center px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors',
+                    'inline-flex items-center px-3 sm:px-4 py-3 text-xs sm:text-sm font-medium border-b-2 whitespace-nowrap transition-colors',
                     isActive
                       ? 'border-primary text-foreground'
-                      : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border',
-                    isDisabled && 'opacity-50 cursor-not-allowed pointer-events-none'
+                      : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
                   )}
                   aria-current={isActive ? 'page' : undefined}
-                  aria-disabled={isDisabled}
-                  onClick={(e) => isDisabled && e.preventDefault()}
                 >
                   {tab.label}
                 </Link>
               )
-
-              if (isDisabled) {
-                return (
-                  <Tooltip key={tab.key}>
-                    <TooltipTrigger asChild>
-                      <span className="cursor-not-allowed">{TabLink}</span>
-                    </TooltipTrigger>
-                    <TooltipContent>Tersedia setelah event dipublikasikan</TooltipContent>
-                  </Tooltip>
-                )
-              }
-
-              return TabLink
             })}
           </nav>
         </TooltipProvider>

@@ -63,6 +63,8 @@ export interface RegistrationWithContact extends Registration {
   contactEmail: string
   contactPhone: string
   contactFlagCategory: FlagCategory
+  contactIndustry: string | null
+  contactJobTitle: string | null
   aiScore: number      // 0–99 (djb2 % 100)
   flagOverride: boolean
 }

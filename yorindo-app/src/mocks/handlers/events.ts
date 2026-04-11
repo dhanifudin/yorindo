@@ -480,6 +480,8 @@ export const eventHandlers = [
           contactEmail: contact.email,
           contactPhone: contact.phone,
           contactFlagCategory: contact.flagCategory,
+          contactIndustry: contact.serviceType ?? null,
+          contactJobTitle: contact.jobTitle ?? null,
           aiScore: djb2(contact.id + eventId),
         }
       })

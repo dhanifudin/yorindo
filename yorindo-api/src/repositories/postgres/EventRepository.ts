@@ -257,13 +257,14 @@ export class PostgresEventRepository
 
   async getOverviewMetrics(eventId: EntityId): Promise<EventOverviewMetrics> {
     const { rows } = await this.query<{
-      invited: string; registered: string; approved: string; attended: string
+      invited: string; registered: string; approved: string; attended: string; ots_count: string
     }>(
       `SELECT
          (SELECT COUNT(*) FROM blast_logs WHERE event_id = $1) as invited,
          (SELECT COUNT(*) FROM registrations WHERE event_id = $1) as registered,
          (SELECT COUNT(*) FROM registrations WHERE event_id = $1 AND status = 'approved') as approved,
-         (SELECT COUNT(*) FROM registrations WHERE event_id = $1 AND attendance_status = 'attended') as attended`,
+         (SELECT COUNT(*) FROM registrations WHERE event_id = $1 AND status = 'attended') as attended,
+         (SELECT COUNT(*) FROM registrations WHERE event_id = $1 AND status = 'approved' AND attended_at IS NOT NULL) as ots_count`,
       [eventId],
     )
     const row = rows[0]
@@ -271,11 +272,13 @@ export class PostgresEventRepository
     const registered = parseInt(row?.registered ?? '0', 10)
     const approved = parseInt(row?.approved ?? '0', 10)
     const attended = parseInt(row?.attended ?? '0', 10)
+    const otsCount = parseInt(row?.ots_count ?? '0', 10)
     return {
       invited,
       registered,
       approved,
       attended,
+      otsCount,
       conversionRate: registered > 0 ? Math.round((attended / registered) * 1000) / 10 : 0,
     }
   }

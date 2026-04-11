@@ -283,6 +283,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                 registered={report.registered}
                 approved={report.approved}
                 attended={report.attended}
+                otsCount={report.otsCount ?? 0}
                 attendanceRate={report.attendanceRate}
                 noShowRate={report.noShowRate}
               />

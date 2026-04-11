@@ -1430,6 +1430,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       registrationCount: metrics.registered,
       approvedCount:    metrics.approved,
       attendedCount:    metrics.attended,
+      otsCount:         metrics.otsCount,
       pendingApprovals: metrics.registered - metrics.approved,
       seatsRemaining:   Math.max((event.capacity ?? 0) - metrics.approved, 0),
       daysUntilEvent:   Math.ceil((new Date(event.startDate).getTime() - Date.now()) / 86400000),
@@ -1564,5 +1565,165 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     return reply.status(204).send()
+  })
+
+  // ─────────────────────────────────────────────────────────────────────
+  // On-the-Spot Walk-in Registration
+  // ─────────────────────────────────────────────────────────────────────
+  const OtsBodySchema = z.object({
+    name: z.string().trim().min(1),
+    email: z.string().email(),
+    phone: z.string().trim().min(8),
+    company: z.string().trim().optional(),
+    industry: z.string().trim().optional(),
+    jobTitle: z.string().trim().optional(),
+  })
+
+  fastify.post('/api/events/:id/ots', { preHandler: [requireAuth, requireAdmin] }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const params = EventIdParamsSchema.safeParse(request.params)
+    if (!params.success) return replyValidationError(reply, params.error.issues, 'Invalid event id')
+
+    const event = await requireEventOr404(reply, params.data.id)
+    if (!event) return
+
+    const body = OtsBodySchema.safeParse(request.body)
+    if (!body.success) return replyValidationError(reply, body.error.issues, 'Invalid registration payload')
+
+    validateOpenApiRequest({ path: '/events/{id}/ots', method: 'post', params: params.data, body: body.data })
+
+    // Check if contact with this email already exists
+    let contact = await contactRepository.findByPhone(body.data.phone)
+
+    // Also check by email to prevent duplicate OTS registrations
+    if (!contact && body.data.email) {
+      const { data: allContacts } = await contactRepository.findAll({ page: 1, pageSize: 1000 })
+      contact = allContacts.find(c => (c.email ?? '').toLowerCase() === body.data.email.toLowerCase()) ?? null
+    }
+
+    // If contact exists, check if they already have an OTS registration for this event
+    if (contact) {
+      const existingRegistrations = await registrationRepository.findByEvent(event.id, { page: 1, pageSize: 500 })
+      const duplicateOts = existingRegistrations.data.find(
+        r => r.contactId === contact!.id && r.status === 'approved' && r.attendedAt
+      )
+      if (duplicateOts) {
+        return reply.status(409).send({
+          error: {
+            code: 'DUPLICATE_OTS',
+            message: `${contact.name} sudah terdaftar sebagai peserta On The Spot untuk event ini`,
+            details: [],
+          },
+        })
+      }
+
+      // Update existing contact with latest info
+      contact = await contactRepository.update(contact.id, {
+        name: body.data.name,
+        email: body.data.email,
+        serviceType: body.data.industry ?? contact.serviceType,
+        jobTitle: body.data.jobTitle ?? contact.jobTitle,
+        company: body.data.company ?? contact.company,
+      })
+    } else {
+      contact = await contactRepository.upsert({
+        name: body.data.name,
+        phone: body.data.phone,
+        email: body.data.email,
+        serviceType: body.data.industry ?? null,
+        jobTitle: body.data.jobTitle ?? null,
+        city: null,
+        provinceCode: null,
+        provinceName: null,
+        cityCode: null,
+        cityName: null,
+        company: body.data.company ?? null,
+        department: null,
+        eventDate: null,
+        topicTags: null,
+        source: 'manual',
+        completenessScore: 0.6,
+        consentStatus: 'active',
+        flagCategory: null,
+        deletedAt: null,
+      })
+    }
+    if (!contact) {
+      return reply.status(500).send({ error: { code: 'INTERNAL_ERROR', message: 'Failed to create contact', details: [] } })
+    }
+
+    // Create registration — auto-approved AND marked as attended
+    const registration = await registrationRepository.create({
+      contactId: contact.id,
+      eventId: event.id,
+      status: 'approved',
+      attendedAt: new Date().toISOString(),
+      ticketToken: null,
+      aiScore: null,
+      flagOverride: false,
+      approvedAt: new Date().toISOString(),
+    })
+
+    const token = request.user as JwtPayload
+    await auditLogRepository.create({
+      action: 'registration.ots',
+      actorId: token.sub,
+      actorRole: token.role,
+      eventId: event.id,
+      targetId: registration.id,
+      targetType: 'registration',
+      metadata: { name: body.data.name, phone: body.data.phone },
+    })
+
+    return reply.status(201).send({
+      id: registration.id,
+      contactId: registration.contactId,
+      contactName: contact.name ?? '',
+      contactPhone: contact.phone ?? '',
+      contactEmail: contact.email ?? '',
+      contactCompany: contact.company ?? null,
+      contactIndustry: contact.serviceType ?? null,
+      contactJobTitle: contact.jobTitle ?? null,
+      status: registration.status,
+      attendedAt: registration.attendedAt,
+      createdAt: registration.createdAt,
+    })
+  })
+
+  // ─────────────────────────────────────────────────────────────────────
+  // Recent OTS Registrations for an event
+  // ─────────────────────────────────────────────────────────────────────
+  fastify.get('/api/events/:id/ots', { preHandler: [requireAuth] }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const params = EventIdParamsSchema.safeParse(request.params)
+    if (!params.success) return replyValidationError(reply, params.error.issues, 'Invalid event id')
+
+    const event = await requireEventOr404(reply, params.data.id)
+    if (!event) return
+
+    // Fetch recent approved+attended registrations (OTS walk-ins)
+    const registrations = await registrationRepository.findByEvent(event.id, { page: 1, pageSize: 15 })
+
+    // Filter to only OTS (approved + attended) and enrich with contact data
+    const otsRegistrations = registrations.data
+      .filter((r): r is typeof r & { attendedAt: string } => r.status === 'approved' && !!r.attendedAt)
+      .slice(0, 10)
+
+    const enriched = []
+    for (const reg of otsRegistrations) {
+      const contact = await contactRepository.findById(reg.contactId)
+      if (contact) {
+        enriched.push({
+          id: reg.id,
+          contactName: contact.name,
+          contactEmail: contact.email ?? '',
+          contactCompany: contact.company ?? null,
+          attendedAt: reg.attendedAt,
+        })
+      }
+    }
+
+    // Sort by most recent (attendedAt descending)
+    enriched.sort((a, b) => new Date(b.attendedAt).getTime() - new Date(a.attendedAt).getTime())
+
+    return reply.status(200).send({ data: enriched })
   })
 }

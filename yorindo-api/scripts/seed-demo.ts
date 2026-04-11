@@ -91,20 +91,21 @@ interface EventDef {
   id?: string; name: string; slug: string; status: string; dateOffset: number; city: string
   venue: string; capacity: number; isPaid: boolean; price: number | null
   regCount: number; attendedCount: number; pendingCount: number; surveyCount: number
+  otsCount: number; topicTags: string[]
 }
 
 const EVENTS: EventDef[] = [
-  { id: null, name: 'TechConf Jakarta 2026',     slug: 'techconf-jakarta-2026',     status: 'active',    dateOffset: -1,   city: 'Jakarta',    venue: 'Jakarta Convention Center', capacity: 500, isPaid: false, price: null, regCount: 80, attendedCount: 42, pendingCount: 0, surveyCount: 0 },
-  { id: null, name: 'AI Summit Bandung',          slug: 'ai-summit-bandung',         status: 'active',    dateOffset: 2,    city: 'Bandung',    venue: 'Trans Convention Hall',     capacity: 200, isPaid: true,  price: 150000, regCount: 120, attendedCount: 0, pendingCount: 0, surveyCount: 0 },
-  { id: null, name: 'ERP Workshop Surabaya',      slug: 'erp-workshop-surabaya',     status: 'published', dateOffset: 14,   city: 'Surabaya',   venue: 'Hotel Majapahit',           capacity: 80,  isPaid: true,  price: 75000, regCount: 35, attendedCount: 0, pendingCount: 5, surveyCount: 0 },
-  { id: null, name: 'Fintech Networking Bali',    slug: 'fintech-networking-bali',   status: 'published', dateOffset: 30,   city: 'Denpasar',   venue: 'Bali Nusa Dua Convention',  capacity: 150, isPaid: false, price: null, regCount: 20, attendedCount: 0, pendingCount: 0, surveyCount: 0 },
-  { id: null, name: 'Cloud Conference Jakarta',   slug: 'cloud-conference-jakarta',  status: 'draft',     dateOffset: 60,   city: 'Jakarta',    venue: 'ICE BSD',                   capacity: 300, isPaid: false, price: null, regCount: 0, attendedCount: 0, pendingCount: 0, surveyCount: 0 },
-  { id: null, name: 'Data Summit Yogyakarta',     slug: 'data-summit-yogyakarta',    status: 'draft',     dateOffset: 90,   city: 'Yogyakarta', venue: 'Royal Ambarrukmo',          capacity: 100, isPaid: false, price: null, regCount: 0, attendedCount: 0, pendingCount: 0, surveyCount: 0 },
-  { id: null, name: 'DevOps Meetup Jakarta',      slug: 'devops-meetup-jakarta',     status: 'completed', dateOffset: -30,  city: 'Jakarta',    venue: 'WeWork Sudirman',           capacity: 60,  isPaid: false, price: null, regCount: 55, attendedCount: 42, pendingCount: 0, surveyCount: 20 },
-  { id: null, name: 'Marketing Forum Bandung',    slug: 'marketing-forum-bandung',   status: 'completed', dateOffset: -60,  city: 'Bandung',    venue: 'Padma Hotel',               capacity: 200, isPaid: false, price: null, regCount: 150, attendedCount: 98, pendingCount: 0, surveyCount: 30 },
-  { id: null, name: 'HR Tech Summit',             slug: 'hr-tech-summit',            status: 'cancelled', dateOffset: -15,  city: 'Jakarta',    venue: 'Ritz Carlton Pacific Place', capacity: 120, isPaid: false, price: null, regCount: 15, attendedCount: 0, pendingCount: 0, surveyCount: 0 },
-  { id: null, name: 'Startup Pitch Night',        slug: 'startup-pitch-night',       status: 'archived',  dateOffset: -180, city: 'Jakarta',    venue: 'Block71 Jakarta',           capacity: 250, isPaid: false, price: null, regCount: 200, attendedCount: 145, pendingCount: 0, surveyCount: 25 },
-  { id: 'e44rnx7cg7cstacu725iolms', name: 'Konferensi Kesehatan Digital 2026', slug: 'konferensi-kesehatan-digital-2026', status: 'active', dateOffset: 12, city: 'Jakarta', venue: 'Jakarta Convention Center, Assembly Hall', capacity: 500, isPaid: false, price: null, regCount: 180, attendedCount: 0, pendingCount: 15, surveyCount: 0 },
+  { id: null, name: 'TechConf Jakarta 2026',     slug: 'techconf-jakarta-2026',     status: 'active',    dateOffset: -1,   city: 'Jakarta',    venue: 'Jakarta Convention Center', capacity: 500, isPaid: false, price: null, regCount: 80, attendedCount: 42, pendingCount: 0, surveyCount: 0, otsCount: 12, topicTags: ['AI', 'Cloud'] },
+  { id: null, name: 'AI Summit Bandung',          slug: 'ai-summit-bandung',         status: 'active',    dateOffset: 2,    city: 'Bandung',    venue: 'Trans Convention Hall',     capacity: 200, isPaid: true,  price: 150000, regCount: 120, attendedCount: 0, pendingCount: 0, surveyCount: 0, otsCount: 0, topicTags: ['Machine Learning'] },
+  { id: null, name: 'ERP Workshop Surabaya',      slug: 'erp-workshop-surabaya',     status: 'published', dateOffset: 14,   city: 'Surabaya',   venue: 'Hotel Majapahit',           capacity: 80,  isPaid: true,  price: 75000, regCount: 35, attendedCount: 0, pendingCount: 5, surveyCount: 0, otsCount: 0, topicTags: [] },
+  { id: null, name: 'Fintech Networking Bali',    slug: 'fintech-networking-bali',   status: 'published', dateOffset: 30,   city: 'Denpasar',   venue: 'Bali Nusa Dua Convention',  capacity: 150, isPaid: false, price: null, regCount: 20, attendedCount: 0, pendingCount: 0, surveyCount: 0, otsCount: 0, topicTags: [] },
+  { id: null, name: 'Cloud Conference Jakarta',   slug: 'cloud-conference-jakarta',  status: 'draft',     dateOffset: 60,   city: 'Jakarta',    venue: 'ICE BSD',                   capacity: 300, isPaid: false, price: null, regCount: 0, attendedCount: 0, pendingCount: 0, surveyCount: 0, otsCount: 0, topicTags: [] },
+  { id: null, name: 'Data Summit Yogyakarta',     slug: 'data-summit-yogyakarta',    status: 'draft',     dateOffset: 90,   city: 'Yogyakarta', venue: 'Royal Ambarrukmo',          capacity: 100, isPaid: false, price: null, regCount: 0, attendedCount: 0, pendingCount: 0, surveyCount: 0, otsCount: 0, topicTags: [] },
+  { id: null, name: 'DevOps Meetup Jakarta',      slug: 'devops-meetup-jakarta',     status: 'completed', dateOffset: -30,  city: 'Jakarta',    venue: 'WeWork Sudirman',           capacity: 60,  isPaid: false, price: null, regCount: 55, attendedCount: 42, pendingCount: 0, surveyCount: 20, otsCount: 8, topicTags: ['CI/CD', 'Kubernetes'] },
+  { id: null, name: 'Marketing Forum Bandung',    slug: 'marketing-forum-bandung',   status: 'completed', dateOffset: -60,  city: 'Bandung',    venue: 'Padma Hotel',               capacity: 200, isPaid: false, price: null, regCount: 150, attendedCount: 98, pendingCount: 0, surveyCount: 30, otsCount: 15, topicTags: [] },
+  { id: null, name: 'HR Tech Summit',             slug: 'hr-tech-summit',            status: 'cancelled', dateOffset: -15,  city: 'Jakarta',    venue: 'Ritz Carlton Pacific Place', capacity: 120, isPaid: false, price: null, regCount: 15, attendedCount: 0, pendingCount: 0, surveyCount: 0, otsCount: 0, topicTags: [] },
+  { id: null, name: 'Startup Pitch Night',        slug: 'startup-pitch-night',       status: 'archived',  dateOffset: -180, city: 'Jakarta',    venue: 'Block71 Jakarta',           capacity: 250, isPaid: false, price: null, regCount: 200, attendedCount: 145, pendingCount: 0, surveyCount: 25, otsCount: 22, topicTags: ['Venture Capital', 'Fundraising'] },
+  { id: 'e44rnx7cg7cstacu725iolms', name: 'Konferensi Kesehatan Digital 2026', slug: 'konferensi-kesehatan-digital-2026', status: 'active', dateOffset: 12, city: 'Jakarta', venue: 'Jakarta Convention Center, Assembly Hall', capacity: 500, isPaid: false, price: null, regCount: 180, attendedCount: 0, pendingCount: 15, surveyCount: 0, otsCount: 0, topicTags: [] },
 ]
 
 // ─── Main seed function ────────────────────────────────────────────────────────
@@ -180,16 +181,17 @@ export async function seedDemo(pool: Pool): Promise<void> {
       const id = ev.id ?? createId()
       eventIds.push(id)
       await client.query(`
-        INSERT INTO events (id, name, slug, date, city, venue, capacity, status, is_paid, price, registration_closed, vendor_id)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        INSERT INTO events (id, name, slug, date, city, venue, capacity, status, is_paid, price, registration_closed, vendor_id, topic_tags)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
       `, [
         id, ev.name, ev.slug, d(ev.dateOffset), ev.city, ev.venue, ev.capacity, ev.status,
         ev.isPaid, ev.price,
         ['completed', 'cancelled', 'archived'].includes(ev.status),
         ev.status !== 'draft' ? pick(vendorIds) : null,
+        ev.topicTags.length > 0 ? ev.topicTags : null,
       ])
     }
-    console.log(`✓ Seeded ${EVENTS.length} events`)
+    console.log(`✓ Seeded ${EVENTS.length} events (with topic_tags)`)
 
     // ── Set targetCriteria on active/published events ──
     // Each event gets domain-appropriate criteria matching its theme and city
@@ -409,6 +411,48 @@ export async function seedDemo(pool: Pool): Promise<void> {
       }
     }
     console.log(`✓ Seeded ${totalRegs} registrations`)
+
+    // ── OTS (On The Spot) Registrations ──
+    // OTS registrations are walk-in registrations created during the event
+    // They have status='approved' AND attended_at IS NOT NULL (auto-approved and marked attended)
+    let totalOts = 0
+    // Start from contact index 350 to avoid overlap with regular registrations
+    let otsContactIdx = 350
+    for (let ei = 0; ei < EVENTS.length; ei++) {
+      const ev = EVENTS[ei]
+      if (ev.otsCount === 0) continue
+      const eventId = eventIds[ei]
+
+      for (let o = 0; o < ev.otsCount; o++) {
+        // Use contacts from a separate range to minimize overlap
+        const contactId = contactIds[otsContactIdx % contactIds.length]
+        otsContactIdx++
+        const regId = createId()
+
+        // Skip if this contact is already registered for this event
+        const existing = await client.query(
+          `SELECT id FROM registrations WHERE contact_id = $1 AND event_id = $2`,
+          [contactId, eventId]
+        )
+        if (existing.rows.length > 0) continue
+
+        // OTS registrations are always approved and attended
+        const approvedAt = d(ev.dateOffset, 8 + (o % 4)) // Morning of event
+        const attendedAt = d(ev.dateOffset, 9 + (o % 3)) // Check-in time
+
+        await client.query(`
+          INSERT INTO registrations (id, contact_id, event_id, status, attendance_status, check_in_method, approved_at, attended_at, checked_in_by)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        `, [
+          regId, contactId, eventId, 'approved',
+          'attended', 'manual', // OTS uses manual check-in
+          approvedAt, attendedAt,
+          userIds.admin, // OTS registrations are done by admin
+        ])
+        totalOts++
+      }
+    }
+    console.log(`✓ Seeded ${totalOts} OTS (On The Spot) walk-in registrations`)
 
     // ── Survey Schemas (Registration forms) for each event ──
     // Schemas are stored in events table as registration_survey_schema / post_survey_schema JSONB

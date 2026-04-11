@@ -1,4 +1,4 @@
-import type { FastifyPluginAsync } from 'fastify'
+import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import { auditLogRepository, contactRepository, eventRepository, flaggedRecordsRepository, queueService, registrationRepository, suppressionRepository } from '../container.js'
 import { requireAdmin, requireAuth, type JwtPayload } from '../middleware/auth.js'
@@ -1075,5 +1075,28 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
     }
     validateOpenApiResponse({ path: '/contacts/bulk-flag', method: 'put', status: 200, body: responseBody })
     return reply.status(200).send(responseBody)
+  })
+
+  // GET /api/contacts/lookup?email=... — find contact by email (for OTS auto-fill)
+  fastify.get('/api/contacts/lookup', async (request: FastifyRequest, reply: FastifyReply) => {
+    const { email } = request.query as Record<string, string | undefined>
+    if (!email || email.length < 3) {
+      return reply.status(200).send(null)
+    }
+
+    const contact = await findContactByEmailOrPhone(email)
+    if (!contact) {
+      return reply.status(200).send(null)
+    }
+
+    return reply.status(200).send({
+      id: contact.id,
+      name: contact.name,
+      email: contact.email,
+      phone: contact.phone,
+      serviceType: contact.serviceType,
+      jobTitle: contact.jobTitle,
+      company: contact.company,
+    })
   })
 }

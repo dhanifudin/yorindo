@@ -6,6 +6,7 @@ export interface EventReport {
   registered: number
   approved: number
   attended: number
+  otsCount: number
   attendanceRate: string
   noShowRate: string
   industryBreakdown: Array<{ industry: string; count: number }>

@@ -170,6 +170,7 @@ export class InMemoryEventRepository implements IEventRepository {
       registered: capacity,
       approved: Math.floor(capacity * 0.8),
       attended: Math.floor(capacity * 0.6),
+      otsCount: Math.floor(capacity * 0.15),
       conversionRate: 0.6,
     }
   }

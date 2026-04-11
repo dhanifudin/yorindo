@@ -45,9 +45,10 @@ const migrations = [
   '014_drop_audit_logs_fk_constraints.sql',
   '015_settings_table.sql',
   '016_banner_url.sql',
+  '017_topic_tags.sql',
 ]
 
-async function migrate(): Promise<void> {
+export async function runMigrations(pool: Pool): Promise<void> {
   const migrationsDir = path.join(__dirname, '..', 'migrations')
 
   for (const file of migrations) {
@@ -57,11 +58,15 @@ async function migrate(): Promise<void> {
     console.log(`✓ Migration ${file} applied`)
   }
 
-  await pool.end()
   console.log('All migrations complete.')
 }
 
-migrate().catch((err: unknown) => {
-  console.error('Migration failed:', err)
-  process.exit(1)
-})
+if (import.meta.url === `file://${process.argv[1]}`) {
+  // Direct execution — run as standalone script
+  const databaseUrl = buildDatabaseUrl()
+  const pool = new Pool({ connectionString: databaseUrl })
+  runMigrations(pool).then(() => pool.end()).catch((err: unknown) => {
+    console.error('Migration failed:', err)
+    process.exit(1)
+  })
+}

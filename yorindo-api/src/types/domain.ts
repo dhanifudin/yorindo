@@ -127,6 +127,7 @@ export interface EventOverviewMetrics {
   registered: number
   approved: number
   attended: number
+  otsCount: number
   conversionRate: number
 }
 

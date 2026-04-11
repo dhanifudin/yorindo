@@ -13,6 +13,7 @@ const REPORT_PROFILES = [
     registered: 42,
     approved: 38,
     attended: 35,
+    otsCount: 5,
     attendanceRate: '92.1',
     noShowRate: '7.9',
     industryBreakdown: [
@@ -40,6 +41,7 @@ const REPORT_PROFILES = [
     registered: 85,
     approved: 65,
     attended: 48,
+    otsCount: 12,
     attendanceRate: '73.8',
     noShowRate: '26.2',
     industryBreakdown: [
@@ -69,6 +71,7 @@ const REPORT_PROFILES = [
     registered: 320,
     approved: 245,
     attended: 185,
+    otsCount: 35,
     attendanceRate: '75.5',
     noShowRate: '24.5',
     industryBreakdown: [
@@ -100,6 +103,7 @@ const REPORT_PROFILES = [
     registered: 180,
     approved: 120,
     attended: 95,
+    otsCount: 25,
     attendanceRate: '79.2',
     noShowRate: '20.8',
     industryBreakdown: [

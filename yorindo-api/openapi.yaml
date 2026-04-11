@@ -2873,6 +2873,43 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
 
+  /contacts/lookup:
+    get:
+      summary: Look up a contact by email address
+      operationId: lookupContact
+      tags: [Contacts]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: email
+          required: true
+          schema:
+            type: string
+            format: email
+      responses:
+        '200':
+          description: Contact found or null if not found
+          content:
+            application/json:
+              schema:
+                type: object
+                nullable: true
+                properties:
+                  id: { type: string }
+                  name: { type: string }
+                  email: { type: string, nullable: true }
+                  phone: { type: string, nullable: true }
+                  serviceType: { type: string, nullable: true }
+                  jobTitle: { type: string, nullable: true }
+                  company: { type: string, nullable: true }
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
   /contacts/blast:
     post:
       summary: Initiate a blast to a set of contacts or a contact segment
@@ -6225,6 +6262,94 @@ paths:
                     type: boolean
                   error:
                     type: string
+
+  /events/{id}/ots:
+    post:
+      summary: On-the-spot walk-in registration (auto-approved and marked attended)
+      operationId: otsRegistration
+      tags: [Events]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, phone]
+              properties:
+                name: { type: string }
+                email: { type: string, format: email }
+                phone: { type: string }
+                company: { type: string }
+                industry: { type: string }
+                jobTitle: { type: string }
+      responses:
+        '201':
+          description: Walk-in registration created and marked as attended
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string }
+                  contactId: { type: string }
+                  contactName: { type: string }
+                  contactPhone: { type: string }
+                  contactEmail: { type: string }
+                  contactIndustry: { type: string, nullable: true }
+                  contactJobTitle: { type: string, nullable: true }
+                  status: { type: string }
+                  attendedAt: { type: string }
+                  createdAt: { type: string }
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+    get:
+      summary: List recent on-the-spot walk-in registrations for an event
+      operationId: otsRegistrations
+      tags: [Events]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Recent OTS registrations sorted by most recent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        contactName: { type: string }
+                        contactEmail: { type: string }
+                        contactCompany: { type: string, nullable: true }
+                        attendedAt: { type: string }
 
   # ─────────────────────────────────────────────────────────────────────────────
   # UPLOADS
