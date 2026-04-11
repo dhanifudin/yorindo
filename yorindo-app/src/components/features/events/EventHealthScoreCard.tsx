@@ -64,7 +64,7 @@ export function EventHealthScoreCard({
     {
       label: 'Tingkat Kehadiran',
       value: `${attendanceRate}%`,
-      detail: `${totalAttended} hadir ÷ ${approved} disetujui`,
+      detail: `${totalAttended} hadir dari ${approved} disetujui`,
       contribution: `${attendanceRate}% × ${Math.round(wAttendance * 100)}% = ${contAttendance} poin`,
       weight: `${Math.round(wAttendance * 100)}%`,
       good: attendanceRate >= 70,
@@ -72,7 +72,7 @@ export function EventHealthScoreCard({
     {
       label: 'Tingkat No-show',
       value: `${noShowRate}%`,
-      detail: `${Math.max(0, approved - attended)} tidak hadir ÷ ${approved} disetujui`,
+      detail: `${Math.max(0, approved - attended)} tidak hadir dari ${approved} disetujui`,
       contribution: `(100% − ${noShowRate}%) × ${Math.round(wNoShow * 100)}% = ${contNoShow} poin`,
       weight: `${Math.round(wNoShow * 100)}%`,
       good: noShowRate <= 30,
@@ -80,7 +80,7 @@ export function EventHealthScoreCard({
     {
       label: 'Konversi Blast',
       value: blastConversion !== null ? `${blastConversion}%` : '—',
-      detail: blastConversion !== null ? `${registered} daftar ÷ ${blastCount} diundang` : 'Tidak ada data blast',
+      detail: blastConversion !== null ? `${registered} daftar dari ${blastCount} diundang` : 'Tidak ada data blast',
       contribution: hasBlast
         ? `${blastConversion}% × ${Math.round(wBlast * 100)}% = ${contBlast} poin`
         : 'Bobot didistribusikan ke indikator lain',
