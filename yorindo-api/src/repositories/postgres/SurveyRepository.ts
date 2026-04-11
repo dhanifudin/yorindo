@@ -144,4 +144,17 @@ export class PostgresSurveyRepository
 
     return { responses, total }
   }
+
+  async getContactForRegistration(regId: string): Promise<{ name: string; phone: string } | null> {
+    const { rows } = await this.query<{ name: string; phone: string | null }>(
+      `SELECT c.name, c.phone
+       FROM registrations r
+       JOIN contacts c ON c.id = r.contact_id
+       WHERE r.id = $1`,
+      [regId],
+    )
+    const row = rows[0]
+    if (!row) return null
+    return { name: row.name, phone: row.phone ?? '' }
+  }
 }

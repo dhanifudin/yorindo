@@ -1,11 +1,13 @@
 'use client'
 
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, PieChart, Pie, Cell } from 'recharts'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
 interface SurveyAggregate {
   questionId: string
@@ -18,9 +20,19 @@ interface SurveyAggregate {
   samples?: string[]
 }
 
+interface SurveyResponseRecord {
+  id: string
+  registrationId: string
+  contactName: string
+  contactPhone: string
+  submittedAt: string
+  answers: Record<string, unknown>
+}
+
 interface SurveyResponsesData {
   total: number
   aggregates: SurveyAggregate[]
+  responses: SurveyResponseRecord[]
   pagination: { page: number; pageSize: number; totalPages: number }
 }
 
@@ -102,6 +114,8 @@ function TextResponses({ aggregate }: { aggregate: SurveyAggregate }) {
 }
 
 export function SurveyAnalyticsTab({ eventId }: { eventId: string }) {
+  const [showResponses, setShowResponses] = useState(false)
+
   const { data, isLoading } = useQuery<SurveyResponsesData>({
     queryKey: ['survey-analytics-post-event', eventId],
     queryFn: () => fetch(`/api/events/${eventId}/surveys/responses?type=post-event&pageSize=100`).then(r => r.json()),
@@ -130,6 +144,13 @@ export function SurveyAnalyticsTab({ eventId }: { eventId: string }) {
   }
 
   const aggregates = data.aggregates ?? []
+  const responses = data.responses ?? []
+
+  // Get question labels from aggregates for the responses table
+  const questionLabels = aggregates.reduce<Record<string, string>>((acc, agg) => {
+    acc[agg.questionId] = agg.questionLabel
+    return acc
+  }, {})
 
   return (
     <div className="space-y-6">
@@ -162,6 +183,68 @@ export function SurveyAnalyticsTab({ eventId }: { eventId: string }) {
           </CardContent>
         </Card>
       ))}
+
+      {/* Individual responses table */}
+      {responses.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-base">Daftar Respons Individu</CardTitle>
+                <CardDescription>Detail jawaban setiap responden</CardDescription>
+              </div>
+              <Badge variant="outline">{responses.length} responden</Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[180px]">Responden</TableHead>
+                    {aggregates.map(agg => (
+                      <TableHead key={agg.questionId} className="min-w-[120px]">
+                        {agg.questionLabel}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {responses.map(resp => (
+                    <TableRow key={resp.id}>
+                      <TableCell>
+                        <div className="text-sm font-medium">{resp.contactName}</div>
+                        <div className="text-xs text-muted-foreground">{resp.contactPhone}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {new Date(resp.submittedAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })}
+                        </div>
+                      </TableCell>
+                      {aggregates.map(agg => {
+                        const answer = resp.answers[agg.questionId]
+                        let displayValue: string
+
+                        if (answer === null || answer === undefined) {
+                          displayValue = '—'
+                        } else if (typeof answer === 'object') {
+                          displayValue = JSON.stringify(answer)
+                        } else {
+                          displayValue = String(answer)
+                        }
+
+                        return (
+                          <TableCell key={agg.questionId}>
+                            <span className="text-sm">{displayValue}</span>
+                          </TableCell>
+                        )
+                      })}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }
