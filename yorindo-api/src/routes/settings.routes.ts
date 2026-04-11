@@ -173,6 +173,14 @@ export const settingsRoutes: FastifyPluginAsync = async (fastify) => {
 
   // POST /api/settings/test-email — send a test email to verify configuration
   fastify.post('/api/settings/test-email', { preHandler: [requireAuth, requireAdmin] }, async (request: FastifyRequest, reply: FastifyReply) => {
+    // Force refresh config cache to ensure we read any just-saved settings
+    try {
+      const { clearProviderConfigCache } = await import('../container.js')
+      clearProviderConfigCache()
+    } catch {
+      // Ignore
+    }
+
     const bodySchema = z.object({
       to: z.string().email(),
     })
