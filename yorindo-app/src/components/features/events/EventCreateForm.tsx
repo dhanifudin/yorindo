@@ -45,6 +45,11 @@ const INDUSTRIES = [
   { slug: 'telekomunikasi', label: 'Telekomunikasi' },
 ]
 
+const INDONESIAN_CITIES = [
+  'Jakarta', 'Surabaya', 'Bandung', 'Medan', 'Semarang',
+  'Makassar', 'Yogyakarta', 'Palembang', 'Tangerang', 'Depok',
+]
+
 const EVENT_TYPES = [
   { value: 'conference', label: 'Conference' },
   { value: 'workshop', label: 'Workshop' },
@@ -657,6 +662,18 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
   const [selectedVendorIds, setSelectedVendorIds] = useState<string[]>([])
   const [vendorPopoverOpen, setVendorPopoverOpen] = useState(false)
 
+  // Target criteria state
+  const tc = event?.targetCriteria as Record<string, string[] | undefined> | undefined
+  const [targetServiceTypes, setTargetServiceTypes] = useState<string[]>(
+    tc?.serviceTypes ?? []
+  )
+  const [targetCities, setTargetCities] = useState<string[]>(
+    tc?.cities ?? []
+  )
+  const [targetJobTitlesRaw, setTargetJobTitlesRaw] = useState(
+    tc?.jobTitles?.join(', ') ?? ''
+  )
+
   // Sync sponsor yang sudah ada (edit mode)
   const sponsorKey =
     isEdit && existingSponsors ? existingSponsors.map((s) => s.vendor_id).sort().join() : null
@@ -743,6 +760,10 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
     const topicTags = values.topicTagsRaw
       ? values.topicTagsRaw.split(',').map((t) => t.trim()).filter(Boolean)
       : undefined
+    const targetJobTitles = targetJobTitlesRaw
+      ? targetJobTitlesRaw.split(',').map((t: string) => t.trim()).filter(Boolean)
+      : []
+    const hasTargetCriteria = targetServiceTypes.length > 0 || targetCities.length > 0 || targetJobTitles.length > 0
     const eventType = (values.eventType || undefined) as Event['eventType'] | undefined
 
     const body = {
@@ -756,6 +777,13 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
       ...(eventType && { eventType }),
       ...(industryTags.length && { industryTags }),
       ...(topicTags?.length && { topicTags }),
+      ...(hasTargetCriteria && {
+        targetCriteria: {
+          ...(targetServiceTypes.length && { serviceTypes: targetServiceTypes }),
+          ...(targetCities.length && { cities: targetCities }),
+          ...(targetJobTitles.length && { jobTitles: targetJobTitles }),
+        },
+      }),
     }
 
     if (isEdit) {
@@ -928,6 +956,87 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
         />
         <p className="mt-1 text-xs text-muted-foreground">Pisahkan dengan koma</p>
       </div>
+
+      {/* Target Criteria */}
+      <fieldset className="space-y-4 border border-border rounded-lg p-4">
+        <legend className="text-sm font-medium text-foreground px-1">Target Audiens (Opsional)</legend>
+        <p className="text-xs text-muted-foreground">
+          Tentukan kriteria audiens yang akan diundang. Kosongkan untuk mengundang semua kontak.
+        </p>
+
+        {/* Industry */}
+        <div>
+          <Label>Industri</Label>
+          <div className="mt-1.5 flex flex-wrap gap-2">
+            {INDUSTRIES.map((ind) => {
+              const selected = targetServiceTypes.includes(ind.slug)
+              return (
+                <button
+                  key={ind.slug}
+                  type="button"
+                  onClick={() =>
+                    setTargetServiceTypes((prev) =>
+                      prev.includes(ind.slug) ? prev.filter((s) => s !== ind.slug) : [...prev, ind.slug]
+                    )
+                  }
+                  aria-pressed={selected}
+                  className={cn(
+                    'inline-flex items-center rounded-full border px-3 py-0.5 text-xs font-medium transition-colors',
+                    selected
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border text-muted-foreground hover:bg-muted'
+                  )}
+                >
+                  {ind.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Cities */}
+        <div>
+          <Label>Kota</Label>
+          <div className="mt-1.5 flex flex-wrap gap-2">
+            {INDONESIAN_CITIES.map((city) => {
+              const selected = targetCities.includes(city)
+              return (
+                <button
+                  key={city}
+                  type="button"
+                  onClick={() =>
+                    setTargetCities((prev) =>
+                      prev.includes(city) ? prev.filter((c) => c !== city) : [...prev, city]
+                    )
+                  }
+                  aria-pressed={selected}
+                  className={cn(
+                    'inline-flex items-center rounded-full border px-3 py-0.5 text-xs font-medium transition-colors',
+                    selected
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border text-muted-foreground hover:bg-muted'
+                  )}
+                >
+                  {city}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Job Titles */}
+        <div>
+          <Label htmlFor="targetJobTitlesRaw">Jabatan</Label>
+          <Input
+            id="targetJobTitlesRaw"
+            type="text"
+            value={targetJobTitlesRaw}
+            onChange={(e) => setTargetJobTitlesRaw(e.target.value)}
+            placeholder="Contoh: direktur, manajer, supervisor"
+          />
+          <p className="mt-1 text-xs text-muted-foreground">Pisahkan dengan koma</p>
+        </div>
+      </fieldset>
 
       {/* Vendor */}
       <div>
