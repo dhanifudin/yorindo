@@ -209,6 +209,17 @@ export const settingsRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(200).send({ success: true, messageId: result.messageId })
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error'
+
+      // Parse Brevo-specific errors for actionable messages
+      if (message.includes('Brevo API error')) {
+        const brevoDetail = message.split('\n')[0] // e.g. "Brevo API error: 400 ..."
+        return reply.status(500).send({
+          success: false,
+          error: brevoDetail,
+          troubleshooting: 'Check that your sender email is verified in Brevo dashboard → Senders & IP → Domains',
+        })
+      }
+
       return reply.status(500).send({
         success: false,
         error: message,

@@ -100,13 +100,20 @@ function EmailProviderSection({
       })
       const data = await res.json()
       if (data.success) {
-        setTestResult({ success: true, message: 'Test email sent successfully! Check your inbox.' })
+        setTestResult({
+          success: true,
+          message: `Email sent! Message ID: ${data.messageId}. If you don't see it within 5 minutes, check: 1) Brevo dashboard → Logs, 2) Spam folder, 3) Sender email is verified in Brevo.`,
+        })
       } else {
         // Extract specific error from Brevo/API response if available
         const errorMsg = data.error?.includes('Brevo API error')
           ? data.error.replace('Brevo API error: ', '').split('\n')[0]
           : (data.error ?? 'Failed to send test email')
-        setTestResult({ success: false, message: errorMsg })
+        const troubleshooting = data.troubleshooting
+        setTestResult({
+          success: false,
+          message: troubleshooting ? `${errorMsg}\n\n💡 ${troubleshooting}` : errorMsg,
+        })
       }
     } catch {
       setTestResult({ success: false, message: 'Network error — check your connection' })
@@ -356,7 +363,7 @@ function EmailProviderSection({
             {testResult && (
               <div
                 className={cn(
-                  'rounded-lg p-3 text-sm',
+                  'rounded-lg p-3 text-sm whitespace-pre-line',
                   testResult.success
                     ? 'bg-green-50 text-green-800 border border-green-200'
                     : 'bg-red-50 text-red-800 border border-red-200'
