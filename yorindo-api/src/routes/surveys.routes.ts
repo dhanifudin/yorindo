@@ -24,6 +24,7 @@ const SurveySchemaInput = z.object({
   schema: z.object({
     type: z.literal('object'),
     properties: z.record(z.string(), z.any()),
+    required: z.array(z.string()).optional(),
   }),
   uiSchema: z.record(z.string(), z.any()).default({}),
 })
