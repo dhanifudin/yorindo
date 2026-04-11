@@ -658,7 +658,6 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
   const { data: existingSponsors } = useEventSponsors(event?.id ?? '')
 
   const [bannerUrl, setBannerUrl] = useState(event?.bannerUrl ?? '')
-  const [industryTags, setIndustryTags] = useState<string[]>(event?.industryTags ?? [])
   const [selectedVendorIds, setSelectedVendorIds] = useState<string[]>([])
   const [vendorPopoverOpen, setVendorPopoverOpen] = useState(false)
 
@@ -729,12 +728,6 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
     )
   }
 
-  const toggleIndustry = (slug: string) => {
-    setIndustryTags((prev) =>
-      prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug]
-    )
-  }
-
   const syncVendors = async (eventId: string) => {
     const originalIds = new Set((existingSponsors ?? []).map((s) => s.vendor_id))
     const nextIds = new Set(selectedVendorIds)
@@ -775,7 +768,6 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
       ...(bannerUrl && { bannerUrl }),
       ...(values.venue && { venue: values.venue }),
       ...(eventType && { eventType }),
-      ...(industryTags.length && { industryTags }),
       ...(topicTags?.length && { topicTags }),
       ...(hasTargetCriteria && {
         targetCriteria: {
@@ -917,32 +909,6 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
             </option>
           ))}
         </select>
-      </div>
-
-      {/* Industri */}
-      <div>
-        <Label>Industri</Label>
-        <div className="mt-1.5 flex flex-wrap gap-2">
-          {INDUSTRIES.map((ind) => {
-            const selected = industryTags.includes(ind.slug)
-            return (
-              <button
-                key={ind.slug}
-                type="button"
-                onClick={() => toggleIndustry(ind.slug)}
-                aria-pressed={selected}
-                className={cn(
-                  'inline-flex items-center rounded-full border px-3 py-0.5 text-xs font-medium transition-colors',
-                  selected
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-border text-muted-foreground hover:bg-muted'
-                )}
-              >
-                {ind.label}
-              </button>
-            )
-          })}
-        </div>
       </div>
 
       {/* Topic Tags */}
