@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
-import bcrypt from 'bcrypt'
+import { hash } from '@node-rs/bcrypt'
 import type { User } from '../types/domain.js'
 import { userRepository, auditLogRepository, eventRepository } from '../container.js'
 import { requireAuth, requireAdmin, type JwtPayload } from '../middleware/auth.js'
@@ -115,7 +115,7 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
       })
     }
 
-    const passwordHash = await bcrypt.hash(password, 10)
+    const passwordHash = await hash(password, 10)
     
     // Create User
     const user = await userRepository.create({

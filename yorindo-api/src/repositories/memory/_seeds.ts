@@ -8,11 +8,11 @@
  * This module MUST NOT import from any repository.
  */
 
-import bcrypt from 'bcrypt'
+import { hashSync } from '@node-rs/bcrypt'
 
 // ─── Password hash ─────────────────────────────────────────────────────────────
 // bcrypt cost 10 — runs once at module load (~100 ms), shared across all users
-export const PASSWORD123_HASH = bcrypt.hashSync('Password123!', 10)
+export const PASSWORD123_HASH = hashSync('Password123!', 10)
 
 // ─── User IDs (one per role) ──────────────────────────────────────────────────
 export const SEED_USER_IDS = {
