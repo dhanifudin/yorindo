@@ -543,8 +543,8 @@ export async function seedDemo(pool: Pool): Promise<void> {
         [JSON.stringify(regSchema), eventId],
       )
 
-      // Post-event survey schema (only for active/completed events)
-      if (['active', 'completed', 'archived'].includes(ev.status)) {
+      // Post-event survey schema (for all non-draft/non-cancelled events)
+      if (!['draft', 'cancelled'].includes(ev.status)) {
         const postSchema = {
           title: 'Survei Kepuasan Peserta',
           type: 'object',
@@ -577,15 +577,40 @@ export async function seedDemo(pool: Pool): Promise<void> {
     // ── Survey responses (registration + post-event) ──
     let totalRegSurveys = 0
     let totalPostSurveys = 0
+
+    const REG_NAMES = ['Andi Pratama', 'Dewi Lestari', 'Fajar Nugroho', 'Maya Putri', 'Roni Hermawan', 'Siti Rahayu', 'Budi Santoso', 'Linda Wijaya', 'Hendra Kusuma', 'Putri Handayani']
+    const REG_EMAILS = ['andi@mail.com', 'dewi@mail.com', 'fajar@mail.com', 'maya@mail.com', 'roni@mail.com', 'siti@mail.com', 'budi@mail.com', 'linda@mail.com', 'hendra@mail.com', 'putri@mail.com']
+    const REG_COMPANIES = ['PT Telkom', 'Bank Mandiri', 'Gojek', 'Tokopedia', 'Pertamina', 'Astra International', 'Unilever Indonesia', 'Indofood', 'XL Axiata', 'Garuda Indonesia']
+    const REG_JOBS = ['Software Engineer', 'Product Manager', 'Data Analyst', 'DevOps Engineer', 'IT Manager', 'Marketing Director', 'Business Analyst', 'CTO', 'Project Manager', 'Sales Director']
+    const REG_INDUSTRIES = ['Teknologi', 'Keuangan', 'Kesehatan', 'Manufaktur', 'Pendidikan', 'Retail']
+    const REG_SOURCES = ['Media Sosial', 'Email', 'Rekomendasi Teman', 'Website', 'Lainnya']
+    const REG_EXPECTATIONS = ['Ingin belajar hal baru', 'Networking dengan profesional', 'Meningkatkan skill', 'Mencari solusi untuk perusahaan', 'Memahami tren industri terbaru']
+
+    const POST_TOPICS = ['AI & Machine Learning', 'Cloud Native', 'DevOps', 'Data Engineering', 'Security', 'IoT & Smart Factory', 'Digital Transformation', 'Cybersecurity', 'Blockchain', 'Lainnya']
+    const POST_SUGGESTIONS = [
+      'Sangat bermanfaat, topik relevan dengan pekerjaan sehari-hari',
+      'Perlu lebih banyak sesi networking antar peserta',
+      'Durasi terlalu singkat, bisa diperpanjang',
+      'Tempat kurang luas, kapasitas perlu ditingkatkan',
+      'Materi terlalu teknis untuk pemula',
+      'Pembicara sangat inspiratif dan berpengalaman',
+      'Live demo lebih membantu daripada slide presentasi',
+      'Sesi tanya jawab perlu lebih lama',
+      'Acara sangat terorganisir dan profesional',
+      'Perlu lebih banyak studi kasus nyata dari industri',
+    ]
+
     for (let ei = 0; ei < EVENTS.length; ei++) {
       const ev = EVENTS[ei]
       if (ev.regCount === 0) continue
       const eventId = eventIds[ei]
 
       // Registration survey responses (for approved/attended registrations)
+      // Seed more responses for better analytics (up to 40 per event)
+      const maxRegResponses = Math.min(ev.regCount, 40)
       const regSurveyRows = await client.query(
         `SELECT id FROM registrations WHERE event_id = $1 AND status IN ('approved', 'attended') ORDER BY id LIMIT $2`,
-        [eventId, Math.min(ev.regCount, 20)]
+        [eventId, maxRegResponses]
       )
 
       for (const reg of regSurveyRows.rows) {
@@ -595,21 +620,21 @@ export async function seedDemo(pool: Pool): Promise<void> {
         `, [
           createId(), eventId, reg.id,
           JSON.stringify({
-            namaLengkap: pick(['Andi Pratama', 'Dewi Lestari', 'Fajar Nugroho', 'Maya Putri', 'Roni Hermawan']),
-            email: pick(['andi@mail.com', 'dewi@mail.com', 'fajar@mail.com']),
-            perusahaan: pick(['PT Telkom', 'Bank Mandiri', 'Gojek', 'Tokopedia', 'Pertamina']),
-            jabatan: pick(['Software Engineer', 'Product Manager', 'Data Analyst', 'DevOps Engineer']),
-            nomorTelepon: pick(['+6281234567890', '+6289876543210']),
-            industri: pick(['Teknologi', 'Keuangan', 'Kesehatan']),
-            bagaimanaTahu: pick(['Media Sosial', 'Email', 'Rekomendasi Teman', 'Website']),
-            ekspektasi: pick(['Ingin belajar hal baru', 'Networking dengan profesional', 'Meningkatkan skill']),
+            namaLengkap: pick(REG_NAMES),
+            email: pick(REG_EMAILS),
+            perusahaan: pick(REG_COMPANIES),
+            jabatan: pick(REG_JOBS),
+            nomorTelepon: `+628${String(Math.floor(Math.random() * 90000000) + 10000000)}`,
+            industri: pick(REG_INDUSTRIES),
+            bagaimanaTahu: pick(REG_SOURCES),
+            ekspektasi: pick(REG_EXPECTATIONS),
           }),
         ])
         totalRegSurveys++
       }
 
-      // Post-event survey responses (only for attended registrations on active/completed events)
-      if (['active', 'completed', 'archived'].includes(ev.status) && ev.surveyCount > 0) {
+      // Post-event survey responses (for attended registrations on active/completed/published events)
+      if (!['draft', 'cancelled'].includes(ev.status) && ev.surveyCount > 0) {
         const postSurveyRows = await client.query(
           `SELECT id FROM registrations WHERE event_id = $1 AND attendance_status = 'attended' LIMIT $2`,
           [eventId, ev.surveyCount]
@@ -626,17 +651,9 @@ export async function seedDemo(pool: Pool): Promise<void> {
             createId(), eventId, reg.id,
             JSON.stringify({
               ratingKeseluruhan: rating,
-              topikFavorit: pick(['AI & Machine Learning', 'Cloud Native', 'DevOps', 'Data Engineering', 'Security', 'Lainnya']),
+              topikFavorit: pick(POST_TOPICS),
               kualitasPenyajian: presentation,
-              saranPerbaikan: pick([
-                'Sangat bermanfaat, topik relevan dengan pekerjaan sehari-hari',
-                'Perlu lebih banyak sesi networking antar peserta',
-                'Durasi terlalu singkat, bisa diperpanjang',
-                'Tempat kurang luas, kapasitas perlu ditingkatkan',
-                'Materi terlalu teknis untuk pemula',
-                'Pembicara sangat inspiratif dan berpengalaman',
-                'Live demo lebih membantu daripada slide presentasi',
-              ]),
+              saranPerbaikan: pick(POST_SUGGESTIONS),
               akanHadirLagi: weightedPick(['Ya', 'Mungkin', 'Tidak'], [65, 25, 10]),
             }),
           ])
@@ -871,7 +888,9 @@ async function validate(client: PoolClient): Promise<void> {
   await check('Registrations organic', `SELECT count(*) FROM registrations WHERE registration_source = 'organic'`, c => c >= 10)
   await check('Registrations OTS', `SELECT count(*) FROM registrations WHERE registration_source = 'ots'`, c => c >= 5)
   await check('Events with registration_survey_schema', `SELECT count(*) FROM events WHERE registration_survey_schema IS NOT NULL`, c => c >= 10)
-  await check('Events with post_survey_schema', `SELECT count(*) FROM events WHERE post_survey_schema IS NOT NULL`, c => c >= 5)
+  await check('Events with post_survey_schema', `SELECT count(*) FROM events WHERE post_survey_schema IS NOT NULL`, c => c >= 7)
+  await check('Registration survey responses', `SELECT count(*) FROM survey_responses WHERE survey_type = 'registration'`, c => c >= 50)
+  await check('Post-event survey responses', `SELECT count(*) FROM survey_responses WHERE survey_type = 'post-event'`, c => c >= 20)
 
   console.log(`\n${passed + failed} checks: ${passed} passed, ${failed} failed`)
   if (failed > 0) {
