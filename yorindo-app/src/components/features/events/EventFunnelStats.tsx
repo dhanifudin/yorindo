@@ -20,7 +20,8 @@ interface FunnelStep {
 }
 
 export function EventFunnelStats({ blastCount, registered, approved, attended, otsCount, blastRegistered, organicRegistered }: EventFunnelStatsProps) {
-  const totalAttended = attended + otsCount
+  const ots = otsCount ?? 0
+  const totalAttended = attended + ots
   const noShow = approved - attended
   const noShowRate = approved > 0 ? Math.round((noShow / approved) * 100) : 0
 
@@ -30,10 +31,10 @@ export function EventFunnelStats({ blastCount, registered, approved, attended, o
   }
 
   const steps: FunnelStep[] = [
-    { label: 'Diundang',   value: blastCount,    conversion: undefined },
-    { label: 'Daftar',     value: registered,    conversion: pct(registered, blastCount) ?? '—' },
-    { label: 'Disetujui',  value: approved,      conversion: pct(approved, registered) ?? '—' },
-    { label: 'Hadir',      value: totalAttended, conversion: pct(totalAttended, approved) ?? '—' },
+    { label: 'Diundang',   value: blastCount ?? 0,    conversion: undefined },
+    { label: 'Daftar',     value: registered ?? 0,    conversion: pct(registered ?? 0, blastCount ?? 0) ?? '—' },
+    { label: 'Disetujui',  value: approved ?? 0,      conversion: pct(approved ?? 0, registered ?? 0) ?? '—' },
+    { label: 'Hadir',      value: totalAttended, conversion: pct(totalAttended, approved ?? 0) ?? '—' },
   ]
 
   return (
@@ -68,7 +69,7 @@ export function EventFunnelStats({ blastCount, registered, approved, attended, o
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">🚶 On The Spot (OTS)</span>
-            <span className="font-medium">{otsCount.toLocaleString('id-ID')}</span>
+            <span className="font-medium">{ots.toLocaleString('id-ID')}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">❌ No-show</span>
@@ -96,7 +97,7 @@ export function EventFunnelStats({ blastCount, registered, approved, attended, o
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">🚶 On The Spot (OTS)</span>
-              <span className="font-medium">{otsCount.toLocaleString('id-ID')}</span>
+              <span className="font-medium">{ots.toLocaleString('id-ID')}</span>
             </div>
           </div>
         )}
