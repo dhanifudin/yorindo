@@ -47,6 +47,7 @@ const migrations = [
   '016_banner_url.sql',
   '017_topic_tags.sql',
   '018_registration_source.sql',
+  '019_survey_responses.sql',
 ]
 
 export async function runMigrations(pool: Pool): Promise<void> {
