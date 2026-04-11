@@ -1590,9 +1590,32 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
 
     validateOpenApiRequest({ path: '/events/{id}/ots', method: 'post', params: params.data, body: body.data })
 
-    // Upsert contact by phone
+    // Check if contact with this email already exists
     let contact = await contactRepository.findByPhone(body.data.phone)
+
+    // Also check by email to prevent duplicate OTS registrations
+    if (!contact && body.data.email) {
+      const { data: allContacts } = await contactRepository.findAll({ page: 1, pageSize: 1000 })
+      contact = allContacts.find(c => (c.email ?? '').toLowerCase() === body.data.email.toLowerCase()) ?? null
+    }
+
+    // If contact exists, check if they already have an OTS registration for this event
     if (contact) {
+      const existingRegistrations = await registrationRepository.findByEvent(event.id, { page: 1, pageSize: 500 })
+      const duplicateOts = existingRegistrations.data.find(
+        r => r.contactId === contact!.id && r.status === 'approved' && r.attendedAt
+      )
+      if (duplicateOts) {
+        return reply.status(409).send({
+          error: {
+            code: 'DUPLICATE_OTS',
+            message: `${contact.name} sudah terdaftar sebagai peserta On The Spot untuk event ini`,
+            details: [],
+          },
+        })
+      }
+
+      // Update existing contact with latest info
       contact = await contactRepository.update(contact.id, {
         name: body.data.name,
         email: body.data.email,
@@ -1680,7 +1703,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
 
     // Filter to only OTS (approved + attended) and enrich with contact data
     const otsRegistrations = registrations.data
-      .filter(r => r.status === 'approved' && r.attendedAt)
+      .filter((r): r is typeof r & { attendedAt: string } => r.status === 'approved' && !!r.attendedAt)
       .slice(0, 10)
 
     const enriched = []
