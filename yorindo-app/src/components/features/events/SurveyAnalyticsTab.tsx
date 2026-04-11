@@ -184,65 +184,81 @@ export function SurveyAnalyticsTab({ eventId }: { eventId: string }) {
         </Card>
       ))}
 
-      {/* Individual responses table */}
+      {/* Individual responses table — hidden by default */}
       {responses.length > 0 && (
         <Card>
           <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <div>
+            <button
+              type="button"
+              onClick={() => setShowResponses(!showResponses)}
+              className="flex items-center justify-between w-full"
+            >
+              <div className="text-left">
                 <CardTitle className="text-base">Daftar Respons Individu</CardTitle>
-                <CardDescription>Detail jawaban setiap responden</CardDescription>
+                <CardDescription>Klik untuk {showResponses ? 'sembunyikan' : 'tampilkan'} detail jawaban</CardDescription>
               </div>
-              <Badge variant="outline">{responses.length} responden</Badge>
-            </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline">{responses.length} responden</Badge>
+                <svg
+                  className={`w-5 h-5 transition-transform ${showResponses ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </button>
           </CardHeader>
-          <CardContent>
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[180px]">Responden</TableHead>
-                    {aggregates.map(agg => (
-                      <TableHead key={agg.questionId} className="min-w-[120px]">
-                        {agg.questionLabel}
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {responses.map(resp => (
-                    <TableRow key={resp.id}>
-                      <TableCell>
-                        <div className="text-sm font-medium">{resp.contactName}</div>
-                        <div className="text-xs text-muted-foreground">{resp.contactPhone}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {new Date(resp.submittedAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })}
-                        </div>
-                      </TableCell>
-                      {aggregates.map(agg => {
-                        const answer = resp.answers[agg.questionId]
-                        let displayValue: string
-
-                        if (answer === null || answer === undefined) {
-                          displayValue = '—'
-                        } else if (typeof answer === 'object') {
-                          displayValue = JSON.stringify(answer)
-                        } else {
-                          displayValue = String(answer)
-                        }
-
-                        return (
-                          <TableCell key={agg.questionId}>
-                            <span className="text-sm">{displayValue}</span>
-                          </TableCell>
-                        )
-                      })}
+          {showResponses && (
+            <CardContent>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[180px]">Responden</TableHead>
+                      {aggregates.map(agg => (
+                        <TableHead key={agg.questionId} className="min-w-[120px]">
+                          {agg.questionLabel}
+                        </TableHead>
+                      ))}
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
+                  </TableHeader>
+                  <TableBody>
+                    {responses.map(resp => (
+                      <TableRow key={resp.id}>
+                        <TableCell>
+                          <div className="text-sm font-medium">{resp.contactName}</div>
+                          <div className="text-xs text-muted-foreground">{resp.contactPhone}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {new Date(resp.submittedAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })}
+                          </div>
+                        </TableCell>
+                        {aggregates.map(agg => {
+                          const answer = resp.answers[agg.questionId]
+                          let displayValue: string
+
+                          if (answer === null || answer === undefined) {
+                            displayValue = '—'
+                          } else if (typeof answer === 'object') {
+                            displayValue = JSON.stringify(answer)
+                          } else {
+                            displayValue = String(answer)
+                          }
+
+                          return (
+                            <TableCell key={agg.questionId}>
+                              <span className="text-sm">{displayValue}</span>
+                            </TableCell>
+                          )
+                        })}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          )}
         </Card>
       )}
     </div>
