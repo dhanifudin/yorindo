@@ -53,10 +53,9 @@ const TABS: TabConfig[] = [
   { label: 'Tiket',       key: 'confirmation',  href: '/confirmation' },
   { label: 'Check-in',    key: 'checkin',       href: '/checkin' },
   { label: 'On the spot', key: 'ots',           href: '/ots' },
-  { label: 'Laporan',     key: 'report',        href: '/report' },
 ]
 
-// ─── Reorder tabs for completed events (Laporan first) ────────────────────────
+// ─── Visible tabs based on event status ───────────────────────────────────────
 
 function getVisibleTabs(eventStatus?: string): TabConfig[] {
   if (!eventStatus) return [TABS[0]] // Overview safely
@@ -69,22 +68,20 @@ function getVisibleTabs(eventStatus?: string): TabConfig[] {
     case 'active':
       return TABS.filter(t => ['overview', 'checkin', 'ots'].includes(t.key))
     case 'completed':
-      return TABS.filter(t => ['overview', 'report'].includes(t.key))
     case 'archived':
-      return TABS.filter(t => ['report', 'overview'].includes(t.key))
+      return TABS.filter(t => ['overview'].includes(t.key))
     default:
       return TABS.filter(t => ['overview'].includes(t.key))
   }
 }
 
-// ─── Redirect /report to Overview (merged) ───────────────────────────────────
+// ─── Tab key detection ────────────────────────────────────────────────────────
 
 function getActiveTab(pathname: string): string {
   if (pathname.endsWith('/blast')) return 'blast'
   if (pathname.includes('/registrations')) return 'registrations'
   if (pathname.endsWith('/confirmation')) return 'confirmation'
   if (pathname.endsWith('/checkin')) return 'checkin'
-  if (pathname.endsWith('/report')) return 'report'
   if (pathname.endsWith('/ots')) return 'ots'
   return 'overview'
 }
@@ -106,13 +103,6 @@ export default function EventHubShellLayout({ children, params }: HubLayoutProps
     queryFn: () => fetch(`/api/events/${id}`).then(r => r.json()),
     staleTime: 60_000,
   })
-
-  // Redirect /report to Overview (tabs merged)
-  useEffect(() => {
-    if (pathname.includes('/report')) {
-      router.replace(baseHref)
-    }
-  }, [pathname, router, baseHref])
 
   // Shared blockerState query
   const { data: blockerState } = useQuery<EventOverviewResponse>({

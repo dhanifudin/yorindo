@@ -188,7 +188,7 @@ export async function seedDemo(pool: Pool): Promise<void> {
         ev.isPaid, ev.price,
         ['completed', 'cancelled', 'archived'].includes(ev.status),
         ev.status !== 'draft' ? pick(vendorIds) : null,
-        ev.topicTags.length > 0 ? JSON.stringify(ev.topicTags) : null,
+        ev.topicTags.length > 0 ? ev.topicTags : null,
       ])
     }
     console.log(`✓ Seeded ${EVENTS.length} events (with topic_tags)`)
@@ -416,16 +416,25 @@ export async function seedDemo(pool: Pool): Promise<void> {
     // OTS registrations are walk-in registrations created during the event
     // They have status='approved' AND attended_at IS NOT NULL (auto-approved and marked attended)
     let totalOts = 0
+    // Start from contact index 350 to avoid overlap with regular registrations
+    let otsContactIdx = 350
     for (let ei = 0; ei < EVENTS.length; ei++) {
       const ev = EVENTS[ei]
       if (ev.otsCount === 0) continue
       const eventId = eventIds[ei]
 
       for (let o = 0; o < ev.otsCount; o++) {
-        // Use contacts that haven't been registered yet for this event
-        const contactOffset = 100 + totalOts
-        const contactId = contactIds[contactOffset % contactIds.length]
+        // Use contacts from a separate range to minimize overlap
+        const contactId = contactIds[otsContactIdx % contactIds.length]
+        otsContactIdx++
         const regId = createId()
+
+        // Skip if this contact is already registered for this event
+        const existing = await client.query(
+          `SELECT id FROM registrations WHERE contact_id = $1 AND event_id = $2`,
+          [contactId, eventId]
+        )
+        if (existing.rows.length > 0) continue
 
         // OTS registrations are always approved and attended
         const approvedAt = d(ev.dateOffset, 8 + (o % 4)) // Morning of event
