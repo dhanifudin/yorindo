@@ -52,6 +52,7 @@ export default function OnTheSpotPage({ params }: { params: Promise<{ id: string
     name: '',
     email: '',
     phone: '',
+    company: '',
     title: '', // Jabatan
     industry: '',
   })
@@ -73,11 +74,12 @@ export default function OnTheSpotPage({ params }: { params: Promise<{ id: string
               ...prev,
               name: contact.name ?? prev.name,
               phone: contact.phone ?? prev.phone,
+              company: contact.company ?? prev.company,
               industry: contact.serviceType ?? prev.industry,
               title: contact.jobTitle ?? prev.title,
             }))
             setHasAutoFilled(true)
-            toast.info(`Kontek ditemukan: ${contact.name}`, {
+            toast.info(`Kontak ditemukan: ${contact.name}`, {
               description: 'Data otomatis diisi dari database kontak',
               duration: 4000,
             })
@@ -108,6 +110,7 @@ export default function OnTheSpotPage({ params }: { params: Promise<{ id: string
           name: data.name,
           email: data.email,
           phone: data.phone,
+          company: data.company || undefined,
           industry: data.industry,
           jobTitle: data.title || undefined,
         }),
@@ -125,6 +128,7 @@ export default function OnTheSpotPage({ params }: { params: Promise<{ id: string
         name: '',
         email: '',
         phone: '',
+        company: '',
         title: '',
         industry: '',
       })
@@ -208,6 +212,16 @@ export default function OnTheSpotPage({ params }: { params: Promise<{ id: string
                   value={form.phone}
                   onChange={(e) => setForm(f => ({ ...f, phone: e.target.value }))}
                   required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="company">Perusahaan</Label>
+                <Input
+                  id="company"
+                  placeholder="Contoh: PT Maju Bersama"
+                  value={form.company}
+                  onChange={(e) => setForm(f => ({ ...f, company: e.target.value }))}
                 />
               </div>
 
