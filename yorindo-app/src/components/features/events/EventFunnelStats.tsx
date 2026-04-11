@@ -20,10 +20,15 @@ interface FunnelStep {
 }
 
 export function EventFunnelStats({ blastCount, registered, approved, attended, otsCount, blastRegistered, organicRegistered }: EventFunnelStatsProps) {
+  const att = attended ?? 0
+  const reg = registered ?? 0
+  const app = approved ?? 0
   const ots = otsCount ?? 0
-  const totalAttended = attended + ots
-  const noShow = approved - attended
-  const noShowRate = approved > 0 ? Math.round((noShow / approved) * 100) : 0
+  const bl = blastRegistered ?? 0
+  const org = organicRegistered ?? 0
+  const totalAttended = att + ots
+  const noShow = app - att
+  const noShowRate = app > 0 ? Math.round((noShow / app) * 100) : 0
 
   function pct(num: number, denom: number) {
     if (denom === 0) return null
@@ -32,9 +37,9 @@ export function EventFunnelStats({ blastCount, registered, approved, attended, o
 
   const steps: FunnelStep[] = [
     { label: 'Diundang',   value: blastCount ?? 0,    conversion: undefined },
-    { label: 'Daftar',     value: registered ?? 0,    conversion: pct(registered ?? 0, blastCount ?? 0) ?? '—' },
-    { label: 'Disetujui',  value: approved ?? 0,      conversion: pct(approved ?? 0, registered ?? 0) ?? '—' },
-    { label: 'Hadir',      value: totalAttended, conversion: pct(totalAttended, approved ?? 0) ?? '—' },
+    { label: 'Daftar',     value: reg,                conversion: pct(reg, blastCount ?? 0) ?? '—' },
+    { label: 'Disetujui',  value: app,                conversion: pct(app, reg) ?? '—' },
+    { label: 'Hadir',      value: totalAttended,      conversion: pct(totalAttended, app) ?? '—' },
   ]
 
   return (
@@ -65,7 +70,7 @@ export function EventFunnelStats({ blastCount, registered, approved, attended, o
         <div className="border-t pt-3 space-y-1.5 text-sm">
           <div className="flex justify-between">
             <span className="text-muted-foreground">🎟️ Pre-registered hadir</span>
-            <span className="font-medium">{attended.toLocaleString('id-ID')}</span>
+            <span className="font-medium">{att.toLocaleString('id-ID')}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">🚶 On The Spot (OTS)</span>
@@ -89,11 +94,11 @@ export function EventFunnelStats({ blastCount, registered, approved, attended, o
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Sumber Registrasi</p>
             <div className="flex justify-between">
               <span className="text-muted-foreground">📧 Dari Undangan (Blast)</span>
-              <span className="font-medium">{(blastRegistered ?? 0).toLocaleString('id-ID')}</span>
+              <span className="font-medium">{bl.toLocaleString('id-ID')}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">🔗 Organik (Link Publik)</span>
-              <span className="font-medium">{(organicRegistered ?? 0).toLocaleString('id-ID')}</span>
+              <span className="font-medium">{org.toLocaleString('id-ID')}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">🚶 On The Spot (OTS)</span>
