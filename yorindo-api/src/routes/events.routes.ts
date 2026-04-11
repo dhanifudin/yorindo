@@ -2,6 +2,7 @@ import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import {
   auditLogRepository,
+  blastLogRecipientRepository,
   contactRepository,
   eventRepository,
   queueService,
@@ -15,6 +16,7 @@ import {
 } from '../container.js'
 import { blastProgressStore } from '../lib/blast-progress-store.js'
 import { getRedisOptional } from '../lib/redis.js'
+import { getPool } from '../lib/postgres.js'
 import { requireAdmin, requireAuth, requireRoles, type JwtPayload } from '../middleware/auth.js'
 import type { Event, EventStatus, Registration, TargetCriteria } from '../types/domain.js'
 import { validateOpenApiRequest, validateOpenApiResponse } from '../lib/openapi-contract.js'
@@ -1371,11 +1373,37 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       contactFilters.topicTags = event.topicTags
     }
 
-    // Always exclude contacts missing phone or email — they can't receive any blast channel
-    const recipientCount = body.data.contactIds?.length ?? (await contactRepository.findAll(
-      { page: 1, pageSize: 500 },
-      { ...contactFilters, hasPhone: true, hasEmail: true },
-    )).total
+    // Fetch actual contacts for recipient tracking
+    let contactIds: string[]
+    if (body.data.contactIds?.length) {
+      contactIds = body.data.contactIds
+    } else {
+      const result = await contactRepository.findAll(
+        { page: 1, pageSize: 500 },
+        { ...contactFilters, hasPhone: true, hasEmail: true },
+      )
+      contactIds = result.data.map(c => c.id)
+    }
+    const recipientCount = contactIds.length
+
+    // Create blast_logs entry and record recipients for registration source tracking
+    try {
+      const pool = getPool()
+      const blastLogId = `blast-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+      await pool.query(
+        `INSERT INTO blast_logs (id, event_id, template_id, channel, recipient_count, status, sent_at)
+         VALUES ($1, $2, $3, $4, $5, 'queued', NOW())`,
+        [blastLogId, event.id, body.data.templateId ?? null, body.data.channel, recipientCount],
+      )
+      if (contactIds.length > 0) {
+        await blastLogRecipientRepository.insertRecipients(blastLogId, event.id, contactIds, body.data.channel)
+      }
+    } catch {
+      // Pool not available (tests or non-Postgres mode) — still track recipients
+      if (contactIds.length > 0) {
+        await blastLogRecipientRepository.insertRecipients(`blast-${Date.now()}`, event.id, contactIds, body.data.channel)
+      }
+    }
 
     // Look up template from database (not hardcoded)
     const tmpl = body.data.templateId

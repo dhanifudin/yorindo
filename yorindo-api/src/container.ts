@@ -11,6 +11,7 @@ import type { ITemplateRepository } from './interfaces/repositories/ITemplateRep
 import type { IUserRepository } from './interfaces/repositories/IUserRepository.js'
 import type { IVendorRepository } from './interfaces/repositories/IVendorRepository.js'
 import type { IEventSponsorRepository } from './interfaces/repositories/IEventSponsorRepository.js'
+import type { IBlastLogRecipientRepository } from './interfaces/repositories/IBlastLogRecipientRepository.js'
 import type { IDeduplicationService } from './interfaces/services/IDeduplicationService.js'
 import type { IEmailService } from './interfaces/services/IEmailService.js'
 import type { IEtlNormalizationService } from './interfaces/services/IEtlNormalizationService.js'
@@ -30,6 +31,7 @@ import { InMemoryUserRepository } from './repositories/memory/UserRepository.js'
 import { InMemoryVendorRepository } from './repositories/memory/VendorRepository.js'
 import { InMemoryEventSponsorRepository } from './repositories/memory/EventSponsorRepository.js'
 import { InMemoryTemplateRepository } from './repositories/memory/TemplateRepository.js'
+import { InMemoryBlastLogRecipientRepository } from './repositories/memory/BlastLogRecipientRepository.js'
 import { getPool } from './repositories/postgres/pool.js'
 import { PostgresContactRepository } from './repositories/postgres/ContactRepository.js'
 import { PostgresEventRepository } from './repositories/postgres/EventRepository.js'
@@ -43,6 +45,7 @@ import { PostgresSurveyRepository } from './repositories/postgres/SurveyReposito
 import { PostgresVendorRepository } from './repositories/postgres/VendorRepository.js'
 import { PostgresEventSponsorRepository } from './repositories/postgres/EventSponsorRepository.js'
 import { PostgresTemplateRepository } from './repositories/postgres/TemplateRepository.js'
+import { PostgresBlastLogRecipientRepository } from './repositories/postgres/BlastLogRecipientRepository.js'
 import { SmtpEmailService } from './services/adapters/real/SmtpEmailService.js'
 import { getProviderConfig, clearProviderConfigCache } from './lib/email-provider-config.js'
 import { FuzzyDeduplicationService } from './services/FuzzyDeduplicationService.js'
@@ -73,6 +76,7 @@ function resolveRepositories(): {
   vendorRepository: IVendorRepository
   eventSponsorRepository: IEventSponsorRepository
   templateRepository: ITemplateRepository
+  blastLogRecipientRepository: IBlastLogRecipientRepository
 } {
   if (config.repositoryImpl === 'memory') {
     return {
@@ -88,6 +92,7 @@ function resolveRepositories(): {
       vendorRepository: new InMemoryVendorRepository(),
       eventSponsorRepository: new InMemoryEventSponsorRepository(),
       templateRepository: new InMemoryTemplateRepository(),
+      blastLogRecipientRepository: new InMemoryBlastLogRecipientRepository(),
     }
   }
 
@@ -106,6 +111,7 @@ function resolveRepositories(): {
       vendorRepository: new PostgresVendorRepository(pool),
       eventSponsorRepository: new PostgresEventSponsorRepository(pool),
       templateRepository: new PostgresTemplateRepository(pool),
+      blastLogRecipientRepository: new PostgresBlastLogRecipientRepository(pool),
     }
   }
 
@@ -216,6 +222,7 @@ export const auditLogRepository: IAuditLogRepository = repos.auditLogRepository
 export const vendorRepository: IVendorRepository = repos.vendorRepository
 export const eventSponsorRepository: IEventSponsorRepository = repos.eventSponsorRepository
 export const templateRepository: ITemplateRepository = repos.templateRepository
+export const blastLogRecipientRepository: IBlastLogRecipientRepository = repos.blastLogRecipientRepository
 
 export const emailService: IEmailService = svcs.emailService
 export const whatsAppService: IWhatsAppService = svcs.whatsAppService
