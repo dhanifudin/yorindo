@@ -86,7 +86,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   return (
     <div className="space-y-4">
       {/* Banner image — Story 4.7 */}
-      <div className="relative aspect-video lg:aspect-[21/9] w-full rounded-xl overflow-hidden border bg-muted">
+      <div className="relative h-32 md:h-40 w-full rounded-xl overflow-hidden border bg-muted">
         {event.bannerUrl ? (
           <Image
             src={event.bannerUrl}
@@ -102,9 +102,9 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
-        <div className="absolute bottom-4 left-6 right-6">
-          <h1 className="text-3xl font-bold text-white drop-shadow-md">{event.name}</h1>
-          <p className="text-white/80 line-clamp-1">{event.venue ?? 'Venue belum ditentukan'}</p>
+        <div className="absolute bottom-3 left-4 right-4">
+          <h1 className="text-xl md:text-2xl font-bold text-white drop-shadow-md">{event.name}</h1>
+          <p className="text-white/80 text-sm line-clamp-1">{event.venue ?? 'Venue belum ditentukan'}</p>
         </div>
       </div>
 
