@@ -158,7 +158,7 @@ export default function EventHubShellLayout({ children, params }: HubLayoutProps
     }
   }
 
-  // Blocker strip items
+  // Blocker strip items — hide pending approvals when event is active
   const blockerItems: Array<{
     id: string
     label: string
@@ -166,7 +166,9 @@ export default function EventHubShellLayout({ children, params }: HubLayoutProps
     urgency?: 'default' | 'warning'
   }> = []
 
-  if (pendingCount > 0) {
+  const isActiveEvent = event?.status === 'active'
+
+  if (pendingCount > 0 && !isActiveEvent) {
     blockerItems.push({
       id: 'pending',
       label: `${pendingCount} pendaftar menunggu persetujuan`,
