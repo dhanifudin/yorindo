@@ -1,6 +1,6 @@
 'use client'
 
-import { use, useState } from 'react'
+import { use, useState, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -47,7 +47,7 @@ const STATUS_BADGE_CLASS: Record<string, string> = {
 export default function OnTheSpotPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const queryClient = useQueryClient()
-  
+
   const [form, setForm] = useState({
     name: '',
     email: '',
@@ -55,6 +55,43 @@ export default function OnTheSpotPage({ params }: { params: Promise<{ id: string
     title: '', // Jabatan
     industry: '',
   })
+  const [isLookingUp, setIsLookingUp] = useState(false)
+  const [hasAutoFilled, setHasAutoFilled] = useState(false)
+
+  // Debounced contact lookup by email
+  useEffect(() => {
+    if (!form.email || form.email.length < 3 || hasAutoFilled) return
+
+    const timer = setTimeout(async () => {
+      setIsLookingUp(true)
+      try {
+        const res = await fetch(`/api/contacts/lookup?email=${encodeURIComponent(form.email)}`)
+        if (res.ok) {
+          const contact = await res.json()
+          if (contact) {
+            setForm((prev) => ({
+              ...prev,
+              name: contact.name ?? prev.name,
+              phone: contact.phone ?? prev.phone,
+              industry: contact.serviceType ?? prev.industry,
+              title: contact.jobTitle ?? prev.title,
+            }))
+            setHasAutoFilled(true)
+            toast.info(`Kontek ditemukan: ${contact.name}`, {
+              description: 'Data otomatis diisi dari database kontak',
+              duration: 4000,
+            })
+          }
+        }
+      } catch {
+        // Ignore lookup errors silently
+      } finally {
+        setIsLookingUp(false)
+      }
+    }, 600) // 600ms debounce
+
+    return () => clearTimeout(timer)
+  }, [form.email, hasAutoFilled])
 
   const { data: registrationsData, isLoading: isLoadingRegs } = useQuery<{ data: RegistrationWithContact[] }>({
     queryKey: ['event-registrations', id],
@@ -91,6 +128,7 @@ export default function OnTheSpotPage({ params }: { params: Promise<{ id: string
         title: '',
         industry: '',
       })
+      setHasAutoFilled(false)
     },
     onError: (error: Error) => {
       toast.error(error.message)
@@ -137,14 +175,28 @@ export default function OnTheSpotPage({ params }: { params: Promise<{ id: string
 
               <div className="space-y-2">
                 <Label htmlFor="email">Email <span className="text-destructive">*</span></Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="budi@example.com"
-                  value={form.email}
-                  onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))}
-                  required
-                />
+                <div className="relative">
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="budi@example.com"
+                    value={form.email}
+                    onChange={(e) => {
+                      setForm(f => ({ ...f, email: e.target.value }))
+                      setHasAutoFilled(false)
+                    }}
+                    required
+                    className={isLookingUp ? 'pr-10' : ''}
+                  />
+                  {isLookingUp && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Masukkan email — data otomatis diisi jika ditemukan di database kontak
+                </p>
               </div>
 
               <div className="space-y-2">
