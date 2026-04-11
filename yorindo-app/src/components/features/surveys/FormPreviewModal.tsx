@@ -210,17 +210,15 @@ export function FormPreviewModal({
       <DialogContent className="max-w-4xl w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0">
         {/* Header */}
         <DialogHeader className="px-6 py-4 border-b bg-muted/30">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Eye className="w-4 h-4 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold">Preview Formulir</p>
-                <p className="text-xs text-muted-foreground">
-                  Tampilan formulir sesuai yang akan dilihat peserta
-                </p>
-              </div>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Eye className="w-4 h-4 text-primary" />
+            </div>
+            <div>
+              <DialogTitle className="text-sm font-semibold">Preview Formulir</DialogTitle>
+              <p className="text-xs text-muted-foreground">
+                Tampilan formulir sesuai yang akan dilihat peserta
+              </p>
             </div>
           </div>
         </DialogHeader>
