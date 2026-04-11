@@ -22,7 +22,7 @@ interface SurveyBuilderClientProps {
 export default function SurveyBuilderClient({ id }: SurveyBuilderClientProps) {
   const queryClient = useQueryClient()
   const [previewOpen, setPreviewOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState<'registration' | 'post-event'>('registration')
+  const [activeTab, setActiveTab] = useState<'registration' | 'post-event'>('post-event')
   
   // Registration and Post-Event preview fields
   const [regPreviewFields, setRegPreviewFields] = useState<SurveyField[]>([])
@@ -71,7 +71,8 @@ export default function SurveyBuilderClient({ id }: SurveyBuilderClientProps) {
     setPreviewOpen(true)
   }
 
-  const isEditable = event?.status === 'draft'
+  const isDraft = event?.status === 'draft'
+  const isPreSurveyLocked = !isDraft // registration survey locked after draft
 
   return (
     <div className="space-y-6">
@@ -105,23 +106,22 @@ export default function SurveyBuilderClient({ id }: SurveyBuilderClientProps) {
         </div>
       </div>
 
-      {/* Locked banner for non-draft events */}
-      {!isEditable && (
+      {/* Locked banner for registration survey when event is past draft */}
+      {isPreSurveyLocked && activeTab === 'registration' && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
           <div className="flex items-start gap-3">
             <span className="text-amber-600 text-lg">🔒</span>
             <div>
-              <p className="text-sm font-medium text-amber-800">Survei Terkunci</p>
+              <p className="text-sm font-medium text-amber-800">Survei Registrasi Terkunci</p>
               <p className="text-xs text-amber-700 mt-0.5">
-                Survei tidak dapat diubah karena event sudah dipublikasikan.
-                Pendaftaran peserta mungkin sudah menggunakan formulir ini.
+                Survei registrasi tidak dapat diubah setelah event dibuat. Pendaftaran peserta mungkin sudah menggunakan formulir ini.
               </p>
             </div>
           </div>
         </div>
       )}
 
-      {/* Tabs */}
+      {/* Tabs — Post-Event first, then Registration */}
       <Tabs
         value={activeTab}
         onValueChange={(val) => setActiveTab(val as 'registration' | 'post-event')}
@@ -129,25 +129,13 @@ export default function SurveyBuilderClient({ id }: SurveyBuilderClientProps) {
       >
         <nav className="flex border-b border-border bg-background overflow-x-auto">
           <button
-            onClick={() => setActiveTab('registration')}
-            className={cn(
-              'inline-flex items-center px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors',
-              activeTab === 'registration'
-                ? 'border-primary text-foreground'
-                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border',
-              !isEditable && 'opacity-60 pointer-events-none',
-            )}
-          >
-            Survei Registrasi
-          </button>
-          <button
-            onClick={() => isEditable && setActiveTab('post-event')}
+            onClick={() => setActiveTab('post-event')}
             className={cn(
               'inline-flex items-center px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors',
               activeTab === 'post-event'
                 ? 'border-primary text-foreground'
                 : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border',
-              !isEditable && 'opacity-60 pointer-events-none',
+              !event?.postSurveyEnabled && 'opacity-60 pointer-events-none',
             )}
           >
             Survei Post-Event
@@ -155,17 +143,26 @@ export default function SurveyBuilderClient({ id }: SurveyBuilderClientProps) {
               <span className="ml-2 w-2 h-2 rounded-full bg-green-500" />
             )}
           </button>
+          <button
+            onClick={() => !isPreSurveyLocked && setActiveTab('registration')}
+            className={cn(
+              'inline-flex items-center px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors',
+              activeTab === 'registration'
+                ? 'border-primary text-foreground'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border',
+              isPreSurveyLocked && 'opacity-60 pointer-events-none cursor-not-allowed',
+            )}
+            disabled={isPreSurveyLocked}
+            title={isPreSurveyLocked ? 'Survei registrasi tidak dapat diubah setelah event dibuat' : ''}
+          >
+            Survei Registrasi
+            {isPreSurveyLocked && (
+              <span className="ml-2 text-xs text-muted-foreground">(terkunci)</span>
+            )}
+          </button>
         </nav>
 
-        <TabsContent value="registration" className="m-0 focus-visible:outline-none">
-          <SurveyBuilderTab
-            eventId={id}
-            type="registration"
-            onPreview={handlePreview}
-            readOnly={!isEditable}
-          />
-        </TabsContent>
-
+        {/* Post-Event Survey — always editable when enabled */}
         <TabsContent value="post-event" className="m-0 focus-visible:outline-none">
           <SurveyBuilderTab
             eventId={id}
@@ -173,7 +170,17 @@ export default function SurveyBuilderClient({ id }: SurveyBuilderClientProps) {
             postSurveyEnabled={event?.postSurveyEnabled}
             onTogglePostSurvey={(enabled) => togglePostSurveyMutation.mutate(enabled)}
             onPreview={handlePreview}
-            readOnly={!isEditable}
+            readOnly={!event?.postSurveyEnabled}
+          />
+        </TabsContent>
+
+        {/* Registration Survey — locked after draft */}
+        <TabsContent value="registration" className="m-0 focus-visible:outline-none">
+          <SurveyBuilderTab
+            eventId={id}
+            type="registration"
+            onPreview={handlePreview}
+            readOnly={isPreSurveyLocked}
           />
         </TabsContent>
       </Tabs>
