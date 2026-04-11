@@ -567,7 +567,7 @@ export async function seedDemo(pool: Pool): Promise<void> {
         }
 
         await client.query(
-          `UPDATE events SET post_survey_schema = $1 WHERE id = $2`,
+          `UPDATE events SET post_survey_schema = $1, post_survey_enabled = TRUE WHERE id = $2`,
           [JSON.stringify(postSchema), eventId],
         )
       }
