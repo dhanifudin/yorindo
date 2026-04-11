@@ -83,15 +83,20 @@ function EmailProviderSection({
   const selectedProvider = formValues.EMAIL_PROVIDER ?? providers?.email?.EMAIL_PROVIDER ?? 'smtp'
   const [testSending, setTestSending] = useState(false)
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
+  const [testEmail, setTestEmail] = useState('')
 
   const handleTestSend = async () => {
+    if (!testEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(testEmail)) {
+      setTestResult({ success: false, message: 'Masukkan alamat email yang valid' })
+      return
+    }
     setTestSending(true)
     setTestResult(null)
     try {
       const res = await fetch('/api/settings/test-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to: 'dhanifudin@gmail.com' }),
+        body: JSON.stringify({ to: testEmail }),
       })
       const data = await res.json()
       if (data.success) {
@@ -306,6 +311,25 @@ function EmailProviderSection({
         <>
           <Separator />
           <div className="space-y-3">
+            <div>
+              <Label htmlFor="test-email-input">Email Tujuan Uji</Label>
+              <Input
+                id="test-email-input"
+                type="email"
+                value={testEmail}
+                onChange={(e) => {
+                  setTestEmail(e.target.value)
+                  setTestResult(null)
+                }}
+                placeholder="admin@yourdomain.com"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    handleTestSend()
+                  }
+                }}
+              />
+            </div>
             <Button
               type="button"
               variant="outline"
@@ -338,7 +362,7 @@ function EmailProviderSection({
               </div>
             )}
             <p className="text-xs text-muted-foreground">
-              Email uji akan dikirim ke dhanifudin@gmail.com
+              Masukkan email Anda dan klik tombol untuk menguji konfigurasi email
             </p>
           </div>
         </>
