@@ -31,8 +31,8 @@ function normalizeScore(average: number, distribution: Array<{ label: string; co
 
 export function SurveyScoreCard({ eventId, onScoreComputed }: SurveyScoreCardProps) {
   const { data, isLoading } = useQuery<SurveyResponsesData>({
-    queryKey: ['survey-responses', eventId],
-    queryFn: () => fetch(`/api/events/${eventId}/surveys/responses`).then((r) => r.json()),
+    queryKey: ['survey-responses-post-event', eventId],
+    queryFn: () => fetch(`/api/events/${eventId}/surveys/responses?type=post-event`).then((r) => r.json()),
     staleTime: 60_000,
   })
 
