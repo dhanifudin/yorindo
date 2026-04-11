@@ -17,6 +17,7 @@ interface EventRow extends QueryResultRow {
   city: string | null
   venue: string | null
   description: string | null
+  banner_url: string | null
   capacity: number | null
   waitlist_buffer: number
   approval_mode: string
@@ -30,6 +31,7 @@ interface EventRow extends QueryResultRow {
   is_paid: boolean
   price: string | null
   payment_method: string | null
+  topic_tags: string[] | null
   deleted_at: Date | null
   created_at: Date
   updated_at: Date
@@ -56,6 +58,7 @@ export class PostgresEventRepository
       city: row.city,
       venue: row.venue,
       description: row.description,
+      bannerUrl: row.banner_url,
       capacity: row.capacity,
       waitlistBuffer: row.waitlist_buffer ?? 0,
       approvalMode: row.approval_mode as Event['approvalMode'],
@@ -69,6 +72,7 @@ export class PostgresEventRepository
       isPaid: row.is_paid ?? false,
       price: row.price != null ? Number(row.price) : null,
       paymentMethod: row.payment_method,
+      topicTags: row.topic_tags ?? null,
       deletedAt: this.toIsoOrNull(row.deleted_at),
       createdAt: this.toIso(row.created_at),
       updatedAt: this.toIso(row.updated_at),
@@ -152,11 +156,11 @@ export class PostgresEventRepository
     const { rows } = await this.query<EventRow>(
       `INSERT INTO events (
          id, name, slug, date, start_time, end_date, end_time, timezone,
-         city, venue, description, capacity, waitlist_buffer,
+         city, venue, description, banner_url, capacity, waitlist_buffer,
          approval_mode, notification_channel, scan_format,
          target_criteria, registration_survey_schema, vendor_id, status,
-         is_paid, price, payment_method, deleted_at
-       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)
+         is_paid, price, payment_method, topic_tags, deleted_at
+       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26)
        RETURNING *`,
       [
         createId(),
@@ -170,6 +174,7 @@ export class PostgresEventRepository
         data.city,
         data.venue,
         data.description,
+        data.bannerUrl,
         data.capacity,
         data.waitlistBuffer,
         data.approvalMode,
@@ -182,6 +187,7 @@ export class PostgresEventRepository
         data.isPaid,
         data.price,
         data.paymentMethod,
+        data.topicTags,
         data.deletedAt,
       ],
     )
@@ -204,6 +210,7 @@ export class PostgresEventRepository
       ['city', 'city'],
       ['venue', 'venue'],
       ['description', 'description'],
+      ['bannerUrl', 'banner_url'],
       ['capacity', 'capacity'],
       ['waitlistBuffer', 'waitlist_buffer'],
       ['approvalMode', 'approval_mode'],
@@ -215,6 +222,7 @@ export class PostgresEventRepository
       ['isPaid', 'is_paid'],
       ['price', 'price'],
       ['paymentMethod', 'payment_method'],
+      ['topicTags', 'topic_tags', true],
       ['deletedAt', 'deleted_at'],
       ['targetCriteria', 'target_criteria', true],
     ]

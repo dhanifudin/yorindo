@@ -42,3 +42,11 @@
 **`flagCategory` sentinel strings undocumented:** `'NONE'` (→ IS NULL) and `'ANY'` (→ IS NOT NULL) are magic sentinel values in `ContactFilters.flagCategory`. They are handled in both the memory and Postgres repos but not documented in the `ContactFilters` interface or `IContactRepository`. A future developer passing a literal value `'NONE'` for a real flag category would silently get wrong behavior. Consider replacing with typed `excludeFlagged?: boolean` and `requireFlagged?: boolean` fields.
 
 **`EVENT_CRITERIA` map in seed-demo.ts is not self-updating:** New events added to the `EVENTS` array with `status: 'active'` or `'published'` silently fall through to a generic teknologi fallback if their slug is not in `EVENT_CRITERIA`. No warning is logged when the fallback is used. Consider adding a console.warn when a slug is missing from the map.
+
+## Deferred from spec-fix-event-mgmt-banner-upload (2026-04-11)
+
+- **No upload file cleanup/GC**: Uploaded files accumulate indefinitely. Consider adding a cron job or TTL-based cleanup for old/unused uploads.
+- **Public access to uploaded files**: `/api/uploads/:filename` has no authentication — anyone can access files by guessing filenames. Acceptable for event banners (public-facing), but worth noting if sensitive files are ever uploaded.
+- **Migration 016 includes payment columns**: `is_paid`, `price`, `payment_method` were added alongside `banner_url`. These weren't in the original spec but were found missing during implementation. Useful addition but should be tracked separately.
+- **No upload rate limiting**: An authenticated admin could rapidly upload many files. No per-user or per-endpoint rate limiting exists beyond the global 100 req/min. Address when production performance hardening is done.
+- **SVG XSS risk**: SVG files can contain embedded JavaScript. The upload endpoint accepts SVGs and serves them as `image/svg+xml`. Modern browsers generally don't execute SVG scripts when loaded as `<img>`, but direct URL access could execute them. Consider stripping `<script>` tags from SVGs or serving with `X-Content-Type-Options: nosniff` (already handled by Helmet).

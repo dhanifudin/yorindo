@@ -37,6 +37,7 @@ const EventCreateBodySchema = z.object({
   name: z.string().trim().min(1),
   slug: z.string().trim().optional(),
   description: z.string().trim().optional(),
+  bannerUrl: z.string().min(1).optional().nullable(),
   eventDate: z.string().datetime(), // keep backward compatible openapi
   startDate: z.string().datetime().optional(),
   startTime: z.string().regex(/^([0-1]\d|2[0-3]):[0-5]\d$/).optional(),
@@ -72,6 +73,7 @@ const EventUpdateBodySchema = z.object({
   name: z.string().trim().min(1).optional(),
   slug: z.string().trim().optional(),
   description: z.string().trim().optional(),
+  bannerUrl: z.string().min(1).optional().nullable(),
   eventDate: z.string().datetime().optional(),
   startDate: z.string().datetime().optional(),
   startTime: z.string().regex(/^([0-1]\d|2[0-3]):[0-5]\d$/).optional(),
@@ -115,6 +117,7 @@ const BlastBodySchema = z.object({
     serviceTypes: z.array(z.string()).optional(),
     cities: z.array(z.string()).optional(),
     jobTitles: z.array(z.string()).optional(),
+    topicTags: z.array(z.string()).optional(),
     behavior: z.array(z.enum(['most_active', 'low_attendance', 'never_attended'])).optional(),
     lastAttendedBefore: z.string().optional(),
   }).optional(),
@@ -191,12 +194,13 @@ function toEventDto(event: Event, surveySchema?: unknown, registeredCount: numbe
     timezone: event.timezone,
     capacity: event.capacity ?? undefined,
     registeredCount,
+    bannerUrl: event.bannerUrl ?? undefined,
     targetCriteria: event.targetCriteria ?? {},
     surveySchema: surveySchema ?? {},
     venue: event.venue ?? '',
     industryTags: event.targetCriteria?.serviceTypes ?? [],
     eventType: 'conference',
-    topicTags: [],
+    topicTags: event.topicTags ?? [],
     deletedAt: event.deletedAt,
     createdAt: event.createdAt,
     updatedAt: event.updatedAt,
@@ -521,6 +525,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       city: null,
       venue: payload.venue ?? null,
       description: payload.description ?? null,
+      bannerUrl: payload.bannerUrl ?? null,
       capacity: payload.capacity ?? null,
       waitlistBuffer: 10,
       approvalMode: payload.approvalMode,
@@ -532,6 +537,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       targetCriteria: payload.targetCriteria ? { ...payload.targetCriteria } : {
         serviceTypes: payload.industryTags ?? [],
       },
+      topicTags: payload.topicTags ?? null,
       surveySchemaId: null,
       vendorId: null,
       status: 'draft',
@@ -596,6 +602,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     if (body.data.name !== undefined) updateData.name = body.data.name
     if (body.data.slug !== undefined) updateData.slug = body.data.slug
     if (body.data.description !== undefined) updateData.description = body.data.description
+    if (body.data.bannerUrl !== undefined) updateData.bannerUrl = body.data.bannerUrl ?? null
     if (body.data.eventDate !== undefined) {
       updateData.startDate = body.data.eventDate
       updateData.endDate = body.data.eventDate
@@ -653,6 +660,9 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     }
     if (body.data.postSurveyEnabled !== undefined) {
       updateData.postSurveyEnabled = body.data.postSurveyEnabled
+    }
+    if (body.data.bannerUrl !== undefined) {
+      updateData.bannerUrl = body.data.bannerUrl ?? null
     }
 
     if (Object.keys(updateData).length === 0) {
@@ -714,12 +724,14 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       city: event.city,
       venue: event.venue,
       description: event.description,
+      bannerUrl: event.bannerUrl,
       capacity: event.capacity,
       waitlistBuffer: event.waitlistBuffer,
       approvalMode: event.approvalMode,
       notificationChannel: event.notificationChannel,
       scanFormat: event.scanFormat,
       targetCriteria: event.targetCriteria ? JSON.parse(JSON.stringify(event.targetCriteria)) : null,
+      topicTags: event.topicTags ? [...event.topicTags] : null,
       surveySchemaId: null, // we will recreate survey below
       vendorId: event.vendorId,
       status: 'draft',
@@ -1075,12 +1087,19 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     validateOpenApiRequest({ path: '/events/{id}/audience-preview', method: 'post', params: params.data, body: request.body })
 
     // Use event targetCriteria if no body filters provided
-    const bodyData = body.data
+    const bodyData = body.data as Record<string, unknown>
     const effectiveFilters: Record<string, unknown> = { ...bodyData }
-    if (event.targetCriteria && !bodyData.serviceTypes?.length) {
+    const hasBodyServiceTypes = Array.isArray(bodyData.serviceTypes) && bodyData.serviceTypes.length > 0
+    const hasBodyTopicTags = Array.isArray(bodyData.topicTags) && bodyData.topicTags.length > 0
+    if (event.targetCriteria && !hasBodyServiceTypes) {
       if (event.targetCriteria.serviceTypes) effectiveFilters.serviceTypes = event.targetCriteria.serviceTypes
       if (event.targetCriteria.cities) effectiveFilters.cities = event.targetCriteria.cities
       if (event.targetCriteria.jobTitles) effectiveFilters.jobTitles = event.targetCriteria.jobTitles
+    }
+
+    // Apply event topicTags as secondary filter (contacts must have at least one matching tag)
+    if (event.topicTags?.length && !hasBodyTopicTags) {
+      effectiveFilters.topicTags = event.topicTags
     }
 
     // Normalize legacy slug serviceTypes to the display names stored in the contacts table
@@ -1112,9 +1131,11 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     const svcTypes = effectiveFilters.serviceTypes as string[] | undefined
     const cities = effectiveFilters.cities as string[] | undefined
     const jobTitles = effectiveFilters.jobTitles as string[] | undefined
+    const topicTags = effectiveFilters.topicTags as string[] | undefined
     if (svcTypes?.length) filters.serviceTypes = svcTypes
     if (cities?.length) filters.cities = cities
     if (jobTitles?.length) filters.jobTitles = jobTitles
+    if (topicTags?.length) filters.topicTags = topicTags
 
     // Fetch all matching contacts (use large pageSize, rely on total for accurate count)
     const contacts = await contactRepository.findAll({ page: 1, pageSize: 10000 }, filters)
@@ -1251,12 +1272,37 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     if (!event) return
     validateOpenApiRequest({ path: '/events/{id}/blast', method: 'post', params: params.data, body: body.data })
     const payload = request.user as JwtPayload
+
+    // Fall back to event targetCriteria if no body filters provided
+    const bodyFilters = body.data.filters
+    const hasBodyFilters = bodyFilters && (
+      bodyFilters.serviceTypes?.length ||
+      bodyFilters.cities?.length ||
+      bodyFilters.jobTitles?.length ||
+      bodyFilters.behavior?.length
+    )
+
     const contactFilters: TargetCriteria = {}
-    if (body.data.filters?.serviceTypes) contactFilters.serviceTypes = body.data.filters.serviceTypes
-    if (body.data.filters?.cities) contactFilters.cities = body.data.filters.cities
-    if (body.data.filters?.jobTitles) contactFilters.jobTitles = body.data.filters.jobTitles
-    if (body.data.filters?.behavior) contactFilters.behavior = body.data.filters.behavior
-    if (body.data.filters?.lastAttendedBefore) contactFilters.lastAttendedBefore = body.data.filters.lastAttendedBefore
+    if (!hasBodyFilters && event.targetCriteria) {
+      if (event.targetCriteria.serviceTypes) contactFilters.serviceTypes = event.targetCriteria.serviceTypes
+      if (event.targetCriteria.cities) contactFilters.cities = event.targetCriteria.cities
+      if (event.targetCriteria.jobTitles) contactFilters.jobTitles = event.targetCriteria.jobTitles
+      if (event.targetCriteria.topicTags) contactFilters.topicTags = event.targetCriteria.topicTags
+      if (event.targetCriteria.behavior) contactFilters.behavior = event.targetCriteria.behavior
+      if (event.targetCriteria.lastAttendedBefore) contactFilters.lastAttendedBefore = event.targetCriteria.lastAttendedBefore
+    } else if (bodyFilters) {
+      if (bodyFilters.serviceTypes) contactFilters.serviceTypes = bodyFilters.serviceTypes
+      if (bodyFilters.cities) contactFilters.cities = bodyFilters.cities
+      if (bodyFilters.jobTitles) contactFilters.jobTitles = bodyFilters.jobTitles
+      if (bodyFilters.topicTags) contactFilters.topicTags = bodyFilters.topicTags
+      if (bodyFilters.behavior) contactFilters.behavior = bodyFilters.behavior
+      if (bodyFilters.lastAttendedBefore) contactFilters.lastAttendedBefore = bodyFilters.lastAttendedBefore
+    }
+
+    // Apply event topicTags as secondary filter when no explicit topicTags in body
+    if (!contactFilters.topicTags && event.topicTags?.length) {
+      contactFilters.topicTags = event.topicTags
+    }
 
     // Always exclude contacts missing phone or email — they can't receive any blast channel
     const recipientCount = body.data.contactIds?.length ?? (await contactRepository.findAll(

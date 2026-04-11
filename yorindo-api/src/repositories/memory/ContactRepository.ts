@@ -58,6 +58,7 @@ export class InMemoryContactRepository implements IContactRepository {
         company: faker.company.name(),
         department: i % 6 === 0 ? 'Engineering' : 'Marketing',
         eventDate: i % 10 === 0 ? '2024-03-20' : null,
+        topicTags: i % 3 === 0 ? ['ai', 'cloud'] : i % 3 === 1 ? ['fintech'] : null,
         source: SOURCES[i % SOURCES.length]!,
         completenessScore: Math.round((0.4 + (i % 7) * 0.09) * 1000) / 1000,
         consentStatus: status,

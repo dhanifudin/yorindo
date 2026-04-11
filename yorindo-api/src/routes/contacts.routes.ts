@@ -878,6 +878,7 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
       company: approvedDraft.company,
       department: approvedDraft.department,
       eventDate: approvedDraft.eventDate,
+      topicTags: null,
       source: 'excel_upload',
       completenessScore: computeApprovalCompleteness({
         name: approvedDraft.name,

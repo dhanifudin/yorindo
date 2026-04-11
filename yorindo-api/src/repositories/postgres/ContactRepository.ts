@@ -30,6 +30,7 @@ interface ContactRow extends QueryResultRow {
   company: string | null
   department: string | null
   event_date: string | null
+  topic_tags: string[] | null
   source: string | null
   completeness_score: string
   consent_status: string
@@ -72,6 +73,7 @@ export class PostgresContactRepository
       company: row.company,
       department: row.department,
       eventDate: row.event_date,
+      topicTags: row.topic_tags ?? null,
       source: row.source as Contact['source'],
       completenessScore: Number(row.completeness_score),
       consentStatus: row.consent_status as Contact['consentStatus'],
@@ -125,6 +127,11 @@ export class PostgresContactRepository
     if (filters?.jobTitles?.length) {
       conditions.push(`job_title = ANY($${idx}::text[])`)
       values.push(filters.jobTitles)
+      idx++
+    }
+    if (filters?.topicTags?.length) {
+      conditions.push(`topic_tags && $${idx}::text[]`)
+      values.push(filters.topicTags)
       idx++
     }
     if (filters?.flagCategory === 'NONE') {
