@@ -256,7 +256,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
           </CardHeader>
           <CardContent>
             <Button asChild variant="outline" className="w-full">
-              <Link href={`/app/events/${id}/survey-responses`}>
+              <Link href={`/app/events/${id}/survey`}>
                 Lihat Dashboard Respons
               </Link>
             </Button>

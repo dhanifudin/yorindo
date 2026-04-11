@@ -100,7 +100,7 @@ export default function SurveyBuilderClient({ id }: SurveyBuilderClientProps) {
 
         <div className="flex items-center gap-2">
           <Button variant="outline" asChild>
-            <Link href={`/app/events/${id}/survey-responses`}>
+            <Link href={`/app/events/${id}/survey`}>
               <LayoutDashboard size={16} className="mr-2" />
               Lihat Dashboard Respons
             </Link>
