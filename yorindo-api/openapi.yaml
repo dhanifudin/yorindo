@@ -6268,9 +6268,10 @@ paths:
 
   /uploads/{filename}:
     get:
-      summary: Serve an uploaded image
+      summary: Serve an uploaded image (public access)
       operationId: getUploadedImage
       tags: [Uploads]
+      security: []
       parameters:
         - in: path
           name: filename
