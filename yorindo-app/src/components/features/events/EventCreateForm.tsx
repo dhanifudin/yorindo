@@ -249,7 +249,7 @@ function ImageSourceSelector({
               )}
             >
               <Database className="w-4 h-4 inline mr-2" />
-              Database Gallery ({galleryFiles.length})
+              Database Gallery ({galleryLoading ? '•••' : galleryFiles.length})
             </button>
             <button
               type="button"
