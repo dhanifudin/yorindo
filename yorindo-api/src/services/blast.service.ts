@@ -149,18 +149,23 @@ export class BlastService {
     contact: Contact,
     send: () => Promise<void>,
   ): Promise<DeliveryFailure | null> {
-    const retryDelays = [0, 2000, 4000, 8000]
+    const maxRetries = 3
+    let lastError: unknown
 
-    for (let attempt = 0; attempt < retryDelays.length; attempt++) {
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         if (attempt > 0) {
-          await this.sleep(retryDelays[attempt]!)
+          const delay = this.calculateRetryDelay(attempt, lastError)
+          await this.sleep(delay)
         }
         await send()
         return null
       } catch (error) {
-        if (attempt === retryDelays.length - 1) {
-          const reason = error instanceof Error ? error.message : String(error)
+        lastError = error
+        const errorMessage = error instanceof Error ? error.message : String(error)
+
+        // Check if this is a non-retryable error (SMTP auth failure, connection refused)
+        if (this.isNonRetryableError(errorMessage)) {
           await this.writeAuditLog(
             'blast.delivery-failed',
             'system-error',
@@ -168,8 +173,30 @@ export class BlastService {
             {
               channel: job.channel,
               contactId: contact.id,
-              attempts: retryDelays.length,
-              error: reason,
+              attempts: attempt + 1,
+              error: errorMessage,
+              deadLettered: true,
+              nonRetryable: true,
+            },
+            contact.id,
+            'contact',
+          )
+          return {
+            contactId: contact.id,
+            error: errorMessage,
+          }
+        }
+
+        if (attempt === maxRetries) {
+          await this.writeAuditLog(
+            'blast.delivery-failed',
+            'system-error',
+            job,
+            {
+              channel: job.channel,
+              contactId: contact.id,
+              attempts: maxRetries + 1,
+              error: errorMessage,
               deadLettered: true,
             },
             contact.id,
@@ -177,7 +204,7 @@ export class BlastService {
           )
           return {
             contactId: contact.id,
-            error: reason,
+            error: errorMessage,
           }
         }
       }
@@ -187,6 +214,35 @@ export class BlastService {
       contactId: contact.id,
       error: 'Unknown delivery failure',
     }
+  }
+
+  /**
+   * Calculate retry delay based on attempt count and error type.
+   * For rate-limit (429) errors, uses exponential backoff: 1s, 4s, 16s, 64s.
+   */
+  private calculateRetryDelay(attempt: number, _lastError: unknown): number {
+    // Exponential backoff with base 1 second: 1s, 4s, 16s, 64s
+    const baseDelay = 1000
+    const exponentialDelay = baseDelay * Math.pow(4, attempt - 1)
+    // Add jitter (±20%)
+    const jitter = exponentialDelay * 0.2 * (Math.random() - 0.5) * 2
+    return Math.min(exponentialDelay + jitter, 64000) // Cap at 64 seconds
+  }
+
+  /**
+   * Check if an error is non-retryable (e.g., auth failure, connection refused).
+   * These errors won't resolve with retries, so we fail immediately.
+   */
+  private isNonRetryableError(errorMessage: string): boolean {
+    const lower = errorMessage.toLowerCase()
+    return (
+      lower.includes('authentication failed') ||
+      lower.includes('invalid login') ||
+      lower.includes('invalid credentials') ||
+      lower.includes('connection refused') ||
+      lower.includes('enetunreach') ||
+      lower.includes('getaddrinfo')
+    )
   }
 
   async processJob(job: BlastJobData): Promise<BlastJobResult> {

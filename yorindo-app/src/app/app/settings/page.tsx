@@ -58,6 +58,227 @@ interface Providers {
   whatsapp: Record<string, string | null>
 }
 
+const SMTP_PRESETS: Record<string, { host: string; port: string; secure: string; hint: string }> = {
+  gmail: { host: 'smtp.gmail.com', port: '587', secure: 'false', hint: 'Use Google App Password, not your regular password' },
+  mailtrap: { host: 'live.smtp.mailtrap.io', port: '587', secure: 'false', hint: 'Get credentials from Mailtrap dashboard' },
+  ses: { host: 'email-smtp.${region}.amazonaws.com', port: '587', secure: 'false', hint: 'Replace ${region} with your AWS region' },
+  sendgrid: { host: 'smtp.sendgrid.net', port: '587', secure: 'false', hint: 'Use "apikey" as username and your API key as password' },
+  custom: { host: '', port: '', secure: 'false', hint: '' },
+}
+
+function EmailProviderSection({
+  formValues,
+  setFormValues,
+  providers,
+  showSecrets,
+  setShowSecrets,
+}: {
+  formValues: Record<string, string>
+  setFormValues: (fn: (prev: Record<string, string>) => Record<string, string>) => void
+  providers?: Providers
+  showSecrets: Record<string, boolean>
+  setShowSecrets: (fn: (prev: Record<string, boolean>) => Record<string, boolean>) => void
+}) {
+  const selectedProvider = formValues.EMAIL_PROVIDER ?? providers?.email?.EMAIL_PROVIDER ?? 'smtp'
+
+  const applyPreset = (preset: string) => {
+    const config = SMTP_PRESETS[preset]
+    if (!config) return
+    setFormValues((prev) => ({
+      ...prev,
+      SMTP_HOST: config.host,
+      SMTP_PORT: config.port,
+      SMTP_SECURE: config.secure,
+    }))
+  }
+
+  const getValue = (key: string) => formValues[key] ?? providers?.email?.[key] ?? ''
+
+  return (
+    <div className="space-y-4">
+      {/* Provider Dropdown */}
+      <div>
+        <Label htmlFor="EMAIL_PROVIDER">Email Provider</Label>
+        <Select
+          value={selectedProvider}
+          onValueChange={(v) => {
+            setFormValues((prev) => ({ ...prev, EMAIL_PROVIDER: v }))
+            if (v !== 'smtp') return
+            // Auto-select Gmail preset when SMTP is chosen
+            applyPreset('gmail')
+          }}
+        >
+          <SelectTrigger id="EMAIL_PROVIDER">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="brevo">Brevo (HTTP API)</SelectItem>
+            <SelectItem value="smtp">SMTP (Gmail, Mailtrap, SES, Custom)</SelectItem>
+            <SelectItem value="mock">Mock (Development Only)</SelectItem>
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground mt-1">
+          Provider changes take effect immediately — no server restart needed
+        </p>
+      </div>
+
+      {selectedProvider === 'brevo' && (
+        <>
+          <Separator />
+          <div>
+            <p className="text-sm font-medium mb-3 text-muted-foreground">Brevo Configuration</p>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="BREVO_API_KEY">API Key</Label>
+                <Input
+                  id="BREVO_API_KEY"
+                  type={showSecrets['BREVO_API_KEY'] ? 'text' : 'password'}
+                  value={getValue('BREVO_API_KEY')}
+                  onChange={(e) => setFormValues((prev) => ({ ...prev, BREVO_API_KEY: e.target.value }))}
+                  placeholder="xapikey-..."
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Get from{' '}
+                  <a href="https://app.brevo.com/settings/keys/api" target="_blank" rel="noopener noreferrer" className="underline">
+                    Brevo Settings → API Keys
+                  </a>
+                </p>
+              </div>
+              <div>
+                <Label htmlFor="BREVO_SENDER_EMAIL">Sender Email</Label>
+                <Input
+                  id="BREVO_SENDER_EMAIL"
+                  type="email"
+                  value={getValue('BREVO_SENDER_EMAIL')}
+                  onChange={(e) => setFormValues((prev) => ({ ...prev, BREVO_SENDER_EMAIL: e.target.value }))}
+                  placeholder="noreply@yourdomain.com"
+                />
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {selectedProvider === 'smtp' && (
+        <>
+          <Separator />
+          <div>
+            <p className="text-sm font-medium mb-3 text-muted-foreground">SMTP Configuration</p>
+
+            {/* Preset Selector */}
+            <div className="mb-4">
+              <Label htmlFor="smtp-preset">Quick Preset</Label>
+              <Select onValueChange={applyPreset} defaultValue="gmail">
+                <SelectTrigger id="smtp-preset">
+                  <SelectValue placeholder="Select a preset" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="gmail">Gmail</SelectItem>
+                  <SelectItem value="mailtrap">Mailtrap</SelectItem>
+                  <SelectItem value="ses">AWS SES</SelectItem>
+                  <SelectItem value="sendgrid">SendGrid</SelectItem>
+                  <SelectItem value="custom">Custom SMTP</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="SMTP_HOST">SMTP Host</Label>
+                <Input
+                  id="SMTP_HOST"
+                  value={getValue('SMTP_HOST')}
+                  onChange={(e) => setFormValues((prev) => ({ ...prev, SMTP_HOST: e.target.value }))}
+                  placeholder="smtp.gmail.com"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="SMTP_PORT">Port</Label>
+                  <Input
+                    id="SMTP_PORT"
+                    type="number"
+                    value={getValue('SMTP_PORT')}
+                    onChange={(e) => setFormValues((prev) => ({ ...prev, SMTP_PORT: e.target.value }))}
+                    placeholder="587"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="SMTP_SECURE">TLS Mode</Label>
+                  <Select
+                    value={getValue('SMTP_SECURE')}
+                    onValueChange={(v) => setFormValues((prev) => ({ ...prev, SMTP_SECURE: v }))}
+                  >
+                    <SelectTrigger id="SMTP_SECURE">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="false">STARTTLS (587)</SelectItem>
+                      <SelectItem value="true">SSL/TLS (465)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="SMTP_USER">Username</Label>
+                <Input
+                  id="SMTP_USER"
+                  value={getValue('SMTP_USER')}
+                  onChange={(e) => setFormValues((prev) => ({ ...prev, SMTP_USER: e.target.value }))}
+                  placeholder="your-email@gmail.com"
+                />
+              </div>
+              <div>
+                <Label htmlFor="SMTP_PASS">Password / App Password</Label>
+                <div className="relative">
+                  <Input
+                    id="SMTP_PASS"
+                    type={showSecrets['SMTP_PASS'] ? 'text' : 'password'}
+                    value={getValue('SMTP_PASS')}
+                    onChange={(e) => setFormValues((prev) => ({ ...prev, SMTP_PASS: e.target.value }))}
+                    placeholder="your-app-password"
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowSecrets((prev) => ({ ...prev, SMTP_PASS: !prev['SMTP_PASS'] }))}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showSecrets['SMTP_PASS'] ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+                {SMTP_PRESETS[selectedProvider === 'smtp' ? 'gmail' : 'gmail']?.hint && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {SMTP_PRESETS.gmail.hint}
+                  </p>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="SENDER_EMAIL">Sender Email (From address)</Label>
+                <Input
+                  id="SENDER_EMAIL"
+                  type="email"
+                  value={getValue('SENDER_EMAIL')}
+                  onChange={(e) => setFormValues((prev) => ({ ...prev, SENDER_EMAIL: e.target.value }))}
+                  placeholder="noreply@yourdomain.com"
+                />
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {selectedProvider === 'mock' && (
+        <div className="rounded-lg border border-dashed p-6 text-center">
+          <p className="text-sm text-muted-foreground">
+            Mock mode — emails are stored in memory and not sent. Use for development/testing only.
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function SettingsPage() {
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState('ai')
@@ -367,29 +588,17 @@ export default function SettingsPage() {
                 Konfigurasi Email
               </CardTitle>
               <CardDescription>
-                Atur layanan pengiriman email untuk undangan dan notifikasi.
+                Pilih dan konfigurasi layanan pengiriman email. Perubahan langsung berlaku tanpa restart server.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {renderField('EMAIL_PROVIDER', 'Email Provider', 'mock | brevo | mailtrap')}
-              <Separator />
-              <div>
-                <p className="text-sm font-medium mb-3 text-muted-foreground">Mailtrap Configuration</p>
-                <div className="space-y-4">
-                  {renderField('MAILTRAP_HOST', 'Mailtrap Host', 'sandbox.smtp.mailtrap.io')}
-                  {renderField('MAILTRAP_PORT', 'Mailtrap Port', '2525', false, 'number')}
-                  {renderField('MAILTRAP_USER', 'Mailtrap User', 'your-user...', true)}
-                  {renderField('MAILTRAP_PASS', 'Mailtrap Password', 'your-pass...', true)}
-                </div>
-              </div>
-              <Separator />
-              <div>
-                <p className="text-sm font-medium mb-3 text-muted-foreground">Brevo Configuration</p>
-                <div className="space-y-4">
-                  {renderField('BREVO_API_KEY', 'Brevo API Key', 'xapikey-...', true)}
-                  {renderField('BREVO_SENDER_EMAIL', 'Brevo Sender Email', 'noreply@example.com')}
-                </div>
-              </div>
+              <EmailProviderSection
+                formValues={formValues}
+                setFormValues={setFormValues}
+                providers={providers}
+                showSecrets={showSecrets}
+                setShowSecrets={setShowSecrets}
+              />
             </CardContent>
           </Card>
         </TabsContent>

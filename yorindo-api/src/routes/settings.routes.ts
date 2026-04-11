@@ -89,7 +89,7 @@ export const settingsRoutes: FastifyPluginAsync = async (fastify) => {
     })
 
     // Keys that should be treated as secrets (masked when retrieved)
-    const SECRET_KEYS = ['AI_API_KEY', 'GROQ_API_KEY', 'OPENAI_API_KEY', 'EVERPRO_API_KEY', 'MAILTRAP_PASS', 'MAILTRAP_USER', 'BREVO_API_KEY']
+    const SECRET_KEYS = ['AI_API_KEY', 'GROQ_API_KEY', 'OPENAI_API_KEY', 'EVERPRO_API_KEY', 'MAILTRAP_PASS', 'MAILTRAP_USER', 'BREVO_API_KEY', 'SMTP_PASS', 'SMTP_USER']
 
     const pool = getPool()
     const client = await pool.connect()
@@ -115,6 +115,15 @@ export const settingsRoutes: FastifyPluginAsync = async (fastify) => {
         console.log('[Settings] Cache cleared for AIInsightsService')
       } catch {
         // Ignore if function doesn't exist
+      }
+
+      // Clear email provider config cache so it picks up new values immediately
+      try {
+        const { clearProviderConfigCache } = await import('../container.js')
+        clearProviderConfigCache()
+        console.log('[Settings] Cache cleared for email provider config')
+      } catch {
+        // Ignore
       }
 
       return reply.status(200).send({ updated: Object.keys(settings).length })
