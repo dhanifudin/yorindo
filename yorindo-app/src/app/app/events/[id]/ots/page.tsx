@@ -64,14 +64,15 @@ export default function OnTheSpotPage({ params }: { params: Promise<{ id: string
 
   const registerMutation = useMutation({
     mutationFn: async (data: typeof form) => {
-      const res = await fetch('/api/registrations', {
+      const res = await fetch(`/api/events/${id}/ots`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          eventId: id,
-          ...data,
-          // For "On the spot", we might want to flag it or mark it approved
-          // For now, matching the public registration API structure
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          industry: data.industry,
+          jobTitle: data.title || undefined,
         }),
       })
       if (!res.ok) {
@@ -81,7 +82,7 @@ export default function OnTheSpotPage({ params }: { params: Promise<{ id: string
       return res.json()
     },
     onSuccess: () => {
-      toast.success('Pendaftaran berhasil!')
+      toast.success('Pendaftaran berhasil! Peserta langsung tercatat hadir.')
       queryClient.invalidateQueries({ queryKey: ['event-registrations', id] })
       setForm({
         name: '',

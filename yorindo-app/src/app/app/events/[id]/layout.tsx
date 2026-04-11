@@ -219,8 +219,8 @@ export default function EventHubShellLayout({ children, params }: HubLayoutProps
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Admin Chrome — hidden on mobile for Check-in tab */}
-      <div className={cn(isCheckinTab ? 'hidden lg:block' : 'block')}>
+      {/* Admin Chrome — visible on all screen sizes */}
+      <div className="block">
         <EventHubLayout
           event={event}
           isLoading={isLoading}
@@ -232,7 +232,7 @@ export default function EventHubShellLayout({ children, params }: HubLayoutProps
 
         {/* Tab bar */}
         <TooltipProvider>
-          <nav className="flex border-b border-border bg-background px-6 overflow-x-auto">
+          <nav className="flex border-b border-border bg-background px-4 sm:px-6 overflow-x-auto">
             {visibleTabs.map((tab) => {
               const isActive = activeTab === tab.key
               const href = `${baseHref}${tab.href}`
@@ -242,7 +242,7 @@ export default function EventHubShellLayout({ children, params }: HubLayoutProps
                   key={tab.key}
                   href={href}
                   className={cn(
-                    'inline-flex items-center px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors',
+                    'inline-flex items-center px-3 sm:px-4 py-3 text-xs sm:text-sm font-medium border-b-2 whitespace-nowrap transition-colors',
                     isActive
                       ? 'border-primary text-foreground'
                       : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'

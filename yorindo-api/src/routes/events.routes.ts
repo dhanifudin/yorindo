@@ -1565,4 +1565,102 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
 
     return reply.status(204).send()
   })
+
+  // ─────────────────────────────────────────────────────────────────────
+  // On-the-Spot Walk-in Registration
+  // ─────────────────────────────────────────────────────────────────────
+  const OtsBodySchema = z.object({
+    name: z.string().trim().min(1),
+    email: z.string().email(),
+    phone: z.string().trim().min(8),
+    company: z.string().trim().optional(),
+    industry: z.string().trim().optional(),
+    jobTitle: z.string().trim().optional(),
+  })
+
+  fastify.post('/api/events/:id/ots', { preHandler: [requireAuth, requireAdmin] }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const params = EventIdParamsSchema.safeParse(request.params)
+    if (!params.success) return replyValidationError(reply, params.error.issues, 'Invalid event id')
+
+    const event = await requireEventOr404(reply, params.data.id)
+    if (!event) return
+
+    const body = OtsBodySchema.safeParse(request.body)
+    if (!body.success) return replyValidationError(reply, body.error.issues, 'Invalid registration payload')
+
+    validateOpenApiRequest({ path: '/events/{id}/ots', method: 'post', params: params.data, body: body.data })
+
+    // Upsert contact by phone
+    let contact = await contactRepository.findByPhone(body.data.phone)
+    if (contact) {
+      contact = await contactRepository.update(contact.id, {
+        name: body.data.name,
+        email: body.data.email,
+        serviceType: body.data.industry ?? contact.serviceType,
+        jobTitle: body.data.jobTitle ?? contact.jobTitle,
+        company: body.data.company ?? contact.company,
+      })
+    } else {
+      contact = await contactRepository.upsert({
+        name: body.data.name,
+        phone: body.data.phone,
+        email: body.data.email,
+        serviceType: body.data.industry ?? null,
+        jobTitle: body.data.jobTitle ?? null,
+        city: null,
+        provinceCode: null,
+        provinceName: null,
+        cityCode: null,
+        cityName: null,
+        company: body.data.company ?? null,
+        department: null,
+        eventDate: null,
+        topicTags: null,
+        source: 'manual',
+        completenessScore: 0.6,
+        consentStatus: 'active',
+        flagCategory: null,
+        deletedAt: null,
+      })
+    }
+    if (!contact) {
+      return reply.status(500).send({ error: { code: 'INTERNAL_ERROR', message: 'Failed to create contact', details: [] } })
+    }
+
+    // Create registration — auto-approved AND marked as attended
+    const registration = await registrationRepository.create({
+      contactId: contact.id,
+      eventId: event.id,
+      status: 'approved',
+      attendedAt: new Date().toISOString(),
+      ticketToken: null,
+      aiScore: null,
+      flagOverride: false,
+      approvedAt: new Date().toISOString(),
+    })
+
+    const token = request.user as JwtPayload
+    await auditLogRepository.create({
+      action: 'registration.ots',
+      actorId: token.sub,
+      actorRole: token.role,
+      eventId: event.id,
+      targetId: registration.id,
+      targetType: 'registration',
+      metadata: { name: body.data.name, phone: body.data.phone },
+    })
+
+    return reply.status(201).send({
+      id: registration.id,
+      contactId: registration.contactId,
+      contactName: contact.name ?? '',
+      contactPhone: contact.phone ?? '',
+      contactEmail: contact.email ?? '',
+      contactIndustry: contact.serviceType ?? null,
+      contactJobTitle: contact.jobTitle ?? null,
+      status: registration.status,
+      attendedAt: registration.attendedAt,
+      createdAt: registration.createdAt,
+    })
+  })
 }
