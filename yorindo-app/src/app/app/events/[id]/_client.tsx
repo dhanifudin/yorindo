@@ -133,18 +133,20 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
           <div className="space-y-3">
           <Card>
             <CardContent className="pt-4 space-y-3">
-              {/* Pending approvals */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase font-medium">Menunggu Persetujuan</p>
-                  <p className="text-2xl font-bold">{metrics.pendingApprovals}</p>
+              {/* Pending approvals — only show for published events */}
+              {event.status === 'published' && (
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase font-medium">Menunggu Persetujuan</p>
+                    <p className="text-2xl font-bold">{metrics.pendingApprovals}</p>
+                  </div>
+                  {metrics.pendingApprovals > 0 && (
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href={`${baseHref}/registrations`}>Review</Link>
+                    </Button>
+                  )}
                 </div>
-                {metrics.pendingApprovals > 0 && (
-                  <Button variant="outline" size="sm" asChild>
-                    <Link href={`${baseHref}/registrations`}>Review</Link>
-                  </Button>
-                )}
-              </div>
+              )}
 
               <div className="border-t pt-3 space-y-2 text-sm">
                 {/* Days until */}
