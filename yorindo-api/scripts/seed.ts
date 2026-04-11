@@ -16,6 +16,7 @@ import { Pool } from 'pg'
 import bcrypt from 'bcrypt'
 import { createId } from '@paralleldrive/cuid2'
 import { seedDemo } from './seed-demo'
+import { runMigrations } from './migrate'
 
 if (process.env.NODE_ENV === 'production' && process.env.ALLOW_SEED !== 'true') {
   console.error('Seed script blocked in production to prevent accidental data loss.')
@@ -239,11 +240,21 @@ async function seed(): Promise<void> {
     throw err
   } finally {
     client.release()
-    await pool.end()
   }
 }
 
-const run = isDemo ? () => seedDemo(pool).then(() => pool.end()) : seed
+const run = async () => {
+  // Run migrations first to ensure schema is up to date
+  console.log('Running migrations before seeding...')
+  await runMigrations(pool)
+
+  if (isDemo) {
+    await seedDemo(pool)
+  } else {
+    await seed()
+  }
+  await pool.end()
+}
 
 run().catch((err: unknown) => {
   console.error('Seed failed:', err)
