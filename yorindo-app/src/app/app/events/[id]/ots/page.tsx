@@ -163,17 +163,6 @@ export default function OnTheSpotPage({ params }: { params: Promise<{ id: string
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Nama Lengkap <span className="text-destructive">*</span></Label>
-                <Input
-                  id="name"
-                  placeholder="Contoh: Budi Santoso"
-                  value={form.name}
-                  onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
                 <Label htmlFor="email">Email <span className="text-destructive">*</span></Label>
                 <div className="relative">
                   <Input
@@ -195,8 +184,19 @@ export default function OnTheSpotPage({ params }: { params: Promise<{ id: string
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Masukkan email — data otomatis diisi jika ditemukan di database kontak
+                  Data otomatis diisi jika ditemukan di database kontak
                 </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="name">Nama Lengkap <span className="text-destructive">*</span></Label>
+                <Input
+                  id="name"
+                  placeholder="Contoh: Budi Santoso"
+                  value={form.name}
+                  onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))}
+                  required
+                />
               </div>
 
               <div className="space-y-2">
