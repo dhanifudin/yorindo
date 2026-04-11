@@ -31,6 +31,7 @@ interface FormPreviewModalProps {
   registrationFields: SurveyField[]
   postEventFields: SurveyField[]
   postSurveyEnabled: boolean
+  eventStatus?: string
 }
 
 const FIXED_REGISTRATION_FIELDS: { id: string; label: string; required: boolean }[] = [
@@ -199,7 +200,11 @@ export function FormPreviewModal({
   registrationFields,
   postEventFields,
   postSurveyEnabled,
+  eventStatus,
 }: FormPreviewModalProps) {
+  const isActive = eventStatus === 'active'
+  const defaultTab = isActive ? 'post-event' : 'registration'
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0">
@@ -220,28 +225,55 @@ export function FormPreviewModal({
           </div>
         </DialogHeader>
 
-        {/* Tabs */}
-        <Tabs defaultValue="registration" className="flex-1 flex flex-col overflow-hidden">
+        {/* Tabs — order swaps based on event status */}
+        <Tabs defaultValue={defaultTab} className="flex-1 flex flex-col overflow-hidden">
           <div className="px-6 border-b bg-muted/20">
             <TabsList className="bg-transparent h-auto p-0 gap-6">
-              <TabsTrigger
-                value="registration"
-                className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none pb-3 pt-3 px-0 text-sm font-medium transition-all"
-              >
-                <ClipboardCheck size={14} className="mr-2" />
-                Formulir Registrasi
-              </TabsTrigger>
-              <TabsTrigger
-                value="post-event"
-                className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none pb-3 pt-3 px-0 text-sm font-medium transition-all"
-                disabled={!postSurveyEnabled}
-              >
-                <MessageSquare size={14} className="mr-2" />
-                Survei Post-Event
-                {!postSurveyEnabled && (
-                  <Badge variant="secondary" className="ml-2 text-[10px]">Nonaktif</Badge>
-                )}
-              </TabsTrigger>
+              {isActive ? (
+                // Active: Post-Event first
+                <>
+                  <TabsTrigger
+                    value="post-event"
+                    className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none pb-3 pt-3 px-0 text-sm font-medium transition-all"
+                    disabled={!postSurveyEnabled}
+                  >
+                    <MessageSquare size={14} className="mr-2" />
+                    Survei Post-Event
+                    {!postSurveyEnabled && (
+                      <Badge variant="secondary" className="ml-2 text-[10px]">Nonaktif</Badge>
+                    )}
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="registration"
+                    className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none pb-3 pt-3 px-0 text-sm font-medium transition-all"
+                  >
+                    <ClipboardCheck size={14} className="mr-2" />
+                    Formulir Registrasi
+                  </TabsTrigger>
+                </>
+              ) : (
+                // Draft: Registration first
+                <>
+                  <TabsTrigger
+                    value="registration"
+                    className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none pb-3 pt-3 px-0 text-sm font-medium transition-all"
+                  >
+                    <ClipboardCheck size={14} className="mr-2" />
+                    Formulir Registrasi
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="post-event"
+                    className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none pb-3 pt-3 px-0 text-sm font-medium transition-all"
+                    disabled={!postSurveyEnabled}
+                  >
+                    <MessageSquare size={14} className="mr-2" />
+                    Survei Post-Event
+                    {!postSurveyEnabled && (
+                      <Badge variant="secondary" className="ml-2 text-[10px]">Nonaktif</Badge>
+                    )}
+                  </TabsTrigger>
+                </>
+              )}
             </TabsList>
           </div>
 

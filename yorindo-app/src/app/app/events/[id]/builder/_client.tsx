@@ -234,6 +234,7 @@ export default function SurveyBuilderClient({ id }: SurveyBuilderClientProps) {
         registrationFields={regPreviewFields}
         postEventFields={postPreviewFields}
         postSurveyEnabled={event?.postSurveyEnabled || false}
+        eventStatus={event?.status}
       />
     </div>
   )
