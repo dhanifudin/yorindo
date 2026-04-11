@@ -46,30 +46,33 @@ const LAST_NAMES = [
   'Handoko', 'Susanto', 'Wibowo', 'Nugroho', 'Haryanto', 'Purnama', 'Siregar', 'Harahap',
   'Situmorang', 'Nasution', 'Hutabarat', 'Simanjuntak',
 ]
-const COMPANIES = [
-  'PT Tokopedia', 'PT Gojek', 'PT Bukalapak', 'PT Traveloka', 'PT Blibli',
-  'PT Telkom Indonesia', 'PT Bank BCA', 'PT Astra International', 'PT Indofood',
-  'PT Pertamina', 'PT Unilever Indonesia', 'PT XL Axiata', 'PT Bank Mandiri',
-  'PT Garuda Indonesia', 'PT Semen Indonesia', 'PT Kalbe Farma', 'PT Mayora Indah',
-  'PT Gudang Garam', 'PT HM Sampoerna', 'PT Adaro Energy',
-]
+// Industry-matched company pools — contacts get companies that fit their industry
+const COMPANIES_BY_INDUSTRY: Record<string, string[]> = {
+  teknologi:  ['PT Telkom Indonesia', 'PT Gojek Indonesia', 'PT Tokopedia', 'PT Bukalapak', 'PT Traveloka', 'PT Blibli', 'PT XL Axiata', 'PT Indosat Ooredoo Hutchison', 'PT Ruangguru', 'PT Kudo'],
+  keuangan:   ['PT Bank Central Asia', 'PT Bank Mandiri', 'PT Bank BRI', 'PT Bank BNI', 'PT OVO Indonesia', 'PT Dana Rupiah', 'PT Asuransi Jiwa Manulife', 'PT Prudential Indonesia'],
+  kesehatan:  ['PT Kalbe Farma', 'PT Kimia Farma', 'PT Sanbe Farma', 'RS Cipto Mangunkusumo', 'PT Mitra Keluarga Karyasehat', 'PT Siloam International Hospitals', 'PT Dexa Medica'],
+  manufaktur: ['PT Astra International', 'PT Krakatau Steel', 'PT Semen Indonesia', 'PT Gudang Garam', 'PT HM Sampoerna', 'PT Adaro Energy', 'PT Baramulti Group'],
+  retail:     ['PT Indomaret', 'PT Sumber Alfaria Trijaya', 'PT Matahari Department Store', 'PT Ramayana Lestari Sentosa', 'PT Mayora Indah', 'PT Indofood CBP', 'PT Unilever Indonesia'],
+  pendidikan: ['Universitas Indonesia', 'Institut Teknologi Bandung', 'Universitas Gadjah Mada', 'Universitas Brawijaya', 'BPPT', 'LIPI', 'Yayasan Pendidikan Telkom'],
+}
 const PHONE_PREFIXES = ['+6281', '+6285', '+6287', '+62812']
 const INDUSTRIES = ['teknologi', 'keuangan', 'kesehatan', 'manufaktur', 'retail', 'pendidikan']
 const INDUSTRY_WEIGHTS = [30, 20, 15, 15, 10, 10] // percentage distribution
 
-// Realistic Indonesian industry display values (matches registration form)
+// Industry display values matching registration form options
 const INDUSTRY_DISPLAY_NAMES: Record<string, string> = {
-  teknologi: 'Elektronik & Peralatan Rumah Tangga',
-  keuangan: 'Fast-Moving Consumer Goods (FMCG)',
+  teknologi: 'Teknologi Informasi & Software',
+  keuangan:  'Keuangan & Perbankan',
   kesehatan: 'Farmasi & Alat Kesehatan',
-  manufaktur: 'Fabrikasi Logam & Mesin Presisi',
-  retail: 'Tekstil & Garmen',
-  pendidikan: 'Yang lain',
+  manufaktur:'Fabrikasi Logam & Mesin Presisi',
+  retail:    'Ritel & Perdagangan',
+  pendidikan:'Pendidikan & Penelitian',
 }
 const SIZES: Array<'<50' | '50-200' | '200-1000' | '>1000'> = ['<50', '50-200', '200-1000', '>1000']
 const SIZE_WEIGHTS = [25, 35, 25, 15]
 const JOB_TITLES = ['direktur', 'manajer', 'supervisor', 'staf', 'engineer', 'analis', 'konsultan', 'wirausaha']
-const CITIES = ['Jakarta', 'Jakarta', 'Jakarta', 'Bandung', 'Bandung', 'Surabaya', 'Denpasar', 'Yogyakarta', 'Medan', 'Semarang']
+// Weighted city pool: ~40% Jakarta, ~20% Surabaya, ~15% Bandung, ~10% Medan, rest split
+const CITIES = ['Jakarta', 'Jakarta', 'Jakarta', 'Jakarta', 'Surabaya', 'Surabaya', 'Bandung', 'Bandung', 'Medan', 'Yogyakarta']
 
 // ─── Weighted random helper ────────────────────────────────────────────────────
 function weightedPick<T>(items: T[], weights: number[]): T {
@@ -88,24 +91,41 @@ function pick<T>(arr: T[]): T {
 
 // ─── Event definitions ─────────────────────────────────────────────────────────
 interface EventDef {
-  id?: string; name: string; slug: string; status: string; dateOffset: number; city: string
+  id?: string | null; name: string; slug: string; status: string; dateOffset: number; city: string
   venue: string; capacity: number; isPaid: boolean; price: number | null
-  regCount: number; attendedCount: number; pendingCount: number; surveyCount: number
+  regCount: number; attendedCount: number; rejectedCount: number; pendingCount: number; surveyCount: number
   otsCount: number; topicTags: string[]
 }
 
+// regCount   = total pre-registrations (all statuses combined)
+// attendedCount = subset of approved who checked in (pre-registered only; OTS added separately)
+// rejectedCount = subset of regCount that were rejected (capacity/criteria mismatch)
+// pendingCount  = subset still awaiting approval (only relevant for upcoming events)
+// otsCount      = walk-in check-ins on the day (not pre-registered)
+// surveyCount   = post-event survey responses (only for completed/archived)
 const EVENTS: EventDef[] = [
-  { id: null, name: 'TechConf Jakarta 2026',     slug: 'techconf-jakarta-2026',     status: 'active',    dateOffset: -1,   city: 'Jakarta',    venue: 'Jakarta Convention Center', capacity: 500, isPaid: false, price: null, regCount: 80, attendedCount: 42, pendingCount: 0, surveyCount: 0, otsCount: 12, topicTags: ['AI', 'Cloud'] },
-  { id: null, name: 'AI Summit Bandung',          slug: 'ai-summit-bandung',         status: 'active',    dateOffset: 2,    city: 'Bandung',    venue: 'Trans Convention Hall',     capacity: 200, isPaid: true,  price: 150000, regCount: 120, attendedCount: 0, pendingCount: 0, surveyCount: 0, otsCount: 0, topicTags: ['Machine Learning'] },
-  { id: null, name: 'ERP Workshop Surabaya',      slug: 'erp-workshop-surabaya',     status: 'published', dateOffset: 14,   city: 'Surabaya',   venue: 'Hotel Majapahit',           capacity: 80,  isPaid: true,  price: 75000, regCount: 35, attendedCount: 0, pendingCount: 5, surveyCount: 0, otsCount: 0, topicTags: [] },
-  { id: null, name: 'Fintech Networking Bali',    slug: 'fintech-networking-bali',   status: 'published', dateOffset: 30,   city: 'Denpasar',   venue: 'Bali Nusa Dua Convention',  capacity: 150, isPaid: false, price: null, regCount: 20, attendedCount: 0, pendingCount: 0, surveyCount: 0, otsCount: 0, topicTags: [] },
-  { id: null, name: 'Cloud Conference Jakarta',   slug: 'cloud-conference-jakarta',  status: 'draft',     dateOffset: 60,   city: 'Jakarta',    venue: 'ICE BSD',                   capacity: 300, isPaid: false, price: null, regCount: 0, attendedCount: 0, pendingCount: 0, surveyCount: 0, otsCount: 0, topicTags: [] },
-  { id: null, name: 'Data Summit Yogyakarta',     slug: 'data-summit-yogyakarta',    status: 'draft',     dateOffset: 90,   city: 'Yogyakarta', venue: 'Royal Ambarrukmo',          capacity: 100, isPaid: false, price: null, regCount: 0, attendedCount: 0, pendingCount: 0, surveyCount: 0, otsCount: 0, topicTags: [] },
-  { id: null, name: 'DevOps Meetup Jakarta',      slug: 'devops-meetup-jakarta',     status: 'completed', dateOffset: -30,  city: 'Jakarta',    venue: 'WeWork Sudirman',           capacity: 60,  isPaid: false, price: null, regCount: 55, attendedCount: 42, pendingCount: 0, surveyCount: 20, otsCount: 8, topicTags: ['CI/CD', 'Kubernetes'] },
-  { id: null, name: 'Marketing Forum Bandung',    slug: 'marketing-forum-bandung',   status: 'completed', dateOffset: -60,  city: 'Bandung',    venue: 'Padma Hotel',               capacity: 200, isPaid: false, price: null, regCount: 150, attendedCount: 98, pendingCount: 0, surveyCount: 30, otsCount: 15, topicTags: [] },
-  { id: null, name: 'HR Tech Summit',             slug: 'hr-tech-summit',            status: 'cancelled', dateOffset: -15,  city: 'Jakarta',    venue: 'Ritz Carlton Pacific Place', capacity: 120, isPaid: false, price: null, regCount: 15, attendedCount: 0, pendingCount: 0, surveyCount: 0, otsCount: 0, topicTags: [] },
-  { id: null, name: 'Startup Pitch Night',        slug: 'startup-pitch-night',       status: 'archived',  dateOffset: -180, city: 'Jakarta',    venue: 'Block71 Jakarta',           capacity: 250, isPaid: false, price: null, regCount: 200, attendedCount: 145, pendingCount: 0, surveyCount: 25, otsCount: 22, topicTags: ['Venture Capital', 'Fundraising'] },
-  { id: 'e44rnx7cg7cstacu725iolms', name: 'Konferensi Kesehatan Digital 2026', slug: 'konferensi-kesehatan-digital-2026', status: 'active', dateOffset: 12, city: 'Jakarta', venue: 'Jakarta Convention Center, Assembly Hall', capacity: 500, isPaid: false, price: null, regCount: 180, attendedCount: 0, pendingCount: 15, surveyCount: 0, otsCount: 0, topicTags: [] },
+  // ── Active (event day = yesterday; check-ins still rolling in) ──
+  { id: null, name: 'TechConf Jakarta 2026',     slug: 'techconf-jakarta-2026',     status: 'active',    dateOffset: -1,   city: 'Jakarta',    venue: 'Jakarta Convention Center',           capacity: 500, isPaid: false, price: null,   regCount: 95,  attendedCount: 62, rejectedCount: 5,  pendingCount: 0,  surveyCount: 0,  otsCount: 14, topicTags: ['AI', 'Cloud'] },
+  // ── Active (in 2 days; registration closed, waiting for event day) ──
+  { id: null, name: 'AI Summit Bandung',          slug: 'ai-summit-bandung',         status: 'active',    dateOffset: 2,    city: 'Bandung',    venue: 'Trans Convention Hall',               capacity: 200, isPaid: true,  price: 150000, regCount: 142, attendedCount: 0,  rejectedCount: 8,  pendingCount: 0,  surveyCount: 0,  otsCount: 0,  topicTags: ['Machine Learning'] },
+  // ── Published (upcoming; open registration) ──
+  { id: null, name: 'ERP Workshop Surabaya',      slug: 'erp-workshop-surabaya',     status: 'published', dateOffset: 14,   city: 'Surabaya',   venue: 'Hotel Majapahit',                     capacity: 80,  isPaid: true,  price: 75000,  regCount: 42,  attendedCount: 0,  rejectedCount: 3,  pendingCount: 8,  surveyCount: 0,  otsCount: 0,  topicTags: [] },
+  { id: null, name: 'Fintech Networking Bali',    slug: 'fintech-networking-bali',   status: 'published', dateOffset: 30,   city: 'Denpasar',   venue: 'Bali Nusa Dua Convention',            capacity: 150, isPaid: false, price: null,   regCount: 28,  attendedCount: 0,  rejectedCount: 0,  pendingCount: 0,  surveyCount: 0,  otsCount: 0,  topicTags: [] },
+  // ── Draft (not yet open) ──
+  { id: null, name: 'Cloud Conference Jakarta',   slug: 'cloud-conference-jakarta',  status: 'draft',     dateOffset: 60,   city: 'Jakarta',    venue: 'ICE BSD',                             capacity: 300, isPaid: false, price: null,   regCount: 0,   attendedCount: 0,  rejectedCount: 0,  pendingCount: 0,  surveyCount: 0,  otsCount: 0,  topicTags: [] },
+  { id: null, name: 'Data Summit Yogyakarta',     slug: 'data-summit-yogyakarta',    status: 'draft',     dateOffset: 90,   city: 'Yogyakarta', venue: 'Royal Ambarrukmo',                    capacity: 100, isPaid: false, price: null,   regCount: 0,   attendedCount: 0,  rejectedCount: 0,  pendingCount: 0,  surveyCount: 0,  otsCount: 0,  topicTags: [] },
+  // ── Completed (primary demo event for smart dashboard) ──
+  // DevOps: 60-person venue, 55 approved, 42 pre-reg attended + 8 OTS = 50 attended total (91% of approved)
+  { id: null, name: 'DevOps Meetup Jakarta',      slug: 'devops-meetup-jakarta',     status: 'completed', dateOffset: -30,  city: 'Jakarta',    venue: 'WeWork Sudirman',                     capacity: 60,  isPaid: false, price: null,   regCount: 58,  attendedCount: 42, rejectedCount: 3,  pendingCount: 0,  surveyCount: 22, otsCount: 8,  topicTags: ['CI/CD', 'Kubernetes'] },
+  // Marketing Forum: 200-person venue, 140 approved, 110 pre-reg attended + 18 OTS = 128 total (91% of approved)
+  { id: null, name: 'Marketing Forum Bandung',    slug: 'marketing-forum-bandung',   status: 'completed', dateOffset: -60,  city: 'Bandung',    venue: 'Padma Hotel',                         capacity: 200, isPaid: false, price: null,   regCount: 155, attendedCount: 110, rejectedCount: 10, pendingCount: 0, surveyCount: 38, otsCount: 18, topicTags: [] },
+  // ── Cancelled (blast sent, registrations collected, then event called off) ──
+  { id: null, name: 'HR Tech Summit',             slug: 'hr-tech-summit',            status: 'cancelled', dateOffset: -15,  city: 'Jakarta',    venue: 'Ritz Carlton Pacific Place',          capacity: 120, isPaid: false, price: null,   regCount: 22,  attendedCount: 0,  rejectedCount: 2,  pendingCount: 0,  surveyCount: 0,  otsCount: 0,  topicTags: [] },
+  // ── Archived (older flagship event; high attendance shows mature program) ──
+  // Startup Pitch Night: 250-person venue, 190 approved, 148 pre-reg attended + 24 OTS = 172 total (90% of approved)
+  { id: null, name: 'Startup Pitch Night',        slug: 'startup-pitch-night',       status: 'archived',  dateOffset: -180, city: 'Jakarta',    venue: 'Block71 Jakarta',                     capacity: 250, isPaid: false, price: null,   regCount: 205, attendedCount: 148, rejectedCount: 15, pendingCount: 0, surveyCount: 42, otsCount: 24, topicTags: ['Venture Capital', 'Fundraising'] },
+  // ── Special fixed-ID event (used by tests) ──
+  { id: 'e44rnx7cg7cstacu725iolms', name: 'Konferensi Kesehatan Digital 2026', slug: 'konferensi-kesehatan-digital-2026', status: 'active', dateOffset: 12, city: 'Jakarta', venue: 'Jakarta Convention Center, Assembly Hall', capacity: 500, isPaid: false, price: null, regCount: 188, attendedCount: 0, rejectedCount: 8, pendingCount: 15, surveyCount: 0, otsCount: 0, topicTags: [] },
 ]
 
 // ─── Main seed function ────────────────────────────────────────────────────────
@@ -261,7 +281,7 @@ export async function seedDemo(pool: Pool): Promise<void> {
         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
       `, [
         id, name, hasPhone ? phone : null, hasEmail ? email : null,
-        city, pick(COMPANIES), size,
+        city, pick(COMPANIES_BY_INDUSTRY[industry] ?? COMPANIES_BY_INDUSTRY.teknologi), size,
         pick(['excel_upload', 'form', 'manual']),
         isOptedOut ? 'suppressed' : 'active',
         industryIds[industry], jobTitleIds[jobTitle], completeness,
@@ -325,7 +345,7 @@ export async function seedDemo(pool: Pool): Promise<void> {
           province_code, province_name, city_code, city_name
         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
       `, [
-        primaryId, s.nameA, s.phoneA, s.emailA, city, pick(COMPANIES), '200-1000',
+        primaryId, s.nameA, s.phoneA, s.emailA, city, pick(COMPANIES_BY_INDUSTRY[industry] ?? COMPANIES_BY_INDUSTRY.teknologi), '200-1000',
         'excel_upload', 'active',
         industryIds[industry], jobTitleIds[jobTitle], '0.850',
         INDUSTRY_DISPLAY_NAMES[industry] ?? industry,
@@ -341,7 +361,7 @@ export async function seedDemo(pool: Pool): Promise<void> {
           province_code, province_name, city_code, city_name, flag_category
         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
       `, [
-        duplicateId, s.nameB, s.phoneB, s.emailB, city, pick(COMPANIES), '<50',
+        duplicateId, s.nameB, s.phoneB, s.emailB, city, pick(COMPANIES_BY_INDUSTRY[industry] ?? COMPANIES_BY_INDUSTRY.teknologi), '<50',
         'form', 'active',
         industryIds[industry], jobTitleIds[jobTitle], '0.650',
         INDUSTRY_DISPLAY_NAMES[industry] ?? industry,
@@ -365,6 +385,8 @@ export async function seedDemo(pool: Pool): Promise<void> {
     console.log(`✓ Seeded ${DUPLICATE_SCENARIOS.length} duplicate contact pairs (${DUPLICATE_SCENARIOS.length * 2} contacts)`)
 
     // ── Registrations ──
+    // Contacts are shuffled per-event so that attend/no-show is distributed across
+    // different industry×city segments — avoiding artificial 100%/0% segment overlap.
     let regIdx = 0
     let totalRegs = 0
     for (let ei = 0; ei < EVENTS.length; ei++) {
@@ -372,9 +394,29 @@ export async function seedDemo(pool: Pool): Promise<void> {
       if (ev.regCount === 0) continue
       const eventId = eventIds[ei]
 
+      // Build a shuffled slice of contacts for this event
+      const pool = contactIds.slice(15) // skip opted-out contacts (first 15)
+      const eventContacts: string[] = []
+      for (let i = 0; i < ev.regCount; i++) {
+        eventContacts.push(pool[(regIdx + i) % pool.length])
+      }
+      regIdx += ev.regCount
+      // Fisher-Yates shuffle — ensures attend/no-show distributes randomly
+      for (let i = eventContacts.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [eventContacts[i], eventContacts[j]] = [eventContacts[j], eventContacts[i]]
+      }
+
+      // Registration status bands (mutually exclusive, applied in order):
+      //   [0, attendedCount)              → attended (checked in)
+      //   [attendedCount, approved_end)   → approved only (no-show for past events)
+      //   [approved_end, rejected_end)    → rejected (capacity/criteria)
+      //   [rejected_end, regCount)        → pending
+      const approvedEnd = ev.regCount - ev.rejectedCount - ev.pendingCount
+      const rejectedEnd = ev.regCount - ev.pendingCount
+
       for (let r = 0; r < ev.regCount; r++) {
-        const contactId = contactIds[(regIdx + 15) % contactIds.length] // skip opted-out contacts
-        regIdx++
+        const contactId = eventContacts[r]
         const regId = createId()
 
         let status: string
@@ -384,17 +426,22 @@ export async function seedDemo(pool: Pool): Promise<void> {
         let attendedAt: string | null = null
 
         if (r < ev.attendedCount) {
-          status = 'approved'
+          // Pre-registered who checked in: status transitions approved→attended
+          // (mirrors what POST /api/scan/verify does in production)
+          status = 'attended'
           attendanceStatus = 'attended'
-          checkInMethod = r % 3 === 0 ? 'manual' : 'qr'
+          checkInMethod = r % 4 === 0 ? 'manual' : 'qr'
           approvedAt = d(ev.dateOffset - 5)
-          attendedAt = d(ev.dateOffset, 10 + (r % 6))
-        } else if (r < ev.regCount - ev.pendingCount) {
+          attendedAt = d(ev.dateOffset, 9 + (r % 8)) // check-in between 09:00–16:00
+        } else if (r < approvedEnd) {
+          // Approved but didn't show up
           status = 'approved'
           approvedAt = d(ev.dateOffset - 3)
           if (['completed', 'archived'].includes(ev.status)) {
             attendanceStatus = 'no_show'
           }
+        } else if (r < rejectedEnd) {
+          status = 'rejected'
         } else {
           status = 'pending'
         }
@@ -416,25 +463,30 @@ export async function seedDemo(pool: Pool): Promise<void> {
     // OTS registrations are walk-in registrations created during the event
     // They have status='approved' AND attended_at IS NOT NULL (auto-approved and marked attended)
     let totalOts = 0
-    // Start from contact index 350 to avoid overlap with regular registrations
-    let otsContactIdx = 350
+    // Start from end of pool to minimise overlap with regular registrations
+    let otsContactIdx = contactIds.length - 60
     for (let ei = 0; ei < EVENTS.length; ei++) {
       const ev = EVENTS[ei]
       if (ev.otsCount === 0) continue
       const eventId = eventIds[ei]
 
       for (let o = 0; o < ev.otsCount; o++) {
-        // Use contacts from a separate range to minimize overlap
-        const contactId = contactIds[otsContactIdx % contactIds.length]
-        otsContactIdx++
+        // Find a contact not already registered for this event (try up to 10 candidates)
+        let contactId: string | null = null
+        for (let attempt = 0; attempt < 10; attempt++) {
+          const candidate = contactIds[otsContactIdx % contactIds.length]
+          otsContactIdx++
+          const existing = await client.query(
+            `SELECT id FROM registrations WHERE contact_id = $1 AND event_id = $2`,
+            [candidate, eventId]
+          )
+          if (existing.rows.length === 0) {
+            contactId = candidate
+            break
+          }
+        }
+        if (!contactId) continue // all candidates already registered
         const regId = createId()
-
-        // Skip if this contact is already registered for this event
-        const existing = await client.query(
-          `SELECT id FROM registrations WHERE contact_id = $1 AND event_id = $2`,
-          [contactId, eventId]
-        )
-        if (existing.rows.length > 0) continue
 
         // OTS registrations are always approved and attended
         const approvedAt = d(ev.dateOffset, 8 + (o % 4)) // Morning of event
@@ -563,17 +615,28 @@ export async function seedDemo(pool: Pool): Promise<void> {
         )
 
         for (const reg of postSurveyRows.rows) {
+          // Bell-curve ratings centred around 4: weights [1,5,20,45,29] → avg ≈ 4.0/5
+          const rating = weightedPick([1, 2, 3, 4, 5], [1, 5, 20, 45, 29])
+          const presentation = weightedPick([1, 2, 3, 4, 5], [1, 4, 18, 47, 30])
           await client.query(`
             INSERT INTO survey_responses (id, event_id, registration_id, survey_type, answers)
             VALUES ($1, $2, $3, 'post-event', $4)
           `, [
             createId(), eventId, reg.id,
             JSON.stringify({
-              ratingKeseluruhan: Math.floor(Math.random() * 3) + 3,
-              topikFavorit: pick(['AI & Machine Learning', 'Cloud Native', 'DevOps', 'Data Engineering', 'Security']),
-              kualitasPenyajian: Math.floor(Math.random() * 3) + 3,
-              saranPerbaikan: pick(['Sangat bermanfaat', 'Perlu lebih banyak sesi networking', 'Topik sangat relevan', 'Waktu kurang panjang', 'Tempat terlalu kecil']),
-              akanHadirLagi: pick(['Ya', 'Mungkin', 'Tidak']),
+              ratingKeseluruhan: rating,
+              topikFavorit: pick(['AI & Machine Learning', 'Cloud Native', 'DevOps', 'Data Engineering', 'Security', 'Lainnya']),
+              kualitasPenyajian: presentation,
+              saranPerbaikan: pick([
+                'Sangat bermanfaat, topik relevan dengan pekerjaan sehari-hari',
+                'Perlu lebih banyak sesi networking antar peserta',
+                'Durasi terlalu singkat, bisa diperpanjang',
+                'Tempat kurang luas, kapasitas perlu ditingkatkan',
+                'Materi terlalu teknis untuk pemula',
+                'Pembicara sangat inspiratif dan berpengalaman',
+                'Live demo lebih membantu daripada slide presentasi',
+              ]),
+              akanHadirLagi: weightedPick(['Ya', 'Mungkin', 'Tidak'], [65, 25, 10]),
             }),
           ])
           totalPostSurveys++
@@ -597,7 +660,7 @@ export async function seedDemo(pool: Pool): Promise<void> {
         VALUES ($1, $2, $3, 'pending')
       `, [
         createId(),
-        JSON.stringify({ name: rec.name, phone: rec.phone, email: rec.email, company: pick(COMPANIES) }),
+        JSON.stringify({ name: rec.name, phone: rec.phone, email: rec.email, company: pick(COMPANIES_BY_INDUSTRY.teknologi) }),
         JSON.stringify(rec.flags),
       ])
     }
@@ -657,23 +720,35 @@ export async function seedDemo(pool: Pool): Promise<void> {
     console.log(`✓ Seeded ${sponsorCount} event-sponsor relationships`)
 
     // ── Blast Logs ──
+    // Recipient count is the pool reached by blast — meaningfully larger than registration
+    // count (blast goes to segmented contacts, not everyone registers).
+    // Rule of thumb: registrations ≈ 30-60% of recipients → recipients ≈ regCount / 0.45 ± noise
     let blastCount = 0
     for (let ei = 0; ei < EVENTS.length; ei++) {
       const ev = EVENTS[ei]
       if (['draft', 'cancelled'].includes(ev.status)) continue
-      
+
       const eventId = eventIds[ei]
-      // Add 1-3 blast logs per active/completed event
-      const blastCountForEvent = ev.status === 'active' || ev.status === 'completed' ? Math.floor(Math.random() * 3) + 1 : 1
-      
+      // 1 blast for published events; 2-3 waves for active/completed (invitation + reminder(s))
+      const blastCountForEvent = ['active', 'completed', 'archived'].includes(ev.status)
+        ? Math.floor(Math.random() * 2) + 2  // 2 or 3 waves
+        : 1
+
       for (let b = 0; b < blastCountForEvent; b++) {
         const channel = pick(['email', 'whatsapp'])
-        const recipientCount = Math.floor(Math.random() * 150) + 20
-        const status = pick(['completed', 'completed', 'completed', 'failed'])
-        const daysAgo = ev.dateOffset - (b * 3) - 2
-        
+        // First wave is the largest (invitation blast to full segment)
+        // Subsequent waves are reminders to non-openers (≈60% of prior)
+        const baseRecipients = ev.regCount > 0
+          ? Math.round(ev.regCount / (0.35 + Math.random() * 0.2)) // regCount = 35–55% of recipients
+          : Math.floor(Math.random() * 80) + 40
+        const recipientCount = b === 0 ? baseRecipients : Math.round(baseRecipients * (0.5 + Math.random() * 0.2))
+        const status = b < blastCountForEvent - 1
+          ? 'completed'
+          : pick(['completed', 'completed', 'completed', 'failed'])
+        const daysAgo = ev.dateOffset - ((blastCountForEvent - 1 - b) * 4) - 2 // most recent blast 2 days before event
+
         await client.query(
-          `INSERT INTO blast_logs (id, event_id, channel, recipient_count, status, sent_at) 
+          `INSERT INTO blast_logs (id, event_id, channel, recipient_count, status, sent_at)
            VALUES ($1, $2, $3, $4, $5, $6)`,
           [createId(), eventId, channel, recipientCount, status, d(daysAgo)]
         )

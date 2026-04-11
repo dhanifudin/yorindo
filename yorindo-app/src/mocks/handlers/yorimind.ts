@@ -1,7 +1,7 @@
 import { http, HttpResponse, delay } from 'msw'
-import type { YoriMindResult } from '@/types/api'
+import type { InsightsResult } from '@/types/api'
 
-const mockYoriMindResult: YoriMindResult = {
+const mockInsightsResult: InsightsResult = {
   disabled: false,
   analysis:
     'Event menunjukkan tingkat minat awal yang kuat dengan 85% tingkat pendaftaran dalam 3 hari pertama kampanye. ' +
@@ -52,9 +52,9 @@ const mockYoriMindResult: YoriMindResult = {
   ],
 }
 
-export const yorimindHandlers = [
-  http.get('/api/events/:id/yorimind', async () => {
+export const insightsHandlers = [
+  http.get('/api/events/:id/insights', async () => {
     await delay(1200)
-    return HttpResponse.json(mockYoriMindResult)
+    return HttpResponse.json(mockInsightsResult)
   }),
 ]

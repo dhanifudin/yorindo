@@ -17,7 +17,7 @@ import type { IEtlNormalizationService } from './interfaces/services/IEtlNormali
 import type { IOtpService } from './interfaces/services/IOtpService.js'
 import type { IQueueService } from './interfaces/services/IQueueService.js'
 import type { IWhatsAppService } from './interfaces/services/IWhatsAppService.js'
-import type { IYoriMindService } from './interfaces/services/IYoriMindService.js'
+import type { IInsightsService } from './interfaces/services/IInsightsService.js'
 import { InMemoryAuditLogRepository } from './repositories/memory/AuditLogRepository.js'
 import { InMemoryContactRepository } from './repositories/memory/ContactRepository.js'
 import { InMemoryEventRepository } from './repositories/memory/EventRepository.js'
@@ -51,8 +51,8 @@ import { MockEtlNormalizationService } from './services/adapters/mock/EtlNormali
 import { MockOtpService } from './services/adapters/mock/OtpService.js'
 import { MockQueueService } from './services/adapters/mock/QueueService.js'
 import { MockWhatsAppService } from './services/adapters/mock/WhatsAppService.js'
-import { MockYoriMindService } from './services/adapters/mock/YoriMindService.js'
-import { AIInsightsService } from './services/adapters/real/AIInsightsService.js'
+import { MockInsightsService } from './services/adapters/mock/MockInsightsService.js'
+import { InsightsService } from './services/adapters/real/InsightsService.js'
 import { BrevoEmailService } from './services/adapters/real/BrevoEmailService.js'
 import { MailtrapEmailService } from './services/adapters/real/MailtrapEmailService.js'
 import { BullQueueService } from './services/adapters/real/BullQueueService.js'
@@ -151,17 +151,17 @@ async function resolveEmailService(): Promise<IEmailService> {
   }
 }
 
-function resolveYoriMindService(): IYoriMindService {
-  // Always use AIInsightsService which reads AI provider settings from database
+function resolveInsightsService(): IInsightsService {
+  // Always use InsightsService which reads AI provider settings from database
   // This allows admin to configure AI provider (openai, groq, mock, disabled) from /app/settings
-  return new AIInsightsService()
+  return new InsightsService()
 }
 
 async function resolveServices(): Promise<{
   emailService: IEmailService
   whatsAppService: IWhatsAppService
   etlNormalizationService: IEtlNormalizationService
-  yoriMindService: IYoriMindService
+  insightsService: IInsightsService
   queueService: IQueueService
   otpService: IOtpService
   deduplicationService: IDeduplicationService
@@ -170,7 +170,7 @@ async function resolveServices(): Promise<{
     ? new MockQueueService()
     : new BullQueueService()
   const etlNormalizationService = resolveEtlNormalizationService()
-  const yoriMindService = resolveYoriMindService()
+  const insightsService = resolveInsightsService()
   const deduplicationService = new FuzzyDeduplicationService(repos.contactRepository)
 
   const emailService = await resolveEmailService()
@@ -180,7 +180,7 @@ async function resolveServices(): Promise<{
       emailService,
       whatsAppService: new MockWhatsAppService(),
       etlNormalizationService,
-      yoriMindService,
+      insightsService,
       queueService,
       otpService: new MockOtpService(),
       deduplicationService,
@@ -192,7 +192,7 @@ async function resolveServices(): Promise<{
       emailService,
       whatsAppService: new EverproWhatsAppService(),
       etlNormalizationService,
-      yoriMindService,
+      insightsService,
       queueService,
       otpService: new MockOtpService(),
       deduplicationService,
@@ -220,7 +220,7 @@ export const templateRepository: ITemplateRepository = repos.templateRepository
 export const emailService: IEmailService = svcs.emailService
 export const whatsAppService: IWhatsAppService = svcs.whatsAppService
 export const etlNormalizationService: IEtlNormalizationService = svcs.etlNormalizationService
-export const yoriMindService: IYoriMindService = svcs.yoriMindService
+export const insightsService: IInsightsService = svcs.insightsService
 export const queueService: IQueueService = svcs.queueService
 export const otpService: IOtpService = svcs.otpService
 export const deduplicationService: IDeduplicationService = svcs.deduplicationService

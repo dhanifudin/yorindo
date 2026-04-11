@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
 
-export default function YoriMindPage() {
+export default function InsightsPage() {
   notFound()
 }

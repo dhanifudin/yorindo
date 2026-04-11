@@ -27,6 +27,7 @@ interface RegistrationRow extends QueryResultRow {
   upload_source: string | null
   event_date: string | null
   event_name_raw: string | null
+  registration_source: string | null
   created_at: Date
 }
 
@@ -52,6 +53,7 @@ export class PostgresRegistrationRepository
       ...(row.upload_source ? { uploadSource: row.upload_source as NonNullable<Registration['uploadSource']> } : {}),
       ...(row.event_date ? { eventDate: row.event_date } : {}),
       ...(row.event_name_raw ? { eventNameRaw: row.event_name_raw } : {}),
+      ...(row.registration_source ? { registrationSource: row.registration_source as NonNullable<Registration['registrationSource']> } : {}),
       createdAt: this.toIso(row.created_at),
     } as Registration
   }

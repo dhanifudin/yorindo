@@ -46,6 +46,7 @@ const migrations = [
   '015_settings_table.sql',
   '016_banner_url.sql',
   '017_topic_tags.sql',
+  '018_registration_source.sql',
 ]
 
 export async function runMigrations(pool: Pool): Promise<void> {

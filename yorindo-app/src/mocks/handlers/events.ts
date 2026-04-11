@@ -326,6 +326,24 @@ export const eventHandlers = [
     return new HttpResponse(null, { status: 204 })
   }),
 
+  http.get('/api/events/:id/completion-stats', async () => {
+    await delay(300)
+    return HttpResponse.json({
+      demography: {
+        cities:     [{ name: 'Jakarta', count: 42 }, { name: 'Surabaya', count: 28 }, { name: 'Bandung', count: 15 }],
+        industries: [{ name: 'Fabrikasi Logam & Mesin Presisi', count: 35 }, { name: 'Fast-Moving Consumer Goods (FMCG)', count: 22 }, { name: 'Farmasi & Alat Kesehatan', count: 18 }],
+        jobTitles:  [{ name: 'manajer', count: 30 }, { name: 'direktur', count: 20 }, { name: 'staf', count: 15 }],
+      },
+      segmentOverlap: [
+        { industry: 'Fabrikasi Logam & Mesin Presisi', city: 'Surabaya', attended: 28, approved: 32, rate: 87 },
+        { industry: 'Farmasi & Alat Kesehatan',        city: 'Jakarta',  attended: 18, approved: 22, rate: 81 },
+        { industry: 'Fast-Moving Consumer Goods (FMCG)', city: 'Jakarta', attended: 15, approved: 22, rate: 68 },
+        { industry: 'Elektronik & Peralatan Rumah Tangga', city: 'Bandung', attended: 10, approved: 18, rate: 55 },
+        { industry: 'Tekstil & Garmen',                city: 'Surabaya', attended: 4,  approved: 12, rate: 33 },
+      ],
+    })
+  }),
+
   http.get('/api/events/:id', async ({ params }) => {
     await delay(300)
     const event = eventsStore.find((e) => e.id === params.id)

@@ -67,8 +67,8 @@ async function requireEventAccessOr403(reply: FastifyReply, user: JwtPayload, ev
 export const surveysRoutes: FastifyPluginAsync = async (fastify) => {
   const aggregationService = new SurveyAggregationService()
 
-  // ── GET /api/events/:id/survey/:type ──────────────────────────────────────
-  fastify.get('/api/events/:id/survey/:type', async (request, reply) => {
+  // ── GET /api/events/:id/surveys/:type ──────────────────────────────────────
+  fastify.get('/api/events/:id/surveys/:type', async (request, reply) => {
     const params = EventIdParamsSchema.extend({ type: SurveyTypeParamSchema }).safeParse(request.params)
     if (!params.success) {
       return reply.status(400).send({
@@ -85,7 +85,7 @@ export const surveysRoutes: FastifyPluginAsync = async (fastify) => {
       if (allowed !== true) return
     }
 
-    validateOpenApiRequest({ path: '/events/{id}/survey/{type}', method: 'get', params: params.data })
+    validateOpenApiRequest({ path: '/events/{id}/surveys/{type}', method: 'get', params: params.data })
 
     const schema = await surveyRepository.findByEventId(params.data.id, params.data.type)
 
@@ -98,12 +98,12 @@ export const surveysRoutes: FastifyPluginAsync = async (fastify) => {
       responseBody.enabled = fullEvent?.postSurveyEnabled ?? true
     }
 
-    validateOpenApiResponse({ path: '/events/{id}/survey/{type}', method: 'get', status: 200, body: responseBody })
+    validateOpenApiResponse({ path: '/events/{id}/surveys/{type}', method: 'get', status: 200, body: responseBody })
     return reply.status(200).send(responseBody)
   })
 
-  // ── PUT /api/events/:id/survey/:type (admin only) ─────────────────────────
-  fastify.put('/api/events/:id/survey/:type', { preHandler: [requireAuth, requireAdmin] }, async (request, reply) => {
+  // ── PUT /api/events/:id/surveys/:type (admin only) ─────────────────────────
+  fastify.put('/api/events/:id/surveys/:type', { preHandler: [requireAuth, requireAdmin] }, async (request, reply) => {
     const params = EventIdParamsSchema.extend({ type: SurveyTypeParamSchema }).safeParse(request.params)
     const body = SurveySchemaInput.safeParse(request.body)
 
@@ -120,7 +120,7 @@ export const surveysRoutes: FastifyPluginAsync = async (fastify) => {
     const event = await requireEventOr404(reply, params.data.id)
     if (!event) return
 
-    validateOpenApiRequest({ path: '/events/{id}/survey/{type}', method: 'put', params: params.data, body: body.data })
+    validateOpenApiRequest({ path: '/events/{id}/surveys/{type}', method: 'put', params: params.data, body: body.data })
 
     const existing = await surveyRepository.findByEventId(params.data.id, params.data.type)
     const savedSurvey = await surveyRepository.upsert(params.data.id, params.data.type, {
@@ -153,12 +153,12 @@ export const surveysRoutes: FastifyPluginAsync = async (fastify) => {
       uiSchema: savedSurvey.uiSchema ?? {},
     }
 
-    validateOpenApiResponse({ path: '/events/{id}/survey/{type}', method: 'put', status: 200, body: responseBody })
+    validateOpenApiResponse({ path: '/events/{id}/surveys/{type}', method: 'put', status: 200, body: responseBody })
     return reply.status(200).send(responseBody)
   })
 
-  // ── GET /api/events/:id/survey/responses ──────────────────────────────────
-  fastify.get('/api/events/:id/survey/responses', { preHandler: [requireAuth] }, async (request, reply) => {
+  // ── GET /api/events/:id/surveys/responses ──────────────────────────────────
+  fastify.get('/api/events/:id/surveys/responses', { preHandler: [requireAuth] }, async (request, reply) => {
     const params = EventIdParamsSchema.safeParse(request.params)
     const query = SurveyResponsesQuerySchema.safeParse(request.query)
 
@@ -221,12 +221,12 @@ export const surveysRoutes: FastifyPluginAsync = async (fastify) => {
       },
     }
 
-    validateOpenApiResponse({ path: '/events/{id}/survey/responses', method: 'get', status: 200, body: responseBody })
+    validateOpenApiResponse({ path: '/events/{id}/surveys/responses', method: 'get', status: 200, body: responseBody })
     return reply.status(200).send(responseBody)
   })
 
-  // ── GET /api/events/:id/survey/responses/download ─────────────────────────
-  fastify.get('/api/events/:id/survey/responses/download', { preHandler: [requireAuth] }, async (request, reply) => {
+  // ── GET /api/events/:id/surveys/responses/download ─────────────────────────
+  fastify.get('/api/events/:id/surveys/responses/download', { preHandler: [requireAuth] }, async (request, reply) => {
     const params = EventIdParamsSchema.safeParse(request.params)
     const query = SurveyDownloadQuerySchema.safeParse(request.query)
 

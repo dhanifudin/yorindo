@@ -7,10 +7,10 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { LaporanPlaceholderChart } from './LaporanPlaceholderChart'
 
 // Graceful lazy import — will fall back silently if Epic 8 not yet implemented
-const YORIMIND_PATH = '/src/components/yorimind/YoriMindPanel'
-const YoriMindPanel = React.lazy(() =>
+const INSIGHTS_PATH = '/src/components/features/events/InsightsPanel'
+const InsightsPanel = React.lazy(() =>
   /* @vite-ignore */
-  import(/* @vite-ignore */ YORIMIND_PATH).catch(() => ({
+  import(/* @vite-ignore */ INSIGHTS_PATH).catch(() => ({
     default: () => (
       <div className="rounded border p-4 text-sm text-muted-foreground">
         Analisis tersedia setelah event selesai
@@ -68,12 +68,12 @@ export function LaporanStub({ eventDate, isCompleted }: LaporanStubProps) {
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm text-muted-foreground">
-            Analisis YoriMind
+            Analisis AI
           </CardTitle>
         </CardHeader>
         <CardContent>
           <Suspense fallback={<Skeleton className="h-48 w-full animate-none" />}>
-            <YoriMindPanel />
+            <InsightsPanel />
           </Suspense>
         </CardContent>
       </Card>

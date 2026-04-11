@@ -3,7 +3,7 @@ import { eventHandlers } from './events'
 import { registrationHandlers } from './registrations'
 import { authHandlers } from './auth'
 import { scanHandlers } from './scan'
-import { yorimindHandlers } from './yorimind'
+import { insightsHandlers } from './yorimind'
 import { templateHandlers } from './templates'
 import { reportHandlers } from './reports'
 import { dataRightsHandlers } from './dataRights'
@@ -24,7 +24,7 @@ export const handlers = [
   ...registrationHandlers,
   ...authHandlers,
   ...scanHandlers,
-  ...yorimindHandlers,
+  ...insightsHandlers,
   ...templateHandlers,
   ...reportHandlers,
   ...dataRightsHandlers,

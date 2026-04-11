@@ -74,7 +74,7 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
 
   const { data: survey, isLoading: surveyLoading } = useQuery<{ schema: RJSFSchema; uiSchema: UiSchema }>({
     queryKey: ['survey-public', event?.id],
-    queryFn: () => fetch(`/api/events/${event!.id}/survey/registration`).then((r) => r.json()),
+    queryFn: () => fetch(`/api/events/${event!.id}/surveys/registration`).then((r) => r.json()),
     enabled: !!event?.id && step === 1,
   })
 

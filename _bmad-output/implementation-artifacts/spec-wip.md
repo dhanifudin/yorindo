@@ -1,90 +1,87 @@
 ---
-title: 'Email system revamp — DB-driven config, SMTP presets, rate-limit retry, settings UI'
+title: 'Registration source tracking — blast vs organic vs OTS breakdown'
 type: 'feature'
 created: '2026-04-11'
-status: 'done'
-context:
-  - '_bmad-output/planning-artifacts/prd-email-system-revamp.md'
-baseline_commit: 4eae289a963d4b76e39aed9e3c67ef0db95626ea
+status: 'in-progress'
+context: []
+baseline_commit: 2983afdebb0ee699bd1f2251c8534f01f187d25e
 ---
 
 <frozen-after-approval reason="human-owned intent — do not modify unless human renegotiates">
 
 ## Intent
 
-**Problem:** Email provider selection is env-var only (UI changes ignored at runtime), no rate-limit awareness (429 responses waste fixed-delay retries), no queue recovery on blast failure, and settings UI is unfriendly for non-technical admins.
+**Problem:** Admins cannot see how many participants registered from blast invitations vs organic discovery vs on-the-spot walk-in. The current funnel shows aggregate blast count and registration count with no linkage between them.
 
-**Approach:** Make email config DB-driven with immediate effect, add generic SMTP service with presets, implement rate-limit aware retry with Retry-After parsing, and redesign the email settings tab with dropdown, conditional fields, helper text, and test-send.
+**Approach:** Add `registration_source` column to registrations table. Track blast recipients in a junction table. Update all registration creation paths to set the correct source. Add breakdown metrics to overview and report endpoints.
 
 ## Boundaries & Constraints
 
 **Always:**
-- Email provider resolved from DB settings table on each send (not env vars)
-- Settings cache invalidated immediately on save (5s TTL max)
-- SMTP errors (auth failed, connection refused) fail immediately — no retry
-- Rate-limit retries only on HTTP 429 with Retry-After detection
-- Secrets stored with is_secret: true, masked in API responses
+- `registration_source` values: `'blast'`, `'organic'`, `'ots'`
+- OTS registrations always set source = `'ots'`
+- Public form registrations default to `'organic'`
+- Blast registrations determined by whether contact was in blast_log_recipients
 
 **Ask First:**
-- If implementing multi-provider failover (primary + fallback) — out of scope unless explicitly requested
-- If BlastBodySchema needs breaking changes to existing blast API consumers
+- If blast recipient tracking requires a new table vs. modifying blast_logs
 
 **Never:**
-- Do not break existing blast API contract (BlastBodySchema fields are additive only)
-- Do not remove MockEmailService (needed for dev/test)
-- Do not persist blast progress to in-memory Map — must be Redis or DB
+- Do not break existing registration creation paths
+- Do not change existing blast_logs table structure (add new table instead)
+- Do not retroactively set source on existing registrations (they default to NULL)
 
 ## I/O & Edge-Case Matrix
 
 | Scenario | Input / State | Expected Output / Behavior | Error Handling |
 |----------|--------------|---------------------------|----------------|
-| Admin changes provider in UI | EMAIL_PROVIDER changed from brevo to smtp | Next email send uses SMTP immediately (no restart) | N/A |
-| Provider returns 429 with Retry-After: 60 | Blast in progress | Pauses 60s, resumes at reduced rate | Max 3 retries, then fail + alert admin |
-| Provider returns 429 without Retry-After | Blast in progress | Exponential backoff: 1s, 4s, 16s, 64s | Max 15-min window, then fail + alert |
-| SMTP auth failure | send() called with bad credentials | Immediate failure logged, no retries | Clear error message in UI |
-| Admin clicks Test Send | Valid config, admin has email on file | Test email delivered within 30s, green checkmark | Error message with specific cause |
-| Blast worker crashes mid-send | 500 contacts, 200 sent | Job preserved in Redis, admin can resume from contact #201 | Alert admin, preserve progress |
+| OTS registration | Admin creates walk-in registration | source='ots' set automatically | N/A |
+| Public form registration | User registers via event landing page | source='organic' set automatically | N/A |
+| Blast recipient registers | Contact who received blast clicks registration link | source='blast' set automatically | N/A |
+| Overview endpoint | GET /api/events/:id/overview | Returns blastRegistered, organicRegistered, otsRegistered counts | N/A |
+| Report endpoint | GET /api/events/:id/report | Returns source breakdown in response | N/A |
+| Existing registrations | Old registrations without source column value | source=NULL, excluded from breakdown | Treated as 'unknown' in UI |
 
 </frozen-after-approval>
 
 ## Code Map
 
-- `yorindo-api/src/container.ts` — Change resolveEmailService() to read from DB settings, not env vars
-- `yorindo-api/src/services/adapters/real/SmtpEmailService.ts` (new) — Generic SMTP service from MailtrapEmailService
-- `yorindo-api/src/services/blast.service.ts` — Update sendWithRetry() with rate-limit aware retry
-- `yorindo-api/src/routes/settings.routes.ts` — Add SMTP fields to SECRET_KEYS, clear cache on save
-- `yorindo-app/src/app/app/settings/page.tsx` — Redesigned email tab with dropdown, conditional fields, test-send
-- `yorindo-api/src/interfaces/services/IEmailService.ts` — No changes needed (interface unchanged)
-- `yorindo-api/src/workers/blast.worker.ts` — Add BullMQ retry attempts config
+- `yorindo-api/migrations/018_registration_source.sql` -- Add registration_source column + blast_log_recipients table
+- `yorindo-api/src/types/domain.ts` -- Add registrationSource to Registration type
+- `yorindo-api/src/repositories/postgres/EventRepository.ts` -- Add source breakdown to getOverviewMetrics
+- `yorindo-api/src/routes/events.routes.ts` -- Update overview endpoint, OTS registration, analytics
+- `yorindo-api/src/routes/registrations.routes.ts` -- Set source='organic' on public registration
+- `yorindo-api/src/routes/blast.routes.ts` or blast.service.ts -- Record blast recipients
+- `yorindo-app/src/app/app/events/[id]/_client.tsx` -- Display source breakdown in overview
+- `yorindo-app/src/components/features/reports/MetricCards.tsx` -- Add source breakdown card
 
 ## Tasks & Acceptance
 
 **Execution:**
-- [x] `yorindo-api/src/container.ts` — Change resolveEmailService() to use SettingsService.getProviderConfig() with cache -- DB-driven config
-- [x] `yorindo-api/src/services/adapters/real/SmtpEmailService.ts` (new) — Create generic SMTP service using nodemailer, replace MailtrapEmailService usage -- Support any SMTP server
-- [x] `yorindo-api/src/services/blast.service.ts` — Update sendWithRetry() to detect 429, parse Retry-After, apply exponential backoff with jitter -- Rate-limit aware retry
-- [x] `yorindo-api/src/routes/settings.routes.ts` — Add SMTP fields (SMTP_HOST, SMTP_PORT, SMTP_SECURE, SMTP_USER, SMTP_PASS) to SECRET_KEYS list, ensure clearSettingsCache() called on save -- Enable SMTP config via UI
-- [x] `yorindo-app/src/app/app/settings/page.tsx` — Redesign email tab: provider dropdown (Brevo/Mailtrap/Gmail/SES/SendGrid/Custom), conditional sections, helper text, test-send button, status indicator -- Beginner-friendly UI
-- [x] `yorindo-api/src/workers/blast.worker.ts` — Configure BullMQ job retry attempts = 3 with exponential backoff -- Queue recovery
-- [x] Verify existing tests pass, add test for SMTP service and rate-limit retry logic -- Regression safety
+- [ ] `yorindo-api/migrations/018_registration_source.sql` -- Add `registration_source TEXT` to registrations, create `blast_log_recipients` table
+- [ ] `yorindo-api/src/types/domain.ts` -- Add `registrationSource: 'blast' | 'organic' | 'ots' | null` to Registration type
+- [ ] `yorindo-api/src/routes/events.routes.ts` -- Update OTS endpoint to set source='ots', update overview endpoint to return source breakdown
+- [ ] `yorindo-api/src/routes/registrations.routes.ts` -- Set source='organic' on public form registration
+- [ ] `yorindo-api/src/services/blast.service.ts` -- Record each recipient in blast_log_recipients when blast is sent
+- [ ] `yorindo-api/src/repositories/postgres/EventRepository.ts` -- Update getOverviewMetrics to return blast/organic/ots breakdown
+- [ ] `yorindo-app/src/app/app/events/[id]/_client.tsx` -- Add source breakdown section to completed event dashboard
 
 **Acceptance Criteria:**
-- Given an admin changes EMAIL_PROVIDER in Settings UI, when they save, then the next email send uses the new provider without server restart
-- Given a provider returns HTTP 429 with Retry-After header, when retry logic runs, then next attempt is scheduled exactly Retry-After seconds later
-- Given an admin selects Gmail preset and enters valid credentials, when Test Send is clicked, then email is delivered within 30 seconds
-- Given a blast job fails after sending 200 of 500 contacts, when admin resumes the job, then sending continues from contact #201
-- All 195+ existing backend tests pass
+- Given an OTS registration is created, when the registration is saved, then registration_source is set to 'ots'
+- Given a user registers via public event form, when the registration is saved, then registration_source is set to 'organic'
+- Given a contact who received a blast registers for the event, when the registration is saved, then registration_source is set to 'blast'
+- Given the overview endpoint is called, when the response is returned, then it includes blastRegistered, organicRegistered, and otsRegistered counts
+- Given the event is completed, when the admin views the overview page, then a source breakdown chart is displayed
 
 ## Spec Change Log
 
 ## Verification
 
 **Commands:**
-- `cd yorindo-api && npm test` -- expected: all 195+ tests pass
+- `cd yorindo-api && npm test` -- expected: all tests pass
 - `cd yorindo-api && npx tsc --noEmit` -- expected: zero type errors
 - `cd yorindo-app && npx tsc --noEmit` -- expected: zero type errors
 
 **Manual checks:**
-- Settings UI: dropdown shows 6 providers, selecting one shows only relevant fields
-- Test Send: delivers email to admin inbox within 30 seconds
-- Rate-limit: simulate 429 response, verify Retry-After is respected
+- Create OTS registration → verify source='ots' in database
+- View completed event overview → verify source breakdown is displayed

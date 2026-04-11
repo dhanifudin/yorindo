@@ -313,6 +313,7 @@ export const registrationsRoutes: FastifyPluginAsync = async (fastify) => {
       flagOverride: false,
       approvedAt: null,
       attendedAt: null,
+      registrationSource: 'organic',
     })
 
     if (payload.surveyAnswers && Object.keys(payload.surveyAnswers).length > 0) {

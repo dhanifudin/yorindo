@@ -11,12 +11,7 @@ import { FunnelVisualization } from '@/components/hub/FunnelVisualization'
 import { ActionCard } from '@/components/hub/ActionCard'
 import { SponsorPanel } from '@/components/features/vendors/SponsorPanel'
 import { getHealth } from '@/lib/benchmarks'
-import { MetricCards, MetricCardsSkeleton } from '@/components/features/reports/MetricCards'
-import { AttendanceFunnelChart } from '@/components/features/reports/AttendanceFunnelChart'
-import { DemographicsCharts } from '@/components/features/reports/DemographicsCharts'
-import { AnalyticsDashboard } from '@/components/features/events/AnalyticsDashboard'
-import { YoriMindPanel } from '@/components/features/events/YoriMindPanel'
-import { useReport } from '@/hooks/useReport'
+import { CompletedEventDashboard } from '@/components/features/events/CompletedEventDashboard'
 import Link from 'next/link'
 import Image from 'next/image'
 import type { Event } from '@/types/api'
@@ -30,6 +25,9 @@ interface OverviewMetrics {
   pendingApprovals: number
   seatsRemaining: number | null
   daysUntilEvent: number
+  otsCount: number
+  blastRegistered: number
+  organicRegistered: number
 }
 
 interface EventDetailPageProps {
@@ -62,9 +60,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
     enabled: !!id,
   })
 
-  // Load report data when event is completed/archived
   const isCompleted = ['completed', 'archived'].includes(event?.status ?? '')
-  const { data: report } = useReport(isCompleted ? id : undefined)
 
   if (isLoading || !metrics || !event) {
     return (
@@ -268,51 +264,19 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
       </>
       )}
 
-      {/* ── Report Section (shown only for completed/archived events) ── */}
       {isCompleted && (
-        <div className="mt-8 pt-6 border-t space-y-6">
-          <div>
-            <h2 className="text-xl font-bold mb-1">Laporan Kehadiran</h2>
-            <p className="text-sm text-muted-foreground">Analisis lengkap setelah event selesai</p>
-          </div>
-
-          {report ? (
-            <>
-              <MetricCards
-                totalInvited={report.totalInvited}
-                registered={report.registered}
-                approved={report.approved}
-                attended={report.attended}
-                otsCount={report.otsCount ?? 0}
-                attendanceRate={report.attendanceRate}
-                noShowRate={report.noShowRate}
-              />
-              <AttendanceFunnelChart
-                totalInvited={report.totalInvited}
-                registered={report.registered}
-                approved={report.approved}
-                attended={report.attended}
-              />
-              <DemographicsCharts
-                industryBreakdown={report.industryBreakdown}
-                cityBreakdown={report.cityBreakdown}
-                jobTitleBreakdown={report.jobTitleBreakdown}
-              />
-              <AnalyticsDashboard eventId={id} />
-              <YoriMindPanel eventId={id} />
-            </>
-          ) : (
-            <>
-              <MetricCardsSkeleton />
-              <div className="bg-muted rounded-lg h-64 animate-pulse" />
-              <div className="grid grid-cols-3 gap-4">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="bg-muted rounded-lg h-56 animate-pulse" />
-                ))}
-              </div>
-            </>
-          )}
-        </div>
+        <CompletedEventDashboard
+          eventId={id}
+          overview={{
+            blastCount: metrics.blastCount,
+            registrationCount: metrics.registrationCount,
+            approvedCount: metrics.approvedCount,
+            attendedCount: metrics.attendedCount,
+            otsCount: metrics.otsCount,
+            blastRegistered: metrics.blastRegistered ?? 0,
+            organicRegistered: metrics.organicRegistered ?? 0,
+          }}
+        />
       )}
     </div>
   )

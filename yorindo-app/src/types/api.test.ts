@@ -5,7 +5,7 @@ import type {
   Registration,
   User,
   ScanResult,
-  YoriMindResult,
+  InsightsResult,
   ApiError,
   PaginatedResponse,
   Industry,
@@ -60,15 +60,15 @@ describe('API type definitions', () => {
     expectTypeOf(status).toMatchTypeOf<'success' | 'already_attended' | 'invalid'>()
   })
 
-  it('YoriMindResult has correct structure', () => {
-    const result: YoriMindResult = {
+  it('InsightsResult has correct structure', () => {
+    const result: InsightsResult = {
       analysis: 'text',
       root_causes: ['cause1'],
       recommendations: [{ action: 'act', impact: 'imp', priority: 'high' }],
       summary: 'sum',
       tracked_metrics: ['metric1'],
     }
-    expectTypeOf(result).toMatchTypeOf<YoriMindResult>()
+    expectTypeOf(result).toMatchTypeOf<InsightsResult>()
   })
 
   it('ApiError has error.code, message, details', () => {

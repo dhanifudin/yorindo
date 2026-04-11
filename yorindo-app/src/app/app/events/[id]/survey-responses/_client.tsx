@@ -31,7 +31,7 @@ export default function SurveyResponsesClient({ id }: SurveyResponsesClientProps
   const handleExport = async () => {
     setIsExporting(true)
     try {
-      const res = await fetch(`/api/events/${id}/survey/responses/download?type=${surveyType}`)
+      const res = await fetch(`/api/events/${id}/surveys/responses/download?type=${surveyType}`)
       if (!res.ok) throw new Error('Export gagal')
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
