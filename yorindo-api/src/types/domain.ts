@@ -65,6 +65,7 @@ export interface Contact {
   company: string | null
   department: string | null
   eventDate: string | null
+  topicTags: string[] | null          // interest-based tags for audience matching
   source: ContactSource | null
   completenessScore: number        // 0.000 to 1.000
   consentStatus: ConsentStatus
@@ -84,6 +85,7 @@ export interface TargetCriteria {
   serviceTypes?: string[]
   cities?: string[]
   jobTitles?: string[]
+  topicTags?: string[]
   behavior?: ('most_active' | 'low_attendance' | 'never_attended')[]
   lastAttendedBefore?: string
 }
@@ -100,6 +102,7 @@ export interface Event {
   city: string | null
   venue: string | null
   description: string | null
+  bannerUrl: string | null
   capacity: number | null
   waitlistBuffer: number
   approvalMode: ApprovalMode
@@ -113,6 +116,7 @@ export interface Event {
   price: number | null
   paymentMethod: string | null
   postSurveyEnabled?: boolean      // Phase 2: dual survey toggle
+  topicTags: string[] | null       // thematic content tags for audience matching
   deletedAt: ISODateString | null
   createdAt: ISODateString
   updatedAt: ISODateString

@@ -19,10 +19,10 @@ async function fetchReport(eventId: string): Promise<EventReport> {
   return res.json()
 }
 
-export function useReport(eventId: string) {
+export function useReport(eventId: string | undefined) {
   return useQuery({
     queryKey: ['report', eventId],
-    queryFn: () => fetchReport(eventId),
+    queryFn: () => fetchReport(eventId!),
     enabled: !!eventId,
   })
 }

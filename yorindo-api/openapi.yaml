@@ -303,6 +303,10 @@ components:
         description:
           type: string
           example: Seminar tentang implementasi ERP di industri manufaktur
+        bannerUrl:
+          type: string
+          example: https://images.unsplash.com/photo-1540575467063?w=1200&h=675&fit=crop
+          description: Event banner image URL
         status:
           type: string
           enum: [draft, published, active, completed, cancelled, archived]
@@ -1924,6 +1928,31 @@ components:
         requestId:
           type: string
           example: data-rights-request-001
+
+    # ─── Settings ──────────────────────────────────────────────────────────────
+    Setting:
+      type: object
+      required: [key, category]
+      properties:
+        id:
+          type: string
+        key:
+          type: string
+        value:
+          type: string
+          nullable: true
+        category:
+          type: string
+        description:
+          type: string
+        is_secret:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
 
 paths:
   # ─────────────────────────────────────────────────────────────────────────────
@@ -5966,6 +5995,377 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
 
+  # ─── Settings ────────────────────────────────────────────────────────────────
+  /settings:
+    get:
+      summary: List all settings (admin only)
+      operationId: listSettings
+      tags: [Settings]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of settings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Setting'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /settings/{key}:
+    get:
+      summary: Get setting by key (admin only)
+      operationId: getSetting
+      tags: [Settings]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Setting value
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Setting'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Setting not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+    put:
+      summary: Upsert setting by key (admin only)
+      operationId: upsertSetting
+      tags: [Settings]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [value]
+              properties:
+                value:
+                  type: string
+                  nullable: true
+      responses:
+        '200':
+          description: Setting upserted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Setting'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /settings/batch:
+    patch:
+      summary: Batch update settings (admin only)
+      operationId: batchUpdateSettings
+      tags: [Settings]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [settings]
+              properties:
+                settings:
+                  type: object
+                  additionalProperties:
+                    type: string
+                    nullable: true
+                category:
+                  type: string
+                  default: general
+      responses:
+        '200':
+          description: Batch update result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  updated:
+                    type: integer
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /settings/providers:
+    get:
+      summary: Get provider configuration grouped by type (admin only)
+      operationId: getProviderSettings
+      tags: [Settings]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Provider configuration
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ai:
+                    type: object
+                    additionalProperties:
+                      type: string
+                      nullable: true
+                  email:
+                    type: object
+                    additionalProperties:
+                      type: string
+                      nullable: true
+                  whatsapp:
+                    type: object
+                    additionalProperties:
+                      type: string
+                      nullable: true
+
+  /settings/test-email:
+    post:
+      summary: Send a test email to verify email provider configuration
+      operationId: testEmail
+      tags: [Settings]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [to]
+              properties:
+                to:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Test email sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success]
+                properties:
+                  success:
+                    type: boolean
+                  messageId:
+                    type: string
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: Email delivery failed
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, error]
+                properties:
+                  success:
+                    type: boolean
+                  error:
+                    type: string
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # UPLOADS
+  # ─────────────────────────────────────────────────────────────────────────────
+  /uploads:
+    get:
+      summary: List all uploaded images
+      operationId: listUploads
+      tags: [Uploads]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of uploaded image files
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [files]
+                properties:
+                  files:
+                    type: array
+                    items:
+                      type: object
+                      required: [filename, url, size, uploadedAt]
+                      properties:
+                        filename:
+                          type: string
+                          description: Original filename
+                        url:
+                          type: string
+                          description: URL to access the uploaded file
+                        size:
+                          type: integer
+                          description: File size in bytes
+                        uploadedAt:
+                          type: string
+                          format: date-time
+                          description: Upload timestamp
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /uploads/image:
+    post:
+      summary: Upload an image file (event banners, etc.)
+      operationId: uploadImage
+      tags: [Uploads]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Image file (JPEG, PNG, WebP, GIF, SVG, AVIF — max 5MB)
+      responses:
+        '201':
+          description: Image uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [url]
+                properties:
+                  url:
+                    type: string
+                    description: URL to access the uploaded image
+                    example: /api/uploads/abc123.png
+        '400':
+          description: Validation error or unsupported file type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /uploads/{filename}:
+    get:
+      summary: Serve an uploaded image (public access)
+      operationId: getUploadedImage
+      tags: [Uploads]
+      security: []
+      parameters:
+        - in: path
+          name: filename
+          required: true
+          schema:
+            type: string
+          description: Filename of the uploaded image
+      responses:
+        '200':
+          description: Image file
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/webp:
+              schema:
+                type: string
+                format: binary
+            image/gif:
+              schema:
+                type: string
+                format: binary
+            image/svg+xml:
+              schema:
+                type: string
+                format: binary
+            image/avif:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: File not found
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
 tags:
   - name: Health
     description: Service health check
@@ -5991,3 +6391,7 @@ tags:
     description: AI-powered event analysis
   - name: Users
     description: User account and access management
+  - name: Settings
+    description: External service configuration management
+  - name: Uploads
+    description: Image file upload and serving

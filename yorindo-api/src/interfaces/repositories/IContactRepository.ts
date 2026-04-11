@@ -21,6 +21,7 @@ export interface ContactFilters {
   serviceTypes?: string[]
   cities?: string[]
   jobTitles?: string[]
+  topicTags?: string[]
   behavior?: string[]
   lastAttendedBefore?: string
 }

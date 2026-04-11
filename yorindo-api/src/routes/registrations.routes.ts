@@ -296,6 +296,7 @@ export const registrationsRoutes: FastifyPluginAsync = async (fastify) => {
           company: payload.company ?? null,
           department: null,
           eventDate: null,
+          topicTags: null,
           source: 'form',
           completenessScore: 0.55,
           consentStatus: 'active',

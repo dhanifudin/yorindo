@@ -1,8 +1,8 @@
 'use client'
 
-import { use, useState } from 'react'
+import { use, useState, useEffect } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
@@ -77,7 +77,7 @@ function getVisibleTabs(eventStatus?: string): TabConfig[] {
   }
 }
 
-// ─── Tab key detection ────────────────────────────────────────────────────────
+// ─── Redirect /report to Overview (merged) ───────────────────────────────────
 
 function getActiveTab(pathname: string): string {
   if (pathname.endsWith('/blast')) return 'blast'
@@ -94,6 +94,7 @@ function getActiveTab(pathname: string): string {
 export default function EventHubShellLayout({ children, params }: HubLayoutProps) {
   const { id } = use(params)
   const pathname = usePathname()
+  const router = useRouter()
   const queryClient = useQueryClient()
 
   const baseHref = `/app/events/${id}`
@@ -105,6 +106,13 @@ export default function EventHubShellLayout({ children, params }: HubLayoutProps
     queryFn: () => fetch(`/api/events/${id}`).then(r => r.json()),
     staleTime: 60_000,
   })
+
+  // Redirect /report to Overview (tabs merged)
+  useEffect(() => {
+    if (pathname.includes('/report')) {
+      router.replace(baseHref)
+    }
+  }, [pathname, router, baseHref])
 
   // Shared blockerState query
   const { data: blockerState } = useQuery<EventOverviewResponse>({

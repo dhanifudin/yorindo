@@ -1,24 +1,32 @@
 import type { IEmailService, EmailPayload } from '../../../interfaces/services/IEmailService.js'
-import { config } from '../../../config/index.js'
+import { getProviderConfig } from '../../../lib/email-provider-config.js'
 import { logEmailDelivery } from '../../../lib/email-delivery-logger.js'
 
 export class BrevoEmailService implements IEmailService {
   private readonly BASE_URL = 'https://api.brevo.com/v3'
 
   async send(payload: EmailPayload): Promise<{ messageId: string }> {
+    const providerConfig = await getProviderConfig()
+    const apiKey = providerConfig.brevoApiKey ?? ''
+    const senderEmail = providerConfig.brevoSenderEmail ?? 'noreply@yorindo.app'
+
+    const body: Record<string, unknown> = {
+      sender: { email: senderEmail },
+      to: [{ email: payload.to }],
+      subject: payload.subject,
+      htmlContent: payload.body,
+    }
+    if (payload.variables && Object.keys(payload.variables).length > 0) {
+      body.params = payload.variables
+    }
+
     const response = await fetch(`${this.BASE_URL}/smtp/email`, {
       method: 'POST',
       headers: {
-        'api-key': config.brevoApiKey,
+        'api-key': apiKey,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        sender: { email: 'noreply@emu.app' },
-        to: [{ email: payload.to }],
-        subject: payload.subject,
-        htmlContent: payload.body,
-        params: payload.variables ?? {},
-      }),
+      body: JSON.stringify(body),
     })
     if (!response.ok) {
       const errorText = await response.text()

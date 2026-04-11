@@ -238,8 +238,8 @@ export default function OnTheSpotPage({ params }: { params: Promise<{ id: string
                         <div className="text-xs text-muted-foreground">{reg.contactEmail}</div>
                       </TableCell>
                       <TableCell>
-                        <div className="text-xs font-medium">{reg.industry}</div>
-                        <div className="text-xs text-muted-foreground">{reg.title || '-'}</div>
+                        <div className="text-xs font-medium">{reg.contactIndustry ?? '-'}</div>
+                        <div className="text-xs text-muted-foreground">{reg.contactJobTitle ?? '-'}</div>
                       </TableCell>
                       <TableCell>
                         <Badge className={`${STATUS_BADGE_CLASS[reg.status]} text-[10px] px-1.5 py-0`}>

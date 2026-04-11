@@ -1,10 +1,12 @@
 import * as Sentry from '@sentry/node'
 import Fastify from 'fastify'
+import path from 'path'
 import cors from '@fastify/cors'
 import helmet from '@fastify/helmet'
 import rateLimit from '@fastify/rate-limit'
 import cookie from '@fastify/cookie'
 import multipart from '@fastify/multipart'
+import fastifyStatic from '@fastify/static'
 import swagger from '@fastify/swagger'
 import swaggerUi from '@fastify/swagger-ui'
 import { healthRoutes } from './routes/health.js'
@@ -20,8 +22,11 @@ import { vendorsRoutes } from './routes/vendors.routes.js'
 import { templatesRoutes } from './routes/templates.routes.js'
 import { surveysRoutes } from './routes/surveys.routes.js'
 import { ticketsRoutes } from './routes/tickets.routes.js'
+import { settingsRoutes } from './routes/settings.routes.js'
+import { uploadsRoutes } from './routes/uploads.routes.js'
 import { authPlugin } from './middleware/auth.js'
 import { loadOpenApiDocument } from './lib/openapi.js'
+import { config } from './config/index.js'
 
 function normalizeFastifyPath(url: string): string {
   return url
@@ -133,6 +138,8 @@ export async function buildServer() {
   await fastify.register(vendorsRoutes)
   await fastify.register(surveysRoutes)
   await fastify.register(ticketsRoutes)
+  await fastify.register(settingsRoutes)
+  await fastify.register(uploadsRoutes)
 
   fastify.get('/api/openapi.json', async (_request, reply) => {
     return reply.status(200).send(openapi)
@@ -144,6 +151,13 @@ export async function buildServer() {
   if (undocumentedRoutes.length > 0) {
     throw new Error(`OpenAPI contract is missing registered routes: ${undocumentedRoutes.join(', ')}`)
   }
+
+  // Static file serving for uploaded images (registered after OpenAPI validation — wildcard route not documented)
+  const uploadsDir = config.uploadsDir || 'uploads'
+  await fastify.register(fastifyStatic, {
+    root: path.resolve(uploadsDir),
+    prefix: '/api/uploads/',
+  })
 
   return fastify
 }
