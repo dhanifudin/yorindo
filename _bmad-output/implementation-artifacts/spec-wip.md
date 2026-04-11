@@ -2,7 +2,7 @@
 title: 'Email system revamp — DB-driven config, SMTP presets, rate-limit retry, settings UI'
 type: 'feature'
 created: '2026-04-11'
-status: 'in-progress'
+status: 'done'
 context:
   - '_bmad-output/planning-artifacts/prd-email-system-revamp.md'
 baseline_commit: 4eae289a963d4b76e39aed9e3c67ef0db95626ea

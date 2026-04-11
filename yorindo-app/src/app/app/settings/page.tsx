@@ -12,7 +12,8 @@ import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { Save, RotateCcw, Eye, EyeOff, Shield, Mail, MessageSquare, Brain } from 'lucide-react'
+import { Save, RotateCcw, Eye, EyeOff, Shield, Mail, MessageSquare, Brain, Loader2 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 const AI_PROVIDERS = [
   { value: 'openai', label: 'OpenAI' },
@@ -80,6 +81,30 @@ function EmailProviderSection({
   setShowSecrets: (fn: (prev: Record<string, boolean>) => Record<string, boolean>) => void
 }) {
   const selectedProvider = formValues.EMAIL_PROVIDER ?? providers?.email?.EMAIL_PROVIDER ?? 'smtp'
+  const [testSending, setTestSending] = useState(false)
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
+
+  const handleTestSend = async () => {
+    setTestSending(true)
+    setTestResult(null)
+    try {
+      const res = await fetch('/api/settings/test-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: 'dhanifudin@gmail.com' }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setTestResult({ success: true, message: 'Test email sent successfully! Check your inbox.' })
+      } else {
+        setTestResult({ success: false, message: data.error ?? 'Failed to send test email' })
+      }
+    } catch {
+      setTestResult({ success: false, message: 'Network error — check your connection' })
+    } finally {
+      setTestSending(false)
+    }
+  }
 
   const applyPreset = (preset: string) => {
     const config = SMTP_PRESETS[preset]
@@ -274,6 +299,49 @@ function EmailProviderSection({
             Mock mode — emails are stored in memory and not sent. Use for development/testing only.
           </p>
         </div>
+      )}
+
+      {/* Test Send Button */}
+      {selectedProvider !== 'mock' && (
+        <>
+          <Separator />
+          <div className="space-y-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleTestSend}
+              disabled={testSending}
+              className="w-full"
+            >
+              {testSending ? (
+                <>
+                  <Loader2 size={16} className="mr-2 animate-spin" />
+                  Mengirim email uji...
+                </>
+              ) : (
+                <>
+                  <Mail size={16} className="mr-2" />
+                  Test Send — Kirim Email Uji
+                </>
+              )}
+            </Button>
+            {testResult && (
+              <div
+                className={cn(
+                  'rounded-lg p-3 text-sm',
+                  testResult.success
+                    ? 'bg-green-50 text-green-800 border border-green-200'
+                    : 'bg-red-50 text-red-800 border border-red-200'
+                )}
+              >
+                {testResult.message}
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Email uji akan dikirim ke dhanifudin@gmail.com
+            </p>
+          </div>
+        </>
       )}
     </div>
   )

@@ -2,6 +2,7 @@ import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import { requireAuth, requireAdmin } from '../middleware/auth.js'
 import { getPool } from '../lib/postgres.js'
+import { emailService } from '../container.js'
 
 const SettingKeySchema = z.object({
   key: z.string().min(1),
@@ -168,5 +169,42 @@ export const settingsRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     return reply.status(200).send(providers)
+  })
+
+  // POST /api/settings/test-email — send a test email to verify configuration
+  fastify.post('/api/settings/test-email', { preHandler: [requireAuth, requireAdmin] }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const bodySchema = z.object({
+      to: z.string().email(),
+    })
+    const parsed = bodySchema.safeParse(request.body)
+    if (!parsed.success) {
+      return reply.status(400).send({
+        error: { code: 'VALIDATION_ERROR', message: 'Valid email address required', details: parsed.error.issues },
+      })
+    }
+
+    try {
+      const result = await emailService.send({
+        to: parsed.data.to,
+        subject: 'Test Email — Yorindo Email Configuration',
+        body: `
+          <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+            <h2 style="color: #16a34a;">✓ Email Configuration Verified</h2>
+            <p>This is a test email from your Yorindo instance.</p>
+            <p style="color: #6b7280; font-size: 14px;">
+              Sent at: ${new Date().toISOString()}<br/>
+              If you received this, your email provider is configured correctly.
+            </p>
+          </div>
+        `,
+      })
+      return reply.status(200).send({ success: true, messageId: result.messageId })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error'
+      return reply.status(500).send({
+        success: false,
+        error: message,
+      })
+    }
   })
 }
