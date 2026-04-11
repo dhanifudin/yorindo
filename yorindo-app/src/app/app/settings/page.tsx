@@ -102,7 +102,11 @@ function EmailProviderSection({
       if (data.success) {
         setTestResult({ success: true, message: 'Test email sent successfully! Check your inbox.' })
       } else {
-        setTestResult({ success: false, message: data.error ?? 'Failed to send test email' })
+        // Extract specific error from Brevo/API response if available
+        const errorMsg = data.error?.includes('Brevo API error')
+          ? data.error.replace('Brevo API error: ', '').split('\n')[0]
+          : (data.error ?? 'Failed to send test email')
+        setTestResult({ success: false, message: errorMsg })
       }
     } catch {
       setTestResult({ success: false, message: 'Network error — check your connection' })
@@ -334,7 +338,7 @@ function EmailProviderSection({
               type="button"
               variant="outline"
               onClick={handleTestSend}
-              disabled={testSending}
+              disabled={testSending || !testEmail}
               className="w-full"
             >
               {testSending ? (

@@ -10,19 +10,23 @@ export class BrevoEmailService implements IEmailService {
     const apiKey = providerConfig.brevoApiKey ?? ''
     const senderEmail = providerConfig.brevoSenderEmail ?? 'noreply@yorindo.app'
 
+    const body: Record<string, unknown> = {
+      sender: { email: senderEmail },
+      to: [{ email: payload.to }],
+      subject: payload.subject,
+      htmlContent: payload.body,
+    }
+    if (payload.variables && Object.keys(payload.variables).length > 0) {
+      body.params = payload.variables
+    }
+
     const response = await fetch(`${this.BASE_URL}/smtp/email`, {
       method: 'POST',
       headers: {
         'api-key': apiKey,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        sender: { email: senderEmail },
-        to: [{ email: payload.to }],
-        subject: payload.subject,
-        htmlContent: payload.body,
-        params: payload.variables ?? {},
-      }),
+      body: JSON.stringify(body),
     })
     if (!response.ok) {
       const errorText = await response.text()
