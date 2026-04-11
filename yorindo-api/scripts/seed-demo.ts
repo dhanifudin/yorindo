@@ -447,8 +447,8 @@ export async function seedDemo(pool: Pool): Promise<void> {
         }
 
         await client.query(`
-          INSERT INTO registrations (id, contact_id, event_id, status, attendance_status, check_in_method, approved_at, attended_at, checked_in_by)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          INSERT INTO registrations (id, contact_id, event_id, status, attendance_status, check_in_method, approved_at, attended_at, checked_in_by, registration_source)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NULL)
         `, [
           regId, contactId, eventId, status,
           attendanceStatus, checkInMethod, approvedAt, attendedAt,
@@ -493,13 +493,14 @@ export async function seedDemo(pool: Pool): Promise<void> {
         const attendedAt = d(ev.dateOffset, 9 + (o % 3)) // Check-in time
 
         await client.query(`
-          INSERT INTO registrations (id, contact_id, event_id, status, attendance_status, check_in_method, approved_at, attended_at, checked_in_by)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          INSERT INTO registrations (id, contact_id, event_id, status, attendance_status, check_in_method, approved_at, attended_at, checked_in_by, registration_source)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         `, [
           regId, contactId, eventId, 'approved',
           'attended', 'manual', // OTS uses manual check-in
           approvedAt, attendedAt,
           userIds.admin, // OTS registrations are done by admin
+          'ots', // OTS walk-in registration
         ])
         totalOts++
       }
@@ -747,15 +748,64 @@ export async function seedDemo(pool: Pool): Promise<void> {
           : pick(['completed', 'completed', 'completed', 'failed'])
         const daysAgo = ev.dateOffset - ((blastCountForEvent - 1 - b) * 4) - 2 // most recent blast 2 days before event
 
+        const blastLogId = createId()
         await client.query(
           `INSERT INTO blast_logs (id, event_id, channel, recipient_count, status, sent_at)
            VALUES ($1, $2, $3, $4, $5, $6)`,
-          [createId(), eventId, channel, recipientCount, status, d(daysAgo)]
+          [blastLogId, eventId, channel, recipientCount, status, d(daysAgo)]
         )
+
+        // Record blast recipients: pick random contacts to simulate who was invited
+        const recipientContacts: string[] = []
+        const usedSet = new Set<string>()
+        const contactPool = contactIds.slice(15) // skip opted-out
+        for (let r = 0; r < recipientCount && r < contactPool.length; r++) {
+          const cid = contactPool[(r + b * 50 + ei * 20) % contactPool.length]
+          if (!usedSet.has(cid)) {
+            recipientContacts.push(cid)
+            usedSet.add(cid)
+          }
+        }
+
+        // Insert blast_log_recipients
+        if (recipientContacts.length > 0) {
+          const values: string[] = []
+          const params: unknown[] = []
+          let idx = 1
+          for (const cid of recipientContacts) {
+            const id = createId()
+            values.push(`($${idx}, $${idx + 1}, $${idx + 2}, $${idx + 3}, $${idx + 4}, $${idx + 5})`)
+            params.push(id, blastLogId, cid, eventId, channel, d(daysAgo))
+            idx += 6
+          }
+          await client.query(
+            `INSERT INTO blast_log_recipients (id, blast_log_id, contact_id, event_id, channel, sent_at)
+             VALUES ${values.join(', ')}
+             ON CONFLICT (blast_log_id, contact_id) DO NOTHING`,
+            params,
+          )
+        }
+
         blastCount++
       }
     }
-    console.log(`✓ Seeded ${blastCount} blast log records`)
+    console.log(`✓ Seeded ${blastCount} blast log records with recipients`)
+
+    // ── Set registration_source based on blast recipients ──
+    // Contacts who were in blast_log_recipients → 'blast'
+    // Contacts who registered but weren't invited → 'organic'
+    await client.query(`
+      UPDATE registrations SET registration_source = 'blast'
+      WHERE id IN (
+        SELECT DISTINCT r.id FROM registrations r
+        JOIN blast_log_recipients blr ON r.contact_id = blr.contact_id AND r.event_id = blr.event_id
+      )
+    `)
+    await client.query(`
+      UPDATE registrations SET registration_source = 'organic'
+      WHERE registration_source IS NULL AND status IN ('pending', 'approved', 'attended', 'rejected')
+    `)
+    console.log('✓ Set registration_source on registrations (blast/organic)')
 
     await client.query('COMMIT')
     console.log('\n── Seed complete ──')
@@ -816,6 +866,12 @@ async function validate(client: PoolClient): Promise<void> {
   await check('Templates', `SELECT count(*) FROM templates`, c => c >= 12)
   await check('Event sponsors', `SELECT count(*) FROM event_sponsors`, c => c >= 3)
   await check('Blast logs', `SELECT count(*) FROM blast_logs`, c => c >= 5)
+  await check('Blast log recipients', `SELECT count(*) FROM blast_log_recipients`, c => c >= 50)
+  await check('Registrations from blast', `SELECT count(*) FROM registrations WHERE registration_source = 'blast'`, c => c >= 10)
+  await check('Registrations organic', `SELECT count(*) FROM registrations WHERE registration_source = 'organic'`, c => c >= 10)
+  await check('Registrations OTS', `SELECT count(*) FROM registrations WHERE registration_source = 'ots'`, c => c >= 5)
+  await check('Events with registration_survey_schema', `SELECT count(*) FROM events WHERE registration_survey_schema IS NOT NULL`, c => c >= 10)
+  await check('Events with post_survey_schema', `SELECT count(*) FROM events WHERE post_survey_schema IS NOT NULL`, c => c >= 5)
 
   console.log(`\n${passed + failed} checks: ${passed} passed, ${failed} failed`)
   if (failed > 0) {
