@@ -600,6 +600,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     if (body.data.name !== undefined) updateData.name = body.data.name
     if (body.data.slug !== undefined) updateData.slug = body.data.slug
     if (body.data.description !== undefined) updateData.description = body.data.description
+    if (body.data.bannerUrl !== undefined) updateData.bannerUrl = body.data.bannerUrl ?? null
     if (body.data.eventDate !== undefined) {
       updateData.startDate = body.data.eventDate
       updateData.endDate = body.data.eventDate
@@ -657,6 +658,9 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     }
     if (body.data.postSurveyEnabled !== undefined) {
       updateData.postSurveyEnabled = body.data.postSurveyEnabled
+    }
+    if (body.data.bannerUrl !== undefined) {
+      updateData.bannerUrl = body.data.bannerUrl ?? null
     }
 
     if (Object.keys(updateData).length === 0) {
