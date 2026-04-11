@@ -1,5 +1,5 @@
-import React from 'react'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import React, { useState } from 'react'
+import { Tabs, TabsContent } from '@/components/ui/tabs'
 import { SurveyField } from '@/types/surveys'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -22,8 +22,8 @@ import {
 } from '@/components/ui/dialog'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
-import { Badge } from '@/components/ui/badge'
-import { X, Eye, ClipboardCheck, MessageSquare, GripVertical, Star } from 'lucide-react'
+import { X, Eye, ClipboardCheck, MessageSquare } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface FormPreviewModalProps {
   open: boolean
@@ -204,6 +204,12 @@ export function FormPreviewModal({
 }: FormPreviewModalProps) {
   const isActive = eventStatus === 'active'
   const defaultTab = isActive ? 'post-event' : 'registration'
+  const [activeTab, setActiveTab] = useState(defaultTab)
+
+  // Reset tab when modal opens
+  React.useEffect(() => {
+    if (open) setActiveTab(defaultTab)
+  }, [open, defaultTab])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -223,57 +229,81 @@ export function FormPreviewModal({
           </div>
         </DialogHeader>
 
-        {/* Tabs — order swaps based on event status */}
-        <Tabs defaultValue={defaultTab} className="flex-1 flex flex-col overflow-hidden">
-          <div className="px-6 border-b bg-muted/20">
-            <TabsList className="bg-transparent h-auto p-0 gap-6">
-              {isActive ? (
-                // Active: Post-Event first
-                <>
-                  <TabsTrigger
-                    value="post-event"
-                    className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none pb-3 pt-3 px-0 text-sm font-medium transition-all"
-                    disabled={!postSurveyEnabled}
-                  >
-                    <MessageSquare size={14} className="mr-2" />
-                    Survei Post-Event
-                    {!postSurveyEnabled && (
-                      <Badge variant="secondary" className="ml-2 text-[10px]">Nonaktif</Badge>
-                    )}
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="registration"
-                    className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none pb-3 pt-3 px-0 text-sm font-medium transition-all"
-                  >
-                    <ClipboardCheck size={14} className="mr-2" />
-                    Formulir Registrasi
-                  </TabsTrigger>
-                </>
-              ) : (
-                // Draft: Registration first
-                <>
-                  <TabsTrigger
-                    value="registration"
-                    className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none pb-3 pt-3 px-0 text-sm font-medium transition-all"
-                  >
-                    <ClipboardCheck size={14} className="mr-2" />
-                    Formulir Registrasi
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="post-event"
-                    className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none pb-3 pt-3 px-0 text-sm font-medium transition-all"
-                    disabled={!postSurveyEnabled}
-                  >
-                    <MessageSquare size={14} className="mr-2" />
-                    Survei Post-Event
-                    {!postSurveyEnabled && (
-                      <Badge variant="secondary" className="ml-2 text-[10px]">Nonaktif</Badge>
-                    )}
-                  </TabsTrigger>
-                </>
-              )}
-            </TabsList>
-          </div>
+        {/* Tabs — order swaps based on event status, matching builder tab style */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
+          <nav className="flex border-b border-border bg-background px-6 overflow-x-auto">
+            {isActive ? (
+              // Active: Post-Event first
+              <>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('post-event')}
+                  className={cn(
+                    'inline-flex items-center px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors',
+                    activeTab === 'post-event'
+                      ? 'border-primary text-foreground'
+                      : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border',
+                    !postSurveyEnabled && 'opacity-60 pointer-events-none',
+                  )}
+                  disabled={!postSurveyEnabled}
+                >
+                  <MessageSquare size={14} className="mr-2" />
+                  Survei Post-Event
+                  {postSurveyEnabled && (
+                    <span className="ml-2 w-2 h-2 rounded-full bg-green-500" />
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('registration')}
+                  className={cn(
+                    'inline-flex items-center px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors',
+                    activeTab === 'registration'
+                      ? 'border-primary text-foreground'
+                      : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border',
+                  )}
+                >
+                  <ClipboardCheck size={14} className="mr-2" />
+                  Formulir Registrasi
+                </button>
+              </>
+            ) : (
+              // Draft: Registration first
+              <>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('registration')}
+                  className={cn(
+                    'inline-flex items-center px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors',
+                    activeTab === 'registration'
+                      ? 'border-primary text-foreground'
+                      : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border',
+                  )}
+                >
+                  <ClipboardCheck size={14} className="mr-2" />
+                  Formulir Registrasi
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('post-event')}
+                  className={cn(
+                    'inline-flex items-center px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors',
+                    activeTab === 'post-event'
+                      ? 'border-primary text-foreground'
+                      : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border',
+                    !postSurveyEnabled && 'opacity-60 pointer-events-none',
+                  )}
+                  disabled={!postSurveyEnabled}
+                >
+                  <MessageSquare size={14} className="mr-2" />
+                  Survei Post-Event
+                  {postSurveyEnabled && (
+                    <span className="ml-2 w-2 h-2 rounded-full bg-green-500" />
+                  )}
+                </button>
+              </>
+            )}
+          </nav>
 
           {/* Content */}
           <div className="flex-1 overflow-y-auto p-6 bg-background/50">
