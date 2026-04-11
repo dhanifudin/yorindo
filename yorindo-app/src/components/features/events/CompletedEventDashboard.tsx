@@ -1,13 +1,11 @@
 'use client'
 
-import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EventHealthScoreCard } from './EventHealthScoreCard'
 import { EventFunnelStats } from './EventFunnelStats'
 import { DemographyQuickStats } from './DemographyQuickStats'
 import { SegmentOverlapMap } from './SegmentOverlapMap'
-import { SurveyScoreCard } from './SurveyScoreCard'
 import { InsightsPanel } from './InsightsPanel'
 import type { CompletionStats } from '@/types/api'
 
@@ -25,8 +23,6 @@ interface CompletedEventDashboardProps {
 }
 
 export function CompletedEventDashboard({ eventId, overview }: CompletedEventDashboardProps) {
-  const [surveyScore, setSurveyScore] = useState<number | null>(null)
-
   const { data: stats, isLoading } = useQuery<CompletionStats>({
     queryKey: ['completion-stats', eventId],
     queryFn: () => fetch(`/api/events/${eventId}/completion-stats`).then((r) => r.json()),
@@ -46,7 +42,6 @@ export function CompletedEventDashboard({ eventId, overview }: CompletedEventDas
         registered={overview.registrationCount}
         blastCount={overview.blastCount}
         otsCount={overview.otsCount}
-        surveyScore={surveyScore}
       />
 
       <EventFunnelStats
@@ -78,8 +73,6 @@ export function CompletedEventDashboard({ eventId, overview }: CompletedEventDas
       ) : stats ? (
         <SegmentOverlapMap rows={stats.segmentOverlap} />
       ) : null}
-
-      <SurveyScoreCard eventId={eventId} onScoreComputed={setSurveyScore} />
 
       <InsightsPanel eventId={eventId} />
     </div>

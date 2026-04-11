@@ -9,7 +9,6 @@ interface EventHealthScoreCardProps {
   registered: number
   blastCount: number
   otsCount: number
-  surveyScore: number | null
 }
 
 function scoreColor(score: number) {
@@ -25,7 +24,7 @@ function scoreLabel(score: number) {
 }
 
 export function EventHealthScoreCard({
-  attended, approved, registered, blastCount, otsCount, surveyScore,
+  attended, approved, registered, blastCount, otsCount,
 }: EventHealthScoreCardProps) {
   const totalAttended = attended + otsCount
   const attendanceRate = approved > 0 ? Math.round((totalAttended / approved) * 100) : 0
@@ -34,29 +33,20 @@ export function EventHealthScoreCard({
   const blastConversionRaw = blastCount > 0 ? Math.min((registered / blastCount) * 100, 100) : null
   const blastConversion = blastConversionRaw !== null ? Math.round(blastConversionRaw) : null
 
-  const hasSurvey = surveyScore !== null
   const hasBlast = blastConversion !== null
 
-  // Effective weights depending on available data
-  let wAttendance: number, wNoShow: number, wBlast: number, wSurvey: number
-  if (hasSurvey && hasBlast) {
-    wAttendance = 0.4; wNoShow = 0.2; wBlast = 0.2; wSurvey = 0.2
-  } else if (hasSurvey && !hasBlast) {
-    wAttendance = 0.5; wNoShow = 0.25; wBlast = 0; wSurvey = 0.25
-  } else if (!hasSurvey && hasBlast) {
-    wAttendance = 0.5; wNoShow = 0.25; wBlast = 0.25; wSurvey = 0
-  } else {
-    wAttendance = 0.67; wNoShow = 0.33; wBlast = 0; wSurvey = 0
-  }
+  // Weights: attendance 60%, no-show 40% (or 50/25/25 if blast data exists)
+  const wAttendance = hasBlast ? 0.5 : 0.67
+  const wNoShow = hasBlast ? 0.25 : 0.33
+  const wBlast = hasBlast ? 0.25 : 0
 
   const contAttendance = Math.round(attendanceRate * wAttendance)
   const contNoShow = Math.round(noShowScore * wNoShow)
-  const contBlast = hasBlast ? Math.round(blastConversion! * wBlast) : null
-  const contSurvey = hasSurvey ? Math.round(surveyScore! * wSurvey) : null
+  const contBlast = hasBlast ? Math.round(blastConversion * wBlast) : null
 
-  const score = contAttendance + contNoShow + (contBlast ?? 0) + (contSurvey ?? 0)
+  const score = contAttendance + contNoShow + (contBlast ?? 0)
 
-  const scoreFormula = [contAttendance, contNoShow, contBlast, contSurvey]
+  const scoreFormula = [contAttendance, contNoShow, contBlast]
     .filter((c) => c !== null)
     .join(' + ') + ` = ${score} poin`
 
@@ -78,24 +68,14 @@ export function EventHealthScoreCard({
       good: noShowRate <= 30,
     },
     {
-      label: 'Konversi Blast',
+      label: 'Konversi Undangan',
       value: blastConversion !== null ? `${blastConversion}%` : '—',
-      detail: blastConversion !== null ? `${registered} daftar dari ${blastCount} diundang` : 'Tidak ada data blast',
+      detail: blastConversion !== null ? `${registered} daftar dari ${blastCount} diundang` : 'Tidak ada data undangan',
       contribution: hasBlast
         ? `${blastConversion}% × ${Math.round(wBlast * 100)}% = ${contBlast} poin`
         : 'Bobot didistribusikan ke indikator lain',
       weight: hasBlast ? `${Math.round(wBlast * 100)}%` : '(terdistribusi)',
       good: blastConversion === null || blastConversion >= 20,
-    },
-    {
-      label: 'Skor Survei',
-      value: surveyScore !== null ? `${Math.round(surveyScore)}/100` : '—',
-      detail: surveyScore !== null ? 'Rata-rata nilai range dari survei post-event' : 'Tidak ada survei post-event',
-      contribution: hasSurvey
-        ? `${Math.round(surveyScore!)}% × ${Math.round(wSurvey * 100)}% = ${contSurvey} poin`
-        : 'Bobot didistribusikan ke indikator lain',
-      weight: hasSurvey ? `${Math.round(wSurvey * 100)}%` : '(terdistribusi)',
-      good: surveyScore === null || surveyScore >= 60,
     },
   ]
 
