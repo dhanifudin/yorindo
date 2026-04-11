@@ -730,7 +730,14 @@ export default function SettingsPage() {
                 <Switch
                   checked={getDisplayValue('WHATSAPP_PROVIDER', providers?.whatsapp?.WHATSAPP_PROVIDER ?? 'mock') !== 'mock'}
                   onCheckedChange={(checked) => {
-                    updateField('WHATSAPP_PROVIDER', checked ? 'everpro' : 'mock')
+                    if (checked) {
+                      toast.info('WhatsApp blast — Under Development', {
+                        description: 'Fitur pengiriman WhatsApp melalui Everpro sedang dalam pengembangan dan belum tersedia.',
+                        duration: 8000,
+                      })
+                      return
+                    }
+                    updateField('WHATSAPP_PROVIDER', 'mock')
                   }}
                 />
               </div>
@@ -751,7 +758,12 @@ export default function SettingsPage() {
                         <SelectValue placeholder="Pilih provider" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="everpro">Everpro</SelectItem>
+                        <SelectItem value="everpro" disabled>
+                          <div className="flex items-center justify-between w-full">
+                            <span>Everpro</span>
+                            <span className="text-xs text-muted-foreground ml-2">Under Development</span>
+                          </div>
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
