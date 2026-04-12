@@ -8,19 +8,34 @@ interface ActionCardProps {
   blastHealth: Health
   regHealth: Health
   blastCount: number
+  eventStatus: string
 }
 
-export function ActionCard({ baseHref, blastHealth, regHealth, blastCount }: ActionCardProps) {
+export function ActionCard({ baseHref, blastHealth, regHealth, blastCount, eventStatus }: ActionCardProps) {
+  const isDraft = eventStatus === 'draft'
+
   // Priority: no blast > bad registration conversion > bad approval conversion
   if (blastCount === 0) {
     return (
-      <Card className="border-red-200 bg-red-50">
+      <Card className={isDraft ? 'border-muted bg-muted/20' : 'border-red-200 bg-red-50'}>
         <CardContent className="pt-4">
-          <p className="text-sm font-medium text-red-700 mb-2">Belum ada blast</p>
-          <p className="text-xs text-red-600 mb-3">Undangan belum dikirim ke kontak manapun.</p>
-          <Button size="sm" asChild>
-            <Link href={`${baseHref}/blast`}>Kirim Undangan Sekarang</Link>
-          </Button>
+          {isDraft ? (
+            <>
+              <p className="text-sm font-medium text-muted-foreground mb-2">Event belum dipublikasikan</p>
+              <p className="text-xs text-muted-foreground mb-3">Blast undangan hanya dapat dilakukan setelah event dipublikasikan.</p>
+              <Button size="sm" variant="outline" disabled>
+                Kirim Undangan
+              </Button>
+            </>
+          ) : (
+            <>
+              <p className="text-sm font-medium text-red-700 mb-2">Belum ada blast</p>
+              <p className="text-xs text-red-600 mb-3">Undangan belum dikirim ke kontak manapun.</p>
+              <Button size="sm" asChild>
+                <Link href={`${baseHref}/blast`}>Kirim Undangan Sekarang</Link>
+              </Button>
+            </>
+          )}
         </CardContent>
       </Card>
     )

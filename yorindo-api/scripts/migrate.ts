@@ -50,6 +50,7 @@ const migrations = [
   '019_survey_responses.sql',
   '021_contact_normalize_flags.sql',
   '022_cities.sql',
+  '023_survey_templates.sql',
 ]
 
 export async function runMigrations(pool: Pool): Promise<void> {

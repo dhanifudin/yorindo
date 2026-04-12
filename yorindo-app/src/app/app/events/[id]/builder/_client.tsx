@@ -140,7 +140,6 @@ export default function SurveyBuilderClient({ id }: SurveyBuilderClientProps) {
                   activeTab === 'post-event'
                     ? 'border-primary text-foreground'
                     : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border',
-                  !event?.postSurveyEnabled && 'opacity-60 pointer-events-none',
                 )}
               >
                 Survei Post-Event
@@ -193,7 +192,6 @@ export default function SurveyBuilderClient({ id }: SurveyBuilderClientProps) {
                   activeTab === 'post-event'
                     ? 'border-primary text-foreground'
                     : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border',
-                  !event?.postSurveyEnabled && 'opacity-60 pointer-events-none',
                 )}
               >
                 Survei Post-Event
@@ -205,15 +203,15 @@ export default function SurveyBuilderClient({ id }: SurveyBuilderClientProps) {
           )}
         </nav>
 
-        {/* Post-Event Survey — always editable when enabled */}
+        {/* Post-Event Survey — always editable */}
         <TabsContent value="post-event" className="m-0 focus-visible:outline-none">
           <SurveyBuilderTab
             eventId={id}
             type="post-event"
-            postSurveyEnabled={event?.postSurveyEnabled}
+            postSurveyEnabled={event?.postSurveyEnabled ?? false}
             onTogglePostSurvey={(enabled) => togglePostSurveyMutation.mutate(enabled)}
             onPreview={handlePreview}
-            readOnly={!event?.postSurveyEnabled}
+            readOnly={false}
           />
         </TabsContent>
 

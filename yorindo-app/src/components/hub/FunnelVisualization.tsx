@@ -1,9 +1,6 @@
-import Link from "next/link";
 import { ConversionBadge } from "./ConversionBadge";
 import { getHealth, type Health } from "@/lib/benchmarks";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Send } from "lucide-react";
 
 export interface FunnelData {
   blastCount: number;
@@ -25,10 +22,9 @@ interface FunnelBarProps {
   count: number;
   maxCount: number;
   badge: React.ReactNode;
-  cta?: React.ReactNode;
 }
 
-function FunnelBar({ label, count, maxCount, badge, cta }: FunnelBarProps) {
+function FunnelBar({ label, count, maxCount, badge }: FunnelBarProps) {
   const widthPct = Math.max((count / Math.max(maxCount, 1)) * 100, 2);
 
   return (
@@ -53,7 +49,6 @@ function FunnelBar({ label, count, maxCount, badge, cta }: FunnelBarProps) {
         {count.toLocaleString("id-ID")}
       </span>
       <div className="shrink-0">{badge}</div>
-      {cta && <div className="shrink-0">{cta}</div>}
     </div>
   );
 }
@@ -71,7 +66,6 @@ export function FunnelVisualization({
   const ac = approvedCount ?? 0;
   const atc = attendedCount ?? 0;
   const maxCount = Math.max(bc, rc, ac, atc, 1);
-  const baseHref = `/app/events/${eventId}`;
 
   // Conversion rates
   const blastToReg = bc > 0 ? rc / bc : null;
@@ -110,16 +104,6 @@ export function FunnelVisualization({
             rate={null}
             label="Blast baseline"
           />
-        }
-        cta={
-          bc === 0 ? (
-            <Link href={`${baseHref}/blast`}>
-              <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5">
-                <Send size={12} />
-                Kirim Undangan
-              </Button>
-            </Link>
-          ) : undefined
         }
       />
       <FunnelBar

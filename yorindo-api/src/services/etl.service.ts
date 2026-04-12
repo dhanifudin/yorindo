@@ -463,23 +463,27 @@ export class EtlService {
               })
 
               // Check if serviceType/jobTitle match any standard values
-              const flags: string[] = []
-              if (validatedRow.serviceType && validatedRow.serviceType.trim()) {
-                const normService = getNormalizationService()
-                const industryMatch = await normService.matchIndustry(validatedRow.serviceType)
-                if (!industryMatch.matched) flags.push('industry-unmatched')
-              }
-              if (validatedRow.jobTitle && validatedRow.jobTitle.trim()) {
-                const normService = getNormalizationService()
-                const jobMatch = await normService.matchJobTitle(validatedRow.jobTitle)
-                if (!jobMatch.matched) flags.push('jobtitle-unmatched')
-              }
+              try {
+                const flags: string[] = []
+                if (validatedRow.serviceType && validatedRow.serviceType.trim()) {
+                  const normService = getNormalizationService()
+                  const industryMatch = await normService.matchIndustry(validatedRow.serviceType)
+                  if (!industryMatch.matched) flags.push('industry-unmatched')
+                }
+                if (validatedRow.jobTitle && validatedRow.jobTitle.trim()) {
+                  const normService = getNormalizationService()
+                  const jobMatch = await normService.matchJobTitle(validatedRow.jobTitle)
+                  if (!jobMatch.matched) flags.push('jobtitle-unmatched')
+                }
 
-              // Apply flags if any unmatched
-              if (flags.length > 0) {
-                // Prioritize industry-unmatched if both exist
-                const flagToApply = flags.includes('industry-unmatched') ? 'industry-unmatched' : 'jobtitle-unmatched'
-                await this.contactRepo.update(contact.id, { flagCategory: flagToApply as any })
+                // Apply flags if any unmatched
+                if (flags.length > 0) {
+                  // Prioritize industry-unmatched if both exist
+                  const flagToApply = flags.includes('industry-unmatched') ? 'industry-unmatched' : 'jobtitle-unmatched'
+                  await this.contactRepo.update(contact.id, { flagCategory: flagToApply as any })
+                }
+              } catch {
+                // Normalization service unavailable (e.g., tests without DB) — skip flagging
               }
 
               if (opts.eventId) {

@@ -8,6 +8,7 @@ export default defineConfig({
     // Running files serially avoids intermittent CI flakes from cross-file state.
     fileParallelism: false,
     env: {
+      NODE_ENV: 'test',
       JWT_SECRET: 'test-jwt-secret',
       JWT_REFRESH_SECRET: 'test-jwt-refresh-secret',
       // Prevent dotenv from loading redis://redis:6379 from .env during tests.

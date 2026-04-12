@@ -33,6 +33,7 @@ const EventListQuerySchema = z.object({
   sortDir: z.enum(['asc', 'desc']).optional(),
   status: z.enum(['draft', 'published', 'active', 'completed', 'cancelled', 'archived']).optional(),
   deleted: z.coerce.boolean().optional(),
+  hasSurvey: z.enum(['registration', 'post-event']).optional(),
 })
 
 const EventCreateBodySchema = z.object({
@@ -439,6 +440,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       ids?: string[]
       status?: 'draft' | 'published' | 'active' | 'completed' | 'cancelled' | 'archived'
       deleted?: 'exclude' | 'only'
+      hasSurvey?: 'registration' | 'post-event'
     } = {}
     const user = request.user as JwtPayload | undefined
     if (user && user.role !== 'admin' && user.role !== 'participant') {
@@ -446,8 +448,19 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     }
     if (query.status) eventFilters.status = query.status
     if (query.deleted) eventFilters.deleted = 'only'
+    if (query.hasSurvey) eventFilters.hasSurvey = query.hasSurvey
 
-    const result = await eventRepository.findAll(paginationParams, eventFilters)
+    let result = await eventRepository.findAll(paginationParams, eventFilters)
+
+    // Filter by survey presence if requested
+    if (query.hasSurvey) {
+      const eventsWithSurvey = []
+      for (const event of result.data) {
+        const survey = await surveyRepository.findByEventId(event.id, query.hasSurvey)
+        if (survey) eventsWithSurvey.push(event)
+      }
+      result = { data: eventsWithSurvey, total: eventsWithSurvey.length }
+    }
 
     const data = await Promise.all(result.data.map(async (event) => {
       const surveySchema = await surveyRepository.findByEventId(event.id, 'registration')

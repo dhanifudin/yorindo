@@ -33,13 +33,8 @@ describe('FunnelVisualization', () => {
     })
   })
 
-  it('shows CTA button when blastCount = 0', async () => {
+  it('does NOT show CTA button regardless of blastCount', async () => {
     render(<FunnelVisualization {...defaultProps} blastCount={0} />)
-    await waitFor(() => expect(screen.getByText('Kirim Undangan')).toBeTruthy())
-  })
-
-  it('does NOT show CTA button when blastCount > 0', async () => {
-    render(<FunnelVisualization {...defaultProps} />)
     await waitFor(() => expect(screen.queryByText('Kirim Undangan')).toBeNull())
   })
 
