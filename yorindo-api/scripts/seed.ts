@@ -13,7 +13,7 @@
  */
 
 import { Pool } from 'pg'
-import bcrypt from 'bcrypt'
+import { hashSync } from '@node-rs/bcrypt'
 import { createId } from '@paralleldrive/cuid2'
 import { seedDemo } from './seed-demo'
 import { runMigrations } from './migrate'
@@ -89,7 +89,7 @@ async function seed(): Promise<void> {
     const jobTitleMap = Object.fromEntries(jobTitleRows.rows.map((r: { id: string; slug: string }) => [r.slug, r.id]))
 
     // Users
-    const sharedHash = await bcrypt.hash('Password123!', 10)
+    const sharedHash = hashSync('Password123!', 10)
     await client.query(`
       INSERT INTO users (id, email, password_hash, role, name) VALUES
         ($1, 'admin@yorindo.id', $4, 'admin', 'Admin EM · U'),

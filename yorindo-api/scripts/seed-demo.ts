@@ -10,7 +10,7 @@
 
 import type { PoolClient } from 'pg'
 import { Pool } from 'pg'
-import bcrypt from 'bcrypt'
+import { hashSync } from '@node-rs/bcrypt'
 import { createId } from '@paralleldrive/cuid2'
 
 // ─── Relative date helper ──────────────────────────────────────────────────────
