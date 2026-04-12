@@ -46,7 +46,7 @@ export interface EventSponsor {
 // ─── Contact ─────────────────────────────────────────────────────────────────
 
 export type ConsentStatus = 'active' | 'suppressed' | 'legacy_unverified'
-export type FlagCategory = 'invalid-data' | 'duplicate' | null
+export type FlagCategory = 'invalid-data' | 'duplicate' | 'industry-unmatched' | 'jobtitle-unmatched' | null
 export type CompanySize = '<50' | '50-200' | '200-1000' | '>1000'
 export type ContactSource = 'excel_upload' | 'form' | 'manual'
 

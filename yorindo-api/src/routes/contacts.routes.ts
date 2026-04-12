@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
-import { auditLogRepository, contactRepository, eventRepository, flaggedRecordsRepository, queueService, registrationRepository, suppressionRepository } from '../container.js'
+import { auditLogRepository, contactRepository, eventRepository, flaggedRecordsRepository, queueService, registrationRepository, suppressionRepository, getNormalizationService } from '../container.js'
 import { requireAdmin, requireAuth, type JwtPayload } from '../middleware/auth.js'
 import type { Contact, DuplicatePair, FlaggedRecord, FlaggedRecordStatus, RegistrationStatus, SuppressionRecord } from '../types/domain.js'
 import { INDONESIAN_INDUSTRIES } from '../repositories/memory/_seeds.js'
@@ -1098,5 +1098,70 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
       jobTitle: contact.jobTitle,
       company: contact.company,
     })
+  })
+
+  // ── GET /api/contacts/normalize/suggestions ───────────────────────
+  fastify.get('/api/contacts/normalize/suggestions', { preHandler: [requireAuth] }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const { type, value } = request.query as Record<string, string | undefined>
+    if (!type || !value) {
+      return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: 'type and value required', details: [] } })
+    }
+
+    const normalizationService = getNormalizationService()
+    if (type === 'industry') {
+      const result = await normalizationService.matchIndustry(value)
+      return reply.status(200).send(result)
+    }
+    if (type === 'jobTitle') {
+      const result = await normalizationService.matchJobTitle(value)
+      return reply.status(200).send(result)
+    }
+
+    return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: 'Invalid type', details: [] } })
+  })
+
+  // ── GET /api/contacts/flagged ─────────────────────────────────────
+  fastify.get('/api/contacts/flagged', { preHandler: [requireAuth] }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const { type, page = '1', pageSize = '50' } = request.query as Record<string, string | undefined>
+    if (!type || !['industry-unmatched', 'jobtitle-unmatched'].includes(type)) {
+      return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: 'Invalid type', details: [] } })
+    }
+
+    const normalizationService = getNormalizationService()
+    const result = await normalizationService.getUnmatchedContacts(type as 'industry-unmatched' | 'jobtitle-unmatched', parseInt(page, 10), parseInt(pageSize, 10))
+    return reply.status(200).send(result)
+  })
+
+  // ── PATCH /api/contacts/:id/normalize ─────────────────────────────
+  fastify.patch('/api/contacts/:id/normalize', { preHandler: [requireAuth, requireAdmin] }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const params = z.object({ id: z.string().min(1) }).safeParse((request as FastifyRequest).params)
+    const body = z.object({ field: z.enum(['serviceType', 'jobTitle']), standardId: z.string().min(1) }).safeParse((request as FastifyRequest).body)
+
+    if (!params.success || !body.success) {
+      return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: 'Invalid payload', details: [] } })
+    }
+
+    const normalizationService = getNormalizationService()
+    await normalizationService.normalizeContact(params.data.id, body.data.field, body.data.standardId)
+    return reply.status(200).send({ success: true })
+  })
+
+  // ── POST /api/contacts/bulk-normalize ─────────────────────────────
+  fastify.post('/api/contacts/bulk-normalize', { preHandler: [requireAuth, requireAdmin] }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const body = z.object({ contactIds: z.array(z.string().min(1)), field: z.enum(['serviceType', 'jobTitle']), standardId: z.string().min(1) }).safeParse((request as FastifyRequest).body)
+    if (!body.success) {
+      return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: 'Invalid payload', details: body.error.issues } })
+    }
+
+    const normalizationService = getNormalizationService()
+    const count = await normalizationService.bulkNormalize(body.data.contactIds, body.data.field, body.data.standardId)
+    return reply.status(200).send({ success: true, normalized: count })
+  })
+
+  // ── POST /api/contacts/scan-unmatched ─────────────────────────────
+  fastify.post('/api/contacts/scan-unmatched', { preHandler: [requireAuth, requireAdmin] }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const normalizationService = getNormalizationService()
+    const result = await normalizationService.flagUnmatchedContacts()
+    return reply.status(200).send(result)
   })
 }

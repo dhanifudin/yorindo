@@ -12,8 +12,9 @@ import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { Save, RotateCcw, Eye, EyeOff, Shield, Mail, MessageSquare, Brain, Loader2 } from 'lucide-react'
+import { Save, RotateCcw, Eye, EyeOff, Shield, Mail, MessageSquare, Brain, Loader2, Building2, Briefcase } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { StandardValuesManager } from '@/components/settings/StandardValuesManager'
 
 const AI_PROVIDERS = [
   { value: 'openai', label: 'OpenAI' },
@@ -529,7 +530,7 @@ export default function SettingsPage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setFormValues({}) }}>
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="ai" className="gap-2">
             <Brain size={16} />
             AI Provider
@@ -545,6 +546,10 @@ export default function SettingsPage() {
           <TabsTrigger value="security" className="gap-2">
             <Shield size={16} />
             Security
+          </TabsTrigger>
+          <TabsTrigger value="standards" className="gap-2">
+            <Building2 size={16} />
+            Standar Data
           </TabsTrigger>
         </TabsList>
 
@@ -869,6 +874,22 @@ export default function SettingsPage() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Standard Values Tab */}
+        <TabsContent value="standards" className="space-y-6 mt-6">
+          <StandardValuesManager
+            endpoint="/industries"
+            title="Industri Standar"
+            description="Kelola daftar industri baku untuk normalisasi kontak"
+            label="Industri"
+          />
+          <StandardValuesManager
+            endpoint="/job-titles"
+            title="Jabatan Standar"
+            description="Kelola daftar jabatan baku untuk normalisasi kontak"
+            label="Jabatan"
+          />
         </TabsContent>
       </Tabs>
     </div>

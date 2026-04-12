@@ -1,87 +1,63 @@
 ---
-title: 'Registration source tracking — blast vs organic vs OTS breakdown'
+title: 'Standard Industries/Job Titles + Contact Normalization'
 type: 'feature'
-created: '2026-04-11'
+created: '2026-04-12'
 status: 'in-progress'
-context: []
-baseline_commit: 2983afdebb0ee699bd1f2251c8534f01f187d25e
 ---
 
-<frozen-after-approval reason="human-owned intent — do not modify unless human renegotiates">
+<frozen-after-approval reason="human-owned intent">
 
 ## Intent
 
-**Problem:** Admins cannot see how many participants registered from blast invitations vs organic discovery vs on-the-spot walk-in. The current funnel shows aggregate blast count and registration count with no linkage between them.
+**Problem:** Contacts imported via ETL have free-text `serviceType` and `jobTitle` values with inconsistent spellings (e.g., "IT", "Teknologi", "Teknologi Informasi" all mean the same). Admins cannot easily normalize or segment contacts by industry/job title.
 
-**Approach:** Add `registration_source` column to registrations table. Track blast recipients in a junction table. Update all registration creation paths to set the correct source. Add breakdown metrics to overview and report endpoints.
+**Approach:**
+1. Admin manages standard industries and job titles from Settings UI
+2. System flags contacts whose `serviceType`/`jobTitle` don't match any standard value
+3. Admin reviews flagged contacts, accepts suggestions, or bulk-normalizes
 
 ## Boundaries & Constraints
 
 **Always:**
-- `registration_source` values: `'blast'`, `'organic'`, `'ots'`
-- OTS registrations always set source = `'ots'`
-- Public form registrations default to `'organic'`
-- Blast registrations determined by whether contact was in blast_log_recipients
+- Standard values stored in `industries` and `job_titles` tables (already exist)
+- Fuzzy match threshold: 80% (Jaro-Winkler)
+- Flagged contacts use `flagCategory` enum extension
+- Admin-only CRUD for standards
 
 **Ask First:**
-- If blast recipient tracking requires a new table vs. modifying blast_logs
+- If AI-based matching is needed beyond Jaro-Winkler
 
 **Never:**
-- Do not break existing registration creation paths
-- Do not change existing blast_logs table structure (add new table instead)
-- Do not retroactively set source on existing registrations (they default to NULL)
-
-## I/O & Edge-Case Matrix
-
-| Scenario | Input / State | Expected Output / Behavior | Error Handling |
-|----------|--------------|---------------------------|----------------|
-| OTS registration | Admin creates walk-in registration | source='ots' set automatically | N/A |
-| Public form registration | User registers via event landing page | source='organic' set automatically | N/A |
-| Blast recipient registers | Contact who received blast clicks registration link | source='blast' set automatically | N/A |
-| Overview endpoint | GET /api/events/:id/overview | Returns blastRegistered, organicRegistered, otsRegistered counts | N/A |
-| Report endpoint | GET /api/events/:id/report | Returns source breakdown in response | N/A |
-| Existing registrations | Old registrations without source column value | source=NULL, excluded from breakdown | Treated as 'unknown' in UI |
+- Do not break existing free-text behavior — contacts still accept any value
+- Do not auto-reject unmatched contacts — only flag for review
 
 </frozen-after-approval>
 
 ## Code Map
 
-- `yorindo-api/migrations/018_registration_source.sql` -- Add registration_source column + blast_log_recipients table
-- `yorindo-api/src/types/domain.ts` -- Add registrationSource to Registration type
-- `yorindo-api/src/repositories/postgres/EventRepository.ts` -- Add source breakdown to getOverviewMetrics
-- `yorindo-api/src/routes/events.routes.ts` -- Update overview endpoint, OTS registration, analytics
-- `yorindo-api/src/routes/registrations.routes.ts` -- Set source='organic' on public registration
-- `yorindo-api/src/routes/blast.routes.ts` or blast.service.ts -- Record blast recipients
-- `yorindo-app/src/app/app/events/[id]/_client.tsx` -- Display source breakdown in overview
-- `yorindo-app/src/components/features/reports/MetricCards.tsx` -- Add source breakdown card
+- `migrations/021_contact_normalize_flags.sql` — Extend flagCategory enum
+- `src/routes/industries.routes.ts` — CRUD for admin managing industries
+- `src/routes/job-titles.routes.ts` — CRUD for admin managing job titles
+- `src/services/NormalizationService.ts` — Fuzzy matching + flagging logic
+- `src/components/settings/StandardValuesManager.tsx` — Settings UI
+- `src/components/contacts/NormalizationTab.tsx` — Contacts normalize tab
+- `src/hooks/useIndustries.ts`, `src/hooks/useJobTitles.ts` — Frontend hooks
 
 ## Tasks & Acceptance
 
-**Execution:**
-- [ ] `yorindo-api/migrations/018_registration_source.sql` -- Add `registration_source TEXT` to registrations, create `blast_log_recipients` table
-- [ ] `yorindo-api/src/types/domain.ts` -- Add `registrationSource: 'blast' | 'organic' | 'ots' | null` to Registration type
-- [ ] `yorindo-api/src/routes/events.routes.ts` -- Update OTS endpoint to set source='ots', update overview endpoint to return source breakdown
-- [ ] `yorindo-api/src/routes/registrations.routes.ts` -- Set source='organic' on public form registration
-- [ ] `yorindo-api/src/services/blast.service.ts` -- Record each recipient in blast_log_recipients when blast is sent
-- [ ] `yorindo-api/src/repositories/postgres/EventRepository.ts` -- Update getOverviewMetrics to return blast/organic/ots breakdown
-- [ ] `yorindo-app/src/app/app/events/[id]/_client.tsx` -- Add source breakdown section to completed event dashboard
-
-**Acceptance Criteria:**
-- Given an OTS registration is created, when the registration is saved, then registration_source is set to 'ots'
-- Given a user registers via public event form, when the registration is saved, then registration_source is set to 'organic'
-- Given a contact who received a blast registers for the event, when the registration is saved, then registration_source is set to 'blast'
-- Given the overview endpoint is called, when the response is returned, then it includes blastRegistered, organicRegistered, and otsRegistered counts
-- Given the event is completed, when the admin views the overview page, then a source breakdown chart is displayed
-
-## Spec Change Log
+- [ ] Migration 021 — Add 'industry-unmatched' and 'jobtitle-unmatched' to flagCategory
+- [ ] Industries CRUD routes — GET/POST/PATCH/DELETE /api/industries
+- [ ] Job Titles CRUD routes — GET/POST/PATCH/DELETE /api/job-titles
+- [ ] NormalizationService — fuzzy match serviceType/jobTitle against standards
+- [ ] ETL hook — flag contacts on import when no match found
+- [ ] GET /api/contacts/flagged?type=industry-unmatched|jobtitle-unmatched
+- [ ] PATCH /api/contacts/:id/normalize — apply suggested match
+- [ ] POST /api/contacts/bulk-normalize — normalize multiple at once
+- [ ] Settings UI — manage standard industries and job titles
+- [ ] Contacts UI — "Perlu Normalisasi" tab with suggestions and bulk actions
 
 ## Verification
 
-**Commands:**
-- `cd yorindo-api && npm test` -- expected: all tests pass
-- `cd yorindo-api && npx tsc --noEmit` -- expected: zero type errors
-- `cd yorindo-app && npx tsc --noEmit` -- expected: zero type errors
-
-**Manual checks:**
-- Create OTS registration → verify source='ots' in database
-- View completed event overview → verify source breakdown is displayed
+- `cd yorindo-api && npm test` — all tests pass
+- `cd yorindo-api && npx tsc --noEmit` — zero errors
+- `cd yorindo-app && npx tsc --noEmit` — zero errors

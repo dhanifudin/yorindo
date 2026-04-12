@@ -46,6 +46,7 @@ import { PostgresVendorRepository } from './repositories/postgres/VendorReposito
 import { PostgresEventSponsorRepository } from './repositories/postgres/EventSponsorRepository.js'
 import { PostgresTemplateRepository } from './repositories/postgres/TemplateRepository.js'
 import { PostgresBlastLogRecipientRepository } from './repositories/postgres/BlastLogRecipientRepository.js'
+import { NormalizationService } from './services/NormalizationService.js'
 import { SmtpEmailService } from './services/adapters/real/SmtpEmailService.js'
 import { getProviderConfig, clearProviderConfigCache } from './lib/email-provider-config.js'
 import { FuzzyDeduplicationService } from './services/FuzzyDeduplicationService.js'
@@ -231,6 +232,14 @@ export const insightsService: IInsightsService = svcs.insightsService
 export const queueService: IQueueService = svcs.queueService
 export const otpService: IOtpService = svcs.otpService
 export const deduplicationService: IDeduplicationService = svcs.deduplicationService
+
+let _normalizationService: NormalizationService | null = null
+export function getNormalizationService(): NormalizationService {
+  if (!_normalizationService) {
+    _normalizationService = new NormalizationService(getPool())
+  }
+  return _normalizationService
+}
 
 // Re-export for settings route cache invalidation
 export { clearProviderConfigCache }
