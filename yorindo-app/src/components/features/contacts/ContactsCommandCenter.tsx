@@ -27,7 +27,6 @@ import { ContactNormalizationTab } from './ContactNormalizationTab'
 export function ContactsCommandCenter() {
   const [activeView, setActiveView] = useState<'contacts' | 'flagged' | 'duplicates' | 'normalize'>('contacts')
   const [missingField, setMissingField] = useState<'email' | 'phone'>('email')
-  const [normTab, setNormTab] = useState<'industry' | 'jobtitle'>('industry')
   const [triageMode, setTriageMode] = useState<'flagged' | 'duplicates' | null>(null)
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
   const [selectMode, setSelectMode] = useState(false)
@@ -105,7 +104,7 @@ export function ContactsCommandCenter() {
       <ContactsHealthFlags onNavigate={(view, field) => { setActiveView(view); if (field) setMissingField(field) }} />
 
       {/* Normalization health flags */}
-      <NormalizationHealthFlags onNavigate={(type) => { setActiveView('normalize'); setNormTab(type) }} />
+      <NormalizationHealthFlags onNavigate={() => setActiveView('normalize')} />
 
       <EventBanner />
 
@@ -161,7 +160,7 @@ export function ContactsCommandCenter() {
         </TabsContent>
 
         <TabsContent value="normalize" className="mt-4">
-          <ContactNormalizationTab defaultTab={normTab} />
+          <ContactNormalizationTab />
         </TabsContent>
       </Tabs>
 
