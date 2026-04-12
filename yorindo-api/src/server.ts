@@ -26,6 +26,7 @@ import { settingsRoutes } from './routes/settings.routes.js'
 import { uploadsRoutes } from './routes/uploads.routes.js'
 import { industriesRoutes } from './routes/industries.routes.js'
 import { jobTitlesRoutes } from './routes/job-titles.routes.js'
+import { citiesRoutes } from './routes/cities.routes.js'
 import { authPlugin } from './middleware/auth.js'
 import { loadOpenApiDocument } from './lib/openapi.js'
 import { config } from './config/index.js'
@@ -144,6 +145,7 @@ export async function buildServer() {
   await fastify.register(uploadsRoutes)
   await fastify.register(industriesRoutes)
   await fastify.register(jobTitlesRoutes)
+  await fastify.register(citiesRoutes)
 
   fastify.get('/api/openapi.json', async (_request, reply) => {
     return reply.status(200).send(openapi)

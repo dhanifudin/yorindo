@@ -6853,6 +6853,72 @@ paths:
                 properties:
                   industryCount: { type: integer }
                   jobTitleCount: { type: integer }
+  /cities:
+    get:
+      summary: List all cities (cached, 5 min TTL)
+      operationId: listCities
+      tags: [Cities]
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: City list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        province_code: { type: string }
+                        province_name: { type: string }
+                        city_code: { type: string }
+                        city_name: { type: string }
+  /cities/by-province:
+    get:
+      summary: List cities filtered by province
+      operationId: listCitiesByProvince
+      tags: [Cities]
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - in: query
+          name: province
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: City list for province
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+  /cities/sync:
+    post:
+      summary: Sync cities from wilayah.id (admin only)
+      operationId: syncCities
+      tags: [Cities]
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: Sync result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  inserted: { type: integer }
+                  updated: { type: integer }
+                  total: { type: integer }
+        '500':
+          description: Sync failed
 tags:
   - name: Health
     description: Service health check
@@ -6896,3 +6962,5 @@ tags:
     description: Standard job title management
   - name: Contact Normalization
     description: Contact industry/job title normalization
+  - name: Cities
+    description: Indonesian city/province data management
