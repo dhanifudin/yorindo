@@ -21,6 +21,9 @@ import {
   Building2,
   Settings,
   Briefcase,
+  AlertCircle,
+  GitMerge,
+  Settings2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -32,6 +35,9 @@ const NAV_ITEMS = [
   { href: '/app',              label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'viewer', 'staff', 'participant'] },
   { href: '/app/events',       label: 'Event',     icon: Calendar,        roles: ['admin', 'viewer'] },
   { href: '/app/contacts',     label: 'Kontak',    icon: Users,           roles: ['admin'] },
+  { href: '/app/contacts/flagged',     label: 'Perlu Tinjauan', icon: AlertCircle,  roles: ['admin'] },
+  { href: '/app/contacts/duplicates',  label: 'Duplikat',       icon: GitMerge,   roles: ['admin'] },
+  { href: '/app/contacts/normalize',   label: 'Normalisasi',    icon: Settings2,  roles: ['admin'] },
   { href: '/app/vendors',      label: 'Vendor',    icon: Building2,       roles: ['admin'] },
   { href: '/app/data',         label: 'Data',      icon: Briefcase,       roles: ['admin'] },
   // { href: '/app/templates',    label: 'Template',  icon: FileText,        roles: ['admin'] }, // Hidden for now
@@ -68,7 +74,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   const visible = NAV_ITEMS.filter((item) => item.roles.includes(user?.role ?? 'viewer'))
 
-  // Fetch flagged contacts count for badge (admin only)
+  // Fetch counts for badges (admin only)
   const { data: healthData } = useQuery<{ flagged: number }>({
     queryKey: ['contacts', 'health'],
     queryFn: () => fetch('/api/contacts/health').then((r) => r.json()),
@@ -76,6 +82,30 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     refetchInterval: 60_000,
   })
   const flaggedCount = healthData?.flagged ?? 0
+
+  const { data: dupData } = useQuery<{ pagination: { total: number } }>({
+    queryKey: ['contacts-duplicates-count'],
+    queryFn: () => fetch('/api/contacts/duplicates?page=1&pageSize=1').then((r) => r.json()),
+    enabled: user?.role === 'admin',
+    refetchInterval: 60_000,
+  })
+  const dupCount = dupData?.pagination?.total ?? 0
+
+  const { data: normData } = useQuery<{ industryUnmatched: number; jobtitleUnmatched: number }>({
+    queryKey: ['normalization-counts'],
+    queryFn: async () => {
+      const [indRes, jobRes] = await Promise.all([
+        fetch('/api/contacts/unmatched?type=industry-unmatched&page=1&pageSize=1'),
+        fetch('/api/contacts/unmatched?type=jobtitle-unmatched&page=1&pageSize=1'),
+      ])
+      const ind = indRes.ok ? await indRes.json() : { total: 0 }
+      const job = jobRes.ok ? await jobRes.json() : { total: 0 }
+      return { industryUnmatched: ind.total ?? 0, jobtitleUnmatched: job.total ?? 0 }
+    },
+    enabled: user?.role === 'admin',
+    refetchInterval: 60_000,
+  })
+  const normCount = (normData?.industryUnmatched ?? 0) + (normData?.jobtitleUnmatched ?? 0)
 
   const handleLogout = async () => {
     try {
@@ -142,37 +172,55 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           </button>
         </div>
         <nav className={cn('flex-1 py-4 space-y-0.5', collapsed ? 'px-1.5' : 'px-3')}>
-          {visible.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              title={collapsed ? item.label : undefined}
-              className={cn(
-                'flex items-center rounded-md text-sm transition-colors',
-                collapsed ? 'relative justify-center px-2 py-2' : 'gap-3 px-3 py-2',
-                isActive(item.href)
-                  ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
-                  : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
-              )}
-            >
-              <item.icon className="size-4 shrink-0" />
-              {!collapsed && (
-                <>
-                  {item.label}
-                  {item.href === '/app/contacts' && flaggedCount > 0 && (
-                    <span className="ml-auto inline-flex items-center justify-center size-5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold">
-                      {flaggedCount}
-                    </span>
-                  )}
-                </>
-              )}
-              {collapsed && item.href === '/app/contacts' && flaggedCount > 0 && (
-                <span className="absolute top-0 right-0 inline-flex items-center justify-center size-3.5 rounded-full bg-destructive text-destructive-foreground text-[7px] font-bold">
-                  {flaggedCount}
-                </span>
-              )}
-            </Link>
-          ))}
+          {visible.map((item) => {
+            // Get badge count for specific nav items
+            let badgeCount = 0
+            if (item.href === '/app/contacts/flagged') badgeCount = flaggedCount
+            else if (item.href === '/app/contacts/duplicates') badgeCount = dupCount
+            else if (item.href === '/app/contacts/normalize') badgeCount = normCount
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                title={collapsed ? item.label : undefined}
+                className={cn(
+                  'flex items-center rounded-md text-sm transition-colors',
+                  collapsed ? 'relative justify-center px-2 py-2' : 'gap-3 px-3 py-2',
+                  isActive(item.href)
+                    ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
+                    : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
+                )}
+              >
+                <item.icon className="size-4 shrink-0" />
+                {!collapsed && (
+                  <>
+                    {item.label}
+                    {badgeCount > 0 && (
+                      <span className="ml-auto inline-flex items-center justify-center min-w-5 h-5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold px-1.5">
+                        {badgeCount > 99 ? '99+' : badgeCount}
+                      </span>
+                    )}
+                    {item.href === '/app/contacts' && flaggedCount > 0 && (
+                      <span className="ml-auto inline-flex items-center justify-center size-5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold">
+                        {flaggedCount}
+                      </span>
+                    )}
+                  </>
+                )}
+                {collapsed && item.href === '/app/contacts' && flaggedCount > 0 && (
+                  <span className="absolute top-0 right-0 inline-flex items-center justify-center size-3.5 rounded-full bg-destructive text-destructive-foreground text-[7px] font-bold">
+                    {flaggedCount}
+                  </span>
+                )}
+                {collapsed && badgeCount > 0 && item.href !== '/app/contacts' && (
+                  <span className="absolute top-0 right-0 inline-flex items-center justify-center size-3.5 rounded-full bg-destructive text-destructive-foreground text-[7px] font-bold">
+                    {badgeCount > 9 ? '9+' : badgeCount}
+                  </span>
+                )}
+              </Link>
+            )
+          })}
         </nav>
         <div className={cn(
           'py-4 border-t border-sidebar-border space-y-2',
@@ -235,26 +283,34 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
       {/* Mobile bottom nav */}
       <nav className="md:hidden fixed bottom-0 inset-x-0 bg-background border-t border-border z-50 flex items-center justify-around">
-        {visible.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={cn(
-              'relative flex flex-col items-center justify-center gap-0.5 min-h-[56px] min-w-[56px] px-2 py-2 text-[10px] font-medium transition-colors',
-              isActive(item.href)
-                ? 'text-primary'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-          >
-            <item.icon className="size-5" />
-            <span>{item.label}</span>
-            {item.href === '/app/contacts' && flaggedCount > 0 && (
-              <span className="absolute top-1 right-0 inline-flex items-center justify-center size-4 rounded-full bg-destructive text-destructive-foreground text-[8px] font-bold">
-                {flaggedCount}
-              </span>
-            )}
-          </Link>
-        ))}
+        {visible.map((item) => {
+          // Get badge count for mobile nav
+          let badgeCount = 0
+          if (item.href === '/app/contacts/flagged') badgeCount = flaggedCount
+          else if (item.href === '/app/contacts/duplicates') badgeCount = dupCount
+          else if (item.href === '/app/contacts/normalize') badgeCount = normCount
+
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                'relative flex flex-col items-center justify-center gap-0.5 min-h-[56px] min-w-[56px] px-2 py-2 text-[10px] font-medium transition-colors',
+                isActive(item.href)
+                  ? 'text-primary'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              <item.icon className="size-5" />
+              <span>{item.label}</span>
+              {badgeCount > 0 && (
+                <span className="absolute top-1 right-0 inline-flex items-center justify-center size-4 rounded-full bg-destructive text-destructive-foreground text-[8px] font-bold">
+                  {badgeCount > 9 ? '9+' : badgeCount}
+                </span>
+              )}
+            </Link>
+          )
+        })}
       </nav>
     </div>
   )

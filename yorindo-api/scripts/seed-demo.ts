@@ -250,6 +250,10 @@ export async function seedDemo(pool: Pool): Promise<void> {
     // ── Contacts (~500) ──
     const contactIds: string[] = []
     const contactCount = 500
+    // Non-standard industry/job title values for normalization testing
+    const NON_STANDARD_INDUSTRIES = ['IT Services', 'Tech Startup', 'Digital Marketing', 'E-commerce', 'Software House', 'Freelancer']
+    const NON_STANDARD_JOB_TITLES = ['Tech Lead', 'Head of Engineering', 'Product Owner', 'Scrum Master', 'Data Scientist', 'UX Designer']
+
     for (let i = 0; i < contactCount; i++) {
       const id = createId()
       contactIds.push(id)
@@ -291,6 +295,43 @@ export async function seedDemo(pool: Pool): Promise<void> {
       ])
     }
     console.log(`✓ Seeded ${contactCount} contacts (15 suppressed, 10 missing email, 10 missing phone)`)
+
+    // ── Contacts needing normalization (non-standard industry/job title) ──
+    const normalizationCount = 50
+    for (let i = 0; i < normalizationCount; i++) {
+      const id = createId()
+      contactIds.push(id)
+      const firstName = pick(FIRST_NAMES)
+      const lastName = pick(LAST_NAMES)
+      const name = `${firstName} ${lastName}`
+      const city = pick(CITIES)
+      const loc = LOCATIONS[city]
+      const size = weightedPick(SIZES, SIZE_WEIGHTS)
+      const prefix = pick(PHONE_PREFIXES)
+      const phone = `${prefix}${String(20000000 + i).slice(-8)}`
+      const email = `nonstandard.${firstName.toLowerCase()}.${i}@example.com`
+
+      // Use non-standard values that won't match any industry/job title
+      const nonStandardIndustry = pick(NON_STANDARD_INDUSTRIES)
+      const nonStandardJobTitle = pick(NON_STANDARD_JOB_TITLES)
+
+      await client.query(`
+        INSERT INTO contacts (
+          id, name, phone, email, city, company, company_size, source, consent_status,
+          completeness_score, service_type, job_title,
+          province_code, province_name, city_code, city_name
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+      `, [
+        id, name, phone, email,
+        city, pick(COMPANIES), size,
+        'excel_upload', 'active',
+        (0.7 + Math.random() * 0.3).toFixed(3),
+        nonStandardIndustry, nonStandardJobTitle,
+        loc?.province_code ?? null, loc?.province_name ?? null,
+        loc?.city_code ?? null, loc?.city_name ?? null,
+      ])
+    }
+    console.log(`✓ Seeded ${normalizationCount} contacts needing normalization (non-standard industry/job title)`)
 
     // ── Consent records for opted-out contacts ──
     for (let i = 0; i < 15; i++) {
