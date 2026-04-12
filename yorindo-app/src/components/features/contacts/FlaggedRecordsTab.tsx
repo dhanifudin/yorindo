@@ -10,10 +10,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import Link from 'next/link'
-import { FlaggedRecordsTable, type FlaggedRecord } from '@/components/features/contacts/FlaggedRecordsTable'
+import { FlaggedRecordsTable, type FlaggedRecord } from './FlaggedRecordsTable'
 
-export default function FlaggedRecordsPage() {
+export function FlaggedRecordsTab() {
   const [statusFilter, setStatusFilter] = useState('pending')
 
   const { data, isLoading } = useQuery<{ data: FlaggedRecord[]; pagination: { total: number } }>({
@@ -23,14 +22,11 @@ export default function FlaggedRecordsPage() {
   })
 
   return (
-    <div>
-      <div className="flex items-center gap-3 mb-6">
-        <Link href="/app/contacts" className="text-muted-foreground hover:text-foreground text-sm">
-          ← Kembali ke Kontak
-        </Link>
-      </div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Record Bermasalah</h1>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">
+          Tinjau dan selesaikan kontak dengan data bermasalah
+        </p>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-40">
             <SelectValue />

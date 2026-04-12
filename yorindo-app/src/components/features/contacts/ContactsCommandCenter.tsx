@@ -8,6 +8,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useContacts } from '@/hooks/useContacts'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useFilterStore } from '@/store/filterStore'
 import { HealthBar } from './HealthBar'
 import { EventBanner } from './EventBanner'
@@ -20,8 +21,12 @@ import { ActionToolbar } from './ActionToolbar'
 import { BlastModal } from './BlastModal'
 import { NormalizationHealthFlags } from './NormalizationHealthFlags'
 import { useEmailConfig } from '@/hooks/useEmailConfig'
+import { FlaggedRecordsTab } from './FlaggedRecordsTab'
+import { DuplicateContactsTab } from './DuplicateContactsTab'
+import { ContactNormalizationTab } from './ContactNormalizationTab'
 
 export function ContactsCommandCenter() {
+  const [activeView, setActiveView] = useState<'contacts' | 'flagged' | 'duplicates' | 'normalize'>('contacts')
   const [triageMode, setTriageMode] = useState<'flagged' | 'duplicates' | null>(null)
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
   const [selectMode, setSelectMode] = useState(false)
@@ -124,37 +129,61 @@ export function ContactsCommandCenter() {
 
       <EventBanner />
 
-      <ContactsFilterBar />
-      <ActiveFilterPills total={contacts?.pagination.total} />
-      <TriagePanel
-        mode={triageMode}
-        onClose={() => setTriageMode(null)}
-      />
+      {/* View tabs */}
+      <Tabs value={activeView} onValueChange={(v) => setActiveView(v as typeof activeView)}>
+        <TabsList>
+          <TabsTrigger value="contacts">Semua Kontak</TabsTrigger>
+          <TabsTrigger value="flagged">Perlu Tinjauan</TabsTrigger>
+          <TabsTrigger value="duplicates">Duplikat</TabsTrigger>
+          <TabsTrigger value="normalize">Normalisasi</TabsTrigger>
+        </TabsList>
 
-      <ContactsTable
-        rowSelection={rowSelection}
-        onRowSelectionChange={setRowSelection}
-        onToggleSelectMode={handleToggleSelectMode}
-        selectMode={selectMode}
-        selectedIds={selectedIds}
-      />
+        <TabsContent value="contacts" className="mt-4">
+          <ContactsFilterBar />
+          <ActiveFilterPills total={contacts?.pagination.total} />
+          <TriagePanel
+            mode={triageMode}
+            onClose={() => setTriageMode(null)}
+          />
 
-      <ContactsPagination />
+          <ContactsTable
+            rowSelection={rowSelection}
+            onRowSelectionChange={setRowSelection}
+            onToggleSelectMode={handleToggleSelectMode}
+            selectMode={selectMode}
+            selectedIds={selectedIds}
+          />
 
-      <ActionToolbar
-        total={contacts?.pagination.total ?? 0}
-        isVisible={hasFilters || selectedIds.length > 0}
-        selectedIds={selectedIds}
-        selectedNames={selectedNames}
-        onClearSelection={handleClearSelection}
-        onOpenBlastModal={() => {
-          if (emailConfig && !emailConfig.configured) {
-            router.push('/app/settings')
-            return
-          }
-          setBlastModalOpen(true)
-        }}
-      />
+          <ContactsPagination />
+
+          <ActionToolbar
+            total={contacts?.pagination.total ?? 0}
+            isVisible={hasFilters || selectedIds.length > 0}
+            selectedIds={selectedIds}
+            selectedNames={selectedNames}
+            onClearSelection={handleClearSelection}
+            onOpenBlastModal={() => {
+              if (emailConfig && !emailConfig.configured) {
+                router.push('/app/settings')
+                return
+              }
+              setBlastModalOpen(true)
+            }}
+          />
+        </TabsContent>
+
+        <TabsContent value="flagged" className="mt-4">
+          <FlaggedRecordsTab />
+        </TabsContent>
+
+        <TabsContent value="duplicates" className="mt-4">
+          <DuplicateContactsTab />
+        </TabsContent>
+
+        <TabsContent value="normalize" className="mt-4">
+          <ContactNormalizationTab />
+        </TabsContent>
+      </Tabs>
 
       {(() => {
         const serviceType = searchParams.get('serviceType')

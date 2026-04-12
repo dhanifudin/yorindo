@@ -21,9 +21,6 @@ import {
   Building2,
   Settings,
   Briefcase,
-  AlertCircle,
-  GitMerge,
-  Settings2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -35,9 +32,6 @@ const NAV_ITEMS = [
   { href: '/app',              label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'viewer', 'staff', 'participant'] },
   { href: '/app/events',       label: 'Event',     icon: Calendar,        roles: ['admin', 'viewer'] },
   { href: '/app/contacts',     label: 'Kontak',    icon: Users,           roles: ['admin'] },
-  { href: '/app/contacts/flagged',     label: 'Perlu Tinjauan', icon: AlertCircle,  roles: ['admin'] },
-  { href: '/app/contacts/duplicates',  label: 'Duplikat',       icon: GitMerge,   roles: ['admin'] },
-  { href: '/app/contacts/normalize',   label: 'Normalisasi',    icon: Settings2,  roles: ['admin'] },
   { href: '/app/vendors',      label: 'Vendor',    icon: Building2,       roles: ['admin'] },
   { href: '/app/data',         label: 'Data',      icon: Briefcase,       roles: ['admin'] },
   // { href: '/app/templates',    label: 'Template',  icon: FileText,        roles: ['admin'] }, // Hidden for now
@@ -105,7 +99,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     enabled: user?.role === 'admin',
     refetchInterval: 60_000,
   })
-  const normCount = (normData?.industryUnmatched ?? 0) + (normData?.jobtitleUnmatched ?? 0)
+  // Combined badge for contacts nav item
+  const contactsBadgeCount = flaggedCount + dupCount + (normData?.industryUnmatched ?? 0) + (normData?.jobtitleUnmatched ?? 0)
 
   const handleLogout = async () => {
     try {
@@ -173,11 +168,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         </div>
         <nav className={cn('flex-1 py-4 space-y-0.5', collapsed ? 'px-1.5' : 'px-3')}>
           {visible.map((item) => {
-            // Get badge count for specific nav items
-            let badgeCount = 0
-            if (item.href === '/app/contacts/flagged') badgeCount = flaggedCount
-            else if (item.href === '/app/contacts/duplicates') badgeCount = dupCount
-            else if (item.href === '/app/contacts/normalize') badgeCount = normCount
+            // Get badge count for contacts nav item (combined count)
+            const badgeCount = item.href === '/app/contacts' ? contactsBadgeCount : 0
 
             return (
               <Link
@@ -201,19 +193,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                         {badgeCount > 99 ? '99+' : badgeCount}
                       </span>
                     )}
-                    {item.href === '/app/contacts' && flaggedCount > 0 && (
-                      <span className="ml-auto inline-flex items-center justify-center size-5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold">
-                        {flaggedCount}
-                      </span>
-                    )}
                   </>
                 )}
-                {collapsed && item.href === '/app/contacts' && flaggedCount > 0 && (
-                  <span className="absolute top-0 right-0 inline-flex items-center justify-center size-3.5 rounded-full bg-destructive text-destructive-foreground text-[7px] font-bold">
-                    {flaggedCount}
-                  </span>
-                )}
-                {collapsed && badgeCount > 0 && item.href !== '/app/contacts' && (
+                {collapsed && badgeCount > 0 && (
                   <span className="absolute top-0 right-0 inline-flex items-center justify-center size-3.5 rounded-full bg-destructive text-destructive-foreground text-[7px] font-bold">
                     {badgeCount > 9 ? '9+' : badgeCount}
                   </span>
@@ -284,11 +266,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       {/* Mobile bottom nav */}
       <nav className="md:hidden fixed bottom-0 inset-x-0 bg-background border-t border-border z-50 flex items-center justify-around">
         {visible.map((item) => {
-          // Get badge count for mobile nav
-          let badgeCount = 0
-          if (item.href === '/app/contacts/flagged') badgeCount = flaggedCount
-          else if (item.href === '/app/contacts/duplicates') badgeCount = dupCount
-          else if (item.href === '/app/contacts/normalize') badgeCount = normCount
+          const badgeCount = item.href === '/app/contacts' ? contactsBadgeCount : 0
 
           return (
             <Link

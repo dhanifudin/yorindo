@@ -6,8 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Combobox } from '@/components/ui/combobox'
-import { Input } from '@/components/ui/input'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Table,
   TableBody,
@@ -17,8 +15,9 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
-import { RefreshCw, CheckCircle2, Loader2, Search } from 'lucide-react'
+import { RefreshCw, CheckCircle2, Loader2 } from 'lucide-react'
 import { useIndustries, useJobTitles } from '@/hooks/useStandardValues'
 
 interface UnmatchedContact {
@@ -60,7 +59,7 @@ async function bulkNormalize(contactIds: string[], field: 'serviceType' | 'jobTi
   return res.json()
 }
 
-export default function ContactNormalizationPage() {
+export function ContactNormalizationTab() {
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState<'industry' | 'jobtitle'>('industry')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -144,12 +143,11 @@ export default function ContactNormalizationPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Normalisasi Kontak</h1>
-          <p className="text-muted-foreground">Tinjau dan sesuaikan industri/jabatan kontak dengan standar</p>
-        </div>
+        <p className="text-sm text-muted-foreground">
+          Tinjau dan sesuaikan industri/jabatan kontak dengan standar
+        </p>
         <Button onClick={handleScan} disabled={scanMutation.isPending}>
           {scanMutation.isPending ? (
             <Loader2 className="w-4 h-4 mr-1 animate-spin" />
