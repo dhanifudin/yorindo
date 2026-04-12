@@ -30,34 +30,20 @@ interface Contact {
   id: string
   name: string
   email: string | null
-  serviceType: string | null
-  jobTitle: string | null
+  service_type: string | null
+  job_title: string | null
 }
 
 interface ContactsResponse {
-  data: Contact[]
-  pagination: { total: number; page: number; pageSize: number; totalPages: number }
+  contacts: Contact[]
+  total: number
+  totalPages: number
 }
 
-async function fetchContacts(page = 1): Promise<ContactsResponse> {
-  const res = await fetch(`/api/contacts?page=${page}&pageSize=100`)
+async function fetchContacts(type: 'industry-unmatched' | 'jobtitle-unmatched', page = 1): Promise<ContactsResponse> {
+  const res = await fetch(`/api/contacts/unmatched?type=${type}&page=${page}&pageSize=50`)
   if (!res.ok) throw new Error('Gagal memuat kontak')
   return res.json()
-}
-
-async function fetchAllContacts(): Promise<Contact[]> {
-  const allContacts: Contact[] = []
-  let page = 1
-  let totalPages = 1
-
-  while (page <= totalPages) {
-    const data = await fetchContacts(page)
-    allContacts.push(...data.data)
-    totalPages = data.pagination.totalPages
-    page++
-  }
-
-  return allContacts
 }
 
 interface GroupedValue {
@@ -73,30 +59,28 @@ export function ContactNormalizationTab() {
   const [mapping, setMapping] = useState<Record<string, string>>({})
   const [newValues, setNewValues] = useState<Record<string, string>>({})
   const [expandedValue, setExpandedValue] = useState<string | null>(null)
+  const [page, setPage] = useState(1)
 
   const { data: industries, isLoading: industriesLoading } = useIndustries()
   const { data: jobTitles, isLoading: jobTitlesLoading } = useJobTitles()
 
-  const { data: contacts, isLoading: contactsLoading, error: contactsError } = useQuery<Contact[]>({
-    queryKey: ['contacts-for-normalization'],
-    queryFn: fetchAllContacts,
-    staleTime: 60_000,
+  const apiType = activeType === 'serviceType' ? 'industry-unmatched' : 'jobtitle-unmatched'
+
+  const { data, isLoading: contactsLoading, error: contactsError } = useQuery<ContactsResponse>({
+    queryKey: ['unmatched-contacts', apiType, page],
+    queryFn: () => fetchContacts(apiType, page),
+    staleTime: 30_000,
   })
 
   // Group contacts by non-standard values
   const nonStandardGroups = useMemo(() => {
-    if (!contacts) return []
-
-    const standards = activeType === 'serviceType'
-      ? (industries?.map(i => i.name.toLowerCase()) ?? [])
-      : (jobTitles?.map(j => j.name.toLowerCase()) ?? [])
+    if (!data?.contacts) return []
 
     const groups: Record<string, GroupedValue> = {}
 
-    for (const contact of contacts) {
-      const value = contact[activeType]
-      // Skip empty values or values that match standards
-      if (!value || value.trim() === '' || standards.includes(value.toLowerCase())) continue
+    for (const contact of data.contacts) {
+      const value = activeType === 'serviceType' ? contact.service_type : contact.job_title
+      if (!value || value.trim() === '') continue
 
       if (!groups[value]) {
         groups[value] = { value, count: 0, contactIds: [], contacts: [] }
@@ -107,7 +91,7 @@ export function ContactNormalizationTab() {
     }
 
     return Object.values(groups).sort((a, b) => b.count - a.count)
-  }, [contacts, industries, jobTitles, activeType])
+  }, [data, activeType])
 
   const standardOptions = useMemo(() => {
     const items = activeType === 'serviceType' ? industries : jobTitles
@@ -165,7 +149,8 @@ export function ContactNormalizationTab() {
     },
     onSuccess: () => {
       toast.success('Normalisasi berhasil diterapkan')
-      queryClient.invalidateQueries({ queryKey: ['contacts-for-normalization'] })
+      setPage(1)
+      queryClient.invalidateQueries({ queryKey: ['unmatched-contacts', apiType] })
       queryClient.invalidateQueries({ queryKey: ['normalization-counts'] })
       queryClient.invalidateQueries({ queryKey: activeType === 'serviceType' ? ['standard-industries'] : ['standard-job-titles'] })
       setMapping({})
@@ -175,7 +160,8 @@ export function ContactNormalizationTab() {
   })
 
   const handleRefresh = () => {
-    queryClient.invalidateQueries({ queryKey: ['contacts-for-normalization'] })
+    setPage(1)
+    queryClient.invalidateQueries({ queryKey: ['unmatched-contacts', apiType] })
   }
 
   const toggleExpand = useCallback((value: string) => {
@@ -215,7 +201,7 @@ export function ContactNormalizationTab() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          {nonStandardGroups.length} nilai {label.toLowerCase()} tidak standar ditemukan dari {contacts?.length ?? 0} kontak
+          {nonStandardGroups.length} nilai {label.toLowerCase()} tidak standar dari {data?.total ?? 0} kontak
         </p>
         <div className="flex items-center gap-2">
           <Select value={activeType} onValueChange={(v) => { setActiveType(v as typeof activeType); setMapping({}); setNewValues({}) }}>
@@ -353,7 +339,7 @@ export function ContactNormalizationTab() {
                                   <TableCell>{contact.email ?? <span className="text-muted-foreground italic">—</span>}</TableCell>
                                   <TableCell>
                                     <Badge variant="outline" className="text-xs">
-                                      {contact[activeType]}
+                                      {activeType === 'serviceType' ? contact.service_type : contact.job_title}
                                     </Badge>
                                   </TableCell>
                                 </TableRow>
