@@ -166,6 +166,7 @@ export function ContactNormalizationTab() {
     onSuccess: () => {
       toast.success('Normalisasi berhasil diterapkan')
       queryClient.invalidateQueries({ queryKey: ['contacts-for-normalization'] })
+      queryClient.invalidateQueries({ queryKey: ['normalization-counts'] })
       queryClient.invalidateQueries({ queryKey: activeType === 'serviceType' ? ['standard-industries'] : ['standard-job-titles'] })
       setMapping({})
       setNewValues({})

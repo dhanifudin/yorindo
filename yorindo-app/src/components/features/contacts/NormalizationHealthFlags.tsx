@@ -1,7 +1,8 @@
 'use client'
 
-import { useQuery } from '@tanstack/react-query'
-import { AlertCircle, ArrowRight } from 'lucide-react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { AlertCircle, ArrowRight, RefreshCw } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 interface NormalizationCounts {
@@ -26,12 +27,17 @@ async function fetchNormalizationCounts(): Promise<NormalizationCounts> {
 }
 
 export function NormalizationHealthFlags({ onNavigate }: { onNavigate: (type: 'industry' | 'jobtitle') => void }) {
-  const { data, isLoading } = useQuery<NormalizationCounts>({
+  const queryClient = useQueryClient()
+  const { data, isLoading, isFetching } = useQuery<NormalizationCounts>({
     queryKey: ['normalization-counts'],
     queryFn: fetchNormalizationCounts,
     staleTime: 2 * 60 * 1000, // 2 minutes
     refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
   })
+
+  const handleRefresh = () => {
+    queryClient.invalidateQueries({ queryKey: ['normalization-counts'] })
+  }
 
   if (isLoading) return null
 
@@ -39,8 +45,9 @@ export function NormalizationHealthFlags({ onNavigate }: { onNavigate: (type: 'i
   if (total === 0) return null
 
   return (
-    <div className="flex flex-wrap gap-3">
-      {/* Industry unmatched */}
+    <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap gap-3 flex-1">
+        {/* Industry unmatched */}
       {data && data.industryUnmatched > 0 && (
         <button
           onClick={() => onNavigate('industry')}
@@ -95,6 +102,17 @@ export function NormalizationHealthFlags({ onNavigate }: { onNavigate: (type: 'i
           <ArrowRight className="w-4 h-4 ml-2 text-muted-foreground" />
         </button>
       )}
+      </div>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={handleRefresh}
+        disabled={isFetching}
+        className="shrink-0"
+        title="Refresh"
+      >
+        <RefreshCw className={cn('w-4 h-4', isFetching && 'animate-spin')} />
+      </Button>
     </div>
   )
 }
