@@ -6584,36 +6584,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
 
-tags:
-  - name: Health
-    description: Service health check
-  - name: Auth
-    description: Authentication and token management
-  - name: Contacts
-    description: Contact database management and ETL
-  - name: Events
-    description: Event configuration and lifecycle management
-  - name: Registrations
-    description: Participant registration and approval workflow
-  - name: Scan
-    description: Event-day QR ticket verification
-  - name: ETL
-    description: Contact import job management
-  - name: SmartFilter
-    description: AI-powered industry filter
-  - name: Blast
-    description: Invitation blast and notifications
-  - name: Analytics
-    description: Event analytics and reporting
-  - name: AI
-    description: AI-powered event analysis
-  - name: Users
-    description: User account and access management
-  - name: Settings
-    description: External service configuration management
-  - name: Uploads
-    description: Image file upload and serving
-
   /industries:
     get:
       summary: List all standard industries
@@ -6656,7 +6626,6 @@ tags:
           description: Industry created
         '409':
           description: Slug already exists
-
   /industries/{id}:
     parameters:
       - in: path
@@ -6688,7 +6657,6 @@ tags:
       responses:
         '204': { description: Industry deleted }
         '404': { description: Not found }
-
   /job-titles:
     get:
       summary: List all standard job titles
@@ -6729,7 +6697,6 @@ tags:
       responses:
         '201': { description: Job title created }
         '409': { description: Slug already exists }
-
   /job-titles/{id}:
     parameters:
       - in: path
@@ -6761,7 +6728,6 @@ tags:
       responses:
         '204': { description: Job title deleted }
         '404': { description: Not found }
-
   /contacts/normalize/suggestions:
     get:
       summary: Get fuzzy match suggestion for a contact value
@@ -6793,7 +6759,6 @@ tags:
                       slug: { type: string }
                       name: { type: string }
                   confidence: { type: number }
-
   /contacts/unmatched:
     get:
       summary: List contacts flagged as unmatched
@@ -6822,7 +6787,6 @@ tags:
                   contacts: { type: array, items: { type: object } }
                   total: { type: integer }
                   totalPages: { type: integer }
-
   /contacts/{id}/normalize:
     parameters:
       - in: path
@@ -6846,7 +6810,6 @@ tags:
                 standardId: { type: string }
       responses:
         '200': { description: Contact normalized }
-
   /contacts/bulk-normalize:
     post:
       summary: Normalize multiple contacts at once
@@ -6874,7 +6837,6 @@ tags:
                 properties:
                   success: { type: boolean }
                   normalized: { type: integer }
-
   /contacts/scan-unmatched:
     post:
       summary: Scan all contacts and flag those unmatched against standards
@@ -6891,3 +6853,46 @@ tags:
                 properties:
                   industryCount: { type: integer }
                   jobTitleCount: { type: integer }
+tags:
+  - name: Health
+    description: Service health check
+  - name: Auth
+    description: Authentication and token management
+  - name: Contacts
+    description: Contact management and deduplication
+  - name: Events
+    description: Event management and lifecycle
+  - name: Registrations
+    description: Event registration management
+  - name: Vendors
+    description: Vendor and sponsor management
+  - name: Templates
+    description: Notification template management
+  - name: Surveys
+    description: Survey builder and response management
+  - name: Tickets
+    description: Ticket confirmation and delivery
+  - name: Scan
+    description: QR code scanning and check-in
+  - name: ETL
+    description: Contact import job management
+  - name: SmartFilter
+    description: AI-powered industry filter
+  - name: Blast
+    description: Invitation blast and notifications
+  - name: Analytics
+    description: Event analytics and reporting
+  - name: AI
+    description: AI-powered event analysis
+  - name: Users
+    description: User account and access management
+  - name: Settings
+    description: External service configuration management
+  - name: Uploads
+    description: Image file upload and serving
+  - name: Industries
+    description: Standard industry management
+  - name: Job Titles
+    description: Standard job title management
+  - name: Contact Normalization
+    description: Contact industry/job title normalization
