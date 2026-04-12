@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -14,12 +14,22 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Combobox } from '@/components/ui/combobox'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { toast } from 'sonner'
-import { RefreshCw, CheckCircle2, Loader2 } from 'lucide-react'
+import { RefreshCw, CheckCircle2, Loader2, ChevronDown, ChevronUp, Users, Plus } from 'lucide-react'
 import { useIndustries, useJobTitles } from '@/hooks/useStandardValues'
 
 interface Contact {
   id: string
+  name: string
+  email: string | null
   serviceType: string | null
   jobTitle: string | null
 }
@@ -54,6 +64,7 @@ interface GroupedValue {
   value: string
   count: number
   contactIds: string[]
+  contacts: Contact[]
 }
 
 export function ContactNormalizationTab() {
@@ -61,6 +72,7 @@ export function ContactNormalizationTab() {
   const [activeType, setActiveType] = useState<'serviceType' | 'jobTitle'>('serviceType')
   const [mapping, setMapping] = useState<Record<string, string>>({})
   const [newValues, setNewValues] = useState<Record<string, string>>({})
+  const [expandedValue, setExpandedValue] = useState<string | null>(null)
 
   const { data: industries, isLoading: industriesLoading } = useIndustries()
   const { data: jobTitles, isLoading: jobTitlesLoading } = useJobTitles()
@@ -87,10 +99,11 @@ export function ContactNormalizationTab() {
       if (!value || value.trim() === '' || standards.includes(value.toLowerCase())) continue
 
       if (!groups[value]) {
-        groups[value] = { value, count: 0, contactIds: [] }
+        groups[value] = { value, count: 0, contactIds: [], contacts: [] }
       }
       groups[value].count++
       groups[value].contactIds.push(contact.id)
+      groups[value].contacts.push(contact)
     }
 
     return Object.values(groups).sort((a, b) => b.count - a.count)
@@ -164,6 +177,15 @@ export function ContactNormalizationTab() {
     queryClient.invalidateQueries({ queryKey: ['contacts-for-normalization'] })
   }
 
+  const toggleExpand = useCallback((value: string) => {
+    setExpandedValue(prev => prev === value ? null : value)
+  }, [])
+
+  const addAsNewStandard = useCallback((value: string) => {
+    setNewValues(prev => ({ ...prev, [value]: value }))
+    setMapping(prev => { const next = { ...prev }; delete next[value]; return next })
+  }, [])
+
   const setMappingForValue = (value: string, standardId: string) => {
     setMapping(prev => ({ ...prev, [value]: standardId }))
     setNewValues(prev => { const next = { ...prev }; delete next[value]; return next })
@@ -229,65 +251,124 @@ export function ContactNormalizationTab() {
       ) : (
         <>
           <div className="space-y-3">
-            {nonStandardGroups.map((group) => (
-              <Card key={group.value}>
-                <CardContent className="py-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                    {/* Current value and count */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-sm font-medium">
-                          {group.value}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground">
-                          {group.count} kontak
-                        </span>
-                      </div>
-                    </div>
+            {nonStandardGroups.map((group) => {
+              const isExpanded = expandedValue === group.value
+              const isMapped = !!mapping[group.value]
+              const isNew = !!newValues[group.value]
 
-                    {/* Mapping options */}
-                    <div className="flex items-center gap-2 flex-1">
-                      {mapping[group.value] ? (
-                        <div className="flex items-center gap-2 flex-1">
-                          <Badge className="bg-green-100 text-green-700 text-xs">
-                            Dipetakan ke: {industries?.find(i => i.id === mapping[group.value])?.name ?? jobTitles?.find(j => j.id === mapping[group.value])?.name}
-                          </Badge>
-                          <Button variant="ghost" size="sm" onClick={() => setMapping(prev => { const next = { ...prev }; delete next[group.value]; return next })}>
-                            Batal
-                          </Button>
+              return (
+                <Card key={group.value}>
+                  <CardContent className="py-4">
+                    <div className="flex flex-col gap-3">
+                      {/* Header row */}
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                        {/* Current value and count */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge variant="outline" className="text-sm font-medium">
+                              {group.value}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Users className="w-3 h-3" />
+                              {group.count} kontak
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 px-2 text-xs"
+                              onClick={() => toggleExpand(group.value)}
+                            >
+                              {isExpanded ? (
+                                <ChevronUp className="w-3 h-3 mr-1" />
+                              ) : (
+                                <ChevronDown className="w-3 h-3 mr-1" />
+                              )}
+                              {isExpanded ? 'Sembunyikan' : 'Lihat kontak'}
+                            </Button>
+                          </div>
                         </div>
-                      ) : newValues[group.value] ? (
-                        <div className="flex items-center gap-2 flex-1">
-                          <Badge className="bg-blue-100 text-blue-700 text-xs">
-                            Baru: {newValues[group.value]}
-                          </Badge>
-                          <Button variant="ghost" size="sm" onClick={() => setNewValues(prev => { const next = { ...prev }; delete next[group.value]; return next })}>
-                            Batal
-                          </Button>
+
+                        {/* Mapping options */}
+                        <div className="flex items-center gap-2 flex-1 sm:flex-none">
+                          {isMapped ? (
+                            <div className="flex items-center gap-2 w-full sm:w-auto">
+                              <Badge className="bg-green-100 text-green-700 text-xs">
+                                Dipetakan ke: {industries?.find(i => i.id === mapping[group.value])?.name ?? jobTitles?.find(j => j.id === mapping[group.value])?.name}
+                              </Badge>
+                              <Button variant="ghost" size="sm" onClick={() => setMapping(prev => { const next = { ...prev }; delete next[group.value]; return next })}>
+                                Batal
+                              </Button>
+                            </div>
+                          ) : isNew ? (
+                            <div className="flex items-center gap-2 w-full sm:w-auto">
+                              <Badge className="bg-blue-100 text-blue-700 text-xs">
+                                <Plus className="w-3 h-3 mr-1" />
+                                Baru: {newValues[group.value]}
+                              </Badge>
+                              <Button variant="ghost" size="sm" onClick={() => setNewValues(prev => { const next = { ...prev }; delete next[group.value]; return next })}>
+                                Batal
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2 w-full sm:w-auto">
+                              <Combobox
+                                options={standardOptions}
+                                value=""
+                                onValueChange={(v) => setMappingForValue(group.value, v)}
+                                placeholder="Pilih standar..."
+                                searchPlaceholder="Cari..."
+                                emptyText="Tidak ditemukan."
+                              />
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => addAsNewStandard(group.value)}
+                                title="Tambahkan sebagai standar baru"
+                              >
+                                <Plus className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          )}
                         </div>
-                      ) : (
-                        <div className="flex items-center gap-2 flex-1">
-                          <Combobox
-                            options={standardOptions}
-                            value=""
-                            onValueChange={(v) => setMappingForValue(group.value, v)}
-                            placeholder="Pilih standar..."
-                            searchPlaceholder="Cari..."
-                            emptyText="Tidak ditemukan."
-                          />
-                          <span className="text-muted-foreground text-sm">atau</span>
-                          <Input
-                            placeholder="Tambahkan baru..."
-                            className="flex-1 h-9"
-                            onChange={(e) => setNewValueForValue(group.value, e.target.value)}
-                          />
+                      </div>
+
+                      {/* Expanded contact preview */}
+                      {isExpanded && (
+                        <div className="border rounded-lg overflow-hidden">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Nama</TableHead>
+                                <TableHead>Email</TableHead>
+                                <TableHead>{label}</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {group.contacts.slice(0, 10).map((contact) => (
+                                <TableRow key={contact.id}>
+                                  <TableCell className="font-medium">{contact.name}</TableCell>
+                                  <TableCell>{contact.email ?? <span className="text-muted-foreground italic">—</span>}</TableCell>
+                                  <TableCell>
+                                    <Badge variant="outline" className="text-xs">
+                                      {contact[activeType]}
+                                    </Badge>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                          {group.contacts.length > 10 && (
+                            <div className="px-4 py-2 bg-muted/50 text-xs text-muted-foreground text-center">
+                              Menampilkan 10 dari {group.contacts.length} kontak
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              )
+            })}
           </div>
 
           {/* Apply button */}
