@@ -6613,3 +6613,281 @@ tags:
     description: External service configuration management
   - name: Uploads
     description: Image file upload and serving
+
+  /industries:
+    get:
+      summary: List all standard industries
+      operationId: listIndustries
+      tags: [Industries]
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: Industry list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        slug: { type: string }
+                        name: { type: string }
+    post:
+      summary: Create a new industry
+      operationId: createIndustry
+      tags: [Industries]
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, slug]
+              properties:
+                name: { type: string }
+                slug: { type: string }
+      responses:
+        '201':
+          description: Industry created
+        '409':
+          description: Slug already exists
+
+  /industries/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string }
+    patch:
+      summary: Update an industry
+      operationId: updateIndustry
+      tags: [Industries]
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                slug: { type: string }
+      responses:
+        '200': { description: Industry updated }
+        '404': { description: Not found }
+    delete:
+      summary: Delete an industry
+      operationId: deleteIndustry
+      tags: [Industries]
+      security: [{ BearerAuth: [] }]
+      responses:
+        '204': { description: Industry deleted }
+        '404': { description: Not found }
+
+  /job-titles:
+    get:
+      summary: List all standard job titles
+      operationId: listJobTitles
+      tags: [Job Titles]
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: Job title list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        slug: { type: string }
+                        name: { type: string }
+    post:
+      summary: Create a new job title
+      operationId: createJobTitle
+      tags: [Job Titles]
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, slug]
+              properties:
+                name: { type: string }
+                slug: { type: string }
+      responses:
+        '201': { description: Job title created }
+        '409': { description: Slug already exists }
+
+  /job-titles/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string }
+    patch:
+      summary: Update a job title
+      operationId: updateJobTitle
+      tags: [Job Titles]
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                slug: { type: string }
+      responses:
+        '200': { description: Job title updated }
+        '404': { description: Not found }
+    delete:
+      summary: Delete a job title
+      operationId: deleteJobTitle
+      tags: [Job Titles]
+      security: [{ BearerAuth: [] }]
+      responses:
+        '204': { description: Job title deleted }
+        '404': { description: Not found }
+
+  /contacts/normalize/suggestions:
+    get:
+      summary: Get fuzzy match suggestion for a contact value
+      operationId: getNormalizationSuggestion
+      tags: [Contact Normalization]
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - in: query
+          name: type
+          required: true
+          schema: { type: string, enum: [industry, jobTitle] }
+        - in: query
+          name: value
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Match result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  matched: { type: boolean }
+                  suggestion:
+                    type: object
+                    properties:
+                      id: { type: string }
+                      slug: { type: string }
+                      name: { type: string }
+                  confidence: { type: number }
+
+  /contacts/unmatched:
+    get:
+      summary: List contacts flagged as unmatched
+      operationId: getUnmatchedContacts
+      tags: [Contact Normalization]
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - in: query
+          name: type
+          required: true
+          schema: { type: string, enum: [industry-unmatched, jobtitle-unmatched] }
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: pageSize
+          schema: { type: integer, default: 50 }
+      responses:
+        '200':
+          description: Unmatched contacts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  contacts: { type: array, items: { type: object } }
+                  total: { type: integer }
+                  totalPages: { type: integer }
+
+  /contacts/{id}/normalize:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string }
+    patch:
+      summary: Normalize a single contact's industry or job title
+      operationId: normalizeContact
+      tags: [Contact Normalization]
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [field, standardId]
+              properties:
+                field: { type: string, enum: [serviceType, jobTitle] }
+                standardId: { type: string }
+      responses:
+        '200': { description: Contact normalized }
+
+  /contacts/bulk-normalize:
+    post:
+      summary: Normalize multiple contacts at once
+      operationId: bulkNormalizeContacts
+      tags: [Contact Normalization]
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [contactIds, field, standardId]
+              properties:
+                contactIds: { type: array, items: { type: string } }
+                field: { type: string, enum: [serviceType, jobTitle] }
+                standardId: { type: string }
+      responses:
+        '200':
+          description: Bulk normalization complete
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  normalized: { type: integer }
+
+  /contacts/scan-unmatched:
+    post:
+      summary: Scan all contacts and flag those unmatched against standards
+      operationId: scanUnmatchedContacts
+      tags: [Contact Normalization]
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: Scan result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  industryCount: { type: integer }
+                  jobTitleCount: { type: integer }
