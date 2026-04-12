@@ -9,7 +9,7 @@ Participants can exercise their UU PDP data rights through the currently impleme
 ## Story 9.1: Participant Data Request (Copy of Stored Data)
 
 As a participant,
-I want to request a copy of all personal data Yorindo holds about me,
+I want to request a copy of all personal data EM . U holds about me,
 So that I can exercise my right to data portability under UU PDP Art. 28.
 
 **Acceptance Criteria:**

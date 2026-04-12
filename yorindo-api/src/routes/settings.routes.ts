@@ -194,11 +194,11 @@ export const settingsRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const result = await emailService.send({
         to: parsed.data.to,
-        subject: 'Test Email — Yorindo Email Configuration',
+        subject: 'Test Email — EM . U Email Configuration',
         body: `
           <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
             <h2 style="color: #16a34a;">✓ Email Configuration Verified</h2>
-            <p>This is a test email from your Yorindo instance.</p>
+            <p>This is a test email from your EM . U instance.</p>
             <p style="color: #6b7280; font-size: 14px;">
               Sent at: ${new Date().toISOString()}<br/>
               If you received this, your email provider is configured correctly.

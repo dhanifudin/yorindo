@@ -61,7 +61,6 @@ import { BrevoEmailService } from './services/adapters/real/BrevoEmailService.js
 import { MailtrapEmailService } from './services/adapters/real/MailtrapEmailService.js'
 import { BullQueueService } from './services/adapters/real/BullQueueService.js'
 import { EverproWhatsAppService } from './services/adapters/real/EverproWhatsAppService.js'
-import { OpenAiEtlNormalizationService } from './services/adapters/real/OpenAiEtlNormalizationService.js'
 import { RuleBasedEtlNormalizationService } from './services/adapters/real/RuleBasedEtlNormalizationService.js'
 
 function resolveRepositories(): {
@@ -122,16 +121,11 @@ function resolveRepositories(): {
 const repos = resolveRepositories()
 
 function resolveEtlNormalizationService(): IEtlNormalizationService {
-  switch (config.etlAiProvider) {
-    case 'disabled':
-      return new RuleBasedEtlNormalizationService()
-    case 'mock':
-      return new MockEtlNormalizationService()
-    case 'openai':
-      return new OpenAiEtlNormalizationService()
-    default:
-      return new MockEtlNormalizationService()
+  // AI is not used in ETL — always use rule-based normalization
+  if (config.serviceImpl === 'real') {
+    return new RuleBasedEtlNormalizationService()
   }
+  return new MockEtlNormalizationService()
 }
 
 async function resolveEmailService(): Promise<IEmailService> {
@@ -141,6 +135,8 @@ async function resolveEmailService(): Promise<IEmailService> {
       case 'brevo':
         return new BrevoEmailService()
       case 'smtp':
+      case 'ses':   // AWS SES uses SMTP credentials — configure SMTP_HOST to email-smtp.<region>.amazonaws.com
+      case 'gcp':   // GCP Workspace SMTP relay — configure SMTP_HOST to smtp-relay.gmail.com
         return new SmtpEmailService()
       default:
         return new MockEmailService()
@@ -152,6 +148,9 @@ async function resolveEmailService(): Promise<IEmailService> {
         return new BrevoEmailService()
       case 'mailtrap':
         return new MailtrapEmailService()
+      case 'ses':
+      case 'gcp':
+        return new SmtpEmailService()
       default:
         return new MockEmailService()
     }

@@ -377,4 +377,4 @@ Existing tests (62 total) test logic and MSW handlers, never CSS class names. Th
 ## Completion Status
 
 - **Status:** review
-- **Note:** shadcn/ui v4.0.8 foundation + Yorindo blue brand theme applied. Primary: hsl(217 73% 35%). Font: Inter. Radius: 0.75rem. Surface token + card/text utilities ready for Epic 10 stories.
+- **Note:** shadcn/ui v4.0.8 foundation + EM . U blue brand theme applied. Primary: hsl(217 73% 35%). Font: Inter. Radius: 0.75rem. Surface token + card/text utilities ready for Epic 10 stories.

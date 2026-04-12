@@ -52,7 +52,7 @@ Then `authStore.setAuth(token, user, eventKeys)` stores the eventKeys map; for e
 - [x] **Task 1: Create login page at `/login`**
   - [x] Create `src/app/login/page.tsx` (public route, no auth guard)
   - [x] Create `src/app/login/layout.tsx` (centered layout, no sidebar)
-  - [x] Add Yorindo branding: logo placeholder, "Admin Portal" heading
+  - [x] Add EM . U branding: logo placeholder, "Admin Portal" heading
 
 - [x] **Task 2: Build login form with RHF + Zod**
   - [x] Create `src/components/forms/LoginForm.tsx` (client component)

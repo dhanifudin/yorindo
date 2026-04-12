@@ -8,7 +8,7 @@
 
 ## Overview
 
-External services in Yorindo are configured via environment variables. Non-AI services (email, WhatsApp) have their own toggle for per-service provider selection (e.g., mock WhatsApp + real email). All AI features share a single `AI_PROVIDER` toggle.
+External services in EM . U are configured via environment variables. Non-AI services (email, WhatsApp) have their own toggle for per-service provider selection (e.g., mock WhatsApp + real email). All AI features share a single `AI_PROVIDER` toggle.
 
 ---
 

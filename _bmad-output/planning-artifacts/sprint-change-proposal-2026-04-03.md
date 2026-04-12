@@ -77,10 +77,10 @@ None — follows proven patterns from `cd-api.yml` + `docker-compose.api.yml`.
 **File:** `_bmad-output/planning-artifacts/epics/epic-11-demo-environment-deployment.md`
 
 **OLD (Epic Statement):**
-> As a team showcasing the Yorindo platform, we want a self-contained demo environment at `demo.dhanifudin.com` with realistic seed data that resets on every deployment, so that prospects and team members can experience the full product lifecycle without affecting production data.
+> As a team showcasing the EM . U platform, we want a self-contained demo environment at `demo.dhanifudin.com` with realistic seed data that resets on every deployment, so that prospects and team members can experience the full product lifecycle without affecting production data.
 
 **NEW (Epic Statement):**
-> As a team deploying and showcasing the Yorindo platform, we want a unified VPS deployment topology with three endpoints — `yorindo.dhanifudin.com` (FE preview with MSW mocks, replacing GitHub Pages), `api.dhanifudin.com` (standalone API, already deployed), and `demo.dhanifudin.com` (full-stack demo with postgres and seed data) — so that all environments are consistently managed via Docker Compose on VPS.
+> As a team deploying and showcasing the EM . U platform, we want a unified VPS deployment topology with three endpoints — `yorindo.dhanifudin.com` (FE preview with MSW mocks, replacing GitHub Pages), `api.dhanifudin.com` (standalone API, already deployed), and `demo.dhanifudin.com` (full-stack demo with postgres and seed data) — so that all environments are consistently managed via Docker Compose on VPS.
 
 ### 4.2 New Story 13.6
 

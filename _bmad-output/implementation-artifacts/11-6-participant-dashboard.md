@@ -51,7 +51,7 @@ So that I can track my upcoming events and access my tickets without contacting 
 **AC8:** Skeleton loading state while data is fetching — render `<Skeleton />` placeholders that match the shape of each tab's content. Empty states: *"Tidak ada pendaftaran aktif."* (Mendatang tab) and *"Belum ada tiket."* (Tiket Saya tab).
 
 **AC9:** Participant users are wrapped in `ParticipantShell` (not `AdminShell`). `ParticipantShell` is a new standalone layout at `src/components/layout/ParticipantShell.tsx` with:
-- Top bar: Yorindo logo (left), participant name from `authStore.user.name` (center or right), logout button (far right).
+- Top bar: EM . U logo (left), participant name from `authStore.user.name` (center or right), logout button (far right).
 - No sidebar, no mobile bottom nav.
 - Main content area centered, max-w-2xl, px-4, py-6.
 
@@ -90,7 +90,7 @@ MSW handler: `GET /api/participants/me/profile` (new) returns the mock contact o
 
 - [x] **Task 2 — ParticipantShell layout (AC: 9)**
   - [x] Create `src/components/layout/ParticipantShell.tsx`
-  - [x] Top bar: logo text "Yorindo" (left), `authStore.user.name` (right of logo or centered), logout `<Button variant="ghost">` (far right)
+  - [x] Top bar: logo text "EM . U" (left), `authStore.user.name` (right of logo or centered), logout `<Button variant="ghost">` (far right)
   - [x] No sidebar, no mobile nav
   - [x] Main: `<main className="max-w-2xl mx-auto px-4 py-6">{children}</main>`
   - [x] Logout calls `clearAuth()` + `router.replace('/')`

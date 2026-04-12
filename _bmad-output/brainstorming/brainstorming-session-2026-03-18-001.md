@@ -1,7 +1,7 @@
 ---
 stepsCompleted: [1, 2, 3, 4]
-inputDocuments: ['docs/Project Brief Yorindo - KADA.pdf']
-session_topic: 'Yorindo Registration & Participant Database Management System'
+inputDocuments: ['docs/Project Brief EM . U - KADA.pdf']
+session_topic: 'EM . U Registration & Participant Database Management System'
 session_goals: 'Technical Architecture, Risk Identification, UX Flow Design'
 selected_approach: 'ai-recommended'
 techniques_used: ['Constraint Mapping', 'Reversal Inversion', 'Solution Matrix']
@@ -19,12 +19,12 @@ workflow_completed: true
 
 ## Session Overview
 
-**Topic:** Yorindo Registration & Participant Database Management System
+**Topic:** EM . U Registration & Participant Database Management System
 **Goals:** Technical Architecture · Risk Identification · UX Flow Design
 
 ### Context
 
-Yorindo Communication is a Technology Seminar Event Organizer (est. 2017) operating across 18 Indonesian cities with 30,000+ participant contacts. Building a 4-module system:
+EM . U Communication is a Technology Seminar Event Organizer (est. 2017) operating across 18 Indonesian cities with 30,000+ participant contacts. Building a 4-module system:
 1. Data Architecture & Integration (Back-End)
 2. Registration & Survey Module (Front-End)
 3. Attendance & Barcode/QR Management (Mobile/Web)
@@ -57,7 +57,7 @@ _Novelty:_ Thumb-friendly for busy managers checking WhatsApp during meetings. B
 
 **#18 — Smart Event Reminder Sequence**
 _Concept:_ Auto-scheduled 3-touchpoint WhatsApp sequence after approval: (1) Confirmation + OTP immediately, (2) "See you tomorrow" + venue maps link 24h before, (3) "Event starts in 1 hour" + Google Maps deep link on event morning.
-_Novelty:_ Participant never has to remember. Reduces no-show rate — directly protecting Yorindo's credibility with vendor clients.
+_Novelty:_ Participant never has to remember. Reduces no-show rate — directly protecting EM . U's credibility with vendor clients.
 
 **#19 — Digital Ticket with Embedded Info**
 _Concept:_ OTP confirmation message includes link to a lightweight participant page — name, event details, venue, OTP code, "Add to Calendar" button. PWA page accessible anytime from the WhatsApp link.
@@ -65,7 +65,7 @@ _Novelty:_ Single source of truth for the participant. Survives deleted WhatsApp
 
 **#20 — Rejection with Waitlist Option**
 _Concept:_ Rejected registrants offered a waitlist spot. If approved participant cancels, system auto-promotes next waitlist person and sends OTP automatically.
-_Novelty:_ Maximizes seat fill rate. Rejected participants feel respected — protecting Yorindo brand for future events.
+_Novelty:_ Maximizes seat fill rate. Rejected participants feel respected — protecting EM . U brand for future events.
 
 **#21 — Returning Participant Auto-Fill**
 _Concept:_ Phone number entered first — system detects returning participant and pre-fills all personal fields from previous registration. Only new survey questions require input.
@@ -201,7 +201,7 @@ _Novelty:_ Admin effort scales with edge cases only. A 500-registrant event migh
 
 **#10 — Event Creation as Strategy Config**
 _Concept:_ "Create Event" form becomes strategic configuration — admin defines ideal participant profile (industry tags, job titles, cities). This profile drives both invitation blast segmentation AND auto-approval scoring. One config, two uses.
-_Novelty:_ Yorindo's "targeted audience" promise becomes system-enforceable, not just human judgment.
+_Novelty:_ EM . U's "targeted audience" promise becomes system-enforceable, not just human judgment.
 
 **#38 — Criteria Validation Preview**
 _Concept:_ Before saving event config, system simulates against 30K database — "Based on your criteria, ~847 contacts qualify. Here's a sample of 10." Admin sees real names/profiles before committing.
@@ -253,7 +253,7 @@ _Novelty:_ Managing two events same weekend currently means switching spreadshee
 
 **#34 — Cross-Event Participant Identity**
 _Concept:_ Phone number as universal identifier across all events. System flags participant registered for multiple upcoming events. Profile shows full attendance history.
-_Novelty:_ A participant who attended 5 Yorindo events surfaces automatically as a priority contact for vendor clients.
+_Novelty:_ A participant who attended 5 EM . U events surfaces automatically as a priority contact for vendor clients.
 
 **#35 — Shared Template Library**
 _Concept:_ Message templates, survey question banks, approval criteria stored at organization level. Admin picks from library when creating events. "Healthcare Seminar Survey Pack," "Manufacturing IT Criteria" etc.
@@ -265,7 +265,7 @@ _Novelty:_ Protects seat capacity for both events. Prevents double-booking.
 
 **#37 — Event Performance Benchmarking**
 _Concept:_ After each event, auto-generates performance card — registration rate, approval rate, attendance rate, no-show rate, lead quality score. New events show benchmark comparison against previous similar events.
-_Novelty:_ Turns historical data into operational intelligence. Yorindo can tell vendor clients "Our Healthcare seminars consistently deliver 75%+ attendance" — with data.
+_Novelty:_ Turns historical data into operational intelligence. EM . U can tell vendor clients "Our Healthcare seminars consistently deliver 75%+ attendance" — with data.
 
 **#86 — Event Agenda Builder**
 _Concept:_ Event creation includes "Agenda" tab — admin adds sessions with time slot, title, speaker, room/track. Drag-and-drop reordering. Published agenda displays on landing page as clean timeline.
@@ -273,7 +273,7 @@ _Novelty:_ Agenda visibility directly impacts registration conversion — partic
 
 **#87 — Speaker Profile Management**
 _Concept:_ Speakers stored at organization level — name, photo, job title, company, bio, LinkedIn. Picked from library when building agenda. Speaker who presents at 5 events created once, reused across all.
-_Novelty:_ Builds Yorindo's speaker network as a visible asset. Repeat speakers develop recognition.
+_Novelty:_ Builds EM . U's speaker network as a visible asset. Repeat speakers develop recognition.
 
 ---
 
@@ -309,7 +309,7 @@ _Novelty:_ Lightweight for simple events, powerful for premium vendor-sponsored 
 
 **#82 — Unsubscribe Handling + Suppression List**
 _Concept:_ Every message includes unsubscribe option. Unsubscribed contacts go into suppression list — never messaged again. Suppression list checked before every blast. Admin can see count but cannot override individuals.
-_Novelty:_ Protects Yorindo's sender reputation with Brevo/Everpro. High unsubscribe rates get accounts flagged.
+_Novelty:_ Protects EM . U's sender reputation with Brevo/Everpro. High unsubscribe rates get accounts flagged.
 
 ---
 
@@ -321,7 +321,7 @@ _Novelty:_ Transforms failure metric into market intelligence.
 
 **#50 — Check-in Speed Analytics**
 _Concept:_ System timestamps every scan — arrival vs check-in completion. Post-event report shows average duration, peak queue time, slowest scan moments. Used to optimize staff deployment at future events.
-_Novelty:_ Each event Yorindo runs gets faster than the last.
+_Novelty:_ Each event EM . U runs gets faster than the last.
 
 **#60 — Field Drop-off Analytics**
 _Concept:_ System tracks which form field causes abandonment. Post-event admin sees: "32 abandoned at Question 4: Annual IT Budget. Consider making this optional."
@@ -332,8 +332,8 @@ _Concept:_ Every report has export button with three options — PDF (branded wi
 _Novelty:_ Vendor clients have different internal workflows. One engine serves all.
 
 **#77 — Branded PDF Report Generator**
-_Concept:_ PDF reports include Yorindo header, vendor client logo, event name, auto-generated executive summary: "87 participants attended. 62% IT Decision Makers. Top industries: Manufacturing 34%, Healthcare 28%."
-_Novelty:_ Vendor clients forward this directly to sales team. Yorindo's logo on every page = free brand exposure.
+_Concept:_ PDF reports include EM . U header, vendor client logo, event name, auto-generated executive summary: "87 participants attended. 62% IT Decision Makers. Top industries: Manufacturing 34%, Healthcare 28%."
+_Novelty:_ Vendor clients forward this directly to sales team. EM . U's logo on every page = free brand exposure.
 
 **#78 — Scheduled Report Delivery**
 _Concept:_ Vendor clients subscribe to automated report delivery — daily during registration period + final report auto-sent 24h after event ends. Delivered via Brevo with PDF attached.
@@ -460,7 +460,7 @@ OPENAI_API_KEY=sk-...
 GEMINI_API_KEY=...
 ```
 
-_Novelty:_ Prevents vendor lock-in on AI infrastructure. If OpenAI pricing spikes or Gemini improves, Yorindo switches in one config change. Adding a third provider (Claude, local LLM) requires only a new adapter.
+_Novelty:_ Prevents vendor lock-in on AI infrastructure. If OpenAI pricing spikes or Gemini improves, EM . U switches in one config change. Adding a third provider (Claude, local LLM) requires only a new adapter.
 
 ---
 
@@ -499,9 +499,9 @@ _Novelty:_ Prevents vendor lock-in on AI infrastructure. If OpenAI pricing spike
 
 | Priority | Idea | Why |
 |---|---|---|
-| 1 | **Smart Auto-Approval Engine** (#9-10) | Directly delivers Yorindo's core promise of targeted audience to vendor clients |
+| 1 | **Smart Auto-Approval Engine** (#9-10) | Directly delivers EM . U's core promise of targeted audience to vendor clients |
 | 2 | **Participant Account + Passwordless Login** (#62) | Eliminates registration friction permanently, builds long-term identity asset across all events |
-| 3 | **Lead Intelligence Suite** (#13-16) | Transforms Yorindo from event organizer to B2B lead intelligence platform |
+| 3 | **Lead Intelligence Suite** (#13-16) | Transforms EM . U from event organizer to B2B lead intelligence platform |
 
 ### Top 5 Quick Wins
 
@@ -517,7 +517,7 @@ _Novelty:_ Prevents vendor lock-in on AI infrastructure. If OpenAI pricing spike
 
 | Concept | Long-term Potential |
 |---|---|
-| **Lead Intelligence Suite** | Reframes Yorindo's entire value proposition — from EO to B2B lead intelligence platform |
+| **Lead Intelligence Suite** | Reframes EM . U's entire value proposition — from EO to B2B lead intelligence platform |
 | **Event Performance Benchmarking** (#37) | Creates proprietary data moat across 18 cities + 30K contacts — impossible for competitors to replicate quickly |
 | **Participant Account Ecosystem** (#62) | Persistent identity turns a one-time attendee database into a living professional network |
 | **Pluggable AI Provider** (#91) | Future-proofs the AI layer — swap providers as the market evolves without code changes |
@@ -579,4 +579,4 @@ Custom Recharts dashboard, branded PDF export, scheduled report delivery, lead q
 
 *Session facilitated using BMad Brainstorming Workflow*
 *Technique sequence: Constraint Mapping → Reversal Inversion → Solution Matrix*
-*Session date: 2026-03-18 | Facilitator: Dian | Client: Yorindo Communication × KADA*
+*Session date: 2026-03-18 | Facilitator: Dian | Client: EM . U Communication × KADA*

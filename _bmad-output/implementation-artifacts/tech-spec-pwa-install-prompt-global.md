@@ -65,7 +65,7 @@ Move the install banner to the app-level layout so it triggers on first visit to
   - Stores deferred prompt in `useRef`, visibility in `useState`
   - Dismissal stored in `sessionStorage('installBannerDismissed')`
   - UI: shadcn `Card` + `Button`, fixed positioning at bottom with z-50
-  - Shows "Y" branded icon, "Install Yorindo Check-in" title, Install/Nanti buttons
+  - Shows "Y" branded icon, "Install EM . U Check-in" title, Install/Nanti buttons
 
 - **App Layout** (`src/app/app/layout.tsx`):
   - `'use client'` component wrapping all `/app/*` routes
@@ -130,7 +130,7 @@ Move the install banner to the app-level layout so it triggers on first visit to
   - Action: Update the `metadata` export to include:
     ```typescript
     export const metadata: Metadata = {
-      title: "Yorindo",
+      title: "EM . U",
       description: "Event management platform",
       manifest: "/manifest.json",
       themeColor: "#2563eb",
@@ -153,7 +153,7 @@ Move the install banner to the app-level layout so it triggers on first visit to
       - On install: hide banner
     - Move `BeforeInstallPromptEvent` interface to be exported (DevToolbar will need it)
     - Clean up `setTimeout` on unmount to avoid memory leaks
-  - Notes: The existing UI (Card with Y icon, Install/Nanti buttons) stays the same for both modes. The text can differ: global says "Install Yorindo" while scan keeps "Install Yorindo Check-in".
+  - Notes: The existing UI (Card with Y icon, Install/Nanti buttons) stays the same for both modes. The text can differ: global says "Install EM . U" while scan keeps "Install EM . U Check-in".
 
 - [ ] Task 5: Add global install banner to app layout
   - File: `src/app/app/layout.tsx`
@@ -191,7 +191,7 @@ Move the install banner to the app-level layout so it triggers on first visit to
 
 ### Acceptance Criteria
 
-- [ ] AC 1: Given a user visits any `/app/*` route for the first time (no localStorage dismiss) and the browser supports `beforeinstallprompt`, when 3 seconds elapse after the event fires, then the install banner appears with "Install Yorindo" text and Install/Nanti buttons.
+- [ ] AC 1: Given a user visits any `/app/*` route for the first time (no localStorage dismiss) and the browser supports `beforeinstallprompt`, when 3 seconds elapse after the event fires, then the install banner appears with "Install EM . U" text and Install/Nanti buttons.
 
 - [ ] AC 2: Given a user clicks "Nanti" on the global install banner, when they navigate to another `/app/*` page or revisit later, then the banner does not appear again (localStorage persists dismissal).
 

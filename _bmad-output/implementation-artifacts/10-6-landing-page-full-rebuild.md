@@ -12,11 +12,11 @@
 
 ## Story
 
-As a visitor to the Yorindo platform,
-I want a professional, structured landing page that communicates what Yorindo does,
+As a visitor to the EM . U platform,
+I want a professional, structured landing page that communicates what EM . U does,
 So that I understand the platform before logging in.
 
-> **Scope:** Rebuild `src/app/page.tsx` as an 8-section full-page layout adopted from `erick-surbakti/yorindo-landing` reference (locally at `/home/dhs/Workspaces/kada/yorindo-landing/src/`). Create `LandingHeader.tsx` as a sticky nav. Content adapted to Yorindo app (Indonesian language, correct routes). Zero changes to `PublicShell`, `/register`, `/data-rights`, hooks, MSW handlers, or any existing functionality.
+> **Scope:** Rebuild `src/app/page.tsx` as an 8-section full-page layout adopted from `erick-surbakti/yorindo-landing` reference (locally at `/home/dhs/Workspaces/kada/yorindo-landing/src/`). Create `LandingHeader.tsx` as a sticky nav. Content adapted to EM . U app (Indonesian language, correct routes). Zero changes to `PublicShell`, `/register`, `/data-rights`, hooks, MSW handlers, or any existing functionality.
 
 ---
 
@@ -25,7 +25,7 @@ So that I understand the platform before logging in.
 **AC1:** The landing page (`/`) no longer uses `PublicShell`. It renders a full-width layout with no `max-w-xl` container constraint at the page level.
 
 **AC2:** A sticky `LandingHeader` is rendered at the top:
-- Logo: Yorindo logo image (or pill with shield icon + "Yorindo" text + "Communication" subtitle)
+- Logo: EM . U logo image (or pill with shield icon + "EM . U" text + "Communication" subtitle)
 - Nav links: "Overview", "Sistem", "Workflow", "Akses" — anchor scroll to matching section IDs
 - "Masuk" button → `/login` (using shadcn `Button`)
 - Mobile: hamburger menu that toggles a dropdown nav
@@ -33,7 +33,7 @@ So that I understand the platform before logging in.
 **AC3:** Hero section:
 - Full-viewport (`min-h-[70vh]` or `py-24 md:py-36`)
 - Background: `public/hero-bg.png` (copy from reference `src/assets/hero-bg.png`) with dark overlay + blue overlay (`hsl(217 73% 35% / 0.45)`)
-- Title: `h1` "Yorindo Admin Platform" — large, bold, white; "Platform" span with blue gradient
+- Title: `h1` "EM . U Admin Platform" — large, bold, white; "Platform" span with blue gradient
 - Subtitle: descriptive text in white/80
 - CTA: gradient blue `Button` → `/login`
 - 3 inline stats: "6 Core Modules", "24/7 System Uptime", "Secure Role-Based"
@@ -44,7 +44,7 @@ So that I understand the platform before logging in.
 - `h2` with `gradient-text` span
 - 4 cards using `.card-elevated`, `.icon-container` with lucide icons (not emoji): CalendarCheck, Ticket/TicketCheck, Monitor, Target
 - Bottom accent line on hover (`group-hover:bg-primary/40`)
-- Content in Indonesian matching actual Yorindo features
+- Content in Indonesian matching actual EM . U features
 
 **AC5:** CoreModules section:
 - Background: `bg-surface`
@@ -62,7 +62,7 @@ So that I understand the platform before logging in.
 
 **AC7:** Architecture section:
 - Background: `bg-surface`
-- 3-node horizontal flow: Admin → Yorindo System → Output (Events · Kontak · Laporan)
+- 3-node horizontal flow: Admin → EM . U System → Output (Events · Kontak · Laporan)
 - Nodes connected by `ChevronRight` icon with short line segment
 - On mobile: vertical flow with rotated chevron
 - Each node: `.card-elevated`, `.icon-container`
@@ -73,7 +73,7 @@ So that I understand the platform before logging in.
 - Section ID: `id="akses"`
 
 **AC9:** Footer:
-- Logo + "Yorindo Communication" wordmark
+- Logo + "EM . U Communication" wordmark
 - Nav links: Overview, Sistem, Workflow, Akses (anchor links)
 - Separator
 - Copyright + "Hak Data Anda" → `/data-rights` link (preserved from original)
@@ -91,7 +91,7 @@ So that I understand the platform before logging in.
 - [x] **Task 2: Create `LandingHeader` component**
   - [x] Create `src/components/layout/LandingHeader.tsx`
   - [x] Sticky, `backdrop-blur-xl`, `border-b border-border/60`, `z-50`
-  - [x] Logo: shield icon pill + "Yorindo" bold + "Communication" subtitle text
+  - [x] Logo: shield icon pill + "EM . U" bold + "Communication" subtitle text
   - [x] Desktop nav: anchor links (Overview, Sistem, Workflow, Akses, Keamanan)
   - [x] "Masuk" → `<Button asChild size="sm"><Link href="/login">Masuk</Link></Button>`
   - [x] Mobile: `useState` hamburger toggle, dropdown nav below header

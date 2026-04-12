@@ -1,6 +1,6 @@
 # Overview
 
-This document provides the complete epic and story breakdown for Yorindo, decomposing requirements from the PRD and Architecture into implementable stories.
+This document provides the complete epic and story breakdown for EM . U, decomposing requirements from the PRD and Architecture into implementable stories.
 
 **Development Approach: FE-First**
 

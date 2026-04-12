@@ -1,7 +1,7 @@
 {
-  "name": "Yorindo Check-in",
-  "short_name": "Yorindo",
-  "description": "Event check-in app for Yorindo event management platform",
+  "name": "EM . U Check-in",
+  "short_name": "EM . U",
+  "description": "Event check-in app for EM . U event management platform",
   "start_url": "/app",
   "display": "standalone",
   "background_color": "#ffffff",

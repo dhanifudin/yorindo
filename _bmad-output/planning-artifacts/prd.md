@@ -3,7 +3,7 @@ stepsCompleted: ['step-01-init', 'step-02-discovery', 'step-02b-vision', 'step-0
 workflowStatus: 'complete'
 completedAt: '2026-03-18'
 inputDocuments:
-  - 'docs/Project Brief Yorindo - KADA.pdf'
+  - 'docs/Project Brief EM . U - KADA.pdf'
   - '_bmad-output/brainstorming/brainstorming-session-2026-03-18-001.md'
 workflowType: 'prd'
 briefCount: 1
@@ -24,7 +24,7 @@ classification:
   criticalConstraint: 'OpenAPI spec is first-class deliverable — gates both FE and BE teams'
 ---
 
-# Product Requirements Document - Yorindo
+# Product Requirements Document - EM . U
 
 **Author:** Dian
 **Date:** 2026-03-18
@@ -33,21 +33,21 @@ classification:
 
 ## Executive Summary
 
-Yorindo Communication is Indonesia's leading B2B technology seminar organizer, operating across 18 cities since 2017 with a 30,000+ verified participant database spanning manufacturing, healthcare, education, oil & gas, and other industries. This system — the **Yorindo Registration Management & Participant Intelligence Platform** — replaces a manual, spreadsheet-driven operation with a purpose-built platform that transforms each seminar into a measurable demand generation engine for vendor clients.
+EM . U Communication is Indonesia's leading B2B technology seminar organizer, operating across 18 cities since 2017 with a 30,000+ verified participant database spanning manufacturing, healthcare, education, oil & gas, and other industries. This system — the **EM . U Registration Management & Participant Intelligence Platform** — replaces a manual, spreadsheet-driven operation with a purpose-built platform that transforms each seminar into a measurable demand generation engine for vendor clients.
 
 The platform serves three distinct user groups with fundamentally different needs: **participants** who register and attend seminars (mobile-first, channel-agnostic — notification channel configured per event — frictionless experience); **admin operators** who manage events end-to-end under time pressure (approval workflows, multi-city coordination, real-time ops); and **vendor clients** who sponsor seminars expecting qualified, sales-ready leads (intent data, engagement signals, branded intelligence reports). These are three separate products sharing one codebase — each with its own UX contract and success metric.
 
-**The strategic driver is two compounding forces:** Yorindo's internal operations broke under the weight of 18 simultaneous cities, and Indonesia's B2B event market is mid-transition from brand-awareness events to demand-generation events — a shift that has already completed in mature markets globally. The first EO in Indonesia's B2B technology seminar space to deliver attributable pipeline to vendor clients captures the market. The window is measured in months.
+**The strategic driver is two compounding forces:** EM . U's internal operations broke under the weight of 18 simultaneous cities, and Indonesia's B2B event market is mid-transition from brand-awareness events to demand-generation events — a shift that has already completed in mature markets globally. The first EO in Indonesia's B2B technology seminar space to deliver attributable pipeline to vendor clients captures the market. The window is measured in months.
 
 ### What Makes This Special
 
-Competitors deliver a spreadsheet. Yorindo will deliver a **lead intelligence dossier** — pre-event intent signals (which solutions is the participant evaluating?), on-site engagement (did they visit the booth?), post-event confirmation (do they want a follow-up?) — assembled automatically from registration through to reporting. The paying customer — the vendor sales director — doesn't receive an attendance list. They receive a sales-qualified lead package they forward directly to their team.
+Competitors deliver a spreadsheet. EM . U will deliver a **lead intelligence dossier** — pre-event intent signals (which solutions is the participant evaluating?), on-site engagement (did they visit the booth?), post-event confirmation (do they want a follow-up?) — assembled automatically from registration through to reporting. The paying customer — the vendor sales director — doesn't receive an attendance list. They receive a sales-qualified lead package they forward directly to their team.
 
-The defensible moat is Yorindo's 30,000-contact database, built across 9 years and 18 cities. This system makes that moat **visible, queryable, and compounding**: every event enriches participant profiles with new job titles, new engagement signals, and new cross-event attendance history. A competitor starting today cannot replicate that contact graph. The advantage widens with every seminar Yorindo runs.
+The defensible moat is EM . U's 30,000-contact database, built across 9 years and 18 cities. This system makes that moat **visible, queryable, and compounding**: every event enriches participant profiles with new job titles, new engagement signals, and new cross-event attendance history. A competitor starting today cannot replicate that contact graph. The advantage widens with every seminar EM . U runs.
 
 The product loop is: **seamless participant experience → healthy, growing database → credible vendor intelligence → repeat vendor investment → more events → stronger database.** Every layer feeds the next. The platform is the infrastructure that closes that loop.
 
-A premium **Lead Intelligence Suite** (configurable per event) unlocks pre-event intent capture, vendor booth QR self-check-in, and post-event WhatsApp survey delivery. Vendor clients who enable it receive richer reporting; Yorindo prices it as a premium tier. Vendor willingness to pay for intelligence validates the vision — it is the real product.
+A premium **Lead Intelligence Suite** (configurable per event) unlocks pre-event intent capture, vendor booth QR self-check-in, and post-event WhatsApp survey delivery. Vendor clients who enable it receive richer reporting; EM . U prices it as a premium tier. Vendor willingness to pay for intelligence validates the vision — it is the real product.
 
 Data quality is a prerequisite: AI-powered participant scoring and vendor reporting lose credibility if the 30K contact database contains stale job titles or duplicate records. The platform's import and enrichment layer is not an afterthought — it is what makes the intelligence promise credible.
 
@@ -133,7 +133,7 @@ Core event cycle — proves the operational promise before layering intelligence
 
 ### Growth Features (Post-MVP)
 
-Features that make Yorindo competitive as an intelligence platform:
+Features that make EM . U competitive as an intelligence platform:
 
 - **Lead Intelligence Suite UI:** Pre-event intent survey, vendor booth QR check-in, post-event WhatsApp survey, combined lead quality score
 - **Participant Accounts:** Passwordless WhatsApp OTP login, profile auto-fill across events, attendance history dashboard
@@ -159,9 +159,9 @@ Long-term platform evolution:
 
 ### Journey 1 — Participant: The Reluctant Registrant (Success Path)
 
-**Persona: Budi Santoso**, 38, Procurement Manager at a manufacturing plant in Cikarang. He gets 40+ WhatsApp messages a day and deletes most of them. He's attended two Yorindo seminars before — both required him to fill in the same long form, then wait days wondering if he was confirmed.
+**Persona: Budi Santoso**, 38, Procurement Manager at a manufacturing plant in Cikarang. He gets 40+ WhatsApp messages a day and deletes most of them. He's attended two EM . U seminars before — both required him to fill in the same long form, then wait days wondering if he was confirmed.
 
-**Opening Scene:** It's 11am on a Tuesday. A WhatsApp message lands from Yorindo: *"Halo Pak Budi, kami mengundang Anda ke seminar ERP Solution untuk industri manufaktur di Jakarta, 15 April."* The message has a link. He almost swipes it away — but the topic is relevant; his plant is evaluating ERP vendors this quarter.
+**Opening Scene:** It's 11am on a Tuesday. A WhatsApp message lands from EM . U: *"Halo Pak Budi, kami mengundang Anda ke seminar ERP Solution untuk industri manufaktur di Jakarta, 15 April."* The message has a link. He almost swipes it away — but the topic is relevant; his plant is evaluating ERP vendors this quarter.
 
 **Rising Action:** He taps the link. The registration page loads in 3 seconds on his 4G connection. His name and phone are pre-filled — the system recognized his number from a previous event. He only needs to confirm his current job title (changed since last year) and answer one intent question: *"Solusi apa yang sedang Anda evaluasi?"* He selects ERP and Supply Chain. Done. He submits. A WhatsApp reply arrives in under a minute: confirmation received, processing within 1×24 hours.
 
@@ -259,7 +259,7 @@ Long-term platform evolution:
 
 ### Journey 7 — Vendor Client (Premium Tier): From Sponsorship to Sales Pipeline
 
-**Persona: Hendri Kusuma**, 44, Regional Sales Director at an ERP software company. Has sponsored 6 Yorindo seminars. Always received an Excel file two weeks later. Conversion rate: 3%.
+**Persona: Hendri Kusuma**, 44, Regional Sales Director at an ERP software company. Has sponsored 6 EM . U seminars. Always received an Excel file two weeks later. Conversion rate: 3%.
 
 **Opening Scene:** Hendri opts into Lead Intelligence Suite for the April event. Pre-event: 34 of 178 confirmed participants flagged ERP as active evaluation focus. He forwards to pre-sales team. Booth staff arrives prepared.
 
@@ -267,7 +267,7 @@ Long-term platform evolution:
 
 **Climax:** Next morning — Lead Intelligence Report arrives via email magic link. 41 warm leads, 22 booth visitors, 12 with active ERP evaluation. Those 12 flagged sales-qualified. Each lead card: name, company, job title, industry, intent signal, booth visit, survey response.
 
-**Resolution:** Hendri forwards the 12 SQL cards before his 9am meeting. Three discovery calls booked that afternoon. He texts Yorindo's AM: *"Renew untuk Q3 — 4 kota."*
+**Resolution:** Hendri forwards the 12 SQL cards before his 9am meeting. Three discovery calls booked that afternoon. He texts EM . U's AM: *"Renew untuk Q3 — 4 kota."*
 
 **Capabilities revealed:** Pre-event intent capture, vendor booth QR check-in, post-event WhatsApp survey, lead scoring, branded PDF report, 24h automated delivery via magic link.
 
@@ -275,7 +275,7 @@ Long-term platform evolution:
 
 ### Journey 8 — Vendor Client (Standard Tier): The Basic Report
 
-**Persona: Dewi**, Marketing Manager at a networking equipment company. First-time Yorindo sponsor. Did not opt into Lead Intelligence Suite.
+**Persona: Dewi**, Marketing Manager at a networking equipment company. First-time EM . U sponsor. Did not opt into Lead Intelligence Suite.
 
 **Opening Scene:** Event day +1. Dewi receives an email: *"Laporan kehadiran untuk [Event Name] sudah tersedia. [Unduh Laporan]"* — a magic link (signed URL + HMAC + expiry). One click, no login, no portal.
 
@@ -307,7 +307,7 @@ Long-term platform evolution:
 
 ### Journey 10 — Super Admin: Vendor Setup, Audit, and Access Control
 
-**Persona: Andi**, COO of Yorindo.
+**Persona: Andi**, COO of EM . U.
 
 **Part A — Vendor report setup (pre-event):** Andi attaches Dewi's email address to the April Jakarta event report. On report completion (event day +1), the system generates a magic link and sends it automatically. No vendor account required. For premium-tier vendors like Hendri, Andi marks the event as Lead Intelligence enabled and confirms the vendor contact email.
 
@@ -348,7 +348,7 @@ Long-term platform evolution:
 - **Right to erasure (Article 35)** — participants can request deletion of personal data. System distinguishes: (a) event registration cancellation — status change only, history retained; (b) data erasure request — profile + history anonymized in historical reports (`name → "Peserta [ID]"`), suppression flag set to prevent re-collection. Hard delete vs. anonymization approach subject to legal counsel review.
 - **Data retention limits** — per legal counsel review. Reference baseline: participant profile — active + 2 years after last event; event attendance records — 5 years for vendor reporting integrity.
 - **Suppression list** — participants who opt out or request erasure must be suppressed from future blasts and never re-added even if they re-register with the same phone number.
-- **Vendor data processing agreement (DPA)** — vendor clients are data processors for leads they receive. Before accessing any lead report, vendor must accept the DPA. MVP feature: acceptance gate (checkbox + timestamp + DPA version reference stored per vendor record). DPA versioning: when Yorindo updates the DPA, vendors must re-accept before accessing new reports. Legal text of DPA is a pre-launch legal deliverable — not an engineering task.
+- **Vendor data processing agreement (DPA)** — vendor clients are data processors for leads they receive. Before accessing any lead report, vendor must accept the DPA. MVP feature: acceptance gate (checkbox + timestamp + DPA version reference stored per vendor record). DPA versioning: when EM . U updates the DPA, vendors must re-accept before accessing new reports. Legal text of DPA is a pre-launch legal deliverable — not an engineering task.
 - **Cross-border data transfer** — if any vendor client is headquartered outside Indonesia, lead report delivery may require additional compliance steps under UU PDP Chapter VII. Flag during vendor onboarding; legal review required before report delivery to foreign entities.
 - **30K database import — re-consent requirement** — existing contacts require re-consent or documented legitimate basis for continued processing (Article 20), per legal counsel review. Re-consent campaign is a **Sprint 0 operational prerequisite** — must complete before the first production blast.
   - `consentStatus` field on participant records: `legacy_unverified` | `re-consent-sent` | `consented` | `suppressed`
@@ -374,7 +374,7 @@ Long-term platform evolution:
 
 **Multi-timezone operations**
 
-- Yorindo operates across 3 Indonesian time zones: WIB (UTC+7), WITA (UTC+8), WIT (UTC+9).
+- EM . U operates across 3 Indonesian time zones: WIB (UTC+7), WITA (UTC+8), WIT (UTC+9).
 - All timestamps stored in UTC, displayed in local event timezone. Blast scheduling, reminder sequences, confirmation deadlines, and report delivery windows must account for timezone.
 - Simultaneous event ops dashboard must display per-event local time clearly.
 
@@ -410,7 +410,7 @@ Long-term platform evolution:
 
 ### Stated Exclusions
 
-- **No payment processing** — the platform has no payment processing capability. Vendor sponsorship billing is handled off-platform via Yorindo's existing invoicing process. Avoids OJK (Otoritas Jasa Keuangan) licensing requirements and PPN digital services obligations. Any future in-platform billing requires a separate compliance workstream.
+- **No payment processing** — the platform has no payment processing capability. Vendor sponsorship billing is handled off-platform via EM . U's existing invoicing process. Avoids OJK (Otoritas Jasa Keuangan) licensing requirements and PPN digital services obligations. Any future in-platform billing requires a separate compliance workstream.
 
 ---
 
@@ -429,7 +429,7 @@ Long-term platform evolution:
 | Returning participant bypasses prior erasure request (new phone number) | Low | MVP: known risk, manual resolution documented; Growth: composite identity resolution detects returning participants |
 | No-show rate variance — vendor report credibility | Medium | Attendance rate prominently displayed in report; internal alert threshold (configurable) triggers account management call when attendance drops below X% before report is sent |
 | Staff device lost or stolen — personal data breach | Low | PWA session requires PIN to unlock; admin can remotely invalidate device session token from dashboard; constitutes UU PDP reportable breach if unmitigated |
-| Event cancelled by Yorindo — participant and vendor notification | Low | "Cancel Event" admin action (available on Published/Live events): triggers mandatory participant blast, invalidates all QR codes, notifies vendor contacts, transitions event to `Archived` with `cancelledAt` timestamp. No new state required in state machine. |
+| Event cancelled by EM . U — participant and vendor notification | Low | "Cancel Event" admin action (available on Published/Live events): triggers mandatory participant blast, invalidates all QR codes, notifies vendor contacts, transitions event to `Archived` with `cancelledAt` timestamp. No new state required in state machine. |
 | Everpro setup delayed — re-consent campaign blocked | Medium | Brevo email fallback documents good-faith attempt; Everpro setup must start at project kickoff as pre-Sprint 0 business task |
 | OpenAPI sync endpoints omitted from spec | Medium | Spec review checklist must include `/sync/*` endpoints; BE tech lead sign-off required before FE starts offline PWA development |
 
@@ -443,17 +443,17 @@ Long-term platform evolution:
 
 **1. Automated Lead Qualification: Registration Touchpoints → Vendor-Ready Sales Package**
 
-Every B2B event platform treats registration as access control — the goal is to know who's coming. Yorindo's core innovation is treating every participant touchpoint as a qualification signal assembled automatically into a vendor-ready sales package.
+Every B2B event platform treats registration as access control — the goal is to know who's coming. EM . U's core innovation is treating every participant touchpoint as a qualification signal assembled automatically into a vendor-ready sales package.
 
 The registration form captures active evaluation intent. The approval workflow enriches the profile. The check-in scan confirms attendance. The booth QR records vendor engagement. The post-event survey captures follow-up intent. Each touchpoint feeds a composite lead score — and the output is not an attendance list but a **lead intelligence dossier** the vendor sales director forwards directly to their team.
 
-What makes this different from Eventbrite or HubSpot event integrations: (a) **intent specificity** — Yorindo's form captures vendor-specific evaluation signals; (b) **closed-loop assembly** — all signals are automatically combined into a single scored lead card without organizer intermediation; (c) **database baseline** — Yorindo's 30K verified Indonesian B2B contacts give the scores meaning a new entrant cannot replicate. The components are available in global tools; the assembled, locally-grounded product is not.
+What makes this different from Eventbrite or HubSpot event integrations: (a) **intent specificity** — EM . U's form captures vendor-specific evaluation signals; (b) **closed-loop assembly** — all signals are automatically combined into a single scored lead card without organizer intermediation; (c) **database baseline** — EM . U's 30K verified Indonesian B2B contacts give the scores meaning a new entrant cannot replicate. The components are available in global tools; the assembled, locally-grounded product is not.
 
 **2. The Compounding Participant Graph**
 
-Most event platforms are stateless per event — each registration is isolated. Yorindo's 9-year, 18-city database is the defensible moat, but only if the platform makes it *compounding*.
+Most event platforms are stateless per event — each registration is isolated. EM . U's 9-year, 18-city database is the defensible moat, but only if the platform makes it *compounding*.
 
-**MVP enrichment mechanism (event-triggered):** On each new registration, if an existing profile is matched via `identitySignals` composite score, the system updates `jobTitle`, `company`, `industry` if edited; appends the event to `eventHistory`; recalculates `profileCompleteness` score; logs the delta. After 10 events across 3 years, a participant's profile reflects their current role and 10 engagement data points — compounding with every event Yorindo runs.
+**MVP enrichment mechanism (event-triggered):** On each new registration, if an existing profile is matched via `identitySignals` composite score, the system updates `jobTitle`, `company`, `industry` if edited; appends the event to `eventHistory`; recalculates `profileCompleteness` score; logs the delta. After 10 events across 3 years, a participant's profile reflects their current role and 10 engagement data points — compounding with every event EM . U runs.
 
 **Measurable output:** `profileCompleteness` score (profiles with verified industry + jobTitle + phone) is the compounding graph metric — already embedded in the 6-month success criterion (≥ 85% complete profiles).
 
@@ -465,7 +465,7 @@ The hybrid model (rule-based scoring + pluggable AI provider + human review queu
 
 **Explanation layer precision:** For rule-based scoring, explanations are deterministic: `"Verified phone ✓ | Manufacturing industry ✓ | Prior attendance ✓ | Score: 87"`. For AI-scored profiles, the provider adapter normalizes AI output into the `signals[]` schema (`{ label, met: boolean, weight: 'high|medium|low' }`) via prompt engineering (JSON mode / function calling). Quality of AI explanations depends on adapter prompt design — this is an adapter implementation responsibility, not a platform guarantee. MVP can launch with rule-based scoring only (100% explainable) and add AI scoring once the adapter is validated.
 
-The pluggable provider pattern (`AI_PROVIDER` env config, factory interface: `scoreParticipant(profile) → { score: 0-100, signals[], confidence }`) future-proofs against lock-in — OpenAI today, Gemini next year, a fine-tuned Yorindo model eventually.
+The pluggable provider pattern (`AI_PROVIDER` env config, factory interface: `scoreParticipant(profile) → { score: 0-100, signals[], confidence }`) future-proofs against lock-in — OpenAI today, Gemini next year, a fine-tuned EM . U model eventually.
 
 **4. Offline-First Event Operations — Complete Degraded Mode**
 
@@ -481,7 +481,7 @@ The notification channel (WhatsApp via Everpro, or email via Brevo) is configure
 
 For WhatsApp-configured events: invitation arrives via WhatsApp, registration is a web link, ticket is a WhatsApp message, and check-in QR is pulled from WhatsApp. For email-configured events: same experience, email-native. Ticket recovery still happens on-site through cached participant lookup rather than a participant-facing app. The zero-app principle holds regardless of channel.
 
-This eliminates app-install friction — the single biggest barrier to event platform adoption in emerging markets. Participants don't choose to "use Yorindo" — they respond to a message on their existing channel. This scales across 18 cities and a participant base of manufacturing workers, healthcare professionals, and oil & gas engineers who may never have used a dedicated event app.
+This eliminates app-install friction — the single biggest barrier to event platform adoption in emerging markets. Participants don't choose to "use EM . U" — they respond to a message on their existing channel. This scales across 18 cities and a participant base of manufacturing workers, healthcare professionals, and oil & gas engineers who may never have used a dedicated event app.
 
 ---
 
@@ -491,7 +491,7 @@ This eliminates app-install friction — the single biggest barrier to event pla
 
 **Global comparable:** Revenue attribution for events exists in mature markets (Splash, Bizzabo, Hopin with Salesforce integration) — enterprise SaaS products priced for US/EU markets that don't run in Indonesia's infrastructure reality, don't integrate with Everpro/WhatsApp natively, and don't address tier-2 city operational context.
 
-**The window:** Indonesia's B2B technology seminar market is mid-transition — vendors are starting to ask for ROI on sponsorship spend, not just brand visibility. The organizer who delivers attributable pipeline first sets the standard. Yorindo's 9-year database and 18-city footprint provides the credibility; the platform provides the infrastructure. The window is measured in months.
+**The window:** Indonesia's B2B technology seminar market is mid-transition — vendors are starting to ask for ROI on sponsorship spend, not just brand visibility. The organizer who delivers attributable pipeline first sets the standard. EM . U's 9-year database and 18-city footprint provides the credibility; the platform provides the infrastructure. The window is measured in months.
 
 ---
 
@@ -499,7 +499,7 @@ This eliminates app-install friction — the single biggest barrier to event pla
 
 | Innovation | Hypothesis | Validation Signal | Timeframe |
 |---|---|---|---|
-| Lead qualification dossier replaces spreadsheet | Vendor uses report without manual cleanup and attributes pipeline to Yorindo event | **Vendor renewal rate** (% who rebook within 6 months) + **lead qualification rate** measured via structured AM call question ("How many leads did your team contact?") logged in vendor record | Month 3–6 |
+| Lead qualification dossier replaces spreadsheet | Vendor uses report without manual cleanup and attributes pipeline to EM . U event | **Vendor renewal rate** (% who rebook within 6 months) + **lead qualification rate** measured via structured AM call question ("How many leads did your team contact?") logged in vendor record | Month 3–6 |
 | Report drives immediate vendor action | Report is actionable, not filed away | **Time-to-report-download** (magic link click telemetry) — vendors opening within 2 hours signals behavioral change; zero-cost instrumentation | Month 3 |
 | Compounding graph improves targeting | Enrichment loop captures profile changes; returning participants with changed profiles still score accurately | Approval rate for returning participants whose **profile changed** since last event vs. unchanged — proves enrichment loop, not just selection effect | Month 6 |
 | Compounding graph completeness | Database enriches with every event | `profileCompleteness` ≥ 85% within 6 months of launch | Month 6 |
@@ -527,17 +527,17 @@ This eliminates app-install friction — the single biggest barrier to event pla
 
 ### Project-Type Overview
 
-Yorindo is a **single-tenant B2B operations platform + vendor intelligence product** built as a PWA + REST API. It serves three distinct user groups (participants, admins, vendor clients) through separate UX surfaces sharing one codebase. The platform is greenfield, single-tenant at MVP, with multi-tenant architecture deferred to Vision phase.
+EM . U is a **single-tenant B2B operations platform + vendor intelligence product** built as a PWA + REST API. It serves three distinct user groups (participants, admins, vendor clients) through separate UX surfaces sharing one codebase. The platform is greenfield, single-tenant at MVP, with multi-tenant architecture deferred to Vision phase.
 
 ---
 
 ### Tenant Model
 
-**MVP: Single-tenant (Yorindo only)**
+**MVP: Single-tenant (EM . U only)**
 
 All data is scoped to one organization. No tenant isolation required at the data layer. Database collections are not namespaced by tenant ID.
 
-**Vision: Multi-tenant SaaS** — if Yorindo offers the platform to other Indonesian EOs, tenant isolation becomes a requirement. The schema should not actively prevent this future migration (avoid hard-coded `yorindo` org references), but no tenant abstraction layer is built at MVP.
+**Vision: Multi-tenant SaaS** — if EM . U offers the platform to other Indonesian EOs, tenant isolation becomes a requirement. The schema should not actively prevent this future migration (avoid hard-coded `yorindo` org references), but no tenant abstraction layer is built at MVP.
 
 ---
 
@@ -632,7 +632,7 @@ All external service calls (Everpro, Brevo, AI provider) are abstracted behind s
 
 **MVP Approach:** Operations Platform MVP — prove the complete event cycle end-to-end before layering intelligence on top.
 
-**Core principle:** The MVP succeeds when Yorindo runs one complete event cycle — blast → registration → approval → check-in → report — with zero spreadsheet fallback. Every MVP capability must serve this cycle. The intelligence layer (Lead Intelligence Suite) is validated by the MVP data model and schema design, but ships in Growth Phase 1.
+**Core principle:** The MVP succeeds when EM . U runs one complete event cycle — blast → registration → approval → check-in → report — with zero spreadsheet fallback. Every MVP capability must serve this cycle. The intelligence layer (Lead Intelligence Suite) is validated by the MVP data model and schema design, but ships in Growth Phase 1.
 
 **Why this MVP is large by necessity:** The event cycle is a closed loop — each stage depends on the previous. A registration tool without check-in is a form builder. A check-in tool without blast is useless. Partial delivery does not validate the loop. Estimated timeline to MVP: ~4–5 months across two parallel teams. Stakeholder timeline expectations must be calibrated accordingly.
 
@@ -681,7 +681,7 @@ All external service calls (Everpro, Brevo, AI provider) are abstracted behind s
 
 | Task | Owner | Lead Time |
 |---|---|---|
-| Everpro WhatsApp Business API registration + Meta Business Verification | Business (Yorindo) | 2–4 weeks — start immediately |
+| Everpro WhatsApp Business API registration + Meta Business Verification | Business (EM . U) | 2–4 weeks — start immediately |
 | Re-consent campaign to 30K legacy contacts | Ops (runs Sprint 1 after Everpro live) | Depends on Everpro setup |
 | Vendor DPA legal text prepared by counsel | Legal | Pre-launch deliverable |
 | OpenAPI spec reviewed and approved by both tech leads | Both teams | Sprint 0 hard gate |
@@ -848,7 +848,7 @@ All external service calls (Everpro, Brevo, AI provider) are abstracted behind s
 | **NFR-P7** | Post-event report generation: ≤ 10 minutes | Async background job; vendor notified on completion |
 | **NFR-P8** | Vendor magic link report delivery: ≤ 24 hours after event completion | Automated trigger on event state → Completed |
 | **NFR-P9** | Identity recovery search results appear within 500ms | Cached participant list, on-device lookup during check-in |
-| **NFR-P10** | Emergency blast queued and transmission initiated: ≤ 30 seconds of admin action | Platform SLA — what Yorindo controls. Full delivery within Everpro rate-limit capacity (~52 msg/min); events > 250 confirmed participants will exceed 5-minute full delivery window. |
+| **NFR-P10** | Emergency blast queued and transmission initiated: ≤ 30 seconds of admin action | Platform SLA — what EM . U controls. Full delivery within Everpro rate-limit capacity (~52 msg/min); events > 250 confirmed participants will exceed 5-minute full delivery window. |
 | **NFR-P11** | `POST /registrations` returns 201 response: ≤ 3 seconds normal load, ≤ 5 seconds during burst | Synchronous acknowledgement only — approval processing is async via BullMQ. Admin approve/reject action returns ≤ 1 second. |
 
 ### Reliability

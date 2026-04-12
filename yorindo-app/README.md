@@ -1,6 +1,6 @@
-# Yorindo App
+# EM . U App
 
-Frontend for the **Yorindo** event-management platform — Next.js App Router with MSW mock API.
+Frontend for the **EM . U** event-management platform — Next.js App Router with MSW mock API.
 
 ## Tech Stack
 

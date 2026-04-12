@@ -7,7 +7,7 @@
 import { getPool } from '../repositories/postgres/pool.js'
 
 interface EmailProviderConfig {
-  provider: 'brevo' | 'smtp' | 'mock'
+  provider: 'brevo' | 'smtp' | 'ses' | 'gcp' | 'mock'
   // Brevo
   brevoApiKey: string | null
   brevoSenderEmail: string | null
@@ -54,7 +54,7 @@ async function fetchProviderConfig(): Promise<EmailProviderConfig> {
     map[row.key] = row.value
   }
 
-  const provider = (map.EMAIL_PROVIDER ?? 'smtp') as 'brevo' | 'smtp' | 'mock'
+  const provider = (map.EMAIL_PROVIDER ?? 'smtp') as 'brevo' | 'smtp' | 'ses' | 'gcp' | 'mock'
   const smtpPort = map.SMTP_PORT ? parseInt(map.SMTP_PORT, 10) : 587
 
   return {
