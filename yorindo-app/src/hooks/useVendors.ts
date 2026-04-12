@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import type { Vendor, CreateVendorBody, PaginatedResponse } from '@/types/api'
+import { getUserFriendlyError } from '@/lib/error-messages'
 
 async function fetchVendors(): Promise<PaginatedResponse<Vendor>> {
   const res = await fetch('/api/vendors?pageSize=20')
@@ -13,7 +15,10 @@ async function createVendor(body: CreateVendorBody): Promise<Vendor> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
-  if (!res.ok) throw new Error('Failed to create vendor')
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}))
+    throw new Error(errorData.error?.message ?? 'Failed to create vendor')
+  }
   return res.json()
 }
 
@@ -23,7 +28,10 @@ async function updateVendor(id: string, body: Partial<CreateVendorBody>): Promis
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
-  if (!res.ok) throw new Error('Failed to update vendor')
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}))
+    throw new Error(errorData.error?.message ?? 'Failed to update vendor')
+  }
   return res.json()
 }
 
@@ -49,6 +57,10 @@ export function useCreateVendor() {
     mutationFn: createVendor,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vendors'] })
+      toast.success('Vendor berhasil ditambahkan')
+    },
+    onError: (error) => {
+      toast.error(getUserFriendlyError(error))
     },
   })
 }
@@ -59,6 +71,10 @@ export function useUpdateVendor(id: string) {
     mutationFn: (body: Partial<CreateVendorBody>) => updateVendor(id, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vendors'] })
+      toast.success('Vendor berhasil diperbarui')
+    },
+    onError: (error) => {
+      toast.error(getUserFriendlyError(error))
     },
   })
 }
@@ -69,6 +85,10 @@ export function useDeleteVendor() {
     mutationFn: deleteVendor,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vendors'] })
+      toast.success('Vendor berhasil dihapus')
+    },
+    onError: (error) => {
+      toast.error(getUserFriendlyError(error))
     },
   })
 }
