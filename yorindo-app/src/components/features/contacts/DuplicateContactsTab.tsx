@@ -13,25 +13,26 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Check, X, ChevronsLeftRight } from 'lucide-react'
+import { X, ChevronsLeftRight, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
+import { MergeDialog } from './MergeDialog'
+import { useState } from 'react'
+
+interface Contact {
+  id: string
+  name: string
+  email: string | null
+  phone: string | null
+  city: string | null
+  company: string | null
+  serviceType: string | null
+  jobTitle: string | null
+}
 
 interface DuplicatePair {
   id: string
-  primary: {
-    id: string
-    name: string
-    email: string | null
-    phone: string | null
-    city: string | null
-  }
-  duplicate: {
-    id: string
-    name: string
-    email: string | null
-    phone: string | null
-    city: string | null
-  }
+  primary: Contact
+  duplicate: Contact
   matchScore: number
   matchReasons: string[]
 }
@@ -47,16 +48,6 @@ async function fetchDuplicates(page = 1): Promise<DuplicateResponse> {
   return res.json()
 }
 
-async function resolveDuplicate(primaryId: string, keepId: string) {
-  const res = await fetch(`/api/contacts/${keepId}/merge`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ otherId: primaryId === keepId ? '' : primaryId }),
-  })
-  if (!res.ok) throw new Error('Gagal menyelesaikan duplikat')
-  return res.json()
-}
-
 async function dismissDuplicate(pairId: string) {
   const res = await fetch(`/api/contacts/duplicates/${pairId}`, { method: 'DELETE' })
   if (!res.ok) throw new Error('Gagal mengabaikan duplikat')
@@ -64,20 +55,12 @@ async function dismissDuplicate(pairId: string) {
 
 export function DuplicateContactsTab() {
   const queryClient = useQueryClient()
+  const [mergePair, setMergePair] = useState<DuplicatePair | null>(null)
+
   const { data, isLoading } = useQuery<DuplicateResponse>({
     queryKey: ['contacts-duplicates'],
     queryFn: () => fetchDuplicates(),
     staleTime: 60_000,
-  })
-
-  const resolveMutation = useMutation({
-    mutationFn: ({ primaryId, keepId }: { primaryId: string; keepId: string }) =>
-      resolveDuplicate(primaryId, keepId),
-    onSuccess: () => {
-      toast.success('Duplikat berhasil diselesaikan')
-      queryClient.invalidateQueries({ queryKey: ['contacts-duplicates'] })
-    },
-    onError: () => toast.error('Gagal menyelesaikan duplikat'),
   })
 
   const dismissMutation = useMutation({
@@ -154,22 +137,13 @@ export function DuplicateContactsTab() {
                           <X className="w-4 h-4 text-muted-foreground" />
                         </Button>
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
-                          onClick={() => resolveMutation.mutate({ primaryId: pair.primary.id, keepId: pair.primary.id })}
-                          disabled={resolveMutation.isPending}
-                          title="Gabungkan (simpan Kontak 1)"
+                          onClick={() => setMergePair(pair)}
+                          title="Gabungkan dengan pemilihan field"
                         >
-                          <Check className="w-4 h-4 text-green-600" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => resolveMutation.mutate({ primaryId: pair.duplicate.id, keepId: pair.duplicate.id })}
-                          disabled={resolveMutation.isPending}
-                          title="Gabungkan (simpan Kontak 2)"
-                        >
-                          <ChevronsLeftRight className="w-4 h-4 text-blue-600" />
+                          <AlertCircle className="w-4 h-4 mr-1 text-blue-600" />
+                          Gabungkan
                         </Button>
                       </div>
                     </TableCell>
@@ -180,6 +154,12 @@ export function DuplicateContactsTab() {
           </CardContent>
         </Card>
       )}
+
+      <MergeDialog
+        open={!!mergePair}
+        onOpenChange={(open) => { if (!open) setMergePair(null) }}
+        pair={mergePair}
+      />
     </div>
   )
 }
