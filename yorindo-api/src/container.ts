@@ -236,6 +236,10 @@ export const deduplicationService: IDeduplicationService = svcs.deduplicationSer
 let _normalizationService: NormalizationService | null = null
 export function getNormalizationService(): NormalizationService {
   if (!_normalizationService) {
+    // Only create if database URL is configured (skip in test/memory mode)
+    if (!process.env.DATABASE_URL && !process.env.POSTGRES_HOST) {
+      throw new Error('NormalizationService requires DATABASE_URL or POSTGRES_HOST')
+    }
     _normalizationService = new NormalizationService(getPool())
   }
   return _normalizationService
