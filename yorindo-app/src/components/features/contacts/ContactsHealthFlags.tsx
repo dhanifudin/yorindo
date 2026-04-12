@@ -44,7 +44,7 @@ function HealthFlag({ icon, label, count, onClick }: HealthFlagProps) {
 export function ContactsHealthFlags({
   onNavigate,
 }: {
-  onNavigate: (view: 'flagged' | 'duplicates') => void
+  onNavigate: (view: 'flagged' | 'duplicates', field?: 'email' | 'phone') => void
 }) {
   const { data, isLoading } = useQuery<ContactsHealth>({
     queryKey: ['contacts-health'],
@@ -70,13 +70,13 @@ export function ContactsHealthFlags({
         icon={<Mail className="w-4 h-4 text-yellow-600 shrink-0" />}
         label="email kosong"
         count={data?.missingEmail ?? 0}
-        onClick={() => onNavigate('flagged')}
+        onClick={() => onNavigate('flagged', 'email')}
       />
       <HealthFlag
         icon={<Phone className="w-4 h-4 text-yellow-600 shrink-0" />}
         label="telepon kosong"
         count={data?.missingPhone ?? 0}
-        onClick={() => onNavigate('flagged')}
+        onClick={() => onNavigate('flagged', 'phone')}
       />
     </div>
   )

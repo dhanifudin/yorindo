@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
@@ -60,12 +60,19 @@ async function updateContact(id: string, data: Partial<Contact>) {
   return res.json()
 }
 
-export function MissingFieldsTab() {
+export function MissingFieldsTab({ defaultField }: { defaultField: 'email' | 'phone' }) {
   const queryClient = useQueryClient()
-  const [activeField, setActiveField] = useState<'email' | 'phone'>('email')
+  const [activeField, setActiveField] = useState<'email' | 'phone'>(defaultField)
   const [page, setPage] = useState(1)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
+
+  useEffect(() => {
+    setActiveField(defaultField)
+    setPage(1)
+    setEditingId(null)
+    setEditValue('')
+  }, [defaultField])
 
   const { data, isLoading } = useQuery<MissingFieldsResponse>({
     queryKey: ['missing-fields', activeField, page],
