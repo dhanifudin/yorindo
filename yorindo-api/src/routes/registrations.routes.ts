@@ -12,7 +12,9 @@ import {
   surveyRepository,
   templateRepository,
   whatsAppService,
+  getNormalizationService,
 } from '../container.js'
+import { getPool } from '../lib/postgres.js'
 import { requireAdmin, requireAuth, requireRoles } from '../middleware/auth.js'
 import type { Contact, Registration } from '../types/domain.js'
 import { validateOpenApiRequest, validateOpenApiResponse } from '../lib/openapi-contract.js'
@@ -236,19 +238,37 @@ export const registrationsRoutes: FastifyPluginAsync = async (fastify) => {
 
   // ── GET /api/locations/cities (unauthenticated — used by registration form)
   fastify.get('/api/locations/cities', async (_request, reply) => {
-    const raw = readFileSync(path.resolve(process.cwd(), 'src/data/wilayah-static.json'), 'utf8')
-    const data = JSON.parse(raw) as Array<{
-      provinceCode: string
-      provinceName: string
-      cityCode: string
-      cityName: string
-    }>
-    const cities = data.map((c) => ({
-      value: c.cityName,
-      label: `${c.cityName}, ${c.provinceName}`,
-      provinceCode: c.provinceCode,
-      cityCode: c.cityCode,
-    }))
+    const pool = getPool()
+    const { rows } = await pool.query(
+      `SELECT city_code, city_name, province_name
+       FROM cities ORDER BY province_name, city_name`,
+    )
+
+    // Fallback to static JSON if database is empty
+    let cities: Array<{ value: string; label: string; provinceCode?: string; cityCode?: string }>
+
+    if (rows.length === 0) {
+      const raw = readFileSync(path.resolve(process.cwd(), 'src/data/wilayah-static.json'), 'utf8')
+      const data = JSON.parse(raw) as Array<{
+        provinceCode: string
+        provinceName: string
+        cityCode: string
+        cityName: string
+      }>
+      cities = data.map((c) => ({
+        value: c.cityName,
+        label: `${c.cityName}, ${c.provinceName}`,
+        provinceCode: c.provinceCode,
+        cityCode: c.cityCode,
+      }))
+    } else {
+      cities = rows.map((r) => ({
+        value: r.city_name,
+        label: `${r.city_name}, ${r.province_name}`,
+        cityCode: r.city_code,
+      }))
+    }
+
     validateOpenApiResponse({ path: '/locations/cities', method: 'get', status: 200, body: { data: cities } })
     return reply.status(200).send({ data: cities })
   })

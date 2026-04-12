@@ -1,12 +1,13 @@
 'use client'
 
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { Loader2, Search, X } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Combobox } from '@/components/ui/combobox'
 import {
   Select,
   SelectContent,
@@ -74,6 +75,18 @@ export function ContactsFilterBar() {
     queryFn: () => fetch('/api/contacts/facets').then((r) => r.json()),
     staleTime: 5 * 60 * 1000,
   })
+
+  // Cities for dropdown
+  const { data: citiesData } = useQuery<Array<{ city_code: string; city_name: string }>>({
+    queryKey: ['cities'],
+    queryFn: () => fetch('/api/cities').then((r) => r.json()).then((d) => d.data),
+    staleTime: 5 * 60 * 1000,
+  })
+
+  const cityOptions = useMemo(() => {
+    if (!citiesData) return []
+    return citiesData.map((c: { city_name: string }) => ({ value: c.city_name, label: c.city_name }))
+  }, [citiesData])
 
   // Smart filter state
   const [smartQuery, setSmartQuery] = useState(q)
@@ -297,15 +310,13 @@ export function ContactsFilterBar() {
       {/* ── KOTA filter ───────────────────────────────────────────────────── */}
       <div>
         <label className="block text-xs text-muted-foreground mb-1">Kota</label>
-        <Input
-          type="text"
-          placeholder="Cari kota..."
-          value={cityQuery}
-          onChange={(e) => {
-            setCityQuery(e.target.value)
-            debounceCity(() => updateParam('city', e.target.value))
-          }}
-          className="w-40"
+        <Combobox
+          options={cityOptions}
+          value={city}
+          onValueChange={(v) => updateParam('city', v)}
+          placeholder="Pilih kota..."
+          searchPlaceholder="Cari kota..."
+          emptyText="Kota tidak ditemukan."
         />
       </div>
 
