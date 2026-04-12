@@ -4,8 +4,10 @@ import { useState, useCallback, useEffect, useMemo } from 'react'
 import type { RowSelectionState } from '@tanstack/react-table'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { useQuery } from '@tanstack/react-query'
 import { useContacts } from '@/hooks/useContacts'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { useFilterStore } from '@/store/filterStore'
 import { HealthBar } from './HealthBar'
 import { EventBanner } from './EventBanner'
@@ -16,6 +18,7 @@ import { ContactsTable } from './ContactsTable'
 import { ContactsPagination } from './ContactsPagination'
 import { ActionToolbar } from './ActionToolbar'
 import { BlastModal } from './BlastModal'
+import { NormalizationHealthFlags } from './NormalizationHealthFlags'
 import { useEmailConfig } from '@/hooks/useEmailConfig'
 
 export function ContactsCommandCenter() {
@@ -115,6 +118,10 @@ export function ContactsCommandCenter() {
       </div>
 
       <HealthBar onStatClick={handleStatClick} />
+
+      {/* Normalization health flags */}
+      <NormalizationHealthFlags />
+
       <EventBanner />
 
       <ContactsFilterBar />
