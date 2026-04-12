@@ -207,6 +207,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
               blastHealth={blastHealth}
               regHealth={regHealth}
               blastCount={metrics.blastCount}
+              eventStatus={event.status}
             />
           )}
 
