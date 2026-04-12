@@ -15,12 +15,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover'
-import { toast } from 'sonner'
 import type { ContactsFacets } from '@/types/api'
 import { useIndustries, useJobTitles } from '@/hooks/useStandardValues'
 
@@ -100,22 +94,11 @@ export function ContactsFilterBar() {
     setNameQuery('')
   }
 
-  const handleSaveSegment = () => {
-    if (!segmentName.trim()) return
-    const segments = JSON.parse(localStorage.getItem('yorindo:segments') ?? '[]') as Array<{ name: string; params: Record<string, string> }>
-    segments.push({ name: segmentName.trim(), params: Object.fromEntries(searchParams) })
-    localStorage.setItem('yorindo:segments', JSON.stringify(segments))
-    toast.success(`Segmen '${segmentName.trim()}' disimpan`)
-    setSegmentName('')
-  }
-
   const getServiceTypeCount = (slug: string) => {
     if (!facets || !facets.serviceType) return null
     const f = facets.serviceType.find((i) => i.slug === slug)
     return f?.count ?? null
   }
-
-  const [segmentName, setSegmentName] = useState('')
 
   return (
     <div className="flex flex-wrap gap-3 mb-4 items-end">
@@ -198,33 +181,6 @@ export function ContactsFilterBar() {
       <Button variant="outline" onClick={handleReset}>
         Reset Filter
       </Button>
-
-      {/* Save Segment popover */}
-      {hasActiveFilters && (
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" size="sm">Simpan Segmen</Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-64 space-y-2 p-3">
-            <p className="text-sm font-medium">Simpan Filter Saat Ini</p>
-            <Input
-              placeholder="Nama segmen..."
-              value={segmentName}
-              onChange={(e) => setSegmentName(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSaveSegment()}
-              className="h-9"
-            />
-            <Button
-              size="sm"
-              className="w-full"
-              onClick={handleSaveSegment}
-              disabled={!segmentName.trim()}
-            >
-              Simpan
-            </Button>
-          </PopoverContent>
-        </Popover>
-      )}
     </div>
   )
 }

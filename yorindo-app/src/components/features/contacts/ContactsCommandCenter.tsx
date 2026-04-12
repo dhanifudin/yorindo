@@ -20,7 +20,7 @@ import { ActionToolbar } from './ActionToolbar'
 import { BlastModal } from './BlastModal'
 import { NormalizationHealthFlags } from './NormalizationHealthFlags'
 import { useEmailConfig } from '@/hooks/useEmailConfig'
-import { FlaggedRecordsTab } from './FlaggedRecordsTab'
+import { MissingFieldsTab } from './MissingFieldsTab'
 import { DuplicateContactsTab } from './DuplicateContactsTab'
 import { ContactNormalizationTab } from './ContactNormalizationTab'
 
@@ -152,7 +152,7 @@ export function ContactsCommandCenter() {
         </TabsContent>
 
         <TabsContent value="flagged" className="mt-4">
-          <FlaggedRecordsTab />
+          <MissingFieldsTab />
         </TabsContent>
 
         <TabsContent value="duplicates" className="mt-4">
