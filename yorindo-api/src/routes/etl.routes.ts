@@ -25,11 +25,11 @@ export async function etlRoutes(fastify: FastifyInstance): Promise<void> {
       }
 
       const extension = path.extname(data.filename).toLowerCase()
-      if (extension !== '.xlsx' && extension !== '.csv') {
+      if (extension !== '.xlsx') {
         return reply.status(400).send({
           error: {
             code: 'INVALID_FILE_TYPE',
-            message: 'Only .xlsx and .csv files are supported',
+            message: 'Only .xlsx files are supported',
             details: []
           }
         })
