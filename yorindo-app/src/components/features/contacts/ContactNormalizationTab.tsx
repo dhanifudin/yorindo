@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/select'
 import { Combobox } from '@/components/ui/combobox'
 import { toast } from 'sonner'
-import { RefreshCw, CheckCircle2, Loader2, Plus } from 'lucide-react'
+import { RefreshCw, CheckCircle2, Loader2 } from 'lucide-react'
 import { useIndustries, useJobTitles } from '@/hooks/useStandardValues'
 
 interface Contact {
@@ -26,18 +26,22 @@ interface Contact {
 
 interface ContactsResponse {
   data: Contact[]
-  pagination: { total: number }
+  pagination: { total: number; page: number; pageSize: number; totalPages: number }
 }
 
-async function fetchContacts(): Promise<Contact[]> {
+async function fetchContacts(page = 1): Promise<ContactsResponse> {
+  const res = await fetch(`/api/contacts?page=${page}&pageSize=500`)
+  if (!res.ok) throw new Error('Gagal memuat kontak')
+  return res.json()
+}
+
+async function fetchAllContacts(): Promise<Contact[]> {
   const allContacts: Contact[] = []
   let page = 1
   let totalPages = 1
 
   while (page <= totalPages) {
-    const res = await fetch(`/api/contacts?page=${page}&pageSize=500`)
-    if (!res.ok) throw new Error('Gagal memuat kontak')
-    const data: { data: Contact[]; pagination: { total: number; page: number; pageSize: number; totalPages: number } } = await res.json()
+    const data = await fetchContacts(page)
     allContacts.push(...data.data)
     totalPages = data.pagination.totalPages
     page++
@@ -61,23 +65,25 @@ export function ContactNormalizationTab() {
   const { data: industries, isLoading: industriesLoading } = useIndustries()
   const { data: jobTitles, isLoading: jobTitlesLoading } = useJobTitles()
 
-  const { data: contacts, isLoading: contactsLoading } = useQuery<Contact[]>({
+  const { data: contacts, isLoading: contactsLoading, error: contactsError } = useQuery<Contact[]>({
     queryKey: ['contacts-for-normalization'],
-    queryFn: fetchContacts,
+    queryFn: fetchAllContacts,
     staleTime: 60_000,
   })
 
   // Group contacts by non-standard values
   const nonStandardGroups = useMemo(() => {
     if (!contacts) return []
+
     const standards = activeType === 'serviceType'
-      ? industries?.map(i => i.name.toLowerCase()) ?? []
-      : jobTitles?.map(j => j.name.toLowerCase()) ?? []
+      ? (industries?.map(i => i.name.toLowerCase()) ?? [])
+      : (jobTitles?.map(j => j.name.toLowerCase()) ?? [])
 
     const groups: Record<string, GroupedValue> = {}
 
     for (const contact of contacts) {
       const value = contact[activeType]
+      // Skip empty values or values that match standards
       if (!value || value.trim() === '' || standards.includes(value.toLowerCase())) continue
 
       if (!groups[value]) {
@@ -99,7 +105,7 @@ export function ContactNormalizationTab() {
     mutationFn: async () => {
       const promises: Promise<unknown>[] = []
 
-      // Apply mappings
+      // Apply mappings to existing standards
       for (const [nonStandardValue, standardId] of Object.entries(mapping)) {
         const group = nonStandardGroups.find(g => g.value === nonStandardValue)
         if (!group) continue
@@ -107,13 +113,16 @@ export function ContactNormalizationTab() {
         const res = await fetch('/api/contacts/bulk-normalize', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contactIds: group.contactIds, field: activeType === 'serviceType' ? 'serviceType' : 'jobTitle', standardId }),
+          body: JSON.stringify({ contactIds: group.contactIds, field: activeType, standardId }),
         })
-        if (!res.ok) throw new Error('Gagal menormalisasi kontak')
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}))
+          throw new Error(err.error?.message ?? 'Gagal menormalisasi kontak')
+        }
         promises.push(res.json())
       }
 
-      // Add new standard values
+      // Add new standard values and map contacts
       for (const [newValue, label] of Object.entries(newValues)) {
         const endpoint = activeType === 'serviceType' ? '/api/industries' : '/api/job-titles'
         const res = await fetch(endpoint, {
@@ -121,16 +130,19 @@ export function ContactNormalizationTab() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: label, slug: label.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') }),
         })
-        if (!res.ok) throw new Error(`Gagal menambahkan ${activeType === 'serviceType' ? 'industri' : 'jabatan'} baru`)
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}))
+          throw new Error(err.error?.message ?? `Gagal menambahkan ${activeType === 'serviceType' ? 'industri' : 'jabatan'} baru`)
+        }
         const data = await res.json()
 
         // Normalize contacts to the new standard
-        const contactIds = nonStandardGroups.find(g => g.value === newValue)?.contactIds ?? []
-        if (contactIds.length > 0) {
+        const group = nonStandardGroups.find(g => g.value === newValue)
+        if (group && group.contactIds.length > 0) {
           await fetch('/api/contacts/bulk-normalize', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contactIds, field: activeType === 'serviceType' ? 'serviceType' : 'jobTitle', standardId: data.id }),
+            body: JSON.stringify({ contactIds: group.contactIds, field: activeType, standardId: data.id }),
           })
         }
         promises.push(Promise.resolve())
@@ -141,14 +153,14 @@ export function ContactNormalizationTab() {
     onSuccess: () => {
       toast.success('Normalisasi berhasil diterapkan')
       queryClient.invalidateQueries({ queryKey: ['contacts-for-normalization'] })
-      queryClient.invalidateQueries({ queryKey: [activeType === 'serviceType' ? 'standard-industries' : 'standard-job-titles'] })
+      queryClient.invalidateQueries({ queryKey: activeType === 'serviceType' ? ['standard-industries'] : ['standard-job-titles'] })
       setMapping({})
       setNewValues({})
     },
     onError: (err: Error) => toast.error(err.message ?? 'Gagal menormalisasi kontak'),
   })
 
-  const handleScan = () => {
+  const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: ['contacts-for-normalization'] })
   }
 
@@ -164,12 +176,23 @@ export function ContactNormalizationTab() {
 
   const isLoading = contactsLoading || industriesLoading || jobTitlesLoading
   const hasChanges = Object.keys(mapping).length > 0 || Object.keys(newValues).length > 0
+  const label = activeType === 'serviceType' ? 'Industri' : 'Jabatan'
+
+  if (contactsError) {
+    return (
+      <Card>
+        <CardContent className="py-12 text-center text-red-600">
+          Gagal memuat kontak: {contactsError.message}
+        </CardContent>
+      </Card>
+    )
+  }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          Tinjau dan sesuaikan nilai industri/jabatan kontak dengan standar
+          {nonStandardGroups.length} nilai {label.toLowerCase()} tidak standar ditemukan dari {contacts?.length ?? 0} kontak
         </p>
         <div className="flex items-center gap-2">
           <Select value={activeType} onValueChange={(v) => { setActiveType(v as typeof activeType); setMapping({}); setNewValues({}) }}>
@@ -181,7 +204,7 @@ export function ContactNormalizationTab() {
               <SelectItem value="jobTitle">Jabatan</SelectItem>
             </SelectContent>
           </Select>
-          <Button onClick={handleScan} disabled={isLoading} variant="outline" size="sm">
+          <Button onClick={handleRefresh} disabled={isLoading} variant="outline" size="sm">
             <RefreshCw className="w-4 h-4 mr-1" />
             Refresh
           </Button>
@@ -199,7 +222,7 @@ export function ContactNormalizationTab() {
           <CardContent className="py-12 text-center">
             <CheckCircle2 className="w-12 h-12 mx-auto text-green-500 mb-3" />
             <p className="text-muted-foreground">
-              Semua {activeType === 'serviceType' ? 'industri' : 'jabatan'} kontak sudah sesuai dengan standar
+              Semua {label.toLowerCase()} kontak sudah sesuai dengan standar
             </p>
           </CardContent>
         </Card>
