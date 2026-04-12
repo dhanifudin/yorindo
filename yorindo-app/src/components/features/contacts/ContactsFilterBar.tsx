@@ -22,29 +22,10 @@ import {
 } from '@/components/ui/popover'
 import { toast } from 'sonner'
 import type { ContactsFacets } from '@/types/api'
-
-const INDUSTRIES = [
-  { value: '', label: 'Semua Industri' },
-  { value: 'teknologi', label: 'Teknologi' },
-  { value: 'kesehatan', label: 'Kesehatan' },
-  { value: 'manufaktur', label: 'Manufaktur' },
-  { value: 'keuangan', label: 'Keuangan' },
-  { value: 'pendidikan', label: 'Pendidikan' },
-  { value: 'retail', label: 'Retail' },
-  { value: 'properti', label: 'Properti' },
-  { value: 'otomotif', label: 'Otomotif' },
-  { value: 'energi', label: 'Energi' },
-  { value: 'telekomunikasi', label: 'Telekomunikasi' },
-]
-
-interface IndustrySuggestion {
-  slug: string
-  label: string
-  confidence: number
-}
+import { useIndustries, useJobTitles } from '@/hooks/useStandardValues'
 
 interface SuggestionResponse {
-  suggestions: IndustrySuggestion[]
+  suggestions: Array<{ slug: string; label: string; confidence: number }>
   matchedSlug: string | null
   fallback: boolean
 }
@@ -55,7 +36,6 @@ export function ContactsFilterBar() {
   const pathname = usePathname()
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const cityDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const jobTitleDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const serviceType = searchParams.get('serviceType') ?? ''
   const city = searchParams.get('city') ?? ''
@@ -64,10 +44,9 @@ export function ContactsFilterBar() {
 
   const hasActiveFilters = !!(serviceType || city || jobTitle || q)
 
-  // ── State lokal untuk input nama, kota, jabatan (debounced ke URL param) ──
+  // ── State lokal untuk input nama, kota (debounced ke URL param) ──
   const [nameQuery, setNameQuery] = useState(q)
   const [cityQuery, setCityQuery] = useState(city)
-  const [jobTitleQuery, setJobTitleQuery] = useState(jobTitle)
 
   // Facets query
   const { data: facets } = useQuery<ContactsFacets>({
@@ -88,6 +67,20 @@ export function ContactsFilterBar() {
     return citiesData.map((c: { city_name: string }) => ({ value: c.city_name, label: c.city_name }))
   }, [citiesData])
 
+  // Industries from API
+  const { data: industriesData } = useIndustries()
+  const industryOptions = useMemo(() => {
+    if (!industriesData) return []
+    return industriesData.map((ind) => ({ value: ind.slug, label: ind.name }))
+  }, [industriesData])
+
+  // Job titles from API
+  const { data: jobTitlesData } = useJobTitles()
+  const jobTitleOptions = useMemo(() => {
+    if (!jobTitlesData) return []
+    return jobTitlesData.map((jt) => ({ value: jt.name, label: jt.name }))
+  }, [jobTitlesData])
+
   // Smart filter state
   const [smartQuery, setSmartQuery] = useState(q)
   const [aiStatus, setAiStatus] = useState<'idle' | 'loading' | 'matched' | 'fallback'>('idle')
@@ -107,11 +100,6 @@ export function ContactsFilterBar() {
   const debounceCity = useCallback((fn: () => void) => {
     if (cityDebounceRef.current) clearTimeout(cityDebounceRef.current)
     cityDebounceRef.current = setTimeout(fn, 300)
-  }, [])
-
-  const debounceJobTitle = useCallback((fn: () => void) => {
-    if (jobTitleDebounceRef.current) clearTimeout(jobTitleDebounceRef.current)
-    jobTitleDebounceRef.current = setTimeout(fn, 350)
   }, [])
 
   // ── Handler search nama (debounce 350ms ke URL param q) ──────────────────
@@ -174,7 +162,6 @@ export function ContactsFilterBar() {
     setUseSmartMode(false)
     setNameQuery('')
     setCityQuery('')
-    setJobTitleQuery('')
   }
 
   const handleSaveSegment = () => {
@@ -255,7 +242,7 @@ export function ContactsFilterBar() {
             {aiStatus === 'matched' && matchedSlug && (
               <div className="mt-1">
                 <Badge className="bg-green-100 text-green-700 text-xs">
-                  AI: {INDUSTRIES.find((i) => i.value === matchedSlug)?.label ?? matchedSlug}
+                  AI: {industryOptions.find((i) => i.value === matchedSlug)?.label ?? matchedSlug}
                 </Badge>
               </div>
             )}
@@ -271,7 +258,7 @@ export function ContactsFilterBar() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Semua Industri</SelectItem>
-                    {INDUSTRIES.slice(1).map((i) => {
+                    {industryOptions.map((i) => {
                       const count = getServiceTypeCount(i.value)
                       return (
                         <SelectItem key={i.value} value={i.value}>
@@ -294,7 +281,7 @@ export function ContactsFilterBar() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Semua Industri</SelectItem>
-              {INDUSTRIES.slice(1).map((i) => {
+              {industryOptions.map((i) => {
                 const count = getServiceTypeCount(i.value)
                 return (
                   <SelectItem key={i.value} value={i.value}>
@@ -323,30 +310,14 @@ export function ContactsFilterBar() {
       {/* ── JABATAN filter ────────────────────────────────────────────────── */}
       <div>
         <label className="block text-xs text-muted-foreground mb-1">Jabatan</label>
-        <div className="relative w-40">
-          <Input
-            type="text"
-            placeholder="Cari jabatan..."
-            value={jobTitleQuery}
-            onChange={(e) => {
-              setJobTitleQuery(e.target.value)
-              debounceJobTitle(() => updateParam('jobTitle', e.target.value))
-            }}
-            className="h-9 pr-7"
-          />
-          {jobTitleQuery && (
-            <button
-              type="button"
-              onClick={() => {
-                setJobTitleQuery('')
-                updateParam('jobTitle', '')
-              }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          )}
-        </div>
+        <Combobox
+          options={jobTitleOptions}
+          value={jobTitle}
+          onValueChange={(v) => updateParam('jobTitle', v)}
+          placeholder="Pilih jabatan..."
+          searchPlaceholder="Cari jabatan..."
+          emptyText="Jabatan tidak ditemukan."
+        />
       </div>
 
       {/* Action buttons */}
