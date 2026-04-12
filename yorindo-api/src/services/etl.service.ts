@@ -10,6 +10,7 @@ import type { IDeduplicationService } from '../interfaces/services/IDeduplicatio
 import type { IEtlNormalizationService, NormalizedRow, RawContactRow } from '../interfaces/services/IEtlNormalizationService.js'
 import { deleteFile, readUploadFile } from '../lib/storage.js'
 import { INDONESIAN_INDUSTRIES, INDONESIAN_JOB_TITLES } from '../repositories/memory/_seeds.js'
+import { getNormalizationService } from '../container.js'
 import type { CompanySize, ContactSource } from '../types/domain.js'
 
 export const NormalizedRowSchema = z.object({
@@ -460,6 +461,26 @@ export class EtlService {
                 flagCategory: null,
                 deletedAt: null,
               })
+
+              // Check if serviceType/jobTitle match any standard values
+              const flags: string[] = []
+              if (validatedRow.serviceType && validatedRow.serviceType.trim()) {
+                const normService = getNormalizationService()
+                const industryMatch = await normService.matchIndustry(validatedRow.serviceType)
+                if (!industryMatch.matched) flags.push('industry-unmatched')
+              }
+              if (validatedRow.jobTitle && validatedRow.jobTitle.trim()) {
+                const normService = getNormalizationService()
+                const jobMatch = await normService.matchJobTitle(validatedRow.jobTitle)
+                if (!jobMatch.matched) flags.push('jobtitle-unmatched')
+              }
+
+              // Apply flags if any unmatched
+              if (flags.length > 0) {
+                // Prioritize industry-unmatched if both exist
+                const flagToApply = flags.includes('industry-unmatched') ? 'industry-unmatched' : 'jobtitle-unmatched'
+                await this.contactRepo.update(contact.id, { flagCategory: flagToApply as any })
+              }
 
               if (opts.eventId) {
                 await this.registrationRepo.create({
