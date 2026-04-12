@@ -5,7 +5,7 @@
 # App: http://localhost:5173 (Next.js + MSW mocks)
 # API: http://localhost:3000 (Fastify, hot-reload via tsx)
 services:
-  yorindo-api:
+  api:
     container_name: yorindo-api-dev
     image: node:24
     working_dir: /app
@@ -14,8 +14,8 @@ services:
     environment:
       NODE_ENV: development
       PORT: "3000"
-      DATABASE_URL: "postgresql://yorindo:${POSTGRES_PASSWORD:-yorindo}@yorindo-postgres-dev:5432/yorindo"
-      REDIS_URL: "redis://yorindo-redis-dev:6379"
+      DATABASE_URL: "postgresql://yorindo:${POSTGRES_PASSWORD:-yorindo}@postgres:5432/yorindo"
+      REDIS_URL: "redis://redis:6379"
       ETL_AI_PROVIDER: "disabled"
       TSX_LEGACY_WATCH: "true" # required for WSL2 / Docker Desktop file watching
     volumes:
@@ -23,10 +23,10 @@ services:
     ports:
       - "3000:3000"
     depends_on:
-      - yorindo-postgres
-      - yorindo-redis
+      - postgres
+      - redis
 
-  yorindo-app:
+  app:
     container_name: yorindo-app-dev
     image: node:24
     working_dir: /app
@@ -34,7 +34,7 @@ services:
     env_file: ./yorindo-app/.env
     environment:
       NODE_ENV: development
-      API_URL: "http://yorindo-api-dev:3000"
+      API_URL: "http://api:3000"
       NEXT_TELEMETRY_DISABLED: "1"
       WATCHPACK_POLLING: "true" # required for WSL2 / Docker Desktop file watching
     volumes:
@@ -42,9 +42,9 @@ services:
     ports:
       - "5173:5173"
     depends_on:
-      - yorindo-api
+      - api
 
-  yorindo-postgres:
+  postgres:
     container_name: yorindo-postgres-dev
     image: postgres:16-alpine
     environment:
@@ -56,7 +56,7 @@ services:
     volumes:
       - postgres_dev_data:/var/lib/postgresql/data
 
-  yorindo-redis:
+  redis:
     container_name: yorindo-redis-dev
     image: redis:7-alpine
     ports:
