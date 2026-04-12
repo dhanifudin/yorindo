@@ -318,6 +318,7 @@ export function ContactNormalizationTab() {
                                 placeholder="Pilih standar..."
                                 searchPlaceholder="Cari..."
                                 emptyText="Tidak ditemukan."
+                                className="w-full sm:w-48"
                               />
                               <Button
                                 variant="outline"
