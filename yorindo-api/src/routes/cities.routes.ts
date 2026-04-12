@@ -3,6 +3,8 @@ import { getPool } from '../lib/postgres.js'
 import { requireAuth, requireAdmin } from '../middleware/auth.js'
 import { createId } from '@paralleldrive/cuid2'
 
+const BASE_URL = 'https://raw.githubusercontent.com/emsifa/api-wilayah-indonesia/master/static/api'
+
 export const citiesRoutes: FastifyPluginAsync = async (fastify) => {
   // Cache for city data (5 minutes TTL)
   let cityCache: { data: unknown; expiresAt: number } | null = null
@@ -13,46 +15,47 @@ export const citiesRoutes: FastifyPluginAsync = async (fastify) => {
   }
 
   /**
-   * Fetch all provinces from wilayah.id
+   * Fetch all provinces from GitHub-hosted wilayah data
    */
   async function fetchProvinces(): Promise<Array<{ code: string; name: string }>> {
-    const res = await fetch('https://www.wilayah.id/api/provinces', {
+    const res = await fetch(`${BASE_URL}/provinces.json`, {
       headers: { 'Accept': 'application/json' },
-      signal: AbortSignal.timeout(10_000),
+      signal: AbortSignal.timeout(15_000),
     })
     if (!res.ok) throw new Error(`Failed to fetch provinces: ${res.status}`)
-    return res.json()
+    const data = await res.json()
+    return data.map((p: { id: string; name: string }) => ({ code: p.id, name: p.name }))
   }
 
   /**
-   * Fetch all regencies/cities from wilayah.id (paginated)
+   * Fetch all regencies/cities from GitHub-hosted wilayah data
    */
   async function fetchAllRegencies(): Promise<Array<{
     province_code: string
     province_name: string
-    code: string
-    name: string
+    city_code: string
+    city_name: string
   }>> {
     const provinces = await fetchProvinces()
-    const allRegencies: Array<{ province_code: string; province_name: string; code: string; name: string }> = []
+    const allRegencies: Array<{ province_code: string; province_name: string; city_code: string; city_name: string }> = []
 
     for (const prov of provinces) {
       try {
-        const res = await fetch(`https://www.wilayah.id/api/regencies/${prov.code}`, {
+        const res = await fetch(`${BASE_URL}/regencies/${prov.code}.json`, {
           headers: { 'Accept': 'application/json' },
-          signal: AbortSignal.timeout(10_000),
+          signal: AbortSignal.timeout(15_000),
         })
         if (!res.ok) continue
 
         const data = await res.json()
-        const items = Array.isArray(data) ? data : data.data ?? []
+        const items = Array.isArray(data) ? data : []
 
         for (const item of items) {
           allRegencies.push({
             province_code: prov.code,
             province_name: prov.name,
-            code: item.code,
-            name: item.name,
+            city_code: item.id,
+            city_name: item.name,
           })
         }
       } catch {
@@ -101,7 +104,7 @@ export const citiesRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(200).send({ data: rows })
   })
 
-  // POST /api/cities/sync — sync from wilayah.id
+  // POST /api/cities/sync — sync from wilayah data source
   fastify.post('/api/cities/sync', { preHandler: [requireAuth, requireAdmin] }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const regencies = await fetchAllRegencies()
@@ -120,7 +123,7 @@ export const citiesRoutes: FastifyPluginAsync = async (fastify) => {
              city_name = EXCLUDED.city_name,
              updated_at = NOW()
            RETURNING (xmax = 0) AS inserted`,
-          [createId(), item.province_code, item.province_name, item.code, item.name],
+          [createId(), item.province_code, item.province_name, item.city_code, item.city_name],
         )
 
         if (result.rows[0]?.inserted) {
@@ -137,7 +140,7 @@ export const citiesRoutes: FastifyPluginAsync = async (fastify) => {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown error'
       return reply.status(500).send({
-        error: { code: 'SYNC_FAILED', message: `Gagal sinkronisasi dari wilayah.id: ${message}`, details: [] },
+        error: { code: 'SYNC_FAILED', message: `Gagal sinkronisasi data wilayah: ${message}`, details: [] },
       })
     }
   })
