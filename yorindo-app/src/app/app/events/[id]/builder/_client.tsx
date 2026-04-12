@@ -140,7 +140,6 @@ export default function SurveyBuilderClient({ id }: SurveyBuilderClientProps) {
                   activeTab === 'post-event'
                     ? 'border-primary text-foreground'
                     : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border',
-                  !event?.postSurveyEnabled && 'opacity-60 pointer-events-none',
                 )}
               >
                 Survei Post-Event
@@ -193,7 +192,6 @@ export default function SurveyBuilderClient({ id }: SurveyBuilderClientProps) {
                   activeTab === 'post-event'
                     ? 'border-primary text-foreground'
                     : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border',
-                  !event?.postSurveyEnabled && 'opacity-60 pointer-events-none',
                 )}
               >
                 Survei Post-Event
