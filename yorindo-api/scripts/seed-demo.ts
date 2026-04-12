@@ -323,7 +323,7 @@ export async function seedDemo(pool: Pool): Promise<void> {
         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
       `, [
         id, name, phone, email,
-        city, pick(COMPANIES), size,
+        city, pick(COMPANIES_BY_INDUSTRY.teknologi), size,
         'excel_upload', 'active',
         (0.7 + Math.random() * 0.3).toFixed(3),
         nonStandardIndustry, nonStandardJobTitle,

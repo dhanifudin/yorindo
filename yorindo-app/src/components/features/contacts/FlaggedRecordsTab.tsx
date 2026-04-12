@@ -48,7 +48,7 @@ export function FlaggedRecordsTab() {
         </div>
       ) : (
         <>
-          {!data?.data.length && (
+          {(!data?.data || data.data.length === 0) && (
             <p className="text-muted-foreground text-center py-12">
               Tidak ada record dengan status {statusFilter}
             </p>
