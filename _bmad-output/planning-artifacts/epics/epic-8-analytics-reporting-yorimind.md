@@ -56,7 +56,7 @@ So that I receive the participant insights I was promised without the friction o
 
 **Given** the magic link has expired (> 7 days),
 **When** it is accessed,
-**Then** HTTP 403 is returned with a message to contact Yorindo for a new link
+**Then** HTTP 403 is returned with a message to contact EM . U for a new link
 
 **Given** the DPA version changes after the vendor's acceptance,
 **When** the vendor accesses the report again,

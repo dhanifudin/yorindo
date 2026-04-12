@@ -43,7 +43,7 @@ export class SmtpEmailService implements IEmailService {
       const transporter = await this.getTransporter()
 
       const info = await transporter.sendMail({
-        from: { name: config.senderName ?? 'Yorindo', address: config.senderEmail ?? 'noreply@yorindo.app' },
+        from: { name: config.senderName ?? 'EM . U', address: config.senderEmail ?? 'noreply@yorindo.app' },
         to: payload.to,
         subject: payload.subject,
         html: payload.body,

@@ -1,5 +1,5 @@
 # Sprint Change Proposal
-**Project:** Yorindo
+**Project:** EM . U
 **Date:** 2026-03-21
 **Prepared by:** Sam (Scrum Master)
 **Status:** Approved
@@ -10,7 +10,7 @@
 
 ### Problem Statement
 
-The Yorindo frontend Phase 1 implementation (all stories currently in `review`) was built against the original specification, which treated the application as a single-role admin tool with:
+The EM . U frontend Phase 1 implementation (all stories currently in `review`) was built against the original specification, which treated the application as a single-role admin tool with:
 - `/` redirecting directly to `/login` (no public entry point)
 - A single admin dashboard experience regardless of role
 - All authenticated routes under `/admin/*` and `/scan`

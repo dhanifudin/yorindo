@@ -35,7 +35,7 @@ classification:
 
 ## Executive Summary
 
-The Yorindo platform currently supports two email providers (Brevo HTTP API and Mailtrap SMTP), but with significant limitations:
+The EM . U platform currently supports two email providers (Brevo HTTP API and Mailtrap SMTP), but with significant limitations:
 
 1. **Provider selection is environment-variable driven** — changes in the Settings UI are persisted to the database but never consumed at runtime. A server restart is required for any provider change to take effect.
 2. **No rate-limit awareness** — when an email provider returns HTTP 429 (Too Many Requests), the system retries on fixed delays (0, 2s, 4s, 8s), wasting retries and potentially getting further rate-limited.
@@ -296,7 +296,7 @@ Existing `settings` table supports all required keys:
 
 **Persona: Yolanda**, Event Operations Lead. She's not technical — she knows how to run events, not configure SMTP servers.
 
-**Opening Scene:** Yorindo's marketing team wants to switch from Brevo to Gmail for sending invitations because their Brevo quota is exhausted. Yolanda has never configured an email server before.
+**Opening Scene:** EM . U's marketing team wants to switch from Brevo to Gmail for sending invitations because their Brevo quota is exhausted. Yolanda has never configured an email server before.
 
 **Rising Action:** She opens Settings → Email Service tab. She sees a dropdown with presets. She selects "Gmail (SMTP)." The form auto-fills: `smtp.gmail.com`, port `587`, TLS `STARTTLS`. She needs to fill in her Google App Password — a link to Google's instructions is inline. She pastes it, clicks "Test Send."
 

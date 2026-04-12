@@ -1,8 +1,8 @@
 # yorindo-app
 
-Frontend application for **Yorindo — Registration Management & Participant Intelligence Platform**.
+Frontend application for **EM . U — Registration Management & Participant Intelligence Platform**.
 
-Built with Next.js 14 (App Router) + TypeScript. Part of the KADA Program by Yorindo Communication.
+Built with Next.js 14 (App Router) + TypeScript. Part of the KADA Program by EM . U Communication.
 
 ---
 

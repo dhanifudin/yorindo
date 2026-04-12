@@ -4,7 +4,7 @@ Status: done
 
 ## Story
 
-As a developer deploying the Yorindo frontend,
+As a developer deploying the EM . U frontend,
 I want `yorindo-app` deployed to VPS at `app.dhanifudin.com` via Docker Compose with a CD workflow,
 so that the FE preview is hosted consistently alongside the API and demo endpoints on the same VPS, replacing the GitHub Pages static export.
 

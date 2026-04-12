@@ -4,7 +4,7 @@ inputDocuments: []
 workflowType: 'research'
 lastStep: 1
 research_type: 'technical'
-research_topic: 'wilayah.id integration for Indonesian administrative area data in Yorindo'
+research_topic: 'wilayah.id integration for Indonesian administrative area data in EM . U'
 research_goals: 'Understand how to integrate wilayah.id to add structured location data to contacts, enabling admin audience targeting by province/city in blast configuration'
 user_name: 'Dian'
 date: '2026-03-28'
@@ -22,7 +22,7 @@ source_verification: true
 
 ## Research Overview
 
-**Topic:** wilayah.id integration for Indonesian administrative area data in Yorindo
+**Topic:** wilayah.id integration for Indonesian administrative area data in EM . U
 **Goals:** Add structured location data to contacts; enable admin audience targeting by province/city in blast configuration
 **Methodology:** Live web search with source verification; analysis of npm ecosystem, API structure, and integration patterns
 
@@ -34,7 +34,7 @@ All changes fold into existing stories across Epics 1, 3, 5, and 6. The backend 
 
 ## Executive Summary
 
-### wilayah.id Integration for Yorindo — Key Findings
+### wilayah.id Integration for EM . U — Key Findings
 
 **Data source confirmed:** wilayah.id (`https://wilayah.id`) serves pre-generated static JSON files — no auth, no rate limits, open CORS. Data is sourced from Kepmendagri No 300.2.2-2138 Tahun 2025 (Ministry of Home Affairs), last updated 2025-07-04. 38 provinces, ~514 kabupaten/kota. MIT licensed.
 
@@ -58,7 +58,7 @@ All changes fold into existing stories across Epics 1, 3, 5, and 6. The backend 
 
 ## Technical Research Scope Confirmation
 
-**Research Topic:** wilayah.id integration for Indonesian administrative area data in Yorindo
+**Research Topic:** wilayah.id integration for Indonesian administrative area data in EM . U
 **Research Goals:** Understand how to integrate wilayah.id to add structured location data to contacts, enabling admin audience targeting by province/city in blast configuration
 
 **Technical Research Scope:**
@@ -132,10 +132,10 @@ _Source: https://wilayah.id/_
 | `daftar-wilayah-indonesia` | v4.0.3 | any | 2y old; not TS-native |
 | `wilayah-indonesia` | v1.0.2 | any | 5y old; abandoned |
 
-**Recommended for Yorindo:** Call `wilayah.id` API directly from the frontend (province + city dropdowns) — responses are tiny (provinces.json ≈ 2KB), cache with SWR/React Query. No npm package needed for basic province+city targeting.
+**Recommended for EM . U:** Call `wilayah.id` API directly from the frontend (province + city dropdowns) — responses are tiny (provinces.json ≈ 2KB), cache with SWR/React Query. No npm package needed for basic province+city targeting.
 _Source: https://github.com/fityannugroho/idn-area-data_
 
-### Data Hierarchy Depth for Yorindo
+### Data Hierarchy Depth for EM . U
 
 For B2B events audience targeting, **province + kabupaten/kota is sufficient**. Kecamatan and kelurahan are too granular. This limits scope to:
 - `provinces.json` — 38 entries, ~2KB
@@ -186,7 +186,7 @@ CREATE INDEX IF NOT EXISTS idx_contacts_province_code ON contacts(province_code)
 CREATE INDEX IF NOT EXISTS idx_contacts_city_code ON contacts(city_code);
 ```
 
-**Why store both code and name?** Codes are stable (used for filtering/querying); names are denormalized for display without join overhead. No separate `wilayah` reference table needed in Yorindo — data comes from wilayah.id at runtime.
+**Why store both code and name?** Codes are stable (used for filtering/querying); names are denormalized for display without join overhead. No separate `wilayah` reference table needed in EM . U — data comes from wilayah.id at runtime.
 
 _Confidence: High — established pattern for denormalized reference data_
 

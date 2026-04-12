@@ -19,7 +19,7 @@ So that I can perform check-in even when the venue WiFi is unreliable.
 
 **Given** the browser `beforeinstallprompt` event fires,
 **When** the `/scan` page is loaded for the first time,
-**Then** a designed install banner is shown at the bottom of the screen (not the browser default mini-infobar) with: app icon, "Install Yorindo Check-in" label, and "Install" + "Not Now" buttons; clicking "Install" calls `promptEvent.prompt()` and dismisses the banner; "Not Now" dismisses for the session
+**Then** a designed install banner is shown at the bottom of the screen (not the browser default mini-infobar) with: app icon, "Install EM . U Check-in" label, and "Install" + "Not Now" buttons; clicking "Install" calls `promptEvent.prompt()` and dismisses the banner; "Not Now" dismisses for the session
 
 **Given** the PWA is installed,
 **When** it requests persistent storage,

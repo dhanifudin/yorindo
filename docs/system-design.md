@@ -1,6 +1,6 @@
-# Yorindo — System Design & Cost Analysis
+# EM . U — System Design & Cost Analysis
 
-**Project:** Yorindo — Event Management Platform for KADA
+**Project:** EM . U — Event Management Platform for KADA
 **Version:** 2.0 (Updated 2026-04-12)
 
 > Kurs referensi: **1 USD ≈ Rp 16.300** (April 2026)
@@ -9,7 +9,7 @@
 
 ## Table of Contents
 
-1. [Apa itu Yorindo?](#1-apa-itu-yorindo)
+1. [Apa itu EM . U?](#1-apa-itu-em--u)
 2. [Alur Bisnis](#2-alur-bisnis)
 3. [Arsitektur Sistem](#3-arsitektur-sistem)
 4. [Fitur yang Sudah Dibangun](#4-fitur-yang-sudah-dibangun)
@@ -17,11 +17,11 @@
 
 ---
 
-## 1. Apa itu Yorindo?
+## 1. Apa itu EM . U?
 
-Yorindo adalah platform manajemen event B2B yang dibangun untuk KADA. Platform ini menggantikan proses manual — menyimpan kontak di spreadsheet, mengirim undangan satu per satu, dan mencatat kehadiran secara terpisah — menjadi satu sistem terintegrasi.
+EM . U adalah platform manajemen event B2B yang dibangun untuk KADA. Platform ini menggantikan proses manual — menyimpan kontak di spreadsheet, mengirim undangan satu per satu, dan mencatat kehadiran secara terpisah — menjadi satu sistem terintegrasi.
 
-**Apa yang bisa dilakukan Yorindo:**
+**Apa yang bisa dilakukan EM . U:**
 - Menyimpan dan mengelola database kontak
 - Mengirim undangan email ke segmen audiens yang ditargetkan
 - Menerima pendaftaran peserta lewat halaman publik
@@ -38,7 +38,7 @@ Ini adalah perjalanan lengkap dari kontak hingga laporan event:
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │  1. KONTAK                                                       │
-│     Upload CSV/Excel → AI bersihkan & normalisasi → tersimpan   │
+│     Upload CSV/Excel → normalisasi berbasis aturan → tersimpan  │
 └────────────────────────────┬────────────────────────────────────┘
                              ↓
 ┌─────────────────────────────────────────────────────────────────┐
@@ -77,7 +77,7 @@ Ini adalah perjalanan lengkap dari kontak hingga laporan event:
 
 ## 3. Arsitektur Sistem
 
-Sistem Yorindo terdiri dari tiga lapisan utama:
+Sistem EM . U terdiri dari tiga lapisan utama:
 
 ### Lapisan 1 — Antarmuka (Frontend)
 
@@ -107,12 +107,27 @@ Bertanggung jawab untuk:
 | **Database Utama** | PostgreSQL | Semua data persisten: kontak, event, pendaftaran, blast log |
 | **Cache** | Redis | Hasil insight AI (TTL 7 hari), rate limiting |
 
+### Lapisan 4 — SSL & Reverse Proxy
+
+**Nginx + Let's Encrypt (Certbot)** — berjalan di VPS di luar Docker.
+
+- Menerima semua traffic HTTPS pada port 443
+- Sertifikat SSL dikelola otomatis oleh Certbot (diperbarui setiap 90 hari)
+- Meneruskan request ke container aplikasi di port lokal
+
+Setup satu perintah:
+```bash
+make ssl-init DOMAIN=your.domain.com EMAIL=admin@your.domain.com
+```
+
 ### Layanan Eksternal
 
-| Layanan | Fungsi |
-|---|---|
-| **Claude AI (Anthropic)** | Normalisasi data kontak saat upload; generate insight post-event |
-| **Brevo** | Kirim semua email: konfirmasi, tiket QR, blast undangan |
+| Layanan | Provider | Fungsi |
+|---|---|---|
+| **AI Insights** | OpenAI GPT atau Groq | Generate insight post-event per event selesai; hasil di-cache Redis 7 hari |
+| **Email** | Brevo API | Kirim email blast undangan (up to 9.000/bulan gratis) |
+| **Email** | AWS SES (SMTP) | Alternatif email — cocok untuk volume tinggi, biaya rendah |
+| **Email** | GCP Workspace SMTP | Alternatif email — via Google SMTP relay |
 
 ### Diagram Arsitektur
 
@@ -126,11 +141,11 @@ Bertanggung jawab untuk:
                    │ HTTPS/REST
 ┌──────────────────▼───────────────────────────┐
 │              API SERVER                      │
-│           Hono (Node.js / Bun)               │
+│         Fastify (Node.js / Bun)              │
 │                                              │
 │  ┌──────────┐  ┌──────────┐  ┌───────────┐  │
 │  │  Auth &  │  │  Event & │  │ Contact & │  │
-│  │  Users   │  │ Pipeline │  │ ETL / AI  │  │
+│  │  Users   │  │ Pipeline │  │   ETL     │  │
 │  └──────────┘  └──────────┘  └───────────┘  │
 │                                              │
 │  ┌──────────┐  ┌──────────┐                 │
@@ -139,16 +154,20 @@ Bertanggung jawab untuk:
 │  └──────────┘  └──────────┘                 │
 └───────┬──────────────┬──────────────┬────────┘
         │              │              │
-┌───────▼──────┐ ┌─────▼──────┐ ┌───▼────────────────┐
-│  PostgreSQL  │ │   Redis    │ │  External Services │
-│              │ │            │ │                    │
-│ contacts     │ │ AI insight │ │ Claude AI          │
-│ events       │ │ cache 7d   │ │ (normalisasi +     │
-│ registrations│ │            │ │  insight)          │
-│ blast_logs   │ │            │ │                    │
-│ surveys      │ │            │ │ Brevo              │
-└──────────────┘ └────────────┘ │ (email delivery)   │
-                                └────────────────────┘
+┌───────▼──────┐ ┌─────▼──────┐ ┌───▼────────────────────────┐
+│  PostgreSQL  │ │   Redis    │ │    External Services       │
+│              │ │            │ │                            │
+│ contacts     │ │ AI insight │ │ OpenAI GPT / Groq          │
+│ events       │ │ cache 7d   │ │ (insight post-event only)  │
+│ registrations│ │            │ │                            │
+│ blast_logs   │ │            │ │ Brevo API / AWS SES /      │
+│ surveys      │ │            │ │ GCP SMTP (email delivery)  │
+└──────────────┘ └────────────┘ └────────────────────────────┘
+         ↑
+┌────────┴─────────────────────────────────────┐
+│  Nginx + Let's Encrypt (VPS, di luar Docker) │
+│  SSL termination → proxy ke port lokal       │
+└──────────────────────────────────────────────┘
 ```
 
 ---
@@ -157,7 +176,7 @@ Bertanggung jawab untuk:
 
 ### Manajemen Kontak
 - Upload kontak via CSV atau Excel
-- Normalisasi berbasis AI (format nomor telepon, kapitalisasi nama, standarisasi kota)
+- Normalisasi berbasis aturan (format nomor telepon, kapitalisasi nama, standarisasi kota) — tanpa AI
 - Deteksi duplikat dan saran penggabungan
 - Tagging dan segmentasi kontak berdasarkan industri, kota, perusahaan
 - Health bar kualitas data kontak
@@ -194,7 +213,7 @@ Bertanggung jawab untuk:
 - Breakdown demografi (industri, kota, ukuran perusahaan)
 - Peta segmen overlap (kombinasi industri × kota yang paling banyak hadir)
 - Event Health Score — skor komposit dari tingkat kehadiran, no-show, dan konversi undangan
-- Insight post-event berbasis AI (didukung Claude, cache 7 hari)
+- Insight post-event berbasis AI (OpenAI GPT atau Groq, cache Redis 7 hari)
 - Export PDF dan Excel
 
 ### Akses & Keamanan
@@ -229,34 +248,64 @@ Bertanggung jawab untuk:
 - Contoh: kapasitas 200 → kirim blast ke 200–300 kontak per event
 
 **Penggunaan AI:**
-- Normalisasi kontak: sekali per batch upload
+- ETL/normalisasi kontak: **tidak menggunakan AI** — menggunakan normalisasi berbasis aturan (gratis)
 - Insight post-event: 1 panggilan API per event selesai, hasilnya di-cache Redis 7 hari (tampil ulang = gratis)
 
 ---
 
 ### 5.2 Referensi Harga Layanan
 
-#### Claude AI (Anthropic)
+#### AI Insights — OpenAI GPT atau Groq
 
-Yorindo menggunakan dua model berbeda untuk dua kebutuhan yang berbeda:
+AI hanya digunakan untuk satu fungsi: **generate insight setelah event selesai**. ETL/normalisasi kontak tidak menggunakan AI.
 
-| Penggunaan | Model | Harga Input | Harga Output |
-|---|---|---|---|
-| Normalisasi kontak | Claude Haiku 4.5 | $0,80 / 1M token | $4,00 / 1M token |
-| Insight post-event | Claude Sonnet 4.6 | $3,00 / 1M token | $15,00 / 1M token |
+EM . U mendukung dua provider AI yang dapat dikonfigurasi dari halaman Settings:
 
-Estimasi token per operasi:
-- Normalisasi per kontak: ~500 token input + ~200 token output → **~Rp 0,6/kontak**
-- Insight per event: ~2.000 token input + ~1.500 token output → **~Rp 600–800/event**
+| Provider | Model | Harga Input | Harga Output | Catatan |
+|---|---|---|---|---|
+| **OpenAI** | GPT-4o | $2,50 / 1M token | $10,00 / 1M token | Kualitas tinggi, stabil |
+| **OpenAI** | GPT-4o mini | $0,15 / 1M token | $0,60 / 1M token | Hemat, cukup untuk insight |
+| **Groq** | llama-3.3-70b | $0,59 / 1M token | $0,79 / 1M token | Sangat cepat, biaya rendah |
+| **Groq** | mixtral-8x7b | $0,24 / 1M token | $0,24 / 1M token | Paling hemat |
 
-#### Brevo (Email)
+Estimasi token per insight:
+- ~2.000 token input + ~1.500 token output per event
+- GPT-4o mini: **~Rp 15–20/event** | Groq llama: **~Rp 10–15/event**
+
+#### Email — Brevo, AWS SES, atau GCP SMTP
+
+EM . U mendukung tiga provider email yang dapat dipilih dari halaman Settings:
+
+**Brevo (direkomendasikan untuk mulai)**
 
 | Paket | Email/Bulan | Harga |
 |---|---|---|
-| Free | 9.000 | Gratis |
+| Free | 9.000 | **Gratis** |
 | Starter | 20.000 | ~$25 (~Rp 408.000) |
 | Business | 100.000 | ~$65 (~Rp 1.060.000) |
 | Enterprise | 500.000+ | ~$200+ (~Rp 3.260.000+) |
+
+**AWS SES (Simple Email Service)**
+
+Konfigurasi: `EMAIL_PROVIDER=ses`, `SMTP_HOST=email-smtp.<region>.amazonaws.com`, port 587.
+
+| Paket | Harga per 1.000 email | Catatan |
+|---|---|---|
+| Kirim dari EC2 | **Gratis** (62.000/bulan) | Hanya jika API berjalan di AWS |
+| Di luar EC2 | ~$0,10 / 1.000 email (~Rp 1.630) | Pay-as-you-go, tidak ada paket bulanan |
+
+Biaya contoh: 50.000 email/bulan = **~$5/bulan (~Rp 81.500)** — jauh lebih murah dari Brevo Business.
+
+**GCP Workspace SMTP Relay**
+
+Konfigurasi: `EMAIL_PROVIDER=gcp`, `SMTP_HOST=smtp-relay.gmail.com`, port 587, TLS.
+
+| Paket | Email/Hari | Harga |
+|---|---|---|
+| Google Workspace Starter | 2.000/hari | $6/user/bulan (~Rp 98.000) |
+| Google Workspace Business | Tidak terbatas | $12/user/bulan (~Rp 196.000) |
+
+Cocok jika tim sudah menggunakan Google Workspace untuk email internal.
 
 #### Opsi Hosting
 
@@ -274,22 +323,23 @@ Semua harga dalam **Rupiah/bulan** (dikonversi dari USD dengan kurs Rp 16.300).
 
 ---
 
+> Tabel menggunakan Brevo sebagai pilihan email default. AWS SES menghemat 60–80% biaya email vs Brevo pada volume tinggi.
+
 #### Tier Starter — ~1.000 Kontak
 
 | Komponen | VPS | AWS | GCP |
 |---|---|---|---|
 | Hosting (server + DB) | Rp 195.000–325.000 | Rp 570.000–815.000 | Rp 490.000–735.000 |
 | Redis | termasuk di VPS | Rp 245.000 | Rp 195.000 |
-| Claude AI (normalisasi) | Rp 8.000–25.000 | sama | sama |
-| Claude AI (insight) — Rendah | Rp 3.000 | sama | sama |
-| Claude AI (insight) — Sedang | Rp 10.000 | sama | sama |
-| Claude AI (insight) — Tinggi | Rp 20.000 | sama | sama |
-| Brevo email — Rendah | Gratis | sama | sama |
+| AI Insights (GPT-4o mini / Groq) — Rendah | Rp 750 | sama | sama |
+| AI Insights — Sedang | Rp 2.250 | sama | sama |
+| AI Insights — Tinggi | Rp 4.500 | sama | sama |
+| Brevo email — Rendah | **Gratis** | sama | sama |
 | Brevo email — Sedang | Gratis–Rp 408.000 | sama | sama |
 | Brevo email — Tinggi | Rp 408.000 | sama | sama |
-| **TOTAL — Rendah** | **Rp 206.000–358.000** | **Rp 826.000–1.095.000** | **Rp 701.000–960.000** |
-| **TOTAL — Sedang** | **Rp 213.000–758.000** | **Rp 833.000–1.498.000** | **Rp 703.000–1.378.000** |
-| **TOTAL — Tinggi** | **Rp 631.000–778.000** | **Rp 1.243.000–1.498.000** | **Rp 1.113.000–1.368.000** |
+| **TOTAL — Rendah** | **Rp 196.000–326.000** | **Rp 816.000–1.061.000** | **Rp 491.000–931.000** |
+| **TOTAL — Sedang** | **Rp 198.000–735.000** | **Rp 818.000–1.225.000** | **Rp 493.000–1.140.000** |
+| **TOTAL — Tinggi** | **Rp 608.000–738.000** | **Rp 984.000–1.228.000** | **Rp 903.000–1.143.000** |
 
 ---
 
@@ -301,16 +351,16 @@ Kapasitas event rata-rata diasumsikan 200–500 orang.
 |---|---|---|---|
 | Hosting (server + DB) | Rp 325.000–650.000 | Rp 978.000–1.630.000 | Rp 897.000–1.467.000 |
 | Redis | termasuk di VPS | Rp 408.000 | Rp 326.000 |
-| Claude AI (normalisasi) | Rp 16.000–49.000 | sama | sama |
-| Claude AI (insight) — Rendah | Rp 7.000 | sama | sama |
-| Claude AI (insight) — Sedang | Rp 20.000 | sama | sama |
-| Claude AI (insight) — Tinggi | Rp 41.000 | sama | sama |
-| Brevo email — Rendah | Rp 408.000 | sama | sama |
-| Brevo email — Sedang | Rp 408.000–1.060.000 | sama | sama |
-| Brevo email — Tinggi | Rp 1.060.000 | sama | sama |
-| **TOTAL — Rendah** | **Rp 756.000–1.114.000** | **Rp 1.801.000–2.495.000** | **Rp 1.636.000–2.300.000** |
-| **TOTAL — Sedang** | **Rp 757.000–1.779.000** | **Rp 1.814.000–3.167.000** | **Rp 1.649.000–2.902.000** |
-| **TOTAL — Tinggi** | **Rp 1.450.000–1.800.000** | **Rp 2.497.000–3.197.000** | **Rp 2.332.000–2.842.000** |
+| AI Insights — Rendah | Rp 1.500 | sama | sama |
+| AI Insights — Sedang | Rp 4.500 | sama | sama |
+| AI Insights — Tinggi | Rp 9.000 | sama | sama |
+| Email — Brevo Starter | Rp 408.000 | sama | sama |
+| Email — Brevo Business (Sedang/Tinggi) | Rp 1.060.000 | sama | sama |
+| Email alternatif — AWS SES (Rendah, ~10K email) | — | Rp 16.000 | — |
+| Email alternatif — AWS SES (Tinggi, ~50K email) | — | Rp 81.500 | — |
+| **TOTAL — Rendah (Brevo)** | **Rp 735.000–1.060.000** | **Rp 1.804.000–2.455.000** | **Rp 1.306.000–1.892.000** |
+| **TOTAL — Sedang (Brevo)** | **Rp 1.389.000–1.715.000** | **Rp 2.452.000–3.099.000** | **Rp 2.288.000–2.858.000** |
+| **TOTAL — Tinggi (SES, AWS hosting)** | — | **Rp 1.568.000–2.302.000** | — |
 
 ---
 
@@ -322,48 +372,51 @@ Kapasitas event rata-rata diasumsikan 300–2.000 orang.
 |---|---|---|---|
 | Hosting (server + DB) | Rp 978.000–1.956.000 | Rp 2.445.000–4.890.000 | Rp 2.119.000–4.401.000 |
 | Redis | Rp 163.000–326.000 | Rp 815.000 | Rp 652.000 |
-| Claude AI (normalisasi) | Rp 49.000–130.000 | sama | sama |
-| Claude AI (insight) — Rendah | Rp 13.000 | sama | sama |
-| Claude AI (insight) — Sedang | Rp 41.000 | sama | sama |
-| Claude AI (insight) — Tinggi | Rp 82.000 | sama | sama |
-| Brevo email — Rendah | Rp 1.060.000 | sama | sama |
-| Brevo email — Sedang | Rp 1.060.000–3.260.000 | sama | sama |
-| Brevo email — Tinggi | Rp 3.260.000 | sama | sama |
-| **TOTAL — Rendah** | **Rp 2.263.000–3.485.000** | **Rp 4.382.000–6.898.000** | **Rp 3.993.000–6.304.000** |
-| **TOTAL — Sedang** | **Rp 2.291.000–5.513.000** | **Rp 4.410.000–9.346.000** | **Rp 4.021.000–8.752.000** |
-| **TOTAL — Tinggi** | **Rp 5.492.000–5.754.000** | **Rp 7.601.000–9.100.000** | **Rp 7.212.000–8.508.000** |
+| AI Insights — Rendah | Rp 3.000 | sama | sama |
+| AI Insights — Sedang | Rp 9.000 | sama | sama |
+| AI Insights — Tinggi | Rp 18.000 | sama | sama |
+| Email — Brevo Business (~100K email) | Rp 1.060.000 | sama | sama |
+| Email — Brevo Enterprise (~200K+ email) | Rp 3.260.000 | sama | sama |
+| Email alternatif — AWS SES (~200K email) | — | Rp 326.000 | — |
+| **TOTAL — Rendah (Brevo Business)** | **Rp 2.204.000–3.345.000** | **Rp 4.263.000–6.748.000** | **Rp 3.834.000–6.115.000** |
+| **TOTAL — Tinggi (Brevo Enterprise)** | **Rp 4.419.000–5.560.000** | **Rp 6.536.000–9.981.000** | **Rp 6.049.000–9.330.000** |
+| **TOTAL — Tinggi (SES, AWS hosting)** | — | **Rp 3.604.000–5.570.000** | — |
 
 ---
 
 ### 5.4 Ringkasan Biaya
 
-| Tier | VPS | AWS | GCP |
+| Tier | VPS + Brevo | AWS + SES | GCP + Brevo |
 |---|---|---|---|
-| Starter (~1K kontak) | Rp 206rb–778rb/bln | Rp 826rb–1,5jt/bln | Rp 701rb–1,4jt/bln |
-| Growing (~5K kontak) | Rp 756rb–1,8jt/bln | Rp 1,8jt–3,2jt/bln | Rp 1,6jt–2,9jt/bln |
-| Scale (~20K kontak) | Rp 2,3jt–5,8jt/bln | Rp 4,4jt–9,3jt/bln | Rp 4,0jt–8,8jt/bln |
+| Starter (~1K kontak) | Rp 196rb–738rb/bln | Rp 816rb–1,2jt/bln | Rp 491rb–1,1jt/bln |
+| Growing (~5K kontak) | Rp 735rb–1,7jt/bln | Rp 1,6jt–3,1jt/bln | Rp 1,3jt–2,9jt/bln |
+| Scale (~20K kontak) | Rp 2,2jt–5,6jt/bln | Rp 3,6jt–10jt/bln | Rp 3,8jt–9,3jt/bln |
+
+> AWS SES menjadi pilihan paling hemat di tier Scale — kombinasi AWS hosting + SES bisa **50–60% lebih murah** dari AWS hosting + Brevo Enterprise.
 
 ---
 
 ### 5.5 Rekomendasi per Tahap
 
 **Baru mulai (Starter):**
-- Gunakan VPS dari DigitalOcean, Vultr, atau Niagahoster
-- Jalankan PostgreSQL dan Redis di server yang sama
-- Gunakan Brevo Free selama volume email masih rendah
+- VPS murah (DigitalOcean, Vultr, atau Niagahoster)
+- PostgreSQL dan Redis di server yang sama
+- Brevo Free (9.000 email/bulan gratis)
+- AI Insights: Groq (paling hemat, ~Rp 750/bulan untuk 5 event)
+- SSL: Let's Encrypt via `make ssl-init`
 - **Estimasi total: Rp 200.000–400.000/bulan**
 
 **Operasi berkembang (Growing):**
-- Upgrade ke VPS lebih besar, atau pisahkan server app dari database
-- Berlangganan Brevo Starter untuk menangani volume blast yang lebih besar
-- Pertimbangkan managed PostgreSQL jika butuh backup otomatis dan failover
-- **Estimasi total: Rp 750.000–1.800.000/bulan**
+- VPS lebih besar, atau pisahkan server app dari database
+- Brevo Starter → Business sesuai volume blast
+- Pertimbangkan AWS SES jika blast > 20.000 email/bulan
+- **Estimasi total: Rp 750.000–1.700.000/bulan**
 
 **Skala besar (Scale):**
-- Pindah ke cloud provider (AWS atau GCP) untuk reliabilitas dan auto-scaling
-- Gunakan managed database (RDS atau Cloud SQL) dan managed Redis
-- Upgrade Brevo ke Business atau lebih tinggi
-- **Estimasi total: Rp 2.300.000–9.000.000/bulan tergantung volume event**
+- AWS atau GCP untuk reliabilitas dan auto-scaling
+- Managed database (RDS atau Cloud SQL) + managed Redis
+- AWS SES sangat direkomendasikan untuk email volume tinggi
+- **Estimasi total: Rp 2.200.000–5.600.000/bulan (VPS) atau Rp 3.600.000–10.000.000/bulan (cloud)**
 
 ---
 
@@ -377,4 +430,4 @@ Kapasitas event rata-rata diasumsikan 300–2.000 orang.
 
 ---
 
-*Dokumen ini dikelola oleh tim engineering Yorindo. Terakhir diperbarui: 2026-04-12.*
+*Dokumen ini dikelola oleh tim engineering EM . U. Terakhir diperbarui: 2026-04-12.*

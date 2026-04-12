@@ -1,6 +1,6 @@
-# Yorindo — Project Knowledge Index
+# EM . U — Project Knowledge Index
 
-**Project:** Yorindo Event Management Platform
+**Project:** EM . U Event Management Platform
 **Generated:** 2026-03-25 (bmad-document-project, quick scan)
 
 ## Documentation
@@ -10,7 +10,7 @@
 | [system-design.md](./system-design.md) | Architecture | Full system design: architecture, data models, API, FE/BE structure, auth, key flows |
 | [secrets-setup.md](./secrets-setup.md) | Setup | Environment variable configuration guide |
 | [yorindo_system_design_v1_18 03 26.pdf](./yorindo_system_design_v1_18%2003%2026.pdf) | Reference | Original system design PDF (v1, 2026-03-18) |
-| [Project Brief Yorindo - KADA.pdf](./Project%20Brief%20Yorindo%20-%20KADA.pdf) | Reference | Project brief and business requirements |
+| [Project Brief EM . U - KADA.pdf](./Project%20Brief%20Yorindo%20-%20KADA.pdf) | Reference | Project brief and business requirements |
 
 ## Quick Reference
 

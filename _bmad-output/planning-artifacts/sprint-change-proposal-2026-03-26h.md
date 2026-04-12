@@ -76,7 +76,7 @@ OLD:
 ```tsx
 <div className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/7 px-3 py-1.5">
   <Shield className="h-4 w-4 text-white/85" />
-  <span className="text-sm font-medium text-white/85">Yorindo Admin</span>
+  <span className="text-sm font-medium text-white/85">EM . U Admin</span>
 </div>
 ```
 
@@ -86,7 +86,7 @@ NEW:
   <div className="flex items-center justify-center w-7 h-7 rounded-full bg-gradient-to-br from-blue-600 to-blue-800">
     <Shield className="h-3.5 w-3.5 text-white" />
   </div>
-  <span className="text-sm font-medium text-white/85">Yorindo Admin</span>
+  <span className="text-sm font-medium text-white/85">EM . U Admin</span>
 </div>
 ```
 

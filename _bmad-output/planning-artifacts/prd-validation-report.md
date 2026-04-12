@@ -3,7 +3,7 @@ validationTarget: '_bmad-output/planning-artifacts/prd.md'
 validationDate: '2026-03-18'
 inputDocuments:
   - '_bmad-output/planning-artifacts/prd.md'
-  - 'docs/Project Brief Yorindo - KADA.pdf'
+  - 'docs/Project Brief EM . U - KADA.pdf'
   - '_bmad-output/brainstorming/brainstorming-session-2026-03-18-001.md'
 validationStepsCompleted:
   - step-v-01-discovery
@@ -33,7 +33,7 @@ overallStatus: Warning
 | Document | Type | Status |
 |---|---|---|
 | `_bmad-output/planning-artifacts/prd.md` | PRD (target) | ✓ Loaded |
-| `docs/Project Brief Yorindo - KADA.pdf` | Product Brief | ✓ Loaded |
+| `docs/Project Brief EM . U - KADA.pdf` | Product Brief | ✓ Loaded |
 | `_bmad-output/brainstorming/brainstorming-session-2026-03-18-001.md` | Brainstorming Session | ✓ Loaded |
 
 ## Validation Findings
@@ -95,7 +95,7 @@ overallStatus: Warning
 
 ## Product Brief Coverage
 
-**Product Brief:** `docs/Project Brief Yorindo - KADA.pdf`
+**Product Brief:** `docs/Project Brief EM . U - KADA.pdf`
 
 ### Coverage Map
 
@@ -298,7 +298,7 @@ This compliance documentation significantly exceeds the minimum requirements for
 ### Required Sections
 
 **tenant_model:** Partially Present
-> Single-tenant MVP is implicit throughout the PRD (references to "Yorindo's database," single org operations). Multi-tenant platform documented as Vision Phase feature. No dedicated Tenant Model section. For MVP single-tenant, this is an intentional scoping decision — the model is documented via the scoping table and Vision section, not a gap.
+> Single-tenant MVP is implicit throughout the PRD (references to "EM . U's database," single org operations). Multi-tenant platform documented as Vision Phase feature. No dedicated Tenant Model section. For MVP single-tenant, this is an intentional scoping decision — the model is documented via the scoping table and Vision section, not a gap.
 
 **rbac_matrix:** Partially Present
 > 5 roles defined (super_admin, event_admin, staff, vendor_client, participant) through user journeys and FR47–FR48. Role-specific capabilities are described in detail in FRs and user journeys. However, no formal capability × role matrix table exists. An explicit RBAC matrix would be valuable input for the architecture phase.

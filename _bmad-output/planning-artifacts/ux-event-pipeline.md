@@ -55,7 +55,7 @@ Uses only the Check-in tab during live events. Operates on mobile PWA, potential
 The admin's primary loop is: **open event → read pipeline state → act on the highest-priority item.** In practice, the Registrasi tab is where she spends the most time — reviewing the AI approval queue, bulk-approving the recommended list, then moving on. This happens multiple times per day in the days before an event.
 
 **The critical interaction to get absolutely right:**
-**Bulk AI approval.** This action approves real humans for a real event and triggers WhatsApp/email delivery to all of them. If the admin doesn't trust the AI recommendations, she reviews every row manually — destroying the automation value. If she over-trusts and approves flagged contacts, Yorindo's deliverability suffers. Getting this single interaction right is the product's core value proposition made real.
+**Bulk AI approval.** This action approves real humans for a real event and triggers WhatsApp/email delivery to all of them. If the admin doesn't trust the AI recommendations, she reviews every row manually — destroying the automation value. If she over-trusts and approves flagged contacts, EM . U's deliverability suffers. Getting this single interaction right is the product's core value proposition made real.
 
 **What should be completely effortless:**
 - Sending a blast from within the event (no navigating to a separate Blasts page)

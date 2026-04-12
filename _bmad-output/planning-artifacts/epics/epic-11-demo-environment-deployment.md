@@ -9,7 +9,7 @@
 
 ## Epic Statement
 
-As a team deploying and showcasing the Yorindo platform,
+As a team deploying and showcasing the EM . U platform,
 we want a unified VPS deployment topology with three endpoints — `app.dhanifudin.com` (FE preview with MSW mocks, replacing GitHub Pages), `api.dhanifudin.com` (standalone API, already deployed), and `demo.dhanifudin.com` (full-stack demo with postgres and seed data) — so that all environments are consistently managed via Docker Compose on VPS.
 
 ---

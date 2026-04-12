@@ -35,7 +35,7 @@ so that I can deploy the demo stack and have it accessible via the existing VPS 
 
 **AC1:** Given `docker-compose.demo.yml` exists, when `docker compose -f docker-compose.demo.yml up -d` is run, then all 3 services start: `yorindo-app`, `yorindo-api`, `postgres`.
 
-**AC2:** Given the services are running, when the VPS nginx reverse proxy forwards requests to the container ports, then `https://demo.dhanifudin.com` serves the Yorindo app with valid HTTPS (managed by VPS nginx, not the compose stack).
+**AC2:** Given the services are running, when the VPS nginx reverse proxy forwards requests to the container ports, then `https://demo.dhanifudin.com` serves the EM . U app with valid HTTPS (managed by VPS nginx, not the compose stack).
 
 **AC3:** Given the demo environment is running, when `yorindo-api` connects to PostgreSQL, then `REPOSITORY_IMPL=postgres` is set and the connection succeeds.
 
