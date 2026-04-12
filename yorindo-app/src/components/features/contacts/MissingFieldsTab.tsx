@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
@@ -66,13 +66,6 @@ export function MissingFieldsTab({ defaultField }: { defaultField: 'email' | 'ph
   const [page, setPage] = useState(1)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
-
-  useEffect(() => {
-    setActiveField(defaultField)
-    setPage(1)
-    setEditingId(null)
-    setEditValue('')
-  }, [defaultField])
 
   const { data, isLoading } = useQuery<MissingFieldsResponse>({
     queryKey: ['missing-fields', activeField, page],

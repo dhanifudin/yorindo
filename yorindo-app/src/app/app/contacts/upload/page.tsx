@@ -16,7 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { AlertCircle, CheckCircle2, FileSpreadsheet, Upload } from 'lucide-react'
+import { AlertCircle, CheckCircle2, FileSpreadsheet } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

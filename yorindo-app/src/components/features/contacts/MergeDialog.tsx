@@ -63,6 +63,18 @@ export function MergeDialog({ open, onOpenChange, pair }: MergeDialogProps) {
   const queryClient = useQueryClient()
   const [selections, setSelections] = useState<Record<string, FieldChoice>>({})
 
+  // Reset selections when a new pair is passed in
+  useEffect(() => {
+    if (!pair) return
+    const init: Record<string, FieldChoice> = {}
+    for (const field of FIELDS) {
+      const primaryVal = pair.primary[field.key as keyof Contact]
+      init[field.key] = primaryVal ? 'primary' : 'duplicate'
+    }
+    setSelections(init)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pair?.id])
+
   const mergeMutation = useMutation({
     mutationFn: async ({ pairId, primaryId, fieldSelections }: {
       pairId: string
@@ -88,19 +100,6 @@ export function MergeDialog({ open, onOpenChange, pair }: MergeDialogProps) {
     },
     onError: (err: Error) => toast.error(err.message ?? 'Gagal menggabungkan kontak'),
   })
-
-  // Initialize selections when dialog opens with a pair
-  useEffect(() => {
-    if (pair && open) {
-      const init: Record<string, FieldChoice> = {}
-      for (const field of FIELDS) {
-        // Default to primary if it has a value, otherwise duplicate
-        const primaryVal = pair.primary[field.key as keyof Contact]
-        init[field.key] = primaryVal ? 'primary' : 'duplicate'
-      }
-      setSelections(init)
-    }
-  }, [pair, open])
 
   if (!pair) return null
 
