@@ -243,7 +243,20 @@ export function ContactsTable({
     {
       accessorKey: 'completenessScore',
       header: 'Kelengkapan',
-      cell: ({ getValue }) => `${Math.round((getValue() as number) * 100)}%`,
+      cell: ({ getValue }) => {
+        const score = getValue() as number
+        const pct = Math.round(score * 100)
+        let colorClass = ''
+        if (pct >= 80) colorClass = 'bg-green-100 text-green-700 border-green-200'
+        else if (pct >= 50) colorClass = 'bg-yellow-100 text-yellow-700 border-yellow-200'
+        else colorClass = 'bg-red-100 text-red-700 border-red-200'
+
+        return (
+          <Badge variant="outline" className={`font-medium ${colorClass}`}>
+            {pct}%
+          </Badge>
+        )
+      },
     },
   ]
 
@@ -328,7 +341,18 @@ export function ContactsTable({
                   <div><span className="text-muted-foreground">Perusahaan: </span>{detailContact?.company || '—'}</div>
                   <div>
                     <span className="text-muted-foreground">Kelengkapan: </span>
-                    {detailContact && `${Math.round(detailContact.completenessScore * 100)}%`}
+                    {detailContact && (() => {
+                      const pct = Math.round(detailContact.completenessScore * 100)
+                      let colorClass = ''
+                      if (pct >= 80) colorClass = 'bg-green-100 text-green-700 border-green-200'
+                      else if (pct >= 50) colorClass = 'bg-yellow-100 text-yellow-700 border-yellow-200'
+                      else colorClass = 'bg-red-100 text-red-700 border-red-200'
+                      return (
+                        <Badge variant="outline" className={`font-medium ${colorClass}`}>
+                          {pct}%
+                        </Badge>
+                      )
+                    })()}
                   </div>
                   <div>
                     <span className="text-muted-foreground">Dibuat: </span>
@@ -613,8 +637,19 @@ export function ContactsTable({
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground font-medium uppercase">Kelengkapan</p>
-                    <p className="mt-0.5 font-medium">
-                      {detailContact ? `${Math.round(detailContact.completenessScore * 100)}%` : '—'}
+                    <p className="mt-0.5">
+                      {detailContact && (() => {
+                        const pct = Math.round(detailContact.completenessScore * 100)
+                        let colorClass = ''
+                        if (pct >= 80) colorClass = 'bg-green-100 text-green-700 border-green-200'
+                        else if (pct >= 50) colorClass = 'bg-yellow-100 text-yellow-700 border-yellow-200'
+                        else colorClass = 'bg-red-100 text-red-700 border-red-200'
+                        return (
+                          <Badge variant="outline" className={`font-medium ${colorClass}`}>
+                            {pct}%
+                          </Badge>
+                        )
+                      })()}
                     </p>
                   </div>
                 </div>
@@ -713,7 +748,7 @@ export function ContactsTable({
                     />
                   )}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium text-sm">{contact.name}</span>
                       {contact.flagCategory && (
                         <Badge className={FLAG_LABELS[contact.flagCategory].className + ' text-[10px] px-1.5 py-0'}>
@@ -721,12 +756,12 @@ export function ContactsTable({
                         </Badge>
                       )}
                     </div>
-                    <div className="text-xs text-muted-foreground mt-1">
+                    <div className="text-xs text-muted-foreground mt-1 flex flex-wrap items-center gap-x-1">
                       {contact.jobTitle && <span>{contact.jobTitle}</span>}
-                      {contact.jobTitle && contact.serviceType && <span> · </span>}
+                      {contact.jobTitle && contact.serviceType && <span>·</span>}
                       {contact.serviceType && <span>{contact.serviceType}</span>}
-                      {(contact.jobTitle || contact.serviceType) && contact.email && <span> · </span>}
-                      {contact.email && <span>{contact.email}</span>}
+                      {(contact.jobTitle || contact.serviceType) && contact.email && <span>·</span>}
+                      {contact.email && <span className="truncate">{contact.email}</span>}
                     </div>
                   </div>
                 </div>
@@ -775,7 +810,7 @@ export function ContactsTable({
                   onClick={() => setDetailContact(row.original)}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="whitespace-nowrap">
+                    <TableCell key={cell.id} className="whitespace-nowrap max-w-[200px] truncate">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
