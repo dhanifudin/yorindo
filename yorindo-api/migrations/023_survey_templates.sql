@@ -22,56 +22,51 @@ CREATE INDEX IF NOT EXISTS idx_survey_templates_builtin ON survey_templates(is_b
 
 -- Seed built-in templates
 INSERT INTO survey_templates (id, name, description, survey_type, schema, ui_schema, is_builtin) VALUES
-('tpl-reg-simple', 'Registrasi Sederhana', 'Formulir registrasi dasar: nama, email, perusahaan, jabatan', 'registration',
+('tpl-reg-simple', 'Informasi Tambahan', 'Pertanyaan tambahan: sumber informasi dan ekspektasi', 'registration',
  '{
     "type": "object",
-    "title": "Formulir Registrasi",
+    "title": "Informasi Tambahan",
     "properties": {
-      "namaLengkap": { "type": "string", "title": "Nama Lengkap" },
-      "email": { "type": "string", "title": "Email", "format": "email" },
-      "perusahaan": { "type": "string", "title": "Nama Perusahaan" },
-      "jabatan": { "type": "string", "title": "Jabatan" },
-      "nomorTelepon": { "type": "string", "title": "Nomor Telepon / WhatsApp" }
-    },
-    "required": ["namaLengkap", "email", "nomorTelepon"]
-  }',
- '{
-    "namaLengkap": { "ui:widget": "text" },
-    "email": { "ui:widget": "email" },
-    "nomorTelepon": { "ui:widget": "text" }
-  }',
- true),
-
-('tpl-reg-detailed', 'Registrasi Lengkap', 'Formulir registrasi dengan industri, ekspektasi, dan sumber informasi', 'registration',
- '{
-    "type": "object",
-    "title": "Formulir Registrasi Event",
-    "properties": {
-      "namaLengkap": { "type": "string", "title": "Nama Lengkap" },
-      "email": { "type": "string", "title": "Email", "format": "email" },
-      "perusahaan": { "type": "string", "title": "Nama Perusahaan" },
-      "jabatan": { "type": "string", "title": "Jabatan" },
-      "nomorTelepon": { "type": "string", "title": "Nomor Telepon / WhatsApp" },
-      "industri": {
-        "type": "string",
-        "title": "Industri",
-        "enum": ["Teknologi", "Keuangan", "Kesehatan", "Manufaktur", "Pendidikan", "Retail"]
-      },
-      "bagaimanaTahu": {
+      "sumberInformasi": {
         "type": "string",
         "title": "Bagaimana Anda mengetahui event ini?",
         "enum": ["Media Sosial", "Email", "Rekomendasi Teman", "Website", "Lainnya"]
       },
-      "ekspektasi": { "type": "string", "title": "Apa ekspektasi Anda dari event ini?" }
+      "ekspektasi": { "type": "string", "title": "Apa yang Anda harapkan dari event ini?" }
     },
-    "required": ["namaLengkap", "email", "nomorTelepon"]
+    "required": []
   }',
  '{
-    "namaLengkap": { "ui:widget": "text" },
-    "email": { "ui:widget": "email" },
-    "industri": { "ui:widget": "select" },
-    "bagaimanaTahu": { "ui:widget": "radio" },
+    "sumberInformasi": { "ui:widget": "radio" },
     "ekspektasi": { "ui:widget": "textarea" }
+  }',
+ true),
+
+('tpl-reg-detailed', 'Registrasi Lengkap', 'Pertanyaan registrasi: sumber informasi, industri, dan ekspektasi', 'registration',
+ '{
+    "type": "object",
+    "title": "Pertanyaan Registrasi",
+    "properties": {
+      "sumberInformasi": {
+        "type": "string",
+        "title": "Bagaimana Anda mengetahui event ini?",
+        "enum": ["Media Sosial", "Email", "Rekomendasi Teman", "Website", "Lainnya"]
+      },
+      "topikTertarik": {
+        "type": "string",
+        "title": "Topik mana yang paling Anda minati?",
+        "enum": ["AI & Machine Learning", "Cloud Native", "DevOps", "Data Engineering", "Security", "Lainnya"]
+      },
+      "ekspektasi": { "type": "string", "title": "Apa yang Anda harapkan dari event ini?" },
+      "pertanyaanKhusus": { "type": "string", "title": "Apakah ada pertanyaan khusus untuk pembicara?" }
+    },
+    "required": []
+  }',
+ '{
+    "sumberInformasi": { "ui:widget": "radio" },
+    "topikTertarik": { "ui:widget": "checkboxes" },
+    "ekspektasi": { "ui:widget": "textarea" },
+    "pertanyaanKhusus": { "ui:widget": "textarea" }
   }',
  true),
 
