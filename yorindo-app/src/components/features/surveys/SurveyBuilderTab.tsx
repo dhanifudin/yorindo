@@ -215,11 +215,11 @@ export function SurveyBuilderTab({
       </div>
     )
 
-  const isDisabled = type === 'post-event' && !postSurveyEnabled
+  const isPostEvent = type === 'post-event'
 
   return (
     <div className="space-y-6">
-      {type === 'post-event' && (
+      {isPostEvent && (
         <div className="flex items-center justify-between p-4 bg-accent/50 border border-accent rounded-xl">
           <div className="space-y-0.5">
             <Label className="text-base font-semibold">
@@ -236,7 +236,7 @@ export function SurveyBuilderTab({
         </div>
       )}
 
-      <div className={`space-y-6 ${isDisabled ? 'opacity-50 pointer-events-none' : ''}`}>
+      <div className="space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-4 sticky top-0 bg-background/95 backdrop-blur z-20 py-3 px-1">
           <div className="flex items-center gap-2">
             <Select value={selectedType} onValueChange={(val) => setSelectedType(val as SurveyFieldType)} disabled={readOnly}>

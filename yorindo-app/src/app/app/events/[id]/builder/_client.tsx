@@ -205,15 +205,15 @@ export default function SurveyBuilderClient({ id }: SurveyBuilderClientProps) {
           )}
         </nav>
 
-        {/* Post-Event Survey — always editable when enabled */}
+        {/* Post-Event Survey — always editable */}
         <TabsContent value="post-event" className="m-0 focus-visible:outline-none">
           <SurveyBuilderTab
             eventId={id}
             type="post-event"
-            postSurveyEnabled={event?.postSurveyEnabled}
+            postSurveyEnabled={event?.postSurveyEnabled ?? false}
             onTogglePostSurvey={(enabled) => togglePostSurveyMutation.mutate(enabled)}
             onPreview={handlePreview}
-            readOnly={!event?.postSurveyEnabled}
+            readOnly={false}
           />
         </TabsContent>
 
