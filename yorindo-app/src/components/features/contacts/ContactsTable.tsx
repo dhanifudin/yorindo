@@ -34,6 +34,8 @@ import { toast } from 'sonner'
 const FLAG_LABELS: Record<NonNullable<FlagCategory>, { label: string; className: string }> = {
   'invalid-data': { label: 'Data Invalid', className: 'bg-yellow-100 text-yellow-700' },
   duplicate: { label: 'Duplikat', className: 'bg-muted text-muted-foreground' },
+  'industry-unmatched': { label: 'Industri Tidak Cocok', className: 'bg-orange-100 text-orange-700' },
+  'jobtitle-unmatched': { label: 'Jabatan Tidak Cocok', className: 'bg-blue-100 text-blue-700' },
 }
 
 const STATUS_BADGE: Record<ContactHistoryItem['status'], string> = {

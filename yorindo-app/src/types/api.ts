@@ -1,7 +1,7 @@
 // FE-owned types — derived from openapi.yaml (Story 1.4).
 // BE adopts these shapes when implementing; do NOT auto-generate from spec.
 
-export type FlagCategory = 'invalid-data' | 'duplicate' | null
+export type FlagCategory = 'invalid-data' | 'duplicate' | 'industry-unmatched' | 'jobtitle-unmatched' | null
 
 export interface Contact {
   id: string
