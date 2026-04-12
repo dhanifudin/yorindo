@@ -6919,6 +6919,95 @@ paths:
                   total: { type: integer }
         '500':
           description: Sync failed
+  /surveys/templates:
+    get:
+      summary: List survey templates
+      operationId: listSurveyTemplates
+      tags: [Survey Templates]
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - in: query
+          name: type
+          schema: { type: string, enum: [registration, post-event] }
+      responses:
+        '200':
+          description: Template list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+    post:
+      summary: Save survey as template (admin only)
+      operationId: saveSurveyAsTemplate
+      tags: [Survey Templates]
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, surveyType, schema]
+              properties:
+                name: { type: string }
+                description: { type: string }
+                surveyType: { type: string, enum: [registration, post-event] }
+                schema: { type: object }
+                uiSchema: { type: object }
+      responses:
+        '201': { description: Template created }
+  /events/{id}/surveys/{type}/from-event:
+    get:
+      summary: Preview survey from another event
+      operationId: previewSurveyFromEvent
+      tags: [Surveys]
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+        - in: path
+          name: type
+          required: true
+          schema: { type: string, enum: [registration, post-event] }
+        - in: query
+          name: sourceEventId
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Survey schema from source event
+    put:
+      summary: Copy survey from another event (admin only)
+      operationId: copySurveyFromEvent
+      tags: [Surveys]
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+        - in: path
+          name: type
+          required: true
+          schema: { type: string, enum: [registration, post-event] }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sourceEventId]
+              properties:
+                sourceEventId: { type: string }
+      responses:
+        '200': { description: Survey copied }
 tags:
   - name: Health
     description: Service health check
@@ -6964,3 +7053,5 @@ tags:
     description: Contact industry/job title normalization
   - name: Cities
     description: Indonesian city/province data management
+  - name: Survey Templates
+    description: Reusable survey templates

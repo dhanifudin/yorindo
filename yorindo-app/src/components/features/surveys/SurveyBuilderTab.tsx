@@ -22,6 +22,7 @@ import type { SurveyField, SurveyFieldType } from '@/types/surveys'
 import { useSurveySchema, useSaveSurveySchema } from '@/hooks/useSurveys'
 import { buildSurveySchema, schemaToFields } from './surveySchemaBuilder'
 import { SurveyFieldEditor } from './SurveyFieldEditor'
+import { SurveyTemplatePicker } from './SurveyTemplatePicker'
 import { Button } from '@/components/ui/button'
 import {
   Select,
@@ -30,7 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Plus, Save, Eye, Loader2, AlertCircle } from 'lucide-react'
+import { Plus, Save, Eye, Loader2, AlertCircle, Copy } from 'lucide-react'
 import { makeMockCuid2 } from '@/mocks/handlers/id'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
@@ -97,6 +98,7 @@ export function SurveyBuilderTab({
   readOnly = false,
 }: SurveyBuilderTabProps) {
   const [selectedType, setSelectedType] = useState<SurveyFieldType>('text')
+  const [showTemplatePicker, setShowTemplatePicker] = useState(false)
 
   const { data: schema, isLoading, isError } = useSurveySchema(eventId, type)
   const saveMutation = useSaveSurveySchema(eventId)
@@ -166,6 +168,25 @@ export function SurveyBuilderTab({
         const newIndex = items.findIndex((i) => i.id === over.id)
         return arrayMove(items, oldIndex, newIndex)
       })
+    }
+  }
+
+  const handleSelectTemplate = (s: Record<string, unknown>, u: Record<string, unknown>) => {
+    const newFields = schemaToFields(s, u)
+    setFields(newFields)
+    setShowTemplatePicker(false)
+  }
+
+  const handleSelectFromEvent = async (sourceEventId: string) => {
+    try {
+      const res = await fetch(`/api/events/${eventId}/surveys/${type}/from-event?sourceEventId=${sourceEventId}`)
+      if (!res.ok) throw new Error('Failed to copy')
+      const data = await res.json()
+      const newFields = schemaToFields(data.schema, data.uiSchema)
+      setFields(newFields)
+      setShowTemplatePicker(false)
+    } catch {
+      // Error handled by API response
     }
   }
 
@@ -239,6 +260,9 @@ export function SurveyBuilderTab({
             <Button variant="outline" size="sm" onClick={() => onPreview(fields)}>
               <Eye size={16} className="mr-1" /> Preview
             </Button>
+            <Button variant="outline" size="sm" onClick={() => setShowTemplatePicker(true)} disabled={readOnly}>
+              <Copy size={16} className="mr-1" /> Gunakan Desain
+            </Button>
             <Button
               size="sm"
               onClick={handleSave}
@@ -278,6 +302,15 @@ export function SurveyBuilderTab({
           </DndContext>
         )}
       </div>
+
+      <SurveyTemplatePicker
+        open={showTemplatePicker}
+        onOpenChange={setShowTemplatePicker}
+        surveyType={type}
+        currentEventId={eventId}
+        onSelectTemplate={handleSelectTemplate}
+        onSelectFromEvent={handleSelectFromEvent}
+      />
     </div>
   )
 }

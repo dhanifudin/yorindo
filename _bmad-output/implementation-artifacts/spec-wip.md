@@ -1,5 +1,5 @@
 ---
-title: 'Standard Industries/Job Titles + Contact Normalization'
+title: 'Survey Builder Improvements — Copy from previous, templates, metadata'
 type: 'feature'
 created: '2026-04-12'
 status: 'in-progress'
@@ -9,52 +9,48 @@ status: 'in-progress'
 
 ## Intent
 
-**Problem:** Contacts imported via ETL have free-text `serviceType` and `jobTitle` values with inconsistent spellings (e.g., "IT", "Teknologi", "Teknologi Informasi" all mean the same). Admins cannot easily normalize or segment contacts by industry/job title.
+**Problem:** Admins must rebuild surveys from scratch for each event. They cannot copy surveys from previous events or use pre-built templates.
 
 **Approach:**
-1. Admin manages standard industries and job titles from Settings UI
-2. System flags contacts whose `serviceType`/`jobTitle` don't match any standard value
-3. Admin reviews flagged contacts, accepts suggestions, or bulk-normalizes
+1. Add "Copy from Previous Event" button in survey builder
+2. Add survey templates (pre-built presets for common use cases)
+3. Add survey-level metadata (title, description) editing
+4. Add "Save as Template" to reuse across events
+5. Add validation before save
 
 ## Boundaries & Constraints
 
 **Always:**
-- Standard values stored in `industries` and `job_titles` tables (already exist)
-- Fuzzy match threshold: 80% (Jaro-Winkler)
-- Flagged contacts use `flagCategory` enum extension
-- Admin-only CRUD for standards
+- Templates stored in new `survey_templates` table
+- Copy operation clones schema + uiSchema completely
+- Registration survey remains locked after draft status
 
 **Ask First:**
-- If AI-based matching is needed beyond Jaro-Winkler
+- If AI-generated survey suggestions are needed
 
 **Never:**
-- Do not break existing free-text behavior — contacts still accept any value
-- Do not auto-reject unmatched contacts — only flag for review
+- Do not break existing survey data
+- Do not allow editing registration survey after event leaves draft
 
 </frozen-after-approval>
 
 ## Code Map
 
-- `migrations/021_contact_normalize_flags.sql` — Extend flagCategory enum
-- `src/routes/industries.routes.ts` — CRUD for admin managing industries
-- `src/routes/job-titles.routes.ts` — CRUD for admin managing job titles
-- `src/services/NormalizationService.ts` — Fuzzy matching + flagging logic
-- `src/components/settings/StandardValuesManager.tsx` — Settings UI
-- `src/components/contacts/NormalizationTab.tsx` — Contacts normalize tab
-- `src/hooks/useIndustries.ts`, `src/hooks/useJobTitles.ts` — Frontend hooks
+- `yorindo-api/migrations/023_survey_templates.sql` — New table for reusable templates
+- `yorindo-api/src/routes/surveys.routes.ts` — Add copy-from-event, list-templates, save-as-template endpoints
+- `yorindo-app/src/components/features/surveys/SurveyBuilderTab.tsx` — Add template picker, copy dialog, metadata editor
+- `yorindo-app/src/components/features/surveys/SurveyTemplateDialog.tsx` — New dialog component
 
 ## Tasks & Acceptance
 
-- [ ] Migration 021 — Add 'industry-unmatched' and 'jobtitle-unmatched' to flagCategory
-- [ ] Industries CRUD routes — GET/POST/PATCH/DELETE /api/industries
-- [ ] Job Titles CRUD routes — GET/POST/PATCH/DELETE /api/job-titles
-- [ ] NormalizationService — fuzzy match serviceType/jobTitle against standards
-- [ ] ETL hook — flag contacts on import when no match found
-- [ ] GET /api/contacts/flagged?type=industry-unmatched|jobtitle-unmatched
-- [ ] PATCH /api/contacts/:id/normalize — apply suggested match
-- [ ] POST /api/contacts/bulk-normalize — normalize multiple at once
-- [ ] Settings UI — manage standard industries and job titles
-- [ ] Contacts UI — "Perlu Normalisasi" tab with suggestions and bulk actions
+- [ ] Migration 023: Create survey_templates table
+- [ ] GET /api/surveys/templates — List available templates
+- [ ] POST /api/surveys/templates — Save current survey as template
+- [ ] GET /api/events/:id/surveys/:type/from-event?sourceId=... — Copy from another event
+- [ ] Survey builder: "Copy from Previous" button with event selector
+- [ ] Survey builder: "Use Template" button with template picker
+- [ ] Survey builder: Survey title/description editor
+- [ ] Survey builder: Validation on save (required fields, labels, options)
 
 ## Verification
 

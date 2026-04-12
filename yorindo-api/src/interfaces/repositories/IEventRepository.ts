@@ -7,6 +7,7 @@ export interface EventFilters {
   city?: string
   search?: string
   deleted?: 'exclude' | 'only'
+  hasSurvey?: 'registration' | 'post-event'
 }
 
 export interface IEventRepository {

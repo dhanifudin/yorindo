@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
+import { createId } from '@paralleldrive/cuid2'
 import {
   auditLogRepository,
   contactRepository,
@@ -7,6 +8,7 @@ import {
   registrationRepository,
   surveyRepository,
 } from '../container.js'
+import { getPool } from '../lib/postgres.js'
 import { requireAdmin, requireAuth, type JwtPayload } from '../middleware/auth.js'
 import type { SurveyType } from '../types/domain.js'
 import { SurveyAggregationService } from '../services/SurveyAggregationService.js'
@@ -293,5 +295,109 @@ export const surveysRoutes: FastifyPluginAsync = async (fastify) => {
     reply.header('Content-Disposition', `attachment; filename="survey-responses-${query.data.type}-${params.data.id}.csv"`)
 
     return reply.status(200).send(csvContent)
+  })
+
+  // ── GET /api/surveys/templates ──────────────────────────────────────────
+  fastify.get('/api/surveys/templates', { preHandler: [requireAuth] }, async (request, reply) => {
+    const { type } = request.query as { type?: string }
+    const pool = getPool()
+
+    let query = 'SELECT id, name, description, survey_type, schema, ui_schema, is_builtin, created_at FROM survey_templates'
+    const params: unknown[] = []
+
+    if (type) {
+      query += ' WHERE survey_type = $1'
+      params.push(type)
+    }
+
+    query += ' ORDER BY is_builtin DESC, created_at DESC'
+
+    const { rows } = await pool.query(query, params)
+    return reply.status(200).send({ data: rows })
+  })
+
+  // ── POST /api/surveys/templates ─────────────────────────────────────────
+  fastify.post('/api/surveys/templates', { preHandler: [requireAuth, requireAdmin] }, async (request, reply) => {
+    const body = z.object({
+      name: z.string().min(1),
+      description: z.string().optional(),
+      surveyType: z.enum(['registration', 'post-event']),
+      schema: z.record(z.string(), z.any()),
+      uiSchema: z.record(z.string(), z.any()).optional(),
+    }).safeParse(request.body)
+
+    if (!body.success) {
+      return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: 'Invalid payload', details: body.error.issues } })
+    }
+
+    const pool = getPool()
+    const id = createId()
+    const user = request.user as JwtPayload
+
+    await pool.query(
+      `INSERT INTO survey_templates (id, name, description, survey_type, schema, ui_schema, is_builtin, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, FALSE, $7)`,
+      [id, body.data.name, body.data.description ?? null, body.data.surveyType, JSON.stringify(body.data.schema), JSON.stringify(body.data.uiSchema ?? {}), user.sub],
+    )
+
+    return reply.status(201).send({ id, name: body.data.name })
+  })
+
+  // ── GET /api/events/:id/surveys/:type/from-event ────────────────────────
+  fastify.get('/api/events/:id/surveys/:type/from-event', { preHandler: [requireAuth] }, async (request, reply) => {
+    const params = EventIdParamsSchema.extend({ type: SurveyTypeParamSchema }).safeParse(request.params)
+    const { sourceEventId } = request.query as { sourceEventId?: string }
+
+    if (!params.success || !sourceEventId) {
+      return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: 'sourceEventId required', details: [] } })
+    }
+
+    const event = await requireEventOr404(reply, params.data.id)
+    if (!event) return
+
+    const sourceEvent = await eventRepository.findById(sourceEventId)
+    if (!sourceEvent) {
+      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Source event not found', details: [] } })
+    }
+
+    const schema = await surveyRepository.findByEventId(sourceEventId, params.data.type)
+    if (!schema) {
+      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Source event has no survey of this type', details: [] } })
+    }
+
+    return reply.status(200).send({ schema: schema.schema, uiSchema: schema.uiSchema, sourceEventName: sourceEvent.name })
+  })
+
+  // ── PUT /api/events/:id/surveys/:type/from-event ────────────────────────
+  fastify.put('/api/events/:id/surveys/:type/from-event', { preHandler: [requireAuth, requireAdmin] }, async (request, reply) => {
+    const params = EventIdParamsSchema.extend({ type: SurveyTypeParamSchema }).safeParse(request.params)
+    const body = z.object({ sourceEventId: z.string().min(1) }).safeParse(request.body)
+
+    if (!params.success || !body.success) {
+      return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: 'Invalid payload', details: [] } })
+    }
+
+    const event = await requireEventOr404(reply, params.data.id)
+    if (!event) return
+
+    const sourceEvent = await eventRepository.findById(body.data.sourceEventId)
+    if (!sourceEvent) {
+      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Source event not found', details: [] } })
+    }
+
+    const schema = await surveyRepository.findByEventId(body.data.sourceEventId, params.data.type)
+    if (!schema) {
+      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Source event has no survey of this type', details: [] } })
+    }
+
+    const saved = await surveyRepository.upsert(params.data.id, params.data.type, {
+      ...schema,
+      id: createId(),
+      eventId: params.data.id,
+    })
+
+    const responseBody = { schema: saved.schema ?? {}, uiSchema: saved.uiSchema ?? {} }
+    validateOpenApiResponse({ path: '/events/{id}/surveys/{type}', method: 'put', status: 200, body: responseBody })
+    return reply.status(200).send(responseBody)
   })
 }
