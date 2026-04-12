@@ -65,9 +65,21 @@ export class BullQueueService implements IQueueService {
     else if (state === 'failed') status = 'failed'
     else if (state === 'delayed' || state === 'waiting' || state === 'waiting-children') status = 'queued'
 
-    return {
+    const info: JobInfo = {
       status,
       progress: job.progress,
     }
+
+    // Include the result data from completed jobs (ETL stats)
+    if (state === 'completed' && job.returnvalue) {
+      const result = job.returnvalue as Record<string, unknown>
+      info.totalRows = (result.processed as number) ?? undefined
+      info.rowsProcessed = (result.processed as number) ?? undefined
+      info.flaggedRows = (result.flagged as number) ?? undefined
+      info.failedRows = (result.failed as number) ?? undefined
+      info.upsertedRows = (result.upserted as number) ?? undefined
+    }
+
+    return info
   }
 }

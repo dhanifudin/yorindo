@@ -10,6 +10,12 @@ export type JobStatus = 'queued' | 'processing' | 'completed' | 'failed'
 export interface JobInfo {
   status: JobStatus
   progress?: unknown
+  // ETL-specific fields (populated when job completes)
+  totalRows?: number
+  rowsProcessed?: number
+  flaggedRows?: number
+  failedRows?: number
+  upsertedRows?: number
 }
 
 export interface IQueueService {

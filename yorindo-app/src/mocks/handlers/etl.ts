@@ -1,7 +1,7 @@
 import { http, HttpResponse, delay } from 'msw'
 import { faker } from '@faker-js/faker'
 
-interface EtlJob {
+interface ImportJob {
   jobId: string
   status: 'queued' | 'processing' | 'completed' | 'failed'
   progress?: number
@@ -13,7 +13,7 @@ interface EtlJob {
   error?: string
 }
 
-const jobsStore: Map<string, EtlJob> = new Map()
+const jobsStore: Map<string, ImportJob> = new Map()
 
 // Simulate job progression
 function advanceJob(jobId: string) {
@@ -35,7 +35,7 @@ function advanceJob(jobId: string) {
   }
 }
 
-export const etlHandlers = [
+export const importHandlers = [
   http.post('/api/etl/upload', async ({ request }) => {
     await delay(800)
     const contentType = request.headers.get('content-type') ?? ''
@@ -72,8 +72,8 @@ export const etlHandlers = [
       )
     }
 
-    const jobId = `etl:upload:${faker.number.int({ min: 1000, max: 9999 })}`
-    const job: EtlJob = {
+    const jobId = `import:${faker.number.int({ min: 1000, max: 9999 })}`
+    const job: ImportJob = {
       jobId,
       status: 'queued',
       progress: 0,

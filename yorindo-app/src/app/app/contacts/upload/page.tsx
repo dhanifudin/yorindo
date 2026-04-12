@@ -20,7 +20,7 @@ import { AlertCircle, CheckCircle2, FileSpreadsheet, Upload } from 'lucide-react
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface EtlJob {
+interface ImportJob {
   jobId: string
   status: 'queued' | 'processing' | 'completed' | 'failed'
   progress?: number
@@ -42,7 +42,7 @@ interface PreviewData {
 async function uploadFile(file: File): Promise<{ jobId: string }> {
   const form = new FormData()
   form.append('file', file)
-  form.append('uploadSource', 'etl_import')
+  form.append('uploadSource', 'contact_import')
 
   const res = await fetch('/api/etl/upload', { method: 'POST', body: form })
   if (!res.ok) {
@@ -52,7 +52,7 @@ async function uploadFile(file: File): Promise<{ jobId: string }> {
   return res.json()
 }
 
-async function fetchJobStatus(jobId: string): Promise<EtlJob> {
+async function fetchJobStatus(jobId: string): Promise<ImportJob> {
   const res = await fetch(`/api/etl/jobs/${encodeURIComponent(jobId)}`)
   if (!res.ok) throw new Error(`Gagal mengambil status job (${res.status})`)
   return res.json()
@@ -66,13 +66,13 @@ function formatSize(bytes: number) {
     : `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-const STATUS_BADGE: Record<EtlJob['status'], string> = {
+const STATUS_BADGE: Record<ImportJob['status'], string> = {
   queued:     'bg-muted text-muted-foreground',
   processing: 'bg-blue-100 text-blue-700',
   completed:  'bg-green-100 text-green-700',
   failed:     'bg-destructive/10 text-destructive',
 }
-const STATUS_LABEL: Record<EtlJob['status'], string> = {
+const STATUS_LABEL: Record<ImportJob['status'], string> = {
   queued:     'Dalam Antrian',
   processing: 'Diproses',
   completed:  'Selesai',
@@ -89,7 +89,7 @@ export default function UploadPage() {
   const [preview, setPreview]                 = useState<PreviewData | null>(null)
 
   const [activeJobId, setActiveJobId]         = useState<string | null>(null)
-  const [job, setJob]                         = useState<EtlJob | null>(null)
+  const [job, setJob]                         = useState<ImportJob | null>(null)
 
   const inputRef = useRef<HTMLInputElement>(null)
   const pollRef  = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -413,7 +413,7 @@ export default function UploadPage() {
           )}
 
           <Button onClick={handleUpload} disabled={!selectedFile || uploading || !allFieldsMapped} className="w-full">
-            {uploading ? 'Mengunggah…' : 'Upload & Proses ETL'}
+            {uploading ? 'Mengunggah…' : 'Upload & Proses Data'}
           </Button>
 
           {!allFieldsMapped && selectedFile && (
@@ -424,12 +424,12 @@ export default function UploadPage() {
         </CardContent>
       </Card>
 
-      {/* ETL job status */}
+      {/* Import job status */}
       {job && (
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-base font-semibold">Status Job ETL</h2>
+              <h2 className="text-base font-semibold">Status Pemrosesan</h2>
               <Badge className={STATUS_BADGE[job.status]}>{STATUS_LABEL[job.status]}</Badge>
             </div>
             <p className="text-xs text-muted-foreground font-mono break-all">{job.jobId}</p>
@@ -451,14 +451,11 @@ export default function UploadPage() {
             {job.status === 'completed' && (
               <div className="space-y-1 text-sm">
                 {job.totalRows !== undefined && <p>Total baris: <strong>{job.totalRows}</strong></p>}
-                {job.rowsProcessed !== undefined && <p>Diproses: <strong>{job.rowsProcessed}</strong></p>}
-                <p>Ditandai (perlu review): <strong>{job.flaggedRows ?? 0}</strong></p>
-                {(job.flaggedRows ?? 0) > 0 && (
-                  <Link href="/app/contacts/flagged" className="text-primary underline text-sm block mt-1">
-                    Review record yang ditandai →
-                  </Link>
+                {job.rowsProcessed !== undefined && <p>Berhasil diimpor: <strong>{job.rowsProcessed}</strong></p>}
+                {job.flaggedRows !== undefined && job.flaggedRows > 0 && (
+                  <p>Data dengan catatan (flag): <strong>{job.flaggedRows}</strong></p>
                 )}
-                <Link href="/app/contacts" className="text-primary underline text-sm block">
+                <Link href="/app/contacts" className="text-primary underline text-sm block mt-2">
                   Lihat database kontak →
                 </Link>
               </div>
