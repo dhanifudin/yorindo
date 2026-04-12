@@ -195,15 +195,67 @@ export function ContactsTable({
           aria-label="Pilih semua"
         />
       ),
-      cell: () => null,
+      cell: ({ row }) => (
+        <Checkbox
+          checked={row.getIsSelected()}
+          onCheckedChange={(v) => row.toggleSelected(!!v)}
+          onClick={(e) => e.stopPropagation()}
+          aria-label="Pilih baris"
+        />
+      ),
       enableSorting: false,
       enableHiding: false,
       size: 40,
     },
     {
-      id: 'contact-info',
-      header: 'Informasi Kontak',
-      cell: () => null,
+      accessorKey: 'name',
+      header: 'Nama',
+      cell: ({ row }) => {
+        const contact = row.original
+        return (
+          <div>
+            <div className="font-medium text-sm truncate">{contact.name}</div>
+            <div className="text-xs text-muted-foreground truncate">{contact.email || <span className="italic">Email kosong</span>}</div>
+          </div>
+        )
+      },
+    },
+    {
+      accessorKey: 'phone',
+      header: 'Telepon',
+      cell: ({ row }) => {
+        const contact = row.original
+        return (
+          <div>
+            <div className="text-sm truncate">{contact.phone || <span className="italic">—</span>}</div>
+            <div className="text-xs text-muted-foreground truncate">{contact.company || <span className="italic">Perusahaan kosong</span>}</div>
+          </div>
+        )
+      },
+    },
+    {
+      accessorKey: 'serviceType',
+      header: 'Industri',
+      cell: ({ getValue }) => {
+        const val = getValue() as string | null | undefined
+        return <span className="text-sm">{val || <span className="italic">—</span>}</span>
+      },
+    },
+    {
+      accessorKey: 'city',
+      header: 'Kota',
+      cell: ({ getValue }) => {
+        const val = getValue() as string | null | undefined
+        return <span className="text-sm">{val || <span className="italic">—</span>}</span>
+      },
+    },
+    {
+      accessorKey: 'jobTitle',
+      header: 'Jabatan',
+      cell: ({ getValue }) => {
+        const val = getValue() as string | null | undefined
+        return <span className="text-sm">{val || <span className="italic">—</span>}</span>
+      },
     },
   ]
 
@@ -219,6 +271,16 @@ export function ContactsTable({
     if (!contact.serviceType) missing.push('serviceType')
     if (!contact.jobTitle) missing.push('jobTitle')
     return missing
+  }
+
+  // Calculate completeness percentage
+  const getCompleteness = (contact: Contact) => {
+    const fields = ['name', 'email', 'phone', 'city', 'company', 'serviceType', 'jobTitle']
+    const filled = fields.filter(f => {
+      const val = contact[f as keyof Contact]
+      return val && val !== '' && val !== null
+    }).length
+    return filled / fields.length
   }
 
   const handleResolveDuplicates = () => {
@@ -686,10 +748,10 @@ export function ContactsTable({
           ) : (
             table.getRowModel().rows.map((row) => {
               const contact = row.original
-              const missing = getMissingFields(contact)
-              const hasMissing = missing.length > 0
-              const hasManyMissing = missing.length >= 3
-              const rowBg = hasManyMissing ? 'bg-red-50 active:bg-red-100' : hasMissing ? 'bg-yellow-50 active:bg-yellow-100' : ''
+              const completeness = getCompleteness(contact)
+              const hasLowCompleteness = completeness < 0.5
+              const hasMediumCompleteness = completeness >= 0.5 && completeness < 0.8
+              const rowBg = hasLowCompleteness ? 'bg-red-50 active:bg-red-100' : hasMediumCompleteness ? 'bg-yellow-50 active:bg-yellow-100' : ''
 
               return (
                 <div
@@ -704,7 +766,6 @@ export function ContactsTable({
                       setDetailContact(contact)
                     }
                   }}
-                  title={hasMissing ? `Field kosong: ${missing.join(', ')}` : undefined}
                 >
                   {selectMode && (
                     <Checkbox
@@ -744,96 +805,52 @@ export function ContactsTable({
       <div className="rounded-md border hidden md:block">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead className="w-[40px]">
-                <Checkbox
-                  checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && 'indeterminate')}
-                  onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-                  aria-label="Pilih semua"
-                />
-              </TableHead>
-              <TableHead>Informasi Kontak</TableHead>
-            </TableRow>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => (
+                  <TableHead key={header.id}>
+                    {flexRender(header.column.columnDef.header, header.getContext())}
+                  </TableHead>
+                ))}
+              </TableRow>
+            ))}
           </TableHeader>
           <TableBody>
             {isLoading ? (
               Array.from({ length: SKELETON_ROWS }).map((_, i) => (
                 <TableRow key={i}>
-                  <TableCell className="w-[40px]" />
-                  <TableCell className="py-2.5 px-4">
-                    <div className="space-y-2">
-                      <div className="h-4 bg-muted rounded animate-pulse w-1/3" />
-                      <div className="h-3 bg-muted rounded animate-pulse w-2/3" />
-                    </div>
-                  </TableCell>
+                  {columns.map((_, j) => (
+                    <TableCell key={j}>
+                      <div className="h-4 bg-muted rounded animate-pulse" />
+                    </TableCell>
+                  ))}
                 </TableRow>
               ))
             ) : table.getRowModel().rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={2} className="py-8 text-center text-muted-foreground">
+                <TableCell colSpan={columns.length} className="py-8 text-center text-muted-foreground">
                   Tidak ada data kontak.
                 </TableCell>
               </TableRow>
             ) : (
               table.getRowModel().rows.map((row) => {
                 const contact = row.original
-                const missing = getMissingFields(contact)
-                const hasMissing = missing.length > 0
-                const hasManyMissing = missing.length >= 3
-                const rowBg = hasManyMissing ? 'bg-red-50' : hasMissing ? 'bg-yellow-50' : ''
+                const completeness = getCompleteness(contact)
+                const hasLowCompleteness = completeness < 0.5
+                const hasMediumCompleteness = completeness >= 0.5 && completeness < 0.8
+                const rowBg = hasLowCompleteness ? 'bg-red-50' : hasMediumCompleteness ? 'bg-yellow-50' : ''
 
                 return (
                   <TableRow
                     key={row.id}
-                    className={`${row.getIsSelected() ? 'bg-muted/30' : rowBg}`}
+                    className={`cursor-pointer ${row.getIsSelected() ? 'bg-muted/30' : rowBg}`}
                     onClick={() => setDetailContact(row.original)}
-                    title={hasMissing ? `Field kosong: ${missing.join(', ')}` : undefined}
                   >
-                    <TableCell className="w-[40px]">
-                      <Checkbox
-                        checked={row.getIsSelected()}
-                        onCheckedChange={(v) => row.toggleSelected(!!v)}
-                        onClick={(e) => e.stopPropagation()}
-                        aria-label="Pilih kontak"
-                      />
-                    </TableCell>
-                    <TableCell colSpan={1} className="py-2.5 px-4">
-                      {/* Row 1: Name + Badge */}
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <span className="font-medium text-sm">{contact.name}</span>
-                        {contact.flagCategory && (
-                          <Badge className={FLAG_LABELS[contact.flagCategory].className + ' text-[10px] px-1.5 py-0'}>
-                            {FLAG_LABELS[contact.flagCategory].label}
-                          </Badge>
-                        )}
-                      </div>
-                      {/* Row 2: Email · Phone · Company · Industry */}
-                      <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1">
-                        {contact.email ? (
-                          <span className="truncate max-w-[180px]">{contact.email}</span>
-                        ) : (
-                          <span className="italic">Email kosong</span>
-                        )}
-                        <span className="text-muted-foreground/40">·</span>
-                        {contact.phone ? (
-                          <span className="truncate max-w-[140px]">{contact.phone}</span>
-                        ) : (
-                          <span className="italic">Telepon kosong</span>
-                        )}
-                        <span className="text-muted-foreground/40">·</span>
-                        {contact.company ? (
-                          <span className="truncate max-w-[140px]">{contact.company}</span>
-                        ) : (
-                          <span className="italic">Perusahaan kosong</span>
-                        )}
-                        <span className="text-muted-foreground/40">·</span>
-                        {contact.serviceType ? (
-                          <span>{contact.serviceType}</span>
-                        ) : (
-                          <span className="italic">Industri kosong</span>
-                        )}
-                      </div>
-                    </TableCell>
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id} className="py-3">
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
                   </TableRow>
                 )
               })
