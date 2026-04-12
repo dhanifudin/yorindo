@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { toast } from 'sonner'
+import { getUserFriendlyError } from '@/lib/error-messages'
 import {
   Dialog,
   DialogContent,
@@ -13,7 +15,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Send } from 'lucide-react'
-import { toast } from 'sonner'
 
 interface BlastEventDialogProps {
   open: boolean
@@ -81,7 +82,7 @@ export function BlastEventDialog({
       handleOpenChange(false)
       onSuccess?.()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Blast gagal, coba lagi')
+      toast.error(getUserFriendlyError(err))
     } finally {
       setIsBlasting(false)
     }

@@ -1,16 +1,20 @@
 'use client'
 
-import { use, useState } from 'react'
+import { use, useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Settings } from 'lucide-react'
 import { AudienceTargetList } from '@/components/undangan/AudienceTargetList'
 import { BlastHistoryList, type BlastRecord } from '@/components/undangan/BlastHistoryList'
 import { BlastConfigSheet } from '@/components/undangan/BlastConfigSheet'
 import { BlastProgressBar, type BlastJobStatus } from '@/components/undangan/BlastProgressBar'
 import { EmergencyBlastSheet } from '@/components/undangan/EmergencyBlastSheet'
 import type { Event, AudiencePreviewResponse } from '@/types/api'
+import { useEmailConfig } from '@/hooks/useEmailConfig'
 
 interface BlastPageProps {
   params: Promise<{ id: string }>
@@ -27,10 +31,21 @@ interface Template {
 
 export default function BlastPage({ params }: BlastPageProps) {
   const { id } = use(params)
+  const router = useRouter()
   const [sheetOpen, setSheetOpen] = useState(false)
   const [showEmergencySheet, setShowEmergencySheet] = useState(false)
   const [activeJobId, setActiveJobId] = useState<string | null>(null)
   const [selectedContactIds, setSelectedContactIds] = useState<Set<string>>(new Set())
+
+  // Check email provider configuration
+  const { data: emailConfig, isLoading: emailConfigLoading } = useEmailConfig()
+
+  // Redirect to settings if email is not configured
+  useEffect(() => {
+    if (emailConfig && !emailConfig.configured && !emailConfigLoading) {
+      // Don't redirect immediately, show alert first
+    }
+  }, [emailConfig, emailConfigLoading])
 
   // Fetch event for targetCriteria
   const { data: event } = useQuery<Event>({
@@ -100,6 +115,24 @@ export default function BlastPage({ params }: BlastPageProps) {
 
   return (
     <div className="space-y-4">
+      {/* Email config warning */}
+      {emailConfig && !emailConfig.configured && !emailConfigLoading && (
+        <Alert variant="destructive">
+          <Settings className="h-4 w-4" />
+          <AlertDescription>
+            Provider email belum dikonfigurasi.{' '}
+            <button
+              type="button"
+              onClick={() => router.push('/app/settings')}
+              className="underline font-medium hover:no-underline"
+            >
+              Buka Pengaturan
+            </button>
+            {' '}untuk mengatur provider email sebelum mengirim undangan.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Audience target list with selection */}
       <AudienceTargetList
         contacts={contacts}
@@ -116,7 +149,10 @@ export default function BlastPage({ params }: BlastPageProps) {
             ? `${selectedContactIds.size} kontak dipilih`
             : 'Pilih kontak di atas atau kirim ke semua audiens'}
         </p>
-        <Button onClick={() => setSheetOpen(true)} disabled={audienceLoading}>
+        <Button
+          onClick={() => setSheetOpen(true)}
+          disabled={audienceLoading || (emailConfig ? !emailConfig.configured : false)}
+        >
           Kirim Undangan
         </Button>
       </div>

@@ -15,6 +15,7 @@ import { ContactsTable } from './ContactsTable'
 import { ContactsPagination } from './ContactsPagination'
 import { ActionToolbar } from './ActionToolbar'
 import { BlastModal } from './BlastModal'
+import { useEmailConfig } from '@/hooks/useEmailConfig'
 
 export function ContactsCommandCenter() {
   const [triageMode, setTriageMode] = useState<'flagged' | 'duplicates' | null>(null)
@@ -27,6 +28,7 @@ export function ContactsCommandCenter() {
   const searchParams = useSearchParams()
   const { setFilter } = useFilterStore()
   const { data: contacts } = useContacts()
+  const { data: emailConfig } = useEmailConfig()
 
   const hasFilters = ['serviceType', 'city', 'jobTitle', 'q', 'missingEmail', 'missingPhone', 'flagFilter']
     .some((k) => !!searchParams.get(k))
@@ -132,7 +134,13 @@ export function ContactsCommandCenter() {
         selectedIds={selectedIds}
         selectedNames={selectedNames}
         onClearSelection={handleClearSelection}
-        onOpenBlastModal={() => setBlastModalOpen(true)}
+        onOpenBlastModal={() => {
+          if (emailConfig && !emailConfig.configured) {
+            router.push('/app/settings')
+            return
+          }
+          setBlastModalOpen(true)
+        }}
       />
 
       {(() => {

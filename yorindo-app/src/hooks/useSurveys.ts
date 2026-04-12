@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import type { SurveySchema, SurveyResponsesApiResponse } from '@/types/surveys'
+import { getUserFriendlyError } from '@/lib/error-messages'
 
 // Load a survey schema by type
 export function useSurveySchema(eventId: string | undefined, type: 'registration' | 'post-event') {
@@ -38,7 +39,7 @@ export function useSaveSurveySchema(eventId: string) {
       toast.success('Survei berhasil disimpan')
     },
     onError: (error) => {
-      toast.error(error.message || 'Gagal menyimpan survei')
+      toast.error(getUserFriendlyError(error))
     }
   })
 }

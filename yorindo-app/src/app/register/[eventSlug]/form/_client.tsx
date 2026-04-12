@@ -2,6 +2,7 @@
 
 import { use, useState } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import Form from '@rjsf/shadcn'
 import validator from '@rjsf/validator-ajv8'
 import type { RJSFSchema, UiSchema } from '@rjsf/utils'
@@ -9,9 +10,9 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { getUserFriendlyError } from '@/lib/error-messages'
 import { Label } from '@/components/ui/label'
 import { Combobox } from '@/components/ui/combobox'
-import { toast } from 'sonner'
 import type { Event } from '@/types/api'
 import { MockGoogleAuthDialog } from '@/components/auth/MockGoogleAuthDialog'
 import { GoogleIcon } from '@/components/icons/GoogleIcon'
@@ -120,7 +121,7 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
       setRegId(reg.id)
       setSubmitted(true)
     },
-    onError: (err) => toast.error(err instanceof Error ? err.message : 'Pendaftaran gagal'),
+    onError: (err) => toast.error(getUserFriendlyError(err)),
   })
 
   // phone blur/lookup removed

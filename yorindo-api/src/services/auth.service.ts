@@ -1,4 +1,4 @@
-import bcrypt from 'bcrypt'
+import { compare } from '@node-rs/bcrypt'
 import jwt from 'jsonwebtoken'
 import { createId } from '@paralleldrive/cuid2'
 import type { Redis } from 'ioredis'
@@ -20,7 +20,7 @@ export class AuthService {
       throw { statusCode: 401, code: 'INVALID_CREDENTIALS', message: 'Invalid credentials' }
     }
 
-    const valid = await bcrypt.compare(pass, user.passwordHash)
+    const valid = await compare(pass, user.passwordHash)
     if (!valid) {
       throw { statusCode: 401, code: 'INVALID_CREDENTIALS', message: 'Invalid credentials' }
     }

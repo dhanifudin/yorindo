@@ -6,6 +6,7 @@ import { useVendors, useDeleteVendor } from '@/hooks/useVendors'
 import { VendorForm } from '@/components/features/vendors/VendorForm'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { getUserFriendlyError } from '@/lib/error-messages'
 import {
   Table,
   TableBody,
@@ -91,7 +92,7 @@ export default function VendorsPage() {
         setDeleteTarget(null)
       },
       onError: (err) => {
-        toast.error((err as Error).message)
+        toast.error(getUserFriendlyError(err))
         setDeleteTarget(null)
       },
     })

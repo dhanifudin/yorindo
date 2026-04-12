@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/table'
 import { toast } from 'sonner'
 import { UserPlus, Loader2, Users } from 'lucide-react'
+import { getUserFriendlyError } from '@/lib/error-messages'
 
 const INDUSTRIES = [
   'Otomotif & Suku Cadang (Auto Parts)',
@@ -132,7 +133,7 @@ interface OtsRegistration {
       setHasAutoFilled(false)
     },
     onError: (error: Error) => {
-      toast.error(error.message)
+      toast.error(getUserFriendlyError(error))
     },
   })
 
