@@ -209,7 +209,7 @@ components:
         flagCategory:
           type: string
           nullable: true
-          enum: [invalid-data, duplicate, industry-unmatched, jobtitle-unmatched, null]
+          enum: [invalid-data, duplicate, industry-unmatched, jobtitle-unmatched, "", null]
         completenessScore:
           type: number
           format: float
@@ -513,7 +513,7 @@ components:
             contactFlagCategory:
               type: string
               nullable: true
-              enum: [invalid-data, duplicate, industry-unmatched, jobtitle-unmatched, null]
+              enum: [invalid-data, duplicate, industry-unmatched, jobtitle-unmatched, "", null]
               description: Inherited from contact record; null if no flag
             aiScore:
               type: integer
