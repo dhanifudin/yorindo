@@ -1,9 +1,11 @@
 -- ─────────────────────────────────────────────
 -- Migration 021: Contact Normalization Flags
--- Extends flagCategory enum to include normalization flags
+-- Adds new flag_category values for normalization
+-- Note: flag_category is VARCHAR, not ENUM, so no ALTER TYPE needed
 -- Applied via: npx tsx scripts/migrate.ts
 -- ─────────────────────────────────────────────
 
--- PostgreSQL: add new values to the existing enum
-ALTER TYPE flag_category ADD VALUE IF NOT EXISTS 'industry-unmatched';
-ALTER TYPE flag_category ADD VALUE IF NOT EXISTS 'jobtitle-unmatched';
+-- flag_category is already VARCHAR(50) from migration 001
+-- New values 'industry-unmatched' and 'jobtitle-unmatched' are automatically
+-- accepted since there's no ENUM constraint.
+-- This migration is intentionally empty — it exists for documentation purposes.
