@@ -127,7 +127,7 @@ So that urgent communication can be initiated from the implemented FE path while
 
 As an admin,
 I want the system to exclude suppressed contacts from outbound communications and expose the current suppression-list management flow,
-So that Yorindo remains compliant with participant consent preferences and the implemented suppression model.
+So that EM . U remains compliant with participant consent preferences and the implemented suppression model.
 
 **Acceptance Criteria:**
 

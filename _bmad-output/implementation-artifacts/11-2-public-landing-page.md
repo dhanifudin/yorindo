@@ -6,13 +6,13 @@ Status: review
 
 As a prospective user or event participant,
 I want to see a public landing page at `/`,
-so that I can learn about Yorindo and navigate to login or event registration.
+so that I can learn about EM . U and navigate to login or event registration.
 
 ## Acceptance Criteria
 
 1. `/` renders a fully static public landing page — no authentication required, no API calls.
 2. The landing page uses `PublicShell` layout component (already at `src/components/layout/PublicShell.tsx`).
-3. Hero section includes: product name "Yorindo", a tagline, and a brief description.
+3. Hero section includes: product name "EM . U", a tagline, and a brief description.
 4. Two CTAs in the hero: "Masuk" (`<Link href="/login">`) and "Daftar Event" (placeholder, rendered as a disabled/styled element or `href="#"`).
 5. Features section contains 3–4 highlight cards describing product capabilities.
 6. Footer includes: copyright text and a link to `/data-rights`.
@@ -115,9 +115,9 @@ This ensures Next.js renders it as `○ (Static)` in build output — no JS bund
 All user-facing copy should be in Indonesian, consistent with the rest of the app.
 
 **Hero section:**
-- Product name: **Yorindo**
+- Product name: **EM . U**
 - Tagline: e.g., "Platform Manajemen Event Profesional"
-- Description: 1-2 sentences about what Yorindo does
+- Description: 1-2 sentences about what EM . U does
 - CTAs:
   - Primary: `<Button asChild><Link href="/login">Masuk</Link></Button>`
   - Secondary: `<Button variant="outline" disabled>Daftar Event</Button>` (placeholder — no URL yet)
@@ -131,7 +131,7 @@ All user-facing copy should be in Indonesian, consistent with the rest of the ap
 **Footer:**
 ```tsx
 <footer className="mt-16 pt-8 border-t border-border text-center text-sm text-muted-foreground">
-  <p>© {new Date().getFullYear()} Yorindo. All rights reserved.</p>
+  <p>© {new Date().getFullYear()} EM . U. All rights reserved.</p>
   <Link href="/data-rights" className="underline hover:text-foreground mt-1 inline-block">
     Hak Data Anda
   </Link>

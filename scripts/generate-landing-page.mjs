@@ -80,7 +80,7 @@ const html = `<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Contribution Reports — Yorindo</title>
+  <title>Contribution Reports — EM . U</title>
   <style>
     :root {
       --bg: #0d1117; --surface: #161b22; --surface-hover: #1c2128;

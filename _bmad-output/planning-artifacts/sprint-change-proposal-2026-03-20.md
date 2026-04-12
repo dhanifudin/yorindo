@@ -1,5 +1,5 @@
 # Sprint Change Proposal
-**Project:** Yorindo
+**Project:** EM . U
 **Date:** 2026-03-20
 **Prepared by:** Sam (Scrum Master)
 **Status:** Approved
@@ -361,7 +361,7 @@ Acceptance Criteria:
   - Event landing pages (/register/[slug]) include Open Graph meta tags:
     - og:title = event name
     - og:description = event description (truncated to 200 chars)
-    - og:image = event banner URL (or default Yorindo banner)
+    - og:image = event banner URL (or default EM . U banner)
     - og:url = canonical URL
     - og:type = "website"
   - WhatsApp-specific: og:image dimensions ≥ 300x200

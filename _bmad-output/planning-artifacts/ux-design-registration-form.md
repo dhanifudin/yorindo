@@ -158,7 +158,7 @@ Summary of entered information + event details + payment info (informational for
 
 ### Design System Choice
 
-**shadcn/ui + Tailwind CSS** — existing design system throughout the Yorindo app. Components already installed: Card, Button, Input, Select, Label, RadioGroup, Checkbox, Progress, Badge, Sheet, Tabs.
+**shadcn/ui + Tailwind CSS** — existing design system throughout the EM . U app. Components already installed: Card, Button, Input, Select, Label, RadioGroup, Checkbox, Progress, Badge, Sheet, Tabs.
 
 ### Implementation Approach
 

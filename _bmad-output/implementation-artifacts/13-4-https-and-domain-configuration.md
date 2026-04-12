@@ -29,7 +29,7 @@ so that demo visitors access the platform securely.
 
 ## Acceptance Criteria
 
-**AC1:** Given the VPS nginx is configured, when `https://demo.dhanifudin.com` is accessed, then the Yorindo app loads with a valid SSL certificate (no browser warnings).
+**AC1:** Given the VPS nginx is configured, when `https://demo.dhanifudin.com` is accessed, then the EM . U app loads with a valid SSL certificate (no browser warnings).
 
 **AC2:** Given the nginx config exists, when requests are made to `https://demo.dhanifudin.com/api/*`, then they are proxied to `localhost:3000` (yorindo-api).
 
@@ -61,7 +61,7 @@ server {
     ssl_certificate /etc/letsencrypt/live/demo.dhanifudin.com/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/demo.dhanifudin.com/privkey.pem;
 
-    # Yorindo App (Next.js)
+    # EM . U App (Next.js)
     location / {
         proxy_pass http://localhost:5173;
         proxy_http_version 1.1;
@@ -74,7 +74,7 @@ server {
         proxy_cache_bypass $http_upgrade;
     }
 
-    # Yorindo API (Fastify)
+    # EM . U API (Fastify)
     location /api/ {
         proxy_pass http://localhost:3000;
         proxy_http_version 1.1;

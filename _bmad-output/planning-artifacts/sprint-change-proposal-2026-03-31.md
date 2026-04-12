@@ -1,6 +1,6 @@
 # Sprint Change Proposal — 2026-03-31
 
-**Project:** Yorindo
+**Project:** EM . U
 **Prepared by:** Bob (Scrum Master) via Correct Course workflow
 **Date:** 2026-03-31
 **Status:** Approved

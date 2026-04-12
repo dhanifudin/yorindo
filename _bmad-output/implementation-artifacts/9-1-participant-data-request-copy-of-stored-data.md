@@ -12,7 +12,7 @@
 ## Story
 
 As a participant,
-I want to request a copy of all personal data Yorindo holds about me,
+I want to request a copy of all personal data EM . U holds about me,
 So that I can exercise my right to data portability under UU PDP Art. 28.
 
 > **Phase 1 FE scope:** Build the data request form (phone + email, confirmation screen, submitted state), the erasure request form with two-step confirmation, and the erasure vs. cancellation explanation page — all wired to MSW stub 202 responses. These are public routes (no authentication required).

@@ -22,7 +22,7 @@ Transform the Contacts page from a passive directory into a purposeful workspace
 
 ### Target Users
 
-**Primary:** Event admins at B2B event management companies using Yorindo to manage participant databases, approve registrations, and blast invitations before events.
+**Primary:** Event admins at B2B event management companies using EM . U to manage participant databases, approve registrations, and blast invitations before events.
 
 **Secondary:** Staff members who triage flagged records and manage contact data quality.
 
@@ -298,7 +298,7 @@ Emotions to avoid:
 
 ### Design System Choice
 
-**shadcn/ui + Tailwind CSS** — the existing design system already in use throughout the Yorindo app. All components (Card, Table, Sheet, Badge, Button, Input, Select, Tabs) are already installed and in active use.
+**shadcn/ui + Tailwind CSS** — the existing design system already in use throughout the EM . U app. All components (Card, Table, Sheet, Badge, Button, Input, Select, Tabs) are already installed and in active use.
 
 This is not a new selection — it's a constraint from the existing codebase. The contacts revamp must extend this system, not replace it.
 

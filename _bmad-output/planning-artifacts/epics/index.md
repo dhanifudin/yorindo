@@ -1,8 +1,8 @@
-# Yorindo - Epic Breakdown
+# EM . U - Epic Breakdown
 
 ## Table of Contents
 
-- [Yorindo - Epic Breakdown](#table-of-contents)
+- [EM . U - Epic Breakdown](#table-of-contents)
   - [Overview](./overview.md)
   - [Development Phase Plan](./development-phase-plan.md)
     - [Phase 1: Concurrent FE + BE (In-Memory / Mock)](./development-phase-plan.md#phase-1-concurrent-fe--be-in-memory--mock)

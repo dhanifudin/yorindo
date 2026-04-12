@@ -23,7 +23,7 @@ So that the admin surface feels professional and is easy to use on any device.
 
 **AC1:** Given the admin shell is rendered on a desktop viewport (≥768px),
 When any `/admin` page is loaded,
-Then a fixed left sidebar (220px wide) shows: Yorindo brand, role-based nav links with Lucide icons, current user role label, and a Keluar (logout) button.
+Then a fixed left sidebar (220px wide) shows: EM . U brand, role-based nav links with Lucide icons, current user role label, and a Keluar (logout) button.
 
 **AC2:** Given the admin shell is rendered on a mobile viewport (<768px),
 When any `/admin` page is loaded,
@@ -175,7 +175,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       {/* Desktop sidebar */}
       <aside className="hidden md:flex flex-col fixed top-0 left-0 h-full w-56 bg-sidebar border-r border-sidebar-border z-40">
         <div className="px-4 py-5 border-b border-sidebar-border">
-          <span className="font-bold text-sidebar-primary">Yorindo</span>
+          <span className="font-bold text-sidebar-primary">EM . U</span>
         </div>
         <nav className="flex-1 px-3 py-4 space-y-0.5">
           {visible.map((item) => (

@@ -1,7 +1,7 @@
 {
   "name": "yorindo-api",
   "version": "1.0.0",
-  "description": "Yorindo Event Management API",
+  "description": "EM . U Event Management API",
   "type": "module",
   "main": "dist/main.js",
   "scripts": {

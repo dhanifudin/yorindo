@@ -1,8 +1,8 @@
 {
   "info": {
-    "name": "Yorindo API",
+    "name": "EM . U API",
     "_postman_id": "yorindo-api-comprehensive-collection",
-    "description": "Comprehensive Postman collection for the Yorindo API covering all endpoints with positive, negative, and role-based access control tests.",
+    "description": "Comprehensive Postman collection for the EM . U API covering all endpoints with positive, negative, and role-based access control tests.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -5014,7 +5014,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Undangan Seminar\",\n  \"subject\": \"Undangan: {{eventName}}\",\n  \"body\": \"Yth. {{contactName}},\\n\\nKami mengundang Anda untuk menghadiri {{eventName}} yang akan diselenggarakan pada {{eventDate}} di {{eventLocation}}.\\n\\nSalam,\\nTim Yorindo\",\n  \"channel\": \"email\"\n}"
+              "raw": "{\n  \"name\": \"Undangan Seminar\",\n  \"subject\": \"Undangan: {{eventName}}\",\n  \"body\": \"Yth. {{contactName}},\\n\\nKami mengundang Anda untuk menghadiri {{eventName}} yang akan diselenggarakan pada {{eventDate}} di {{eventLocation}}.\\n\\nSalam,\\nTim EM . U\",\n  \"channel\": \"email\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/templates",

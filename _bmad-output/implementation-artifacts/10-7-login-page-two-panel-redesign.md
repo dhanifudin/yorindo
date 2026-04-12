@@ -37,7 +37,7 @@ So that I feel confident I'm in the right place before entering my credentials.
 - Two glow blobs: absolutely positioned, `border-radius: 50%`, `filter: blur(80px)`, `opacity: 0.25`
   - Blob 1: `420×420px`, `hsl(217 73% 35%)` (brand blue), top-left
   - Blob 2: `300×300px`, `hsl(200 80% 55%)` (light blue), bottom-right
-- Logo chip (top): pill with `Shield` icon + "Yorindo Admin" text (white/85, semi-transparent bg)
+- Logo chip (top): pill with `Shield` icon + "EM . U Admin" text (white/85, semi-transparent bg)
 - Center copy:
   - Small label: "Centralized Operations" (uppercase, tracked, white/35)
   - Headline: "Secure Admin" / "Access" — large, white, bold
@@ -85,7 +85,7 @@ So that I feel confident I'm in the right place before entering my credentials.
 
 - [x] **Task 4: Left panel — Logo chip (top section)**
   - [x] `<div className="relative z-10 flex items-center gap-2 ...">`
-  - [x] Pill with `Shield` icon (from lucide-react) + "Yorindo Admin" text
+  - [x] Pill with `Shield` icon (from lucide-react) + "EM . U Admin" text
   - [x] Styles: `bg-white/7 border border-white/12 rounded-full px-3 py-1.5 text-sm text-white/85`
 
 - [x] **Task 5: Left panel — Center copy (middle section)**
@@ -99,7 +99,7 @@ So that I feel confident I'm in the right place before entering my credentials.
 
 - [x] **Task 7: Update `src/app/login/page.tsx` — right panel wrapper**
   - [x] Wrap existing content in a form card: `<div className="w-full max-w-[420px] bg-card rounded-2xl shadow-sm p-8 md:p-10">`
-  - [x] Add "Admin Portal" badge chip above the current "Yorindo" / "Admin Portal" header:
+  - [x] Add "Admin Portal" badge chip above the current "EM . U" / "Admin Portal" header:
     - `<div className="inline-flex items-center gap-1.5 bg-secondary text-secondary-foreground rounded-full px-3 py-1 text-xs font-semibold mb-6">`
     - `<Shield className="h-3 w-3" /> Admin Portal`
   - [x] Keep existing: logo text, `LoginForm`, SSO button (if `ssoEnabled`)

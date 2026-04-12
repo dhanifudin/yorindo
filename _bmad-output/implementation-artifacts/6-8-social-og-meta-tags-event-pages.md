@@ -20,7 +20,7 @@ Add Open Graph meta tags to event landing pages so they display rich previews wh
 - [ ] Event landing pages (`/register/[slug]`) include Open Graph meta tags:
   - `og:title` = event name
   - `og:description` = event description (truncated to 200 characters)
-  - `og:image` = event banner URL (or default Yorindo banner)
+  - `og:image` = event banner URL (or default EM . U banner)
   - `og:url` = canonical URL
   - `og:type` = "website"
 - [ ] WhatsApp compatibility: `og:image` dimensions ≥ 300×200
@@ -49,7 +49,7 @@ Add Open Graph meta tags to event landing pages so they display rich previews wh
 
 - `generateMetadata` in `/register/[slug]/page.tsx`
 - Static export limitation: meta tags are baked at build time
-- Default OG image: Yorindo branded placeholder (e.g., `/images/og-default.png`)
+- Default OG image: EM . U branded placeholder (e.g., `/images/og-default.png`)
 - No `fb:app_id` required for basic sharing
 
 ---

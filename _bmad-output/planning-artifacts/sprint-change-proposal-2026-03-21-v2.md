@@ -2,7 +2,7 @@
 **Date:** 2026-03-21
 **Author:** Dian (approved) via BMAD Correct Course workflow
 **Status:** ✅ All three proposals approved
-**Trigger:** Strategic pivot identified via `/bmad-help` — Yorindo is primarily a Decision Support System for blasting contacts per events, not a contact management tool. Current UX treats contact browsing as the primary workspace; it should be the event lifecycle pipeline.
+**Trigger:** Strategic pivot identified via `/bmad-help` — EM . U is primarily a Decision Support System for blasting contacts per events, not a contact management tool. Current UX treats contact browsing as the primary workspace; it should be the event lifecycle pipeline.
 
 ---
 

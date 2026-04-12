@@ -1,6 +1,6 @@
-# Yorindo API
+# EM . U API
 
-Fastify backend for the **Yorindo** event-management platform.
+Fastify backend for the **EM . U** event-management platform.
 
 ## Tech Stack
 

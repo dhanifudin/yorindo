@@ -1,6 +1,6 @@
 # Sprint Change Proposal — 2026-03-28
 
-**Project:** Yorindo
+**Project:** EM . U
 **Date:** 2026-03-28
 **Author:** Bob (Scrum Master)
 **Scope:** Moderate

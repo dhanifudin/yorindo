@@ -1,945 +1,433 @@
-# Yorindo System Design
+# EM . U — System Design & Cost Analysis
 
-**Project:** Yorindo — Event Management Platform for KADA
-**Version:** 1.0 (Quick Scan, 2026-03-25)
-**Repository:** Monorepo (`/yorindo-app` + `/yorindo-api`)
+**Project:** EM . U — Event Management Platform for KADA
+**Version:** 2.0 (Updated 2026-04-12)
+
+> Kurs referensi: **1 USD ≈ Rp 16.300** (April 2026)
 
 ---
 
 ## Table of Contents
 
-1. [System Overview](#1-system-overview)
-2. [Architecture](#2-architecture)
-3. [Tech Stack](#3-tech-stack)
-4. [Infrastructure Topology](#4-infrastructure-topology)
-5. [Data Models](#5-data-models)
-6. [API Design](#6-api-design)
-7. [Frontend Architecture](#7-frontend-architecture)
-8. [Backend Architecture](#8-backend-architecture)
-9. [Authentication & Authorization](#9-authentication--authorization)
-10. [Key Features & Flows](#10-key-features--flows)
-11. [Development Approach](#11-development-approach)
-12. [File Structure](#12-file-structure)
+1. [Apa itu EM . U?](#1-apa-itu-em--u)
+2. [Alur Bisnis](#2-alur-bisnis)
+3. [Arsitektur Sistem](#3-arsitektur-sistem)
+4. [Fitur yang Sudah Dibangun](#4-fitur-yang-sudah-dibangun)
+5. [Analisis Biaya](#5-analisis-biaya)
 
 ---
 
-## Diagrams
+## 1. Apa itu EM . U?
 
-### MVP Feature Map
+EM . U adalah platform manajemen event B2B yang dibangun untuk KADA. Platform ini menggantikan proses manual — menyimpan kontak di spreadsheet, mengirim undangan satu per satu, dan mencatat kehadiran secara terpisah — menjadi satu sistem terintegrasi.
 
-```mermaid
-mindmap
-  root((Yorindo MVP))
-    Team and Access
-      Admin Login JWT
-      User Management
-      Role-Based Guards
-      Event Assignment
-    Contact Database
-      Excel or CSV Upload
-      ETL AI Normalization
-      Duplicate Detection
-      Smart Filter
-      HealthBar Quality Pulse
-    Event Management
-      Create and Configure
-      Lifecycle State Machine
-      Clone Event
-      Survey Builder
-      Pipeline Hub 6-Tab
-    Invitation Blast
-      Template Editor
-      Segmented Audience
-      Schedule and Delivery
-      Emergency Blast
-      Suppression List
-    Participant Registration
-      Public Landing Page
-      Multi-step Form Mobile
-      Double Opt-in Email
-      Gmail SSO Pre-fill
-      Approval Queue
-      Waitlist Auto-promote
-      QR Ticket Generation
-    Check-in PWA
-      Offline-first QR Scan
-      Background Sync Flush
-      KTP Identity Verify
-      Name Search Override
-      Live Attendance Monitor
-    Analytics and Reports
-      Funnel and Demographics
-      YoriMind AI Analysis
-      Vendor Magic Link
-      PDF and Excel Export
-    Data Rights UU PDP
-      Data Request Copy
-      Erasure Anonymization
+**Apa yang bisa dilakukan EM . U:**
+- Menyimpan dan mengelola database kontak
+- Mengirim undangan email ke segmen audiens yang ditargetkan
+- Menerima pendaftaran peserta lewat halaman publik
+- Menyetujui pendaftaran dan menerbitkan tiket QR
+- Check-in peserta di pintu masuk
+- Menampilkan analitik dan insight AI setelah event selesai
+
+---
+
+## 2. Alur Bisnis
+
+Ini adalah perjalanan lengkap dari kontak hingga laporan event:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  1. KONTAK                                                       │
+│     Upload CSV/Excel → normalisasi berbasis aturan → tersimpan  │
+└────────────────────────────┬────────────────────────────────────┘
+                             ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  2. BUAT EVENT                                                   │
+│     Admin buat event → set kapasitas, tanggal, lokasi           │
+└────────────────────────────┬────────────────────────────────────┘
+                             ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  3. KIRIM UNDANGAN (BLAST)                                       │
+│     Pilih segmen target → kirim email blast → lacak pengiriman  │
+└────────────────────────────┬────────────────────────────────────┘
+                             ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  4. PENDAFTARAN                                                  │
+│     Tamu buka halaman publik → isi form → dapat email konfirmasi│
+└────────────────────────────┬────────────────────────────────────┘
+                             ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  5. PERSETUJUAN                                                  │
+│     Admin review → setujui/tolak → tamu disetujui dapat QR     │
+└────────────────────────────┬────────────────────────────────────┘
+                             ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  6. CHECK-IN                                                     │
+│     Staf scan QR di pintu → kehadiran tercatat real-time        │
+│     Tamu walk-in (OTS) bisa didaftarkan langsung di tempat      │
+└────────────────────────────┬────────────────────────────────────┘
+                             ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  7. ANALITIK & LAPORAN                                           │
+│     Funnel, demografi, health score, insight AI (cache 7 hari)  │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-### Architecture Overview with Queue Communication
+## 3. Arsitektur Sistem
 
-```mermaid
-flowchart TD
-    Browser(["🌐 Browser / Mobile PWA"])
+Sistem EM . U terdiri dari tiga lapisan utama:
 
-    subgraph proxy["Nginx — Reverse Proxy :80/:443"]
-        Nginx["Route split\n/api/* → API\n/* → App"]
-    end
+### Lapisan 1 — Antarmuka (Frontend)
 
-    subgraph fe["yorindo-app · Next.js 16 · React 19"]
-        AdminShell["Admin Shell\n/app/**\nRole-guarded"]
-        PublicPages["Public Pages\n/register · /login\n/tickets · /vendor-report"]
-        ScanPWA["Scan PWA\nOffline QR Check-in\nIndexedDB queue"]
-    end
+**Next.js** — aplikasi web yang berjalan di browser admin.
 
-    subgraph be["yorindo-api · Fastify 4 · TypeScript"]
-        Routes["REST Routes\n/api/**\nJWT auth middleware"]
-        Services["Services\nBlast · ETL\nErasure · Auth"]
-        Repos["Repositories\nPhase 1: In-memory\nPhase 2: PostgreSQL"]
-    end
+Bertanggung jawab untuk:
+- Menampilkan semua halaman dashboard, event, kontak, analitik
+- Mengirim request ke API untuk mengambil dan menyimpan data
+- Menangani state UI secara lokal (form, filter, pagination)
 
-    subgraph queues["BullMQ Queues — backed by Redis"]
-        QBlast[["blast\nqueue"]]
-        QETL[["etl\nqueue"]]
-        QErasure[["erasure\nqueue"]]
-    end
+Tidak menyimpan data apapun secara permanen — semua data ada di API.
 
-    subgraph workers["Background Workers"]
-        WBlast["blast.worker\nEverpro · Brevo"]
-        WETL["etl.worker\nParse → Normalize → Upsert"]
-        WErasure["erasure.worker\nAnonymize contacts"]
-    end
+### Lapisan 2 — Logika Bisnis (Backend API)
 
-    subgraph datastores["Data Stores"]
-        PG[("PostgreSQL 16\nContacts · Events\nRegistrations · Users\nAudit Logs")]
-        Mongo[("MongoDB 7\nSurvey Schemas\nRaw ETL Uploads")]
-        Redis[("Redis 7\nJWT Blacklist\nQueue State")]
-    end
+**Hono** — server API yang berjalan di Node.js/Bun.
 
-    subgraph external["External Services — Phase 2"]
-        Everpro["Everpro\nWhatsApp Blast"]
-        Brevo["Brevo\nEmail Blast"]
-        Claude["Claude · OpenAI\nAI Normalization\nYoriMind Analysis"]
-    end
+Bertanggung jawab untuk:
+- Memproses semua operasi bisnis (setujui pendaftaran, kirim email, hitung statistik)
+- Mengautentikasi request menggunakan JWT
+- Menghubungkan frontend dengan database dan layanan eksternal
+- Mengorkestrasi alur kerja multi-langkah (misal: setujui → kirim email → generate QR)
 
-    Browser --> proxy
-    proxy -->|"/* frontend"| fe
-    proxy -->|"/api/* backend"| Routes
+### Lapisan 3 — Penyimpanan Data
 
-    Routes --> Services
-    Services --> Repos
-    Repos <-->|"read / write"| PG
-    Repos <-->|"survey schemas\nraw uploads"| Mongo
+| Komponen | Teknologi | Fungsi |
+|---|---|---|
+| **Database Utama** | PostgreSQL | Semua data persisten: kontak, event, pendaftaran, blast log |
+| **Cache** | Redis | Hasil insight AI (TTL 7 hari), rate limiting |
 
-    Services -->|"enqueue blast job"| QBlast
-    Services -->|"enqueue ETL job"| QETL
-    Services -->|"enqueue erasure job"| QErasure
+### Lapisan 4 — SSL & Reverse Proxy
 
-    Redis -.->|"queue state\nJWT blacklist"| queues
-    Redis -.->|"session store"| Routes
+**Nginx + Let's Encrypt (Certbot)** — berjalan di VPS di luar Docker.
 
-    QBlast --> WBlast
-    QETL --> WETL
-    QErasure --> WErasure
+- Menerima semua traffic HTTPS pada port 443
+- Sertifikat SSL dikelola otomatis oleh Certbot (diperbarui setiap 90 hari)
+- Meneruskan request ke container aplikasi di port lokal
 
-    WBlast -->|"send WhatsApp"| Everpro
-    WBlast -->|"send email"| Brevo
-    WETL -->|"normalize contact data"| Claude
-    WETL -->|"upsert results"| PG
+Setup satu perintah:
+```bash
+make ssl-init DOMAIN=your.domain.com EMAIL=admin@your.domain.com
+```
 
-    ScanPWA -->|"online: POST /api/scan/verify"| Routes
-    ScanPWA -->|"offline: Background Sync flush"| Routes
+### Layanan Eksternal
+
+| Layanan | Provider | Fungsi |
+|---|---|---|
+| **AI Insights** | OpenAI GPT atau Groq | Generate insight post-event per event selesai; hasil di-cache Redis 7 hari |
+| **Email** | Brevo API | Kirim email blast undangan (up to 9.000/bulan gratis) |
+| **Email** | AWS SES (SMTP) | Alternatif email — cocok untuk volume tinggi, biaya rendah |
+| **Email** | GCP Workspace SMTP | Alternatif email — via Google SMTP relay |
+
+### Diagram Arsitektur
+
+```
+┌──────────────────────────────────────────────┐
+│              BROWSER ADMIN                   │
+│          Next.js (React/TypeScript)          │
+│                                              │
+│  Dashboard │ Events │ Contacts │ Analytics   │
+└──────────────────┬───────────────────────────┘
+                   │ HTTPS/REST
+┌──────────────────▼───────────────────────────┐
+│              API SERVER                      │
+│         Fastify (Node.js / Bun)              │
+│                                              │
+│  ┌──────────┐  ┌──────────┐  ┌───────────┐  │
+│  │  Auth &  │  │  Event & │  │ Contact & │  │
+│  │  Users   │  │ Pipeline │  │   ETL     │  │
+│  └──────────┘  └──────────┘  └───────────┘  │
+│                                              │
+│  ┌──────────┐  ┌──────────┐                 │
+│  │  Blast & │  │Analytics │                 │
+│  │  Email   │  │& Reports │                 │
+│  └──────────┘  └──────────┘                 │
+└───────┬──────────────┬──────────────┬────────┘
+        │              │              │
+┌───────▼──────┐ ┌─────▼──────┐ ┌───▼────────────────────────┐
+│  PostgreSQL  │ │   Redis    │ │    External Services       │
+│              │ │            │ │                            │
+│ contacts     │ │ AI insight │ │ OpenAI GPT / Groq          │
+│ events       │ │ cache 7d   │ │ (insight post-event only)  │
+│ registrations│ │            │ │                            │
+│ blast_logs   │ │            │ │ Brevo API / AWS SES /      │
+│ surveys      │ │            │ │ GCP SMTP (email delivery)  │
+└──────────────┘ └────────────┘ └────────────────────────────┘
+         ↑
+┌────────┴─────────────────────────────────────┐
+│  Nginx + Let's Encrypt (VPS, di luar Docker) │
+│  SSL termination → proxy ke port lokal       │
+└──────────────────────────────────────────────┘
 ```
 
 ---
 
-### Registration Flow
+## 4. Fitur yang Sudah Dibangun
 
-```mermaid
-sequenceDiagram
-    actor P as Participant
-    participant FE as yorindo-app
-    participant API as yorindo-api
-    participant DB as PostgreSQL
-    participant Mail as Email Service
+### Manajemen Kontak
+- Upload kontak via CSV atau Excel
+- Normalisasi berbasis aturan (format nomor telepon, kapitalisasi nama, standarisasi kota) — tanpa AI
+- Deteksi duplikat dan saran penggabungan
+- Tagging dan segmentasi kontak berdasarkan industri, kota, perusahaan
+- Health bar kualitas data kontak
+- UI review normalisasi dengan opsi override manual
 
-    P->>FE: Visit /register/[eventSlug]
-    FE->>API: GET /api/events/public/[slug]
-    API-->>FE: Event details
+### Manajemen Event
+- Buat dan konfigurasi event (kapasitas, tanggal, lokasi, deskripsi)
+- Siklus hidup event: Draft → Published → Ongoing → Completed → Archived
+- Clone event sebagai template
+- Survey builder (pertanyaan kustom untuk pendaftaran atau check-in)
 
-    opt Gmail SSO pre-fill
-        P->>FE: Click "Lanjutkan dengan Google"
-        FE->>API: POST /api/auth/google-mock
-        API-->>FE: { name, email }
-        FE-->>P: Name + email pre-filled (read-only)
-    end
+### Blast Undangan
+- Compose email blast dengan template editor
+- Target audiens berdasarkan segmen (industri, kota, tag, dll.)
+- Jadwalkan pengiriman blast
+- Lacak pengiriman: terkirim, dibuka, bounced
+- Emergency blast untuk pembaruan mendadak
 
-    P->>FE: Fill phone + complete form
-    FE->>API: POST /api/registrations
-    API->>DB: INSERT registration (status: pending)
-    API->>Mail: Send double opt-in email
-    API-->>FE: { id, status: pending }
-    FE-->>P: "Check your email to confirm"
+### Pendaftaran Peserta
+- Halaman pendaftaran publik (mobile-friendly)
+- Form pendaftaran multi-langkah
+- Konfirmasi email double opt-in
+- Antrian persetujuan untuk admin
+- Waitlist dengan promosi otomatis saat slot tersedia
+- Generate tiket QR untuk peserta yang disetujui
 
-    P->>FE: Click confirm link → /register/confirm/[token]
-    FE->>API: GET /api/registrations/confirm/[token]
-    API->>DB: UPDATE registration (status: confirmed)
-    API-->>FE: { registration, contactId, participantEmail }
+### Check-in
+- Scanner QR code (bekerja offline via PWA)
+- Registrasi walk-in on-the-spot (OTS)
+- Counter kehadiran live
 
-    FE->>API: POST /api/auth/google (auto, silent)
-    API-->>FE: { accessToken, user: { role: participant } }
-    FE-->>P: "Email Confirmed!" + "Masuk ke Dashboard →"
-```
+### Dashboard Analitik (per event)
+- Funnel pendaftaran: Undangan → Daftar → Disetujui → Hadir
+- Breakdown demografi (industri, kota, ukuran perusahaan)
+- Peta segmen overlap (kombinasi industri × kota yang paling banyak hadir)
+- Event Health Score — skor komposit dari tingkat kehadiran, no-show, dan konversi undangan
+- Insight post-event berbasis AI (OpenAI GPT atau Groq, cache Redis 7 hari)
+- Export PDF dan Excel
 
----
-
-### ETL Pipeline — Contact Upload
-
-```mermaid
-flowchart TD
-    A(["Admin uploads Excel / CSV"]) --> B["POST /api/contacts/upload\nmultipart form"]
-    B --> C["API: validate file\nstore in /app/uploads (Docker) or uploads/ (local)"]
-    C --> D[["etl queue\nBullMQ job enqueued"]]
-    D --> E["etl.worker picks up job"]
-
-    E --> F["Parse rows\nexcel → JSON array"]
-    F --> G["AI Normalization\nClaude / OpenAI\ncompute completeness_score"]
-
-    G --> H{Flag check}
-    H -->|"low-confidence / invalid / duplicate"| I[("flagged_records\nPostgreSQL")]
-    H -->|"clean"| J{Phone exists?}
-
-    J -->|"Yes — update"| K["UPDATE contacts\nwhere phone = normalized"]
-    J -->|"No — insert"| L["INSERT contacts\nphone as dedup key"]
-
-    K --> M[("contacts\nPostgreSQL")]
-    L --> M
-
-    I --> N(["Admin reviews\n/app/contacts — Flagged tab"])
-    N -->|"Resolve"| M
-    N -->|"Discard"| O(["Record discarded"])
-```
+### Akses & Keamanan
+- Login admin dengan JWT
+- Role-based guards (admin vs. viewer)
+- Penugasan event per pengguna
 
 ---
 
-### Event Lifecycle State Machine
+## 5. Analisis Biaya
 
-```mermaid
-stateDiagram-v2
-    [*] --> draft : Admin creates event
+### 5.1 Asumsi Penggunaan
 
-    draft --> published : Publish event
-    draft --> archived : Archive without publishing
+**Tier Kontak:**
 
-    published --> active : Event date reached\nor manual activation
-    published --> cancelled : Cancel before event
-    published --> draft : Revert to draft
+| Tier | Total Kontak | Gambaran Pengguna |
+|---|---|---|
+| Starter | ~1.000 | Organisasi kecil, baru mulai |
+| Growing | ~5.000 | Chapter KADA yang aktif |
+| Scale | ~20.000 | Operasi KADA regional atau nasional |
 
-    active --> completed : Event ends
-    active --> cancelled : Emergency cancellation
+**Volume Event per Bulan:**
 
-    completed --> archived : Archive report
-    cancelled --> archived : Archive record
+| Tingkat Aktivitas | Event/Bulan |
+|---|---|
+| Rendah | 2–5 event |
+| Sedang | 5–15 event |
+| Tinggi | 15–30 event |
 
-    archived --> [*]
+**Blast Email per Event:**
+- List undangan = 100–150% dari kapasitas event
+- Contoh: kapasitas 200 → kirim blast ke 200–300 kontak per event
 
-    note right of published
-        Registration form live
-        Blast invitations allowed
-        Approval queue open
-    end note
-
-    note right of active
-        Check-in enabled
-        QR scan live
-        Real-time attendance monitor
-    end note
-
-    note right of completed
-        Reports generated
-        YoriMind analysis available
-        Vendor magic link issued
-    end note
-```
+**Penggunaan AI:**
+- ETL/normalisasi kontak: **tidak menggunakan AI** — menggunakan normalisasi berbasis aturan (gratis)
+- Insight post-event: 1 panggilan API per event selesai, hasilnya di-cache Redis 7 hari (tampil ulang = gratis)
 
 ---
 
-### Authentication & Session Flow
+### 5.2 Referensi Harga Layanan
 
-```mermaid
-sequenceDiagram
-    actor U as Admin / Staff
-    participant FE as yorindo-app
-    participant API as yorindo-api
-    participant Redis as Redis
+#### AI Insights — OpenAI GPT atau Groq
 
-    U->>FE: POST credentials → /login
-    FE->>API: POST /api/auth/login
-    API->>API: bcrypt.compare password
-    API-->>FE: { accessToken (15min), refreshToken cookie (7d) }
-    FE->>FE: authStore.setAccessToken()
+AI hanya digunakan untuk satu fungsi: **generate insight setelah event selesai**. ETL/normalisasi kontak tidak menggunakan AI.
 
-    loop Every API request
-        FE->>API: Bearer accessToken
-        API->>Redis: Check JWT blacklist
-        Redis-->>API: Not blacklisted ✓
-        API-->>FE: Response
-    end
+EM . U mendukung dua provider AI yang dapat dikonfigurasi dari halaman Settings:
 
-    Note over FE,API: Access token expires (15 min)
-    FE->>API: POST /api/auth/refresh (httpOnly cookie)
-    API->>Redis: Validate refresh token
-    API-->>FE: New accessToken
+| Provider | Model | Harga Input | Harga Output | Catatan |
+|---|---|---|---|---|
+| **OpenAI** | GPT-4o | $2,50 / 1M token | $10,00 / 1M token | Kualitas tinggi, stabil |
+| **OpenAI** | GPT-4o mini | $0,15 / 1M token | $0,60 / 1M token | Hemat, cukup untuk insight |
+| **Groq** | llama-3.3-70b | $0,59 / 1M token | $0,79 / 1M token | Sangat cepat, biaya rendah |
+| **Groq** | mixtral-8x7b | $0,24 / 1M token | $0,24 / 1M token | Paling hemat |
 
-    U->>FE: Logout
-    FE->>API: POST /api/auth/logout
-    API->>Redis: Blacklist refresh token
-    FE->>FE: authStore.clearAuth()
-```
+Estimasi token per insight:
+- ~2.000 token input + ~1.500 token output per event
+- GPT-4o mini: **~Rp 15–20/event** | Groq llama: **~Rp 10–15/event**
 
----
+#### Email — Brevo, AWS SES, atau GCP SMTP
 
-### Event-Day Check-in — Online + Offline
+EM . U mendukung tiga provider email yang dapat dipilih dari halaman Settings:
 
-```mermaid
-flowchart TD
-    A(["Staff opens Scan PWA\n/app/scan"]) --> B["GET /api/scan/participants/:eventId\nCache in IndexedDB"]
+**Brevo (direkomendasikan untuk mulai)**
 
-    B --> C{Network status?}
+| Paket | Email/Bulan | Harga |
+|---|---|---|
+| Free | 9.000 | **Gratis** |
+| Starter | 20.000 | ~$25 (~Rp 408.000) |
+| Business | 100.000 | ~$65 (~Rp 1.060.000) |
+| Enterprise | 500.000+ | ~$200+ (~Rp 3.260.000+) |
 
-    C -->|"Online"| D["Scan QR code\nhtml5-qrcode"]
-    D --> E["POST /api/scan/verify\n{ token }"]
-    E --> F{Valid?}
-    F -->|"✓ Valid"| G["UPDATE registration\nstatus: attended\nattended_at: now"]
-    F -->|"✗ Already attended"| H(["Show: Already checked in"])
-    F -->|"✗ Invalid"| I(["Show: Invalid QR"])
-    G --> J(["✓ Check-in success\nShow participant name"])
+**AWS SES (Simple Email Service)**
 
-    C -->|"Offline"| K["Scan QR code"]
-    K --> L["Match against\nIndexedDB cache"]
-    L --> M{Found?}
-    M -->|"Yes"| N["Queue scan in IndexedDB\nBackground Sync registered"]
-    M -->|"No"| O(["Name search fallback"])
-    N --> P(["✓ Queued — will sync"])
+Konfigurasi: `EMAIL_PROVIDER=ses`, `SMTP_HOST=email-smtp.<region>.amazonaws.com`, port 587.
 
-    P --> Q{Back online?}
-    Q -->|"Yes"| R["Background Sync fires\nPOST /api/scan/offline-flush\nbatch upload queued scans"]
-    R --> G
-```
+| Paket | Harga per 1.000 email | Catatan |
+|---|---|---|
+| Kirim dari EC2 | **Gratis** (62.000/bulan) | Hanya jika API berjalan di AWS |
+| Di luar EC2 | ~$0,10 / 1.000 email (~Rp 1.630) | Pay-as-you-go, tidak ada paket bulanan |
 
----
+Biaya contoh: 50.000 email/bulan = **~$5/bulan (~Rp 81.500)** — jauh lebih murah dari Brevo Business.
 
-## 1. System Overview
+**GCP Workspace SMTP Relay**
 
-Yorindo is a B2B event management platform that handles the full lifecycle of corporate events: contact database management, invitation blasting, participant registration with approval workflows, event-day QR check-in (offline-capable PWA), and post-event analytics.
+Konfigurasi: `EMAIL_PROVIDER=gcp`, `SMTP_HOST=smtp-relay.gmail.com`, port 587, TLS.
 
-**Core Actors:**
+| Paket | Email/Hari | Harga |
+|---|---|---|
+| Google Workspace Starter | 2.000/hari | $6/user/bulan (~Rp 98.000) |
+| Google Workspace Business | Tidak terbatas | $12/user/bulan (~Rp 196.000) |
 
-| Role | Description |
-|------|-------------|
-| `admin` | Full access — manages users, contacts, events, blasts, reports |
-| `staff` | Event-scoped access — check-in, approvals for assigned events |
-| `viewer` | Read-only — events and reports for assigned events |
-| `participant` | Self-service — registration, ticket, dashboard |
+Cocok jika tim sudah menggunakan Google Workspace untuk email internal.
+
+#### Opsi Hosting
+
+| Opsi | Deskripsi |
+|---|---|
+| **VPS** | Server sewa tunggal (DigitalOcean, Vultr, Niagahoster). Murah, predictable. |
+| **AWS** | Amazon Web Services — layanan terkelola (EC2, RDS, ElastiCache). Scalable, reliable. |
+| **GCP** | Google Cloud Platform — layanan terkelola (Cloud Run, Cloud SQL, Memorystore). Mirip AWS. |
 
 ---
 
-## 2. Architecture
+### 5.3 Estimasi Biaya Bulanan
 
-```
-Browser / Mobile PWA
-        │
-        ▼
-   ┌─────────┐
-   │  Nginx  │  reverse proxy (ports 80/443)
-   └────┬────┘
-        │ route split: /app → yorindo-app, /api → yorindo-api
-   ┌────┴────────────────────┐
-   │                         │
-   ▼                         ▼
-┌──────────────┐    ┌────────────────────┐
-│  yorindo-app │    │   yorindo-api      │
-│  Next.js 16  │    │   Fastify 4        │
-│  React 19    │    │   Node.js / TS     │
-│  Port 3000   │    │   Port 3000        │
-└──────────────┘    └────────┬───────────┘
-                             │
-              ┌──────────────┼──────────────┐
-              ▼              ▼              ▼
-         PostgreSQL 16   MongoDB 7      Redis 7
-         (relational)    (documents)    (sessions/queues)
-```
-
-**Pattern:** Service-oriented monorepo. Frontend is a standalone Next.js app that communicates exclusively via the REST API. Backend follows a layered architecture: Routes → Services → Repositories → Databases.
-
-**Development Phase:**
-- **Phase 1 (current):** FE runs against MSW mock handlers; BE uses in-memory repositories. No real DB or external services in dev.
-- **Phase 2:** BE connects to real PostgreSQL/MongoDB/Redis; real Everpro + Brevo integrations.
+Semua harga dalam **Rupiah/bulan** (dikonversi dari USD dengan kurs Rp 16.300).
 
 ---
 
-## 3. Tech Stack
+> Tabel menggunakan Brevo sebagai pilihan email default. AWS SES menghemat 60–80% biaya email vs Brevo pada volume tinggi.
 
-### Frontend (`yorindo-app`)
+#### Tier Starter — ~1.000 Kontak
 
-| Category | Technology | Version |
-|----------|-----------|---------|
-| Framework | Next.js | ^16.2.0 |
-| UI Library | React | ^19.2.4 |
-| Language | TypeScript | ^5 |
-| Styling | Tailwind CSS v4 | ^4.2.2 |
-| Component Library | shadcn/ui (Radix UI) | ^1.4.3 |
-| State Management | Zustand | ^5.0.12 |
-| Server State / Cache | TanStack Query | ^5.91.0 |
-| Table | TanStack Table | ^8.21.3 |
-| Forms | React Hook Form + Zod | ^7 / ^4 |
-| API Mocking (dev) | MSW | ^2.12.13 |
-| Charts | Recharts | ^3.8.0 |
-| QR Scanning | html5-qrcode | ^2.3.8 |
-| QR Generation | react-qr-code | ^2.0.18 |
-| PWA | Serwist (next) | ^9.5.7 |
-| Notifications | Sonner | ^2.0.7 |
-| Offline Storage | idb (IndexedDB) | ^8.0.3 |
-| Testing | Vitest + Testing Library | ^4 / ^16 |
-| Fake data | @faker-js/faker | ^10.3.0 |
-
-### Backend (`yorindo-api`)
-
-| Category | Technology | Version |
-|----------|-----------|---------|
-| Framework | Fastify | ^4.27.0 |
-| Language | TypeScript | ^5.4.5 |
-| Runtime | Node.js ESM | — |
-| Validation | Zod | ^3.23.8 |
-| Auth | JWT (jsonwebtoken) + bcrypt | ^9 / ^5 |
-| Database (relational) | PostgreSQL 16 (pg driver) | ^8.11.5 |
-| Database (documents) | MongoDB 7 (driver) | ^6.5.0 |
-| Cache / Sessions | Redis 7 (ioredis) | ^5.3.2 |
-| Queue / Jobs | BullMQ | ^5.7.15 |
-| AI Normalization | Anthropic SDK (Claude) + OpenAI | ^0.20.9 / ^4.47.1 |
-| Scheduled Jobs | node-cron | ^3.0.3 |
-| QR Generation | qrcode | ^1.5.3 |
-| Excel Export | xlsx | ^0.18.5 |
-| Logging | Pino + pino-http | ^9 / ^10 |
-| Testing | Vitest | ^1.6.0 |
-
-### Infrastructure
-
-| Service | Image | Purpose |
-|---------|-------|---------|
-| Nginx | nginx:alpine | Reverse proxy, TLS termination |
-| PostgreSQL | postgres:16-alpine | Primary relational store |
-| MongoDB | mongo:7 | Survey schemas, raw ETL uploads |
-| Redis | redis:7-alpine | Session blacklist, BullMQ queues |
+| Komponen | VPS | AWS | GCP |
+|---|---|---|---|
+| Hosting (server + DB) | Rp 195.000–325.000 | Rp 570.000–815.000 | Rp 490.000–735.000 |
+| Redis | termasuk di VPS | Rp 245.000 | Rp 195.000 |
+| AI Insights (GPT-4o mini / Groq) — Rendah | Rp 750 | sama | sama |
+| AI Insights — Sedang | Rp 2.250 | sama | sama |
+| AI Insights — Tinggi | Rp 4.500 | sama | sama |
+| Brevo email — Rendah | **Gratis** | sama | sama |
+| Brevo email — Sedang | Gratis–Rp 408.000 | sama | sama |
+| Brevo email — Tinggi | Rp 408.000 | sama | sama |
+| **TOTAL — Rendah** | **Rp 196.000–326.000** | **Rp 816.000–1.061.000** | **Rp 491.000–931.000** |
+| **TOTAL — Sedang** | **Rp 198.000–735.000** | **Rp 818.000–1.225.000** | **Rp 493.000–1.140.000** |
+| **TOTAL — Tinggi** | **Rp 608.000–738.000** | **Rp 984.000–1.228.000** | **Rp 903.000–1.143.000** |
 
 ---
 
-## 4. Infrastructure Topology
+#### Tier Growing — ~5.000 Kontak
 
-### Production (`docker-compose.yml`)
+Kapasitas event rata-rata diasumsikan 200–500 orang.
 
-```
-Internet → Nginx (80/443)
-              ├── /api/* → yorindo-api:3000
-              └── /*     → yorindo-app:3000
-
-yorindo-api → postgres:5432 (internal)
-           → mongodb:27017 (internal)
-           → redis:6379 (internal)
-
-Volumes:
-  postgres_data  – PostgreSQL data persistence
-  mongo_data     – MongoDB data persistence
-  redis_data     – Redis AOF persistence
-  snapshots_data – /data/snapshots (API snapshots)
-  api_uploads    – /app/uploads (Docker ETL file staging) / uploads (local)
-```
-
-### Development (`docker-compose.dev.yml`)
-
-Separate dev compose file — presumed to expose ports directly without Nginx for local development.
+| Komponen | VPS | AWS | GCP |
+|---|---|---|---|
+| Hosting (server + DB) | Rp 325.000–650.000 | Rp 978.000–1.630.000 | Rp 897.000–1.467.000 |
+| Redis | termasuk di VPS | Rp 408.000 | Rp 326.000 |
+| AI Insights — Rendah | Rp 1.500 | sama | sama |
+| AI Insights — Sedang | Rp 4.500 | sama | sama |
+| AI Insights — Tinggi | Rp 9.000 | sama | sama |
+| Email — Brevo Starter | Rp 408.000 | sama | sama |
+| Email — Brevo Business (Sedang/Tinggi) | Rp 1.060.000 | sama | sama |
+| Email alternatif — AWS SES (Rendah, ~10K email) | — | Rp 16.000 | — |
+| Email alternatif — AWS SES (Tinggi, ~50K email) | — | Rp 81.500 | — |
+| **TOTAL — Rendah (Brevo)** | **Rp 735.000–1.060.000** | **Rp 1.804.000–2.455.000** | **Rp 1.306.000–1.892.000** |
+| **TOTAL — Sedang (Brevo)** | **Rp 1.389.000–1.715.000** | **Rp 2.452.000–3.099.000** | **Rp 2.288.000–2.858.000** |
+| **TOTAL — Tinggi (SES, AWS hosting)** | — | **Rp 1.568.000–2.302.000** | — |
 
 ---
 
-## 5. Data Models
+#### Tier Scale — ~20.000 Kontak
 
-### PostgreSQL (Relational)
+Kapasitas event rata-rata diasumsikan 300–2.000 orang.
 
-#### `contacts`
-Primary entity for the contact database.
-
-| Column | Type | Notes |
-|--------|------|-------|
-| id | TEXT PK | app-generated CUID2 / opaque ID |
-| name | VARCHAR(200) | Required |
-| phone | VARCHAR(20) UNIQUE | Normalized: +62XXXXXXXXXX — **primary identity key** |
-| email | VARCHAR(200) UNIQUE | Optional |
-| industry_id | TEXT FK → industries | |
-| job_title_id | TEXT FK → job_titles | |
-| city | VARCHAR(100) | |
-| company | VARCHAR(200) | |
-| company_size | VARCHAR(20) | '<50', '50-200', '200-1000', '>1000' |
-| source | VARCHAR(50) | 'excel_upload', 'form', 'manual' |
-| completeness_score | NUMERIC(4,3) | 0.000–1.000, AI-computed in ETL |
-| consent_status | VARCHAR(30) | 'active', 'suppressed', 'legacy_unverified' |
-| flag_category | VARCHAR(50) | 'invalid-data', 'duplicate', null = clean |
-| deleted_at | TIMESTAMPTZ | Soft delete |
-
-#### `events`
-Event lifecycle entity.
-
-| Column | Type | Notes |
-|--------|------|-------|
-| id | TEXT PK | |
-| name | VARCHAR(300) | |
-| slug | VARCHAR(150) UNIQUE | URL-safe identifier |
-| date | TIMESTAMPTZ | Event date |
-| timezone | VARCHAR(50) | Default: Asia/Jakarta |
-| capacity | INTEGER | |
-| waitlist_buffer | INTEGER | |
-| approval_mode | VARCHAR(20) | 'auto', 'manual', 'hybrid' |
-| notification_channel | VARCHAR(20) | 'email', 'whatsapp' |
-| target_criteria | JSONB | Audience targeting rules |
-| survey_schema_id | TEXT | MongoDB ObjectId reference |
-| vendor_id | TEXT FK → vendors | |
-| status | event_status ENUM | draft → published → active → completed/cancelled/archived |
-| deleted_at | TIMESTAMPTZ | Soft delete |
-
-**Status Enum:** `draft`, `published`, `active`, `completed`, `cancelled`, `archived`
-
-#### `registrations`
-Join between contacts and events.
-
-| Column | Type | Notes |
-|--------|------|-------|
-| id | TEXT PK | |
-| contact_id | TEXT FK → contacts | CASCADE delete |
-| event_id | TEXT FK → events | CASCADE delete |
-| status | reg_status ENUM | |
-| ticket_token | TEXT | QR code token (generated on approval) |
-| ai_score | NUMERIC(4,3) | AI approval score |
-| flag_override | BOOLEAN | Admin can clear a flag |
-| attended_at | TIMESTAMPTZ | Set on check-in |
-| UNIQUE(contact_id, event_id) | | One registration per contact per event |
-
-**Status Enum:** `pending`, `confirmed`, `approved`, `rejected`, `waitlisted`, `attended`, `cancelled`
-
-#### `users`
-Staff/admin accounts.
-
-| Column | Type | Notes |
-|--------|------|-------|
-| id | TEXT PK | |
-| email | VARCHAR(200) UNIQUE | |
-| password_hash | VARCHAR(255) | bcrypt |
-| role | VARCHAR(20) | 'super_admin', 'event_admin', 'staff', 'vendor_client', 'participant' |
-| name | VARCHAR(200) | |
-
-#### `user_events`
-Scopes staff/viewer access to specific events.
-
-| Column | Notes |
-|--------|-------|
-| user_id FK, event_id FK | UNIQUE per pair |
-| granted_by FK | Who granted access |
-
-#### Other Tables
-
-| Table | Purpose |
-|-------|---------|
-| `industries` | Lookup: industry slugs/names |
-| `job_titles` | Lookup: job title slugs/names |
-| `vendors` | Event vendor records |
-| `flagged_records` | ETL-flagged rows pending review |
-| `audit_logs` | Append-only audit trail (`{resource}.{verb}` actions) |
-| `consent_records` | UU PDP consent tracking per contact |
-
-### MongoDB (Documents)
-
-| Collection | Purpose |
-|------------|---------|
-| Survey schemas | Dynamic survey JSONB templates per event |
-| Raw ETL uploads | Raw Excel/CSV upload data before normalization |
+| Komponen | VPS | AWS | GCP |
+|---|---|---|---|
+| Hosting (server + DB) | Rp 978.000–1.956.000 | Rp 2.445.000–4.890.000 | Rp 2.119.000–4.401.000 |
+| Redis | Rp 163.000–326.000 | Rp 815.000 | Rp 652.000 |
+| AI Insights — Rendah | Rp 3.000 | sama | sama |
+| AI Insights — Sedang | Rp 9.000 | sama | sama |
+| AI Insights — Tinggi | Rp 18.000 | sama | sama |
+| Email — Brevo Business (~100K email) | Rp 1.060.000 | sama | sama |
+| Email — Brevo Enterprise (~200K+ email) | Rp 3.260.000 | sama | sama |
+| Email alternatif — AWS SES (~200K email) | — | Rp 326.000 | — |
+| **TOTAL — Rendah (Brevo Business)** | **Rp 2.204.000–3.345.000** | **Rp 4.263.000–6.748.000** | **Rp 3.834.000–6.115.000** |
+| **TOTAL — Tinggi (Brevo Enterprise)** | **Rp 4.419.000–5.560.000** | **Rp 6.536.000–9.981.000** | **Rp 6.049.000–9.330.000** |
+| **TOTAL — Tinggi (SES, AWS hosting)** | — | **Rp 3.604.000–5.570.000** | — |
 
 ---
 
-## 6. API Design
+### 5.4 Ringkasan Biaya
 
-**Base URL:** `/api`
-**Format:** REST, JSON body + JSON responses
-**Error format:** `{ error: { code: string, message: string, details: [] } }` — universal
-**Auth:** Bearer JWT in `Authorization` header
-**Pagination:** `?page=1&pageSize=20` → `{ data: [], pagination: { page, pageSize, total, totalPages } }`
-**Rate limiting:** 100 req/min global; POST `/api/registrations` limited to 10 req/hour per IP
+| Tier | VPS + Brevo | AWS + SES | GCP + Brevo |
+|---|---|---|---|
+| Starter (~1K kontak) | Rp 196rb–738rb/bln | Rp 816rb–1,2jt/bln | Rp 491rb–1,1jt/bln |
+| Growing (~5K kontak) | Rp 735rb–1,7jt/bln | Rp 1,6jt–3,1jt/bln | Rp 1,3jt–2,9jt/bln |
+| Scale (~20K kontak) | Rp 2,2jt–5,6jt/bln | Rp 3,6jt–10jt/bln | Rp 3,8jt–9,3jt/bln |
 
-### API Endpoints (from OpenAPI spec `yorindo-api/openapi.yaml`)
-
-| Domain | Key Endpoints |
-|--------|--------------|
-| **Auth** | `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, `POST /auth/google`, `POST /auth/google-mock` |
-| **Users** | `GET /users`, `POST /users`, `PATCH /users/:id/role`, `DELETE /users/:id`, `GET /users/:id/events`, `PUT /users/:id/events` |
-| **Events** | `GET /events`, `POST /events`, `GET /events/:id`, `PATCH /events/:id`, `DELETE /events/:id`, `POST /events/:id/clone`, `PATCH /events/:id/status`, `GET /events/public/:slug` |
-| **Registrations** | `GET /registrations`, `POST /registrations`, `GET /registrations/:id`, `POST /registrations/:id/status`, `PUT /registrations/:id/status`, `PUT /registrations/bulk-approve`, `POST /registrations/:id/cancel`, `POST /registrations/:id/resend-ticket`, `POST /registrations/:id/clear-flag`, `GET /registrations/confirm/:token` |
-| **Contacts** | `GET /contacts`, `POST /contacts/upload`, `GET /contacts/lookup`, `GET /contacts/health`, `GET /contacts/facets`, `GET /contacts/duplicates`, `POST /contacts/merge`, `PATCH /contacts/:id/flag`, `GET /contacts/:id/history` |
-| **Blast** | `POST /blast`, `GET /blast/:jobId`, `POST /blast/emergency`, `POST /blast/prefilled-audience` |
-| **Templates** | `GET /templates`, `POST /templates`, `PATCH /templates/:id`, `DELETE /templates/:id` |
-| **Tickets** | `GET /tickets/:token` |
-| **Scan** | `POST /scan/verify`, `GET /scan/participants/:eventId`, `POST /scan/offline-flush` |
-| **Reports** | `GET /reports/:eventId`, `POST /reports/:eventId/generate`, `GET /reports/vendor/:magicToken` |
-| **YoriMind** | `POST /yorimind/analyze` |
-| **Data Rights** | `POST /data-rights/request`, `POST /data-rights/erasure` |
+> AWS SES menjadi pilihan paling hemat di tier Scale — kombinasi AWS hosting + SES bisa **50–60% lebih murah** dari AWS hosting + Brevo Enterprise.
 
 ---
 
-## 7. Frontend Architecture
+### 5.5 Rekomendasi per Tahap
 
-### App Router Structure (`yorindo-app/src/app/`)
+**Baru mulai (Starter):**
+- VPS murah (DigitalOcean, Vultr, atau Niagahoster)
+- PostgreSQL dan Redis di server yang sama
+- Brevo Free (9.000 email/bulan gratis)
+- AI Insights: Groq (paling hemat, ~Rp 750/bulan untuk 5 event)
+- SSL: Let's Encrypt via `make ssl-init`
+- **Estimasi total: Rp 200.000–400.000/bulan**
 
-```
-src/app/
-├── layout.tsx              — Root layout (providers, fonts, theme)
-├── page.tsx                — Public landing page
-├── login/                  — Admin/staff login + participant Google SSO
-├── register/
-│   └── [eventSlug]/
-│       ├── page.tsx        — Public event landing
-│       └── form/           — Registration form (mobile-first, multi-step)
-├── register/confirm/[token]/ — Double opt-in confirmation + account creation
-├── tickets/[token]/         — Ticket display page
-├── vendor-report/[token]/   — Vendor magic-link report page
-├── data-rights/             — UU PDP data request/erasure forms
-└── app/                     — Protected admin/staff shell (requires auth)
-    ├── layout.tsx           — Auth guard + AdminShell wrapper
-    ├── page.tsx             — Dashboard (role-branched)
-    ├── events/              — Event list + pipeline hub per event
-    ├── contacts/            — Contact database
-    ├── blast/               — Invitation blast
-    ├── templates/           — Message templates
-    ├── users/               — Account management
-    ├── scan/                — QR check-in PWA
-    └── yorimind/            — AI analysis panel
-```
+**Operasi berkembang (Growing):**
+- VPS lebih besar, atau pisahkan server app dari database
+- Brevo Starter → Business sesuai volume blast
+- Pertimbangkan AWS SES jika blast > 20.000 email/bulan
+- **Estimasi total: Rp 750.000–1.700.000/bulan**
 
-### State Management
-
-| Store | Purpose |
-|-------|---------|
-| `authStore` (Zustand) | Access token + user `{ id, role, name?, email? }` — in-memory, not persisted |
-| `eventStore` (Zustand) | Active event context |
-| `filterStore` (Zustand) | Contact filter state |
-| TanStack Query | All server state: fetching, caching, invalidation |
-
-### Auth Store Shape
-
-```typescript
-interface AuthStore {
-  accessToken: string | null
-  user: {
-    id: string
-    role: 'admin' | 'staff' | 'viewer' | 'participant'
-    name?: string   // populated for participants via Google SSO
-    email?: string  // populated for participants via Google SSO
-  } | null
-  setAccessToken: (token: string, user: AuthStore['user']) => void
-  clearAuth: () => void
-}
-```
-
-### Route Guards (`app/layout.tsx`)
-
-- No `accessToken` → redirect `/login`
-- `viewer` role → restricted to `/app` and `/app/events/**`
-- `participant` role → restricted to `/app` only
-
-### Mock Service Worker (MSW v2)
-
-All API calls in Phase 1 are intercepted by MSW handlers in `src/mocks/handlers/`. Each domain has its own handler file with an in-memory store simulating real API behavior. MSW is initialized in `src/mocks/browser.ts` and enabled via `src/app/providers/MSWProvider.tsx`.
-
-### PWA (Serwist)
-
-- Service worker: `src/app/sw.ts` → compiled to `public/sw.js`
-- Offline-capable QR check-in via `idb` (IndexedDB) queue + Background Sync
-- PWA install banner: `components/features/scan/PWAInstallBanner.tsx`
-- Disabled in development (`NODE_ENV === 'development'`)
-
-### Component Architecture
-
-```
-src/components/
-├── auth/           — MockGoogleAuthDialog (Phase 1 SSO simulation)
-├── dev/            — DevToolbar (role switcher, mock controls — dev only)
-├── features/       — Domain feature components
-│   ├── contacts/
-│   ├── dashboard/  — Role-differentiated dashboards
-│   ├── events/
-│   ├── scan/
-│   └── users/
-├── forms/          — Shared form components
-├── hub/            — Event Pipeline Hub tabs
-├── icons/          — Shared SVG icon components (GoogleIcon, etc.)
-├── layout/         — AdminShell, sidebar, mobile nav
-├── providers/      — QueryProvider, MSWProvider, ThemeProvider
-└── ui/             — shadcn/ui base components
-```
+**Skala besar (Scale):**
+- AWS atau GCP untuk reliabilitas dan auto-scaling
+- Managed database (RDS atau Cloud SQL) + managed Redis
+- AWS SES sangat direkomendasikan untuk email volume tinggi
+- **Estimasi total: Rp 2.200.000–5.600.000/bulan (VPS) atau Rp 3.600.000–10.000.000/bulan (cloud)**
 
 ---
 
-## 8. Backend Architecture
+### 5.6 Yang Tidak Termasuk dalam Perhitungan
 
-### Layer Structure
-
-```
-HTTP Request
-     │
-     ▼
-Routes (Fastify plugins)
-     │
-     ▼
-Services (business logic)
-     │
-     ├──► Repositories (data access abstraction)
-     │         ├── memory/  (Phase 1: in-memory)
-     │         └── postgres/ (Phase 2: real DB)
-     │
-     └──► External Adapters
-               ├── adapters/mock/   (Phase 1 stubs)
-               └── adapters/real/   (Phase 2: Everpro, Brevo, Claude API)
-```
-
-### Dependency Injection
-
-`src/container.ts` wires all dependencies — repositories, services, adapters. Switching Phase 1 → Phase 2 requires only changing the container bindings.
-
-### Services
-
-| Service | Responsibility |
-|---------|---------------|
-| `blast.service.ts` | Invitation blast orchestration, BullMQ job dispatch |
-| `etl.service.ts` | Excel/CSV ETL pipeline: parse → normalize (AI) → upsert |
-| `erasure.service.ts` | UU PDP data erasure/anonymization |
-
-### Workers (BullMQ)
-
-| Worker | Queue | Purpose |
-|--------|-------|---------|
-| `blast.worker.ts` | blast | Process invitation send jobs (Everpro/Brevo) |
-| `etl.worker.ts` | etl | Process uploaded contact files |
-| `erasure.worker.ts` | erasure | Async data anonymization |
-
-### Repositories (Phase 1 — in-memory)
-
-| Repository | Entity |
-|------------|--------|
-| `ContactRepository.ts` | contacts |
-| `EventRepository.ts` | events |
-| `RegistrationRepository.ts` | registrations |
-| `UserRepository.ts` | users |
-| `FlaggedRecordsRepository.ts` | flagged ETL records |
-| `SurveyRepository.ts` | survey schemas |
-| `SuppressionRepository.ts` | consent/suppression |
-
-### Migrations (PostgreSQL)
-
-| File | Contents |
-|------|----------|
-| `001_core_schema.sql` | industries, job_titles, vendors, contacts, events, registrations |
-| `002_users_access.sql` | users, user_events |
-| `003_audit_flagged.sql` | flagged_records, audit_logs, consent_records |
-| `004_indexes.sql` | Performance indexes |
+- **Domain & SSL**: ~Rp 150.000–250.000/tahun (tidak signifikan)
+- **CDN** (opsional, untuk frontend): Rp 0–325.000/bulan
+- **Monitoring** (Sentry, Grafana Cloud): Rp 0–490.000/bulan
+- **Biaya developer/ops**: tidak dihitung sebagai biaya layanan, tapi server VPS butuh pemeliharaan manual berkala
+- **Integrasi WhatsApp**: dikecualikan dari analisis ini
 
 ---
 
-## 9. Authentication & Authorization
-
-### Flow (Phase 2)
-
-```
-POST /api/auth/login
-  → validate credentials → bcrypt compare
-  → issue short-lived JWT access token (15min)
-  → set httpOnly refresh token cookie (7d)
-  → return { accessToken, user }
-
-POST /api/auth/refresh
-  → validate refresh token cookie
-  → check Redis blacklist
-  → issue new access token
-  → return { accessToken, user }
-
-POST /api/auth/logout
-  → add refresh token to Redis blacklist
-  → clear cookie
-```
-
-### Participant SSO (Phase 1 Mock → Phase 2 Google OAuth)
-
-```
-Phase 1 (Mock):
-  POST /api/auth/google-mock  → simulates Google OAuth pre-fill (name, email only)
-  POST /api/auth/google       → creates participant session after double opt-in confirmation
-
-Phase 2:
-  Real Google OAuth PKCE flow → same /api/auth/google endpoint
-```
-
-### JWT Payload
-
-```json
-{ "sub": "user-cuid2-or-opaque-id", "role": "admin|staff|viewer|participant", "iat": ..., "exp": ... }
-```
-
-### Role-Based Access
-
-| Role | Scope |
-|------|-------|
-| `admin` | Full platform access |
-| `staff` | Event-scoped: assigned events only (check-in, approvals) |
-| `viewer` | Read-only: `/app` and `/app/events/**` only |
-| `participant` | Self-service: `/app` dashboard only (tickets, cancellation) |
-
----
-
-## 10. Key Features & Flows
-
-### Contact Upload & ETL Pipeline
-
-```
-Admin uploads Excel/CSV
-  → POST /api/contacts/upload (multipart)
-  → BullMQ ETL worker processes:
-      1. Parse rows
-      2. Normalize via AI (Claude/OpenAI) — computes completeness_score
-      3. Detect duplicates → flagged_records
-      4. Upsert into contacts (phone as dedup key)
-  → Admin reviews flagged records → resolve/discard
-```
-
-### Event Registration Flow (Participant)
-
-```
-Participant visits /register/[eventSlug]
-  → Optionally: Google SSO pre-fills name + email (MockGoogleAuthDialog)
-  → Fills phone (always manual — primary identity)
-  → Multi-step form: Contact Info → Survey → Confirm
-  → POST /api/registrations → status: pending
-
-POST /api/registrations/confirm/:token (double opt-in)
-  → Registration confirmed
-  → Auto-creates participant account (POST /api/auth/google)
-  → Participant session set in authStore
-  → "Masuk ke Dashboard" button shown
-```
-
-### Invitation Blast Flow
-
-```
-Admin selects audience (filter or AI-curated)
-  → Configure template, channel (email/whatsapp), schedule
-  → POST /api/blast → BullMQ job queued
-  → Worker dispatches via Everpro (WhatsApp) or Brevo (email)
-```
-
-### QR Check-in (Offline-first PWA)
-
-```
-Staff installs PWA on device
-  → GET /api/scan/participants/:eventId → cached in IndexedDB
-  → Scan QR code → POST /api/scan/verify (online)
-  → If offline: queue in IndexedDB → Background Sync auto-flushes on reconnect
-  → Manual name search fallback
-```
-
-### YoriMind AI Analysis
-
-```
-Admin requests analysis for completed event
-  → POST /api/yorimind/analyze
-  → Claude Sonnet API processes attendance + demographics data
-  → Returns: root_causes, recommendations (priority: high/medium/low), summary
-```
-
----
-
-## 11. Development Approach
-
-### Phase 1 — FE-first, Concurrent FE+BE (Mock-first)
-
-- **Frontend:** All API calls intercepted by MSW v2 handlers in `src/mocks/handlers/`
-- **Backend:** In-memory repositories (`repositories/memory/`) — no real DB
-- **No real external services:** Everpro, Brevo, Claude API all mocked
-- **Gate:** Story 1.4 (OpenAPI spec) must be complete before any Epic 2+ story begins
-- **Story 1.8** is the Phase 1 BE gate (service adapter scaffold)
-
-### Phase 2 — Real Backend
-
-- Swap in-memory repos for PostgreSQL/MongoDB implementations (`repositories/postgres/`)
-- Swap mock adapters for real service adapters (`services/adapters/real/`)
-- Redis for JWT blacklist + BullMQ
-- Real Google OAuth replacing `/api/auth/google-mock`
-
-### Developer Tools
-
-- **DevToolbar** (`src/components/dev/DevToolbar.tsx`) — visible in dev only; instant role switching (admin/staff/viewer/participant), MSW toggle
-- MSW DevTools available in browser
-- `vitest.config.ts` + `vitest.setup.ts` — unit/integration tests
-- `fake-indexeddb` for offline queue testing without real IndexedDB
-
----
-
-## 12. File Structure
-
-```
-yorindo/                           ← Monorepo root
-├── docs/                          ← Project knowledge (this folder)
-│   ├── system-design.md           ← This document
-│   ├── secrets-setup.md           ← Environment variable guide
-│   └── yorindo_system_design_v1_18 03 26.pdf
-├── _bmad-output/
-│   ├── planning-artifacts/        ← PRD, architecture, epics, UX specs
-│   └── implementation-artifacts/  ← Sprint status + story files
-├── yorindo-app/                   ← Next.js 16 frontend
-│   └── src/
-│       ├── app/                   ← Next.js App Router pages
-│       ├── components/            ← UI components
-│       │   ├── ui/                ← shadcn/ui base
-│       │   ├── features/          ← Domain components
-│       │   ├── layout/            ← AdminShell, nav
-│       │   ├── auth/              ← Auth dialogs
-│       │   ├── icons/             ← Shared SVG icons
-│       │   └── dev/               ← DevToolbar
-│       ├── hooks/                 ← TanStack Query hooks per domain
-│       ├── store/                 ← Zustand stores
-│       ├── types/                 ← TypeScript API types
-│       ├── mocks/                 ← MSW handlers + browser setup
-│       ├── lib/                   ← Utilities (cn, djb2, etc.)
-│       └── utils/                 ← Helper functions
-├── yorindo-api/                   ← Fastify 4 backend
-│   ├── src/
-│   │   ├── routes/                ← Fastify route plugins
-│   │   ├── services/              ← Business logic
-│   │   │   └── adapters/          ← External service adapters (mock/real)
-│   │   ├── repositories/          ← Data access layer
-│   │   │   ├── memory/            ← Phase 1 in-memory repos
-│   │   │   └── postgres/          ← Phase 2 real DB repos
-│   │   ├── workers/               ← BullMQ background workers
-│   │   ├── middleware/            ← Auth, validation middleware
-│   │   ├── types/                 ← Backend TypeScript types
-│   │   ├── interfaces/            ← Repository/service interfaces
-│   │   ├── config/                ← App configuration
-│   │   ├── container.ts           ← DI container
-│   │   ├── server.ts              ← Fastify server factory
-│   │   └── main.ts                ← Entrypoint
-│   ├── migrations/                ← PostgreSQL migration SQL files
-│   └── openapi.yaml               ← OpenAPI 3.0 spec (API contract)
-├── nginx/                         ← Nginx reverse proxy config
-├── docker-compose.yml             ← Production services
-├── docker-compose.dev.yml         ← Development services
-└── .github/                       ← CI/CD workflows
-```
-
----
-
-*Generated by bmad-document-project (quick scan) — 2026-03-25*
+*Dokumen ini dikelola oleh tim engineering EM . U. Terakhir diperbarui: 2026-04-12.*

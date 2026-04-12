@@ -574,7 +574,7 @@ phone      VARCHAR(20)
 email      VARCHAR(200)
 created_at TIMESTAMPTZ DEFAULT NOW()
 
--- users (internal Yorindo team + assigned staff/viewer accounts)
+-- users (internal EM . U team + assigned staff/viewer accounts)
 id            TEXT PRIMARY KEY
 email         VARCHAR(200) UNIQUE NOT NULL
 password_hash VARCHAR(255) NOT NULL          -- bcrypt hash
@@ -690,7 +690,7 @@ db.survey_responses.createIndex({ event_id: 1 })
 
 | Role | Who | Event Access | Surface Access |
 |---|---|---|---|
-| `admin` | Yorindo internal team | All events (no scope check) | All routes |
+| `admin` | EM . U internal team | All events (no scope check) | All routes |
 | `staff` | Check-in personnel | Assigned events only via `user_events` | `/scan` only |
 | `viewer` | Vendor / client | Assigned events only via `user_events` | Read-only analytics + reports |
 | _(public)_ | Participants | None | `/register/[slug]` only |
@@ -906,7 +906,7 @@ Polling every 5 seconds from client. Dashboard at `/app/events/[id]/check-in` po
 7. After all batches complete: generate ETL report, persist a `raw_uploads` row with JSONB metadata, notify admin
 
 **ETL GPT-4o system prompt (do not change without architectural review):**
-- Role: "Kamu adalah data cleaning agent untuk Yorindo Communication."
+- Role: "Kamu adalah data cleaning agent untuk EM . U Communication."
 - Output: JSON array, each item `{ original_index, name, phone, email, service_type, job_title, city, confidence, flags[] }`
 - Confidence: 0.0–1.0 per field; if < 0.7 anywhere, add to `flags[]`
 - Phone: normalize to `+62XXXXXXXXXX`; if unable → flag `'invalid_phone'`
@@ -930,8 +930,8 @@ Polling every 5 seconds from client. Dashboard at `/app/events/[id]/check-in` po
 9. Cache result in Redis with TTL 24h (self-hosted `redis:6379`). Re-call Claude only if new snapshot generated.
 
 **YoriMind system prompt identity (enforce in `services/YoriMindService.ts`):**
-- UI name: "YoriMind — Yorindo Intelligence"
-- Role: "Kamu adalah YoriMind, AI analitik milik Yorindo Communication. Tugasmu menganalisis data performa event B2B seminar teknologi dan memberikan rekomendasi konkret berbasis data."
+- UI name: "YoriMind — EM . U Intelligence"
+- Role: "Kamu adalah YoriMind, AI analitik milik EM . U Communication. Tugasmu menganalisis data performa event B2B seminar teknologi dan memberikan rekomendasi konkret berbasis data."
 - Tone: Profesional, singkat, actionable. Hindari jargon berlebihan. Rekomendasi harus spesifik (angka, segmen, waktu).
 
 ---

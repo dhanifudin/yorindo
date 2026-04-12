@@ -18,7 +18,7 @@ test_patterns: ['vitest + @testing-library/react', 'renderHook with QueryClient 
 
 ### Problem Statement
 
-Blast targeting in Yorindo is fully manual — admins select filters (industry, city, company size) from dropdowns on `/app/blast` with no intelligence about which contacts are most suitable for a given event. There is no AI-driven audience discovery, no contact-event suitability scoring, and no way to see recommended audiences from within the event management flow. Additionally, the Event model lacks industry/category tags, both critical data gaps for any recommendation engine.
+Blast targeting in EM . U is fully manual — admins select filters (industry, city, company size) from dropdowns on `/app/blast` with no intelligence about which contacts are most suitable for a given event. There is no AI-driven audience discovery, no contact-event suitability scoring, and no way to see recommended audiences from within the event management flow. Additionally, the Event model lacks industry/category tags, both critical data gaps for any recommendation engine.
 
 ### Solution
 

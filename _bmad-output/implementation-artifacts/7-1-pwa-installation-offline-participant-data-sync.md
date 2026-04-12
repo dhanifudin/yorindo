@@ -27,7 +27,7 @@ Then the `beforeinstallprompt` event fires and the custom install banner appears
 
 **AC2:** Given the custom install banner,
 When rendered,
-Then it shows: app icon, "Install Yorindo Check-in" label, "Install" button, "Not Now" button
+Then it shows: app icon, "Install EM . U Check-in" label, "Install" button, "Not Now" button
 
 **AC3:** Given "Install" is clicked,
 Then `promptEvent.prompt()` is called and the banner is dismissed

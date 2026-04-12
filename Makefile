@@ -12,6 +12,7 @@ DEV_API_TTY  = $(DEV_COMPOSE) exec api
 .PHONY: deploy-demo reset-demo stop-demo logs-demo migrate-demo seed-demo \
         up-dev stop-dev clean-dev logs-dev migrate-dev seed-dev seed-dev-demo setup-dev reset-dev \
         deploy-app stop-app logs-app \
+        ssl-init ssl-renew \
         lint lint-api lint-app test test-api test-app
 
 ## Deploy demo (tag release) — full deploy: down -v, pull, up, migrate, seed
@@ -224,6 +225,28 @@ stop-app:
 ## Follow app preview logs
 logs-app:
 	$(APP_COMPOSE) logs -f
+
+# ─────────────────────────────────────────────
+# SSL — Let's Encrypt via Certbot
+# ─────────────────────────────────────────────
+
+## Issue SSL certificates for all configured domains via Let's Encrypt
+## Usage: make ssl-init DOMAIN=your.domain.com EMAIL=admin@your.domain.com
+ssl-init:
+	@if [ -z "$(DOMAIN)" ] || [ -z "$(EMAIL)" ]; then \
+		echo "❌ Usage: make ssl-init DOMAIN=your.domain.com EMAIL=admin@your.domain.com"; \
+		exit 1; \
+	fi
+	@echo "🔐 Issuing Let's Encrypt certificate for $(DOMAIN)..."
+	sudo certbot --nginx -d $(DOMAIN) --non-interactive --agree-tos -m $(EMAIL)
+	@echo "✅ Certificate issued. Nginx reloaded automatically."
+
+## Renew all Let's Encrypt certificates (run via cron: 0 3 * * * make ssl-renew)
+ssl-renew:
+	@echo "🔄 Renewing Let's Encrypt certificates..."
+	sudo certbot renew --quiet
+	sudo systemctl reload nginx
+	@echo "✅ Certificates renewed."
 
 # ─────────────────────────────────────────────
 # Lint & Test

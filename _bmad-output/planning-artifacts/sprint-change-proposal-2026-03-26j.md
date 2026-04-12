@@ -9,7 +9,7 @@
 
 ## Section 1: Issue Summary
 
-During product review, it was identified that the `Vendor` concept — richly described in the PRD (Journeys 7, 8, 10) as a first-class participant in the Yorindo ecosystem — has no backing data model. Vendor companies (e.g., Alibaba Cloud, AWS, ERP software companies) who sponsor events are currently represented only as a scalar `vendor_contact_email` string on the `events` table (FR45). This means:
+During product review, it was identified that the `Vendor` concept — richly described in the PRD (Journeys 7, 8, 10) as a first-class participant in the EM . U ecosystem — has no backing data model. Vendor companies (e.g., Alibaba Cloud, AWS, ERP software companies) who sponsor events are currently represented only as a scalar `vendor_contact_email` string on the `events` table (FR45). This means:
 
 - A vendor company cannot be profiled (name, logo, website, industry, tier)
 - Vendors cannot be reused across events without re-entering contact details
@@ -143,7 +143,7 @@ Add after `events` table definition:
 | website | TEXT | |
 | contact_email | VARCHAR(255) | NOT NULL — used for magic link delivery |
 | industry | VARCHAR(100) | |
-| notes | TEXT | Internal notes for Yorindo AM |
+| notes | TEXT | Internal notes for EM . U AM |
 | created_at | TIMESTAMPTZ | NOT NULL DEFAULT now() |
 | updated_at | TIMESTAMPTZ | NOT NULL DEFAULT now() |
 

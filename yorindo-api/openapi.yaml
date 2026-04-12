@@ -1,12 +1,12 @@
 openapi: 3.0.3
 info:
-  title: Yorindo API
+  title: EM . U API
   version: 1.0.0
   license:
     name: Proprietary
     url: https://yorindo.id/license
   description: |
-    Yorindo event management platform API.
+    EM . U event management platform API.
 
     All dates are ISO 8601 UTC strings (e.g., "2026-04-15T02:00:00.000Z").
     All IDs are opaque strings.
@@ -751,7 +751,7 @@ components:
           example: admin@yorindo.id
         name:
           type: string
-          example: Admin Yorindo
+          example: Admin EM . U
         role:
           type: string
           enum: [admin, staff, viewer, participant]

@@ -19,7 +19,7 @@ So that I receive the participant insights I was promised without the friction o
 - [x] `POST /api/events/:id/vendor-link` generates a time-limited signed URL and delivers it to the sponsor `contact_email` resolved from the linked vendor record attached through `/api/vendors` and `/api/events/:id/sponsors`
 - [x] `GET /api/vendor-report/:token` shows the vendor report landing page with the current `dpaVersion` and blocks report visibility until DPA acceptance
 - [x] `POST /api/vendor-report/:token/dpa` records acceptance and unlocks the report payload for that token
-- [x] If the magic link is expired, invalid, or no longer eligible, the endpoint returns a 403-style error state instructing the vendor to contact Yorindo
+- [x] If the magic link is expired, invalid, or no longer eligible, the endpoint returns a 403-style error state instructing the vendor to contact EM . U
 - [x] DPA acceptance is tracked against the linked vendor identity and DPA version, not a raw email string
 - [x] Vendor-facing report download remains available through the report/download flow after DPA acceptance
 - [x] MSW handlers exist for `/api/vendor-report/:token` and `/api/vendor-report/:token/dpa`

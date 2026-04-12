@@ -53,18 +53,18 @@ All utility classes (`.card-elevated`, `.icon-container`, `.section-label`, `.gr
 
 ### Story 10.6 — Landing Page Full Structural Rebuild
 
-Rewrite `src/app/page.tsx` as a full 8-section landing page, adapted from reference sections to Next.js/Yorindo context. Create `LandingHeader.tsx` as a standalone sticky nav component.
+Rewrite `src/app/page.tsx` as a full 8-section landing page, adapted from reference sections to Next.js/EM . U context. Create `LandingHeader.tsx` as a standalone sticky nav component.
 
 **Sections:**
 
 | Section | Source | Key adaptations |
 |---|---|---|
 | LandingHeader | `Header.tsx` | next/link instead of react-router; nav items → `#overview/#system/#workflow/#access`; "Masuk" CTA → `/login` |
-| Hero | `Hero.tsx` | Full-viewport; bg image (`public/hero-bg.png`) + dark + blue overlay; title "Yorindo Admin Platform"; CTA → `/login`; 3 stats inline |
+| Hero | `Hero.tsx` | Full-viewport; bg image (`public/hero-bg.png`) + dark + blue overlay; title "EM . U Admin Platform"; CTA → `/login`; 3 stats inline |
 | AboutSystem | `AboutSystem.tsx` | 4 `card-elevated` cards with `icon-container`; content in Indonesian |
 | CoreModules | `CoreModules.tsx` | `bg-surface` section bg; 6 modules = Event, Kontak, Blast, Check-in, Laporan, YoriMind |
 | HowItWorks | `HowItWorks.tsx` | 4-step flow; `step-connector` line on desktop |
-| Architecture | `Architecture.tsx` | 3-node flow: Admin → Yorindo System → Output; chevron connectors |
+| Architecture | `Architecture.tsx` | 3-node flow: Admin → EM . U System → Output; chevron connectors |
 | AccessSecurity | `AccessSecurity.tsx` | 3 cards: Role-Based Access, Admin Levels, Data (UU PDP) |
 | Footer | `Footer.tsx` | Logo + nav links + `/data-rights` link + copyright |
 
@@ -78,7 +78,7 @@ Update `src/app/login/layout.tsx` to a two-panel split layout. Update `src/app/l
 - Dark navy background (`hsl(217 65% 10%)`)
 - Grid overlay (subtle white lines, CSS only)
 - Two glow blobs (blue, `filter: blur(80px)`)
-- Logo chip: shield icon + "Yorindo Admin"
+- Logo chip: shield icon + "EM . U Admin"
 - Headline: "Secure Admin Access"
 - Status bar: green pulse dot + "All systems operational"
 
