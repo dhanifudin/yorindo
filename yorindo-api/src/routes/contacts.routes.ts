@@ -1120,8 +1120,8 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: 'Invalid type', details: [] } })
   })
 
-  // ── GET /api/contacts/flagged ─────────────────────────────────────
-  fastify.get('/api/contacts/flagged', { preHandler: [requireAuth] }, async (request: FastifyRequest, reply: FastifyReply) => {
+  // ── GET /api/contacts/unmatched ───────────────────────────────────
+  fastify.get('/api/contacts/unmatched', { preHandler: [requireAuth] }, async (request: FastifyRequest, reply: FastifyReply) => {
     const { type, page = '1', pageSize = '50' } = request.query as Record<string, string | undefined>
     if (!type || !['industry-unmatched', 'jobtitle-unmatched'].includes(type)) {
       return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: 'Invalid type', details: [] } })
