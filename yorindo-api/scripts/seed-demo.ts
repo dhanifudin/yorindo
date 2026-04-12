@@ -185,7 +185,7 @@ export async function seedDemo(pool: Pool): Promise<void> {
     console.log(`✓ Seeded ${vendorData.length} vendors`)
 
     // ── Users ──
-    const passwordHash = await bcrypt.hash('Password123!', 10)
+    const passwordHash = hashSync('Password123!', 10)
     const userIds = { admin: createId(), staff: createId(), viewer: createId() }
     await client.query(`
       INSERT INTO users (id, email, password_hash, role, name) VALUES
