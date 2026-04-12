@@ -23,8 +23,6 @@ import {
 } from '@/components/ui/select'
 import { toast } from 'sonner'
 import { Save, Loader2, AlertCircle } from 'lucide-react'
-import { useIndustries, useJobTitles } from '@/hooks/useStandardValues'
-import { Combobox } from '@/components/ui/combobox'
 
 interface Contact {
   id: string
@@ -43,7 +41,8 @@ interface MissingFieldsResponse {
 }
 
 async function fetchMissingFields(field: string, page = 1): Promise<MissingFieldsResponse> {
-  const res = await fetch(`/api/contacts?${field}=true&page=${page}&pageSize=50`)
+  const param = field === 'email' ? 'missingEmail' : 'missingPhone'
+  const res = await fetch(`/api/contacts?${param}=true&page=${page}&pageSize=50`)
   if (!res.ok) throw new Error('Gagal memuat kontak')
   return res.json()
 }
@@ -63,16 +62,10 @@ async function updateContact(id: string, data: Partial<Contact>) {
 
 export function MissingFieldsTab() {
   const queryClient = useQueryClient()
-  const [activeField, setActiveField] = useState<'email' | 'phone' | 'company' | 'city' | 'serviceType' | 'jobTitle'>('email')
+  const [activeField, setActiveField] = useState<'email' | 'phone'>('email')
   const [page, setPage] = useState(1)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
-
-  const { data: industries } = useIndustries()
-  const { data: jobTitles } = useJobTitles()
-
-  const industryOptions = industries?.map(ind => ({ value: ind.name, label: ind.name })) ?? []
-  const jobTitleOptions = jobTitles?.map(jt => ({ value: jt.name, label: jt.name })) ?? []
 
   const { data, isLoading } = useQuery<MissingFieldsResponse>({
     queryKey: ['missing-fields', activeField, page],
@@ -110,10 +103,6 @@ export function MissingFieldsTab() {
     const labels: Record<string, string> = {
       email: 'Email',
       phone: 'Telepon',
-      company: 'Perusahaan',
-      city: 'Kota',
-      serviceType: 'Industri',
-      jobTitle: 'Jabatan',
     }
     return labels[field] ?? field
   }
@@ -136,10 +125,6 @@ export function MissingFieldsTab() {
             <SelectContent>
               <SelectItem value="email">Email Kosong</SelectItem>
               <SelectItem value="phone">Telepon Kosong</SelectItem>
-              <SelectItem value="company">Perusahaan Kosong</SelectItem>
-              <SelectItem value="city">Kota Kosong</SelectItem>
-              <SelectItem value="serviceType">Industri Kosong</SelectItem>
-              <SelectItem value="jobTitle">Jabatan Kosong</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -178,32 +163,12 @@ export function MissingFieldsTab() {
                     </TableCell>
                     <TableCell>
                       {isEditing ? (
-                        activeField === 'serviceType' ? (
-                          <Combobox
-                            options={industryOptions}
-                            value={editValue}
-                            onValueChange={setEditValue}
-                            placeholder={`Pilih ${getFieldLabel(activeField)}...`}
-                            searchPlaceholder={`Cari ${getFieldLabel(activeField)}...`}
-                            emptyText="Tidak ditemukan."
-                          />
-                        ) : activeField === 'jobTitle' ? (
-                          <Combobox
-                            options={jobTitleOptions}
-                            value={editValue}
-                            onValueChange={setEditValue}
-                            placeholder={`Pilih ${getFieldLabel(activeField)}...`}
-                            searchPlaceholder={`Cari ${getFieldLabel(activeField)}...`}
-                            emptyText="Tidak ditemukan."
-                          />
-                        ) : (
-                          <Input
-                            value={editValue}
-                            onChange={(e) => setEditValue(e.target.value)}
-                            placeholder={`Masukkan ${getFieldLabel(activeField)}...`}
-                            className="h-9"
-                          />
-                        )
+                        <Input
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          placeholder={`Masukkan ${getFieldLabel(activeField)}...`}
+                          className="h-9"
+                        />
                       ) : (
                         <Badge variant="outline" className="text-xs">
                           <AlertCircle className="w-3 h-3 mr-1" />
