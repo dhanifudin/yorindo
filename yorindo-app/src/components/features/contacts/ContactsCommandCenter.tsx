@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import type { RowSelectionState } from '@tanstack/react-table'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import { useContacts } from '@/hooks/useContacts'
 import { Button } from '@/components/ui/button'
 import { useFilterStore } from '@/store/filterStore'
@@ -97,7 +98,12 @@ export function ContactsCommandCenter() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Database Kontak</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold text-gray-900">Database Kontak</h1>
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/app/contacts/normalize">Normalisasi</Link>
+          </Button>
+        </div>
         <Button
           variant={selectMode ? 'default' : 'outline'}
           size="sm"
