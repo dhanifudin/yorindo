@@ -1,7 +1,6 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import Link from 'next/link'
 import { AlertCircle, ArrowRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -26,7 +25,7 @@ async function fetchNormalizationCounts(): Promise<NormalizationCounts> {
   }
 }
 
-export function NormalizationHealthFlags() {
+export function NormalizationHealthFlags({ onNavigate }: { onNavigate: (type: 'industry' | 'jobtitle') => void }) {
   const { data, isLoading } = useQuery<NormalizationCounts>({
     queryKey: ['normalization-counts'],
     queryFn: fetchNormalizationCounts,
@@ -43,10 +42,10 @@ export function NormalizationHealthFlags() {
     <div className="flex flex-wrap gap-3">
       {/* Industry unmatched */}
       {data && data.industryUnmatched > 0 && (
-        <Link
-          href="/app/contacts/normalize"
+        <button
+          onClick={() => onNavigate('industry')}
           className={cn(
-            'flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors',
+            'flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors text-left',
             data.industryUnmatched > 50
               ? 'border-orange-200 bg-orange-50 hover:bg-orange-100'
               : 'border-yellow-200 bg-yellow-50 hover:bg-yellow-100'
@@ -66,15 +65,15 @@ export function NormalizationHealthFlags() {
             <p className="text-xs text-muted-foreground">Perlu normalisasi</p>
           </div>
           <ArrowRight className="w-4 h-4 ml-2 text-muted-foreground" />
-        </Link>
+        </button>
       )}
 
       {/* Job title unmatched */}
       {data && data.jobtitleUnmatched > 0 && (
-        <Link
-          href="/app/contacts/normalize"
+        <button
+          onClick={() => onNavigate('jobtitle')}
           className={cn(
-            'flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors',
+            'flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors text-left',
             data.jobtitleUnmatched > 50
               ? 'border-orange-200 bg-orange-50 hover:bg-orange-100'
               : 'border-yellow-200 bg-yellow-50 hover:bg-yellow-100'
@@ -94,7 +93,7 @@ export function NormalizationHealthFlags() {
             <p className="text-xs text-muted-foreground">Perlu normalisasi</p>
           </div>
           <ArrowRight className="w-4 h-4 ml-2 text-muted-foreground" />
-        </Link>
+        </button>
       )}
     </div>
   )

@@ -222,43 +222,23 @@ export function ContactsTable({
         )
       },
     },
-    {
-      accessorKey: 'email',
-      header: 'Email',
-      cell: ({ getValue }) => {
-        const email = getValue() as string | null | undefined
-        return <span className="text-muted-foreground">{email || '—'}</span>
-      },
-    },
+    { accessorKey: 'email', header: 'Email' },
+    { accessorKey: 'phone', header: 'Telepon' },
+    { accessorKey: 'company', header: 'Perusahaan' },
     { accessorKey: 'serviceType', header: 'Industri' },
-    {
-      accessorKey: 'jobTitle',
-      header: 'Jabatan',
-      cell: ({ getValue }) => {
-        const val = getValue() as string | null | undefined
-        return <span className="text-muted-foreground">{val || '—'}</span>
-      },
-    },
-    { accessorKey: 'city', header: 'Kota' },
-    {
-      accessorKey: 'completenessScore',
-      header: 'Kelengkapan',
-      cell: ({ getValue }) => {
-        const score = getValue() as number
-        const pct = Math.round(score * 100)
-        let colorClass = ''
-        if (pct >= 80) colorClass = 'bg-green-100 text-green-700 border-green-200'
-        else if (pct >= 50) colorClass = 'bg-yellow-100 text-yellow-700 border-yellow-200'
-        else colorClass = 'bg-red-100 text-red-700 border-red-200'
-
-        return (
-          <Badge variant="outline" className={`font-medium ${colorClass}`}>
-            {pct}%
-          </Badge>
-        )
-      },
-    },
   ]
+
+  // Check if contact has missing fields for row coloring
+  const getMissingFields = (contact: Contact) => {
+    const missing: string[] = []
+    if (!contact.email) missing.push('email')
+    if (!contact.phone) missing.push('phone')
+    if (!contact.city) missing.push('city')
+    if (!contact.company) missing.push('company')
+    if (!contact.serviceType) missing.push('serviceType')
+    if (!contact.jobTitle) missing.push('jobTitle')
+    return missing
+  }
 
   const handleResolveDuplicates = () => {
     if (!selectedKeepId || !duplicateGroup) return
@@ -725,11 +705,16 @@ export function ContactsTable({
           ) : (
             table.getRowModel().rows.map((row) => {
               const contact = row.original
+              const missing = getMissingFields(contact)
+              const hasMissing = missing.length > 0
+              const hasManyMissing = missing.length >= 3
+              const rowBg = hasManyMissing ? 'bg-red-50 active:bg-red-100' : hasMissing ? 'bg-yellow-50 active:bg-yellow-100' : ''
+
               return (
                 <div
                   key={contact.id}
                   className={`rounded-lg border border-border bg-card p-3 cursor-pointer active:bg-muted/50 flex items-center gap-2 ${
-                    row.getIsSelected() ? 'bg-muted/30' : ''
+                    row.getIsSelected() ? 'bg-muted/30' : rowBg
                   }`}
                   onClick={() => {
                     if (selectMode) {
@@ -738,6 +723,7 @@ export function ContactsTable({
                       setDetailContact(contact)
                     }
                   }}
+                  title={hasMissing ? `Field kosong: ${missing.join(', ')}` : undefined}
                 >
                   {selectMode && (
                     <Checkbox
@@ -762,6 +748,8 @@ export function ContactsTable({
                       {contact.serviceType && <span>{contact.serviceType}</span>}
                       {(contact.jobTitle || contact.serviceType) && contact.email && <span>·</span>}
                       {contact.email && <span className="truncate">{contact.email}</span>}
+                      {contact.email && contact.phone && <span>·</span>}
+                      {contact.phone && <span className="truncate">{contact.phone}</span>}
                     </div>
                   </div>
                 </div>
@@ -803,19 +791,46 @@ export function ContactsTable({
                 </TableCell>
               </TableRow>
             ) : (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  className={`cursor-pointer ${row.getIsSelected() ? 'bg-muted/30' : ''}`}
-                  onClick={() => setDetailContact(row.original)}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="whitespace-nowrap max-w-[200px] truncate">
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+              table.getRowModel().rows.map((row) => {
+                const contact = row.original
+                const missing = getMissingFields(contact)
+                const hasMissing = missing.length > 0
+                const hasManyMissing = missing.length >= 3
+                const rowBg = hasManyMissing ? 'bg-red-50 hover:bg-red-100' : hasMissing ? 'bg-yellow-50 hover:bg-yellow-100' : ''
+
+                return (
+                  <TableRow
+                    key={row.id}
+                    className={`cursor-pointer ${row.getIsSelected() ? 'bg-muted/30' : rowBg}`}
+                    onClick={() => setDetailContact(row.original)}
+                    title={hasMissing ? `Field kosong: ${missing.join(', ')}` : undefined}
+                  >
+                    {/* Row 1: Name, Email, Phone */}
+                    <TableCell className="whitespace-nowrap max-w-[200px] truncate font-medium">
+                      <div className="flex items-center gap-2">
+                        <span>{contact.name}</span>
+                        {contact.flagCategory && (
+                          <Badge className={FLAG_LABELS[contact.flagCategory].className + ' text-[10px] px-1.5 py-0'}>
+                            {FLAG_LABELS[contact.flagCategory].label}
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
-                  ))}
-                </TableRow>
-              ))
+                    <TableCell className="whitespace-nowrap max-w-[200px] truncate text-muted-foreground">
+                      {contact.email || <span className="italic">—</span>}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap max-w-[150px] truncate text-muted-foreground">
+                      {contact.phone || <span className="italic">—</span>}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap max-w-[150px] truncate text-muted-foreground">
+                      {contact.company || <span className="italic">—</span>}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap max-w-[120px] truncate text-muted-foreground">
+                      {contact.serviceType || <span className="italic">—</span>}
+                    </TableCell>
+                  </TableRow>
+                )
+              })
             )}
           </TableBody>
         </Table>

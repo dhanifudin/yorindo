@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Dialog,
@@ -12,11 +12,10 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
 import { Check, ChevronsLeftRight, Loader2 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface Contact {
   id: string
@@ -43,7 +42,7 @@ interface MergeDialogProps {
   pair: DuplicatePair | null
 }
 
-type FieldChoice = 'primary' | 'duplicate'
+type FieldChoice = 'primary' | 'duplicate' | null
 
 const FIELDS = [
   { key: 'name', label: 'Nama' },
@@ -57,7 +56,7 @@ const FIELDS = [
 
 function FieldValue({ value }: { value: string | null }) {
   if (!value) return <span className="text-muted-foreground italic">—</span>
-  return <span>{value}</span>
+  return <span className="break-all">{value}</span>
 }
 
 export function MergeDialog({ open, onOpenChange, pair }: MergeDialogProps) {
@@ -119,74 +118,96 @@ export function MergeDialog({ open, onOpenChange, pair }: MergeDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[1400px] w-[95vw] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Pilih Data untuk Digabungkan</DialogTitle>
           <DialogDescription>
-            Pilih nilai yang ingin disimpan untuk setiap field. Kontak lainnya akan dihapus.
+            Klik pada nilai yang ingin disimpan untuk setiap field. Kontak lainnya akan dihapus.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           {/* Contact info headers */}
-          <div className="grid grid-cols-[140px_1fr_1fr] gap-3 text-sm">
-            <div className="text-muted-foreground font-medium">Field</div>
-            <div>
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="p-3 rounded-lg border bg-muted/30">
               <div className="font-medium">{pair.primary.name}</div>
-              <Badge variant="outline" className="text-xs mt-1">Kontak 1</Badge>
+              <Badge variant="outline" className="text-[10px] mt-1">Kontak 1</Badge>
             </div>
-            <div>
+            <div className="p-3 rounded-lg border bg-muted/30">
               <div className="font-medium">{pair.duplicate.name}</div>
-              <Badge variant="outline" className="text-xs mt-1">Kontak 2</Badge>
+              <Badge variant="outline" className="text-[10px] mt-1">Kontak 2</Badge>
             </div>
           </div>
 
           <Separator />
 
           {/* Field selection rows */}
-          {FIELDS.map((field) => {
-            const primaryVal = pair.primary[field.key as keyof Contact]
-            const duplicateVal = pair.duplicate[field.key as keyof Contact]
-            const currentSelection = selections[field.key] || (primaryVal ? 'primary' : 'duplicate')
+          <div className="space-y-4">
+            {FIELDS.map((field) => {
+              const primaryVal = pair.primary[field.key as keyof Contact]
+              const duplicateVal = pair.duplicate[field.key as keyof Contact]
+              const currentSelection = selections[field.key] || (primaryVal ? 'primary' : 'duplicate')
 
-            return (
-              <div key={field.key} className="grid grid-cols-[140px_1fr_1fr] gap-3 items-center">
-                <div className="text-sm font-medium">{field.label}</div>
-
-                {/* Primary value */}
-                <div className="flex items-center gap-2">
-                  <RadioGroup
-                    value={currentSelection}
-                    onValueChange={(v) => updateSelection(field.key, v as FieldChoice)}
-                    className="flex items-center"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="primary" id={`${field.key}-primary`} />
-                      <Label htmlFor={`${field.key}-primary`} className="text-sm font-normal cursor-pointer">
+              return (
+                <div key={field.key} className="space-y-2">
+                  <div className="text-sm font-medium text-muted-foreground">{field.label}</div>
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* Primary value */}
+                    <button
+                      type="button"
+                      onClick={() => updateSelection(field.key, 'primary')}
+                      className={cn(
+                        'flex items-center gap-2 p-3 rounded-lg border text-left transition-colors',
+                        currentSelection === 'primary'
+                          ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                          : 'border-border hover:bg-muted/50'
+                      )}
+                    >
+                      <div className={cn(
+                        'flex items-center justify-center w-5 h-5 rounded-full border shrink-0',
+                        currentSelection === 'primary'
+                          ? 'border-primary bg-primary'
+                          : 'border-muted-foreground'
+                      )}>
+                        {currentSelection === 'primary' && (
+                          <Check className="w-3 h-3 text-primary-foreground" />
+                        )}
+                      </div>
+                      <span className="text-sm">
                         <FieldValue value={primaryVal} />
-                      </Label>
-                    </div>
-                  </RadioGroup>
-                </div>
+                      </span>
+                    </button>
 
-                {/* Duplicate value */}
-                <div className="flex items-center gap-2">
-                  <RadioGroup
-                    value={currentSelection}
-                    onValueChange={(v) => updateSelection(field.key, v as FieldChoice)}
-                    className="flex items-center"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="duplicate" id={`${field.key}-duplicate`} />
-                      <Label htmlFor={`${field.key}-duplicate`} className="text-sm font-normal cursor-pointer">
+                    {/* Duplicate value */}
+                    <button
+                      type="button"
+                      onClick={() => updateSelection(field.key, 'duplicate')}
+                      className={cn(
+                        'flex items-center gap-2 p-3 rounded-lg border text-left transition-colors',
+                        currentSelection === 'duplicate'
+                          ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                          : 'border-border hover:bg-muted/50'
+                      )}
+                    >
+                      <div className={cn(
+                        'flex items-center justify-center w-5 h-5 rounded-full border shrink-0',
+                        currentSelection === 'duplicate'
+                          ? 'border-primary bg-primary'
+                          : 'border-muted-foreground'
+                      )}>
+                        {currentSelection === 'duplicate' && (
+                          <Check className="w-3 h-3 text-primary-foreground" />
+                        )}
+                      </div>
+                      <span className="text-sm">
                         <FieldValue value={duplicateVal} />
-                      </Label>
-                    </div>
-                  </RadioGroup>
+                      </span>
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
         </div>
 
         <DialogFooter>
@@ -201,7 +222,7 @@ export function MergeDialog({ open, onOpenChange, pair }: MergeDialogProps) {
               </>
             ) : (
               <>
-                <Check className="w-4 h-4 mr-1" />
+                <ChevronsLeftRight className="w-4 h-4 mr-1" />
                 Gabungkan Kontak
               </>
             )}

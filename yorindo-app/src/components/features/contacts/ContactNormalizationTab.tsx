@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -59,12 +59,19 @@ async function bulkNormalize(contactIds: string[], field: 'serviceType' | 'jobTi
   return res.json()
 }
 
-export function ContactNormalizationTab() {
+export function ContactNormalizationTab({ defaultTab }: { defaultTab: 'industry' | 'jobtitle' }) {
   const queryClient = useQueryClient()
-  const [activeTab, setActiveTab] = useState<'industry' | 'jobtitle'>('industry')
+  const [activeTab, setActiveTab] = useState<'industry' | 'jobtitle'>(defaultTab)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [bulkValue, setBulkValue] = useState('')
   const [page, setPage] = useState(1)
+
+  useEffect(() => {
+    setActiveTab(defaultTab)
+    setPage(1)
+    setSelectedIds(new Set())
+    setBulkValue('')
+  }, [defaultTab])
 
   // Standard values
   const { data: industries } = useIndustries()
@@ -158,7 +165,7 @@ export function ContactNormalizationTab() {
         </Button>
       </div>
 
-      <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v as 'industry' | 'jobtitle'); setPage(1); setSelectedIds(new Set()); setBulkValue('') }}>
+      <Tabs value={activeTab}>
         <TabsList>
           <TabsTrigger value="industry">Industri Tidak Cocok</TabsTrigger>
           <TabsTrigger value="jobtitle">Jabatan Tidak Cocok</TabsTrigger>

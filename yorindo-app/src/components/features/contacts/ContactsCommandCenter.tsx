@@ -3,14 +3,13 @@
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import type { RowSelectionState } from '@tanstack/react-table'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
 import { useContacts } from '@/hooks/useContacts'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useFilterStore } from '@/store/filterStore'
-import { HealthBar } from './HealthBar'
+import { ContactsHealthFlags } from './ContactsHealthFlags'
 import { EventBanner } from './EventBanner'
 import { ContactsFilterBar } from './ContactsFilterBar'
 import { ActiveFilterPills } from './ActiveFilterPills'
@@ -27,6 +26,7 @@ import { ContactNormalizationTab } from './ContactNormalizationTab'
 
 export function ContactsCommandCenter() {
   const [activeView, setActiveView] = useState<'contacts' | 'flagged' | 'duplicates' | 'normalize'>('contacts')
+  const [normTab, setNormTab] = useState<'industry' | 'jobtitle'>('industry')
   const [triageMode, setTriageMode] = useState<'flagged' | 'duplicates' | null>(null)
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
   const [selectMode, setSelectMode] = useState(false)
@@ -85,32 +85,11 @@ export function ContactsCommandCenter() {
     })
   }, [searchParams, setFilter])
 
-  const handleStatClick = (type: 'duplicates' | 'missingEmail' | 'missingPhone') => {
-    if (type === 'duplicates') {
-      setTriageMode(type)
-      return
-    }
-
-    const params = new URLSearchParams(searchParams.toString())
-    params.delete('page')
-    if (type === 'missingEmail') {
-      params.set('missingEmail', 'true')
-      params.delete('missingPhone')
-    } else {
-      params.set('missingPhone', 'true')
-      params.delete('missingEmail')
-    }
-    router.push(`${pathname}?${params.toString()}`)
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-bold text-gray-900">Database Kontak</h1>
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/app/contacts/normalize">Normalisasi</Link>
-          </Button>
         </div>
         <Button
           variant={selectMode ? 'default' : 'outline'}
@@ -122,10 +101,10 @@ export function ContactsCommandCenter() {
         </Button>
       </div>
 
-      <HealthBar onStatClick={handleStatClick} />
+      <ContactsHealthFlags onNavigate={(view) => setActiveView(view)} />
 
       {/* Normalization health flags */}
-      <NormalizationHealthFlags />
+      <NormalizationHealthFlags onNavigate={(type) => { setActiveView('normalize'); setNormTab(type) }} />
 
       <EventBanner />
 
@@ -181,7 +160,7 @@ export function ContactsCommandCenter() {
         </TabsContent>
 
         <TabsContent value="normalize" className="mt-4">
-          <ContactNormalizationTab />
+          <ContactNormalizationTab defaultTab={normTab} />
         </TabsContent>
       </Tabs>
 
