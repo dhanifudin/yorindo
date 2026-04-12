@@ -2,6 +2,7 @@ import type { Pool, QueryResultRow } from 'pg'
 import type { IVendorRepository } from '../../interfaces/repositories/IVendorRepository.js'
 import type { Vendor, EntityId } from '../../types/domain.js'
 import { BasePostgresRepository } from './BasePostgresRepository.js'
+import { createId } from '@paralleldrive/cuid2'
 
 interface VendorRow extends QueryResultRow {
   id: string
@@ -60,10 +61,11 @@ export class PostgresVendorRepository
   }
 
   async create(data: Omit<Vendor, 'id' | 'createdAt' | 'updatedAt'>): Promise<Vendor> {
+    const id = createId()
     const { rows } = await this.query<VendorRow>(
-      `INSERT INTO vendors (name, contact_email, industry, logo_url, website, notes)
-       VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
-      [data.name, data.contactEmail, data.industry, data.logoUrl, data.website, data.notes],
+      `INSERT INTO vendors (id, name, contact_email, industry, logo_url, website, notes)
+       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+      [id, data.name, data.contactEmail, data.industry, data.logoUrl, data.website, data.notes],
     )
     return this.mapRow(rows[0]!)
   }
