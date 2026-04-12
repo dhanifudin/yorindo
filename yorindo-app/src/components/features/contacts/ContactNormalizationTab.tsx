@@ -30,7 +30,7 @@ interface ContactsResponse {
 }
 
 async function fetchContacts(page = 1): Promise<ContactsResponse> {
-  const res = await fetch(`/api/contacts?page=${page}&pageSize=500`)
+  const res = await fetch(`/api/contacts?page=${page}&pageSize=100`)
   if (!res.ok) throw new Error('Gagal memuat kontak')
   return res.json()
 }
