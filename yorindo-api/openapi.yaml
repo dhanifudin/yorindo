@@ -6296,6 +6296,47 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
 
+  /settings/{key}/raw:
+    get:
+      summary: Get unmasked secret value by key (admin only, audited)
+      operationId: getRawSetting
+      tags: [Settings]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Unmasked secret value
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  key:
+                    type: string
+                  value:
+                    type: string
+                    nullable: true
+                  is_secret:
+                    type: boolean
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Setting not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
   /settings/batch:
     patch:
       summary: Batch update settings (admin only)

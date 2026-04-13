@@ -59,6 +59,26 @@ export const settingsRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(200).send(setting)
   })
 
+  // GET /api/settings/:key/raw — return unmasked secret value (admin only, logged)
+  fastify.get('/api/settings/:key/raw', { preHandler: [requireAuth, requireAdmin] }, async (request, reply) => {
+    const pool = getPool()
+    const { key } = SettingKeySchema.parse(request.params)
+    const { rows } = await pool.query('SELECT key, value, is_secret FROM settings WHERE key = $1', [key])
+
+    if (rows.length === 0) {
+      return reply.status(404).send({
+        error: { code: 'NOT_FOUND', message: 'Setting not found', details: [] },
+      })
+    }
+
+    const setting = rows[0]
+
+    // Log access to secret values for audit trail
+    request.log.info({ key, userId: (request.user as any)?.id }, 'Admin revealed secret value')
+
+    return reply.status(200).send({ key: setting.key, value: setting.value, is_secret: setting.is_secret })
+  })
+
   // PUT /api/settings/:key
   fastify.put('/api/settings/:key', adminOnly, async (request, reply) => {
     const pool = getPool()
@@ -67,10 +87,10 @@ export const settingsRoutes: FastifyPluginAsync = async (fastify) => {
 
     const { rows } = await pool.query(
       `INSERT INTO settings (id, key, value, category, description, is_secret, updated_at)
-       VALUES (gen_random_uuid()::text, $1, $2, 'general', '', FALSE, NOW())
-       ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = NOW()
+       VALUES ($1, $2, $3, 'general', '', FALSE, NOW())
+       ON CONFLICT (key) DO UPDATE SET value = $3, updated_at = NOW()
        RETURNING *`,
-      [key, value],
+      [`setting_${key.toLowerCase()}`, key, value],
     )
 
     return reply.status(200).send(rows[0])
