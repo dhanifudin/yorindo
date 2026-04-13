@@ -11,6 +11,13 @@ import { PWAInstallBanner } from '@/components/features/scan/PWAInstallBanner'
 const VIEWER_ALLOWED_PATHS = ['/app', '/app/events']
 const STAFF_ALLOWED_PATHS = ['/app']
 
+// Scan is staff-only — admins are explicitly blocked
+const ADMIN_BLOCKED_PATHS = ['/app/scan']
+
+function isAdminBlocked(pathname: string): boolean {
+  return ADMIN_BLOCKED_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))
+}
+
 function isViewerAllowed(pathname: string): boolean {
   if (VIEWER_ALLOWED_PATHS.includes(pathname)) return true
   if (/^\/app\/events\/[^/]+\/report$/.test(pathname)) return true
@@ -52,6 +59,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const isAuthorized = useMemo(() => {
     if (!accessToken || !user) return false
+    if (user.role === 'admin') return !isAdminBlocked(pathname)
     if (user.role === 'staff') return isStaffAllowed(pathname)
     if (user.role === 'viewer') return isViewerAllowed(pathname)
     if (user.role === 'participant') return isParticipantAllowed(pathname)
@@ -84,6 +92,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
 
     if (user.role === 'staff' && !isStaffAllowed(pathname)) {
+      router.replace('/app')
+      return
+    }
+
+    if (user.role === 'admin' && isAdminBlocked(pathname)) {
       router.replace('/app')
       return
     }

@@ -6,11 +6,9 @@ import { useSearchParams } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { useContacts } from '@/hooks/useContacts'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useFilterStore } from '@/store/filterStore'
 import { ContactsHealthFlags } from './ContactsHealthFlags'
-import { EventBanner } from './EventBanner'
 import { ContactsFilterBar } from './ContactsFilterBar'
 import { ActiveFilterPills } from './ActiveFilterPills'
 import { TriagePanel } from './TriagePanel'
@@ -98,11 +96,7 @@ export function ContactsCommandCenter() {
       </div>
 
       <ContactsHealthFlags onNavigate={(view, field) => { setActiveView(view); if (field) setMissingField(field) }} />
-
-      {/* Normalization health flags */}
       <NormalizationHealthFlags onNavigate={() => setActiveView('normalize')} />
-
-      <EventBanner />
 
       {/* View tabs */}
       <Tabs value={activeView} onValueChange={(v) => setActiveView(v as typeof activeView)}>

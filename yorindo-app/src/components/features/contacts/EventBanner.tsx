@@ -1,23 +1,12 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import { useRouter } from 'next/navigation'
 import { CalendarDays } from 'lucide-react'
 import { Alert } from '@/components/ui/alert'
-import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { UpcomingUncontactedEvent } from '@/types/api'
 
-function buildBlastUrl(event: { id: string; industryTags?: string[] }, count: number): string {
-  const params = new URLSearchParams()
-  params.set('eventId', event.id)
-  if (event.industryTags?.length) params.set('segment', event.industryTags.join(','))
-  params.set('count', String(count))
-  return `/app/blast?${params.toString()}`
-}
-
 export function EventBanner() {
-  const router = useRouter()
   const { data, isLoading } = useQuery<UpcomingUncontactedEvent>({
     queryKey: ['upcoming-uncontacted'],
     queryFn: () => fetch('/api/events/upcoming-uncontacted').then((r) => { if (!r.ok) throw new Error('Failed'); return r.json() }),
@@ -46,13 +35,6 @@ export function EventBanner() {
           <span className="text-sm ml-2">· {data.uncontactedCount} kontak belum diundang</span>
         </div>
       </div>
-      <Button
-        size="sm"
-        className="bg-amber-700 hover:bg-amber-800 text-white shrink-0"
-        onClick={() => router.push(buildBlastUrl(data.event!, data.uncontactedCount!))}
-      >
-        Blast Sekarang →
-      </Button>
     </Alert>
   )
 }
