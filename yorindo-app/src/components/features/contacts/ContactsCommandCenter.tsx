@@ -142,10 +142,6 @@ export function ContactsCommandCenter() {
             selectedNames={selectedNames}
             onClearSelection={handleClearSelection}
             onOpenBlastModal={() => {
-              if (emailConfig && !emailConfig.configured) {
-                router.push('/app/settings')
-                return
-              }
               setBlastModalOpen(true)
             }}
           />

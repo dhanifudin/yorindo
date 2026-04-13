@@ -128,9 +128,9 @@ export function BlastModal({
   // ── Queries ────────────────────────────────────────────────────────────────
 
   const { data: eventsData, isLoading: eventsLoading } = useQuery({
-    queryKey: ['events', 'published'],
+    queryKey: ['events', 'blast'],
     queryFn: async () => {
-      const res = await fetch('/api/events?status=published&pageSize=50')
+      const res = await fetch('/api/events?status=active&pageSize=50')
       return res.json() as Promise<{ data: EventItem[] }>
     },
     staleTime: 60_000,
