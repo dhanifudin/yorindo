@@ -6916,6 +6916,35 @@ paths:
                 standardId: { type: string }
       responses:
         '200': { description: Contact normalized }
+  /contacts/{id}:
+    patch:
+      summary: Update a contact (name, email, phone, city, company, serviceType, jobTitle)
+      operationId: updateContact
+      tags: [Contacts]
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                email: { type: string, nullable: true }
+                phone: { type: string, nullable: true }
+                city: { type: string, nullable: true }
+                company: { type: string, nullable: true }
+                serviceType: { type: string, nullable: true }
+                jobTitle: { type: string, nullable: true }
+      responses:
+        '200': { description: Contact updated }
+        '400': { description: Validation error }
+        '404': { description: Contact not found }
   /contacts/bulk-normalize:
     post:
       summary: Normalize multiple contacts at once

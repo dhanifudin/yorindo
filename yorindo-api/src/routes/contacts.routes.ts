@@ -1132,6 +1132,70 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(200).send(result)
   })
 
+  // ── PATCH /api/contacts/:id ──────────────────────────────────────
+  fastify.patch('/api/contacts/:id', { preHandler: [requireAuth, requireAdmin] }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const params = z.object({ id: z.string().min(1) }).safeParse((request as FastifyRequest).params)
+    const body = z.object({
+      name: z.string().trim().min(1).optional(),
+      email: z.string().trim().nullable().optional(),
+      phone: z.string().trim().nullable().optional(),
+      city: z.string().trim().nullable().optional(),
+      company: z.string().trim().nullable().optional(),
+      serviceType: z.string().trim().nullable().optional(),
+      jobTitle: z.string().trim().nullable().optional(),
+    }).safeParse((request as FastifyRequest).body)
+
+    if (!params.success || !body.success) {
+      return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: 'Invalid payload', details: [] } })
+    }
+
+    const contact = await contactRepository.findById(params.data.id)
+    if (!contact) {
+      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Contact not found', details: [] } })
+    }
+
+    const update: Partial<Contact> = {}
+    const data = body.data
+
+    // Normalize phone number to Indonesian format before saving
+    if (data.phone !== undefined) {
+      if (data.phone === null || data.phone === '') {
+        update.phone = null
+      } else {
+        const digits = data.phone.replace(/\D/g, '')
+        if (digits.startsWith('0')) {
+          update.phone = `+62${digits.slice(1)}`
+        } else if (digits.startsWith('62')) {
+          update.phone = `+${digits}`
+        } else if (digits.startsWith('8')) {
+          update.phone = `+62${digits}`
+        } else if (digits.startsWith('+')) {
+          update.phone = data.phone
+        } else {
+          update.phone = data.phone
+        }
+      }
+    }
+
+    if (data.name !== undefined) update.name = data.name
+    if (data.email !== undefined) update.email = data.email
+    if (data.city !== undefined) update.city = data.city
+    if (data.company !== undefined) update.company = data.company
+    if (data.serviceType !== undefined) update.serviceType = data.serviceType
+    if (data.jobTitle !== undefined) update.jobTitle = data.jobTitle
+
+    if (Object.keys(update).length === 0) {
+      return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: 'No fields to update', details: [] } })
+    }
+
+    const updated = await contactRepository.update(params.data.id, update)
+    if (!updated) {
+      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Contact not found', details: [] } })
+    }
+
+    return reply.status(200).send(updated)
+  })
+
   // ── PATCH /api/contacts/:id/normalize ─────────────────────────────
   fastify.patch('/api/contacts/:id/normalize', { preHandler: [requireAuth, requireAdmin] }, async (request: FastifyRequest, reply: FastifyReply) => {
     const params = z.object({ id: z.string().min(1) }).safeParse((request as FastifyRequest).params)
