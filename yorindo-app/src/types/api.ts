@@ -13,7 +13,7 @@ export interface Contact {
   city: string
   company: string
   department: string | null
-  completenessScore: number // 0.0–1.0, computed by GPT-4o in ETL (Story 3.3)
+  completenessScore: number // 0.0–1.0, computed during contact import
   consentStatus: string
   flagCategory: FlagCategory // Manual flag set by admin (Story 3.4)
   eventDate: string | null

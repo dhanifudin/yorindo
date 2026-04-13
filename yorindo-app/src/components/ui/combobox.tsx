@@ -26,6 +26,7 @@ interface ComboboxProps {
   searchPlaceholder?: string
   emptyText?: string
   disabled?: boolean
+  className?: string
 }
 
 export function Combobox({
@@ -36,6 +37,7 @@ export function Combobox({
   searchPlaceholder = 'Cari...',
   emptyText = 'Tidak ditemukan.',
   disabled = false,
+  className,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
 
@@ -48,7 +50,7 @@ export function Combobox({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full justify-between font-normal"
+          className={cn('w-full justify-between font-normal', className)}
           disabled={disabled}
         >
           <span className={cn('truncate', !selected?.value && 'text-muted-foreground')}>

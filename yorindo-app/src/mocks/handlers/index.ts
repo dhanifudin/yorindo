@@ -8,7 +8,7 @@ import { templateHandlers } from './templates'
 import { reportHandlers } from './reports'
 import { dataRightsHandlers } from './dataRights'
 import { userHandlers } from './users'
-import { etlHandlers } from './etl'
+import { importHandlers } from './etl'
 import { blastHandlers } from './blast'
 import { vendorHandlers } from './vendors'
 import { uploadHandlers } from './uploads'
@@ -29,7 +29,7 @@ export const handlers = [
   ...reportHandlers,
   ...dataRightsHandlers,
   ...userHandlers,
-  ...etlHandlers,
+  ...importHandlers,
   ...vendorHandlers,
   ...uploadHandlers,
 ]

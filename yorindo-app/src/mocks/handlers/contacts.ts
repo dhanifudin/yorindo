@@ -111,7 +111,7 @@ export const contactHandlers = [
 
   http.post('/api/contacts/import', async () => {
     await delay(400)
-    return HttpResponse.json({ jobId: `etl:upload:${faker.number.int()}`, status: 'queued' }, { status: 202 })
+    return HttpResponse.json({ jobId: `import:${faker.number.int()}`, status: 'queued' }, { status: 202 })
   }),
 
   http.get('/api/contacts/flagged', async ({ request }) => {

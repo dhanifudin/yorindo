@@ -190,8 +190,8 @@ export function ContactsTable({
       id: 'select',
       header: ({ table }) => (
         <Checkbox
-          checked={table.getIsAllPageRowsSelected()}
-          onCheckedChange={(v) => table.toggleAllPageRowsSelected(!!v)}
+          checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && 'indeterminate')}
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
           aria-label="Pilih semua"
         />
       ),
@@ -203,6 +203,8 @@ export function ContactsTable({
           aria-label="Pilih baris"
         />
       ),
+      enableSorting: false,
+      enableHiding: false,
       size: 40,
     },
     {
@@ -211,41 +213,75 @@ export function ContactsTable({
       cell: ({ row }) => {
         const contact = row.original
         return (
-          <div className="flex items-center gap-2">
-            <span>{contact.name}</span>
-            {contact.flagCategory && (
-              <Badge className={FLAG_LABELS[contact.flagCategory].className + ' text-[10px] px-1.5 py-0'}>
-                {FLAG_LABELS[contact.flagCategory].label}
-              </Badge>
-            )}
+          <div>
+            <div className="font-medium text-sm truncate">{contact.name}</div>
+            <div className="text-xs text-muted-foreground truncate">{contact.email || <span className="italic">Email kosong</span>}</div>
           </div>
         )
       },
     },
     {
-      accessorKey: 'email',
-      header: 'Email',
-      cell: ({ getValue }) => {
-        const email = getValue() as string | null | undefined
-        return <span className="text-muted-foreground">{email || '—'}</span>
+      accessorKey: 'phone',
+      header: 'Telepon',
+      cell: ({ row }) => {
+        const contact = row.original
+        return (
+          <div>
+            <div className="text-sm truncate">{contact.phone || <span className="italic">—</span>}</div>
+            <div className="text-xs text-muted-foreground truncate">{contact.company || <span className="italic">Perusahaan kosong</span>}</div>
+          </div>
+        )
       },
     },
-    { accessorKey: 'serviceType', header: 'Industri' },
+    {
+      accessorKey: 'serviceType',
+      header: 'Industri',
+      cell: ({ getValue }) => {
+        const val = getValue() as string | null | undefined
+        return <span className="text-sm">{val || <span className="italic">—</span>}</span>
+      },
+    },
+    {
+      accessorKey: 'city',
+      header: 'Kota',
+      cell: ({ getValue }) => {
+        const val = getValue() as string | null | undefined
+        return <span className="text-sm">{val || <span className="italic">—</span>}</span>
+      },
+    },
     {
       accessorKey: 'jobTitle',
       header: 'Jabatan',
       cell: ({ getValue }) => {
         const val = getValue() as string | null | undefined
-        return <span className="text-muted-foreground">{val || '—'}</span>
+        return <span className="text-sm">{val || <span className="italic">—</span>}</span>
       },
     },
-    { accessorKey: 'city', header: 'Kota' },
-    {
-      accessorKey: 'completenessScore',
-      header: 'Kelengkapan',
-      cell: ({ getValue }) => `${Math.round((getValue() as number) * 100)}%`,
-    },
   ]
+
+  // Override table header rendering for simplified header
+
+  // Check if contact has missing fields for row coloring
+  const getMissingFields = (contact: Contact) => {
+    const missing: string[] = []
+    if (!contact.email) missing.push('email')
+    if (!contact.phone) missing.push('phone')
+    if (!contact.city) missing.push('city')
+    if (!contact.company) missing.push('company')
+    if (!contact.serviceType) missing.push('serviceType')
+    if (!contact.jobTitle) missing.push('jobTitle')
+    return missing
+  }
+
+  // Calculate completeness percentage
+  const getCompleteness = (contact: Contact) => {
+    const fields = ['name', 'email', 'phone', 'city', 'company', 'serviceType', 'jobTitle']
+    const filled = fields.filter(f => {
+      const val = contact[f as keyof Contact]
+      return val && val !== '' && val !== null
+    }).length
+    return filled / fields.length
+  }
 
   const handleResolveDuplicates = () => {
     if (!selectedKeepId || !duplicateGroup) return
@@ -328,7 +364,18 @@ export function ContactsTable({
                   <div><span className="text-muted-foreground">Perusahaan: </span>{detailContact?.company || '—'}</div>
                   <div>
                     <span className="text-muted-foreground">Kelengkapan: </span>
-                    {detailContact && `${Math.round(detailContact.completenessScore * 100)}%`}
+                    {detailContact && (() => {
+                      const pct = Math.round(detailContact.completenessScore * 100)
+                      let colorClass = ''
+                      if (pct >= 80) colorClass = 'bg-green-100 text-green-700 border-green-200'
+                      else if (pct >= 50) colorClass = 'bg-yellow-100 text-yellow-700 border-yellow-200'
+                      else colorClass = 'bg-red-100 text-red-700 border-red-200'
+                      return (
+                        <Badge variant="outline" className={`font-medium ${colorClass}`}>
+                          {pct}%
+                        </Badge>
+                      )
+                    })()}
                   </div>
                   <div>
                     <span className="text-muted-foreground">Dibuat: </span>
@@ -613,8 +660,19 @@ export function ContactsTable({
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground font-medium uppercase">Kelengkapan</p>
-                    <p className="mt-0.5 font-medium">
-                      {detailContact ? `${Math.round(detailContact.completenessScore * 100)}%` : '—'}
+                    <p className="mt-0.5">
+                      {detailContact && (() => {
+                        const pct = Math.round(detailContact.completenessScore * 100)
+                        let colorClass = ''
+                        if (pct >= 80) colorClass = 'bg-green-100 text-green-700 border-green-200'
+                        else if (pct >= 50) colorClass = 'bg-yellow-100 text-yellow-700 border-yellow-200'
+                        else colorClass = 'bg-red-100 text-red-700 border-red-200'
+                        return (
+                          <Badge variant="outline" className={`font-medium ${colorClass}`}>
+                            {pct}%
+                          </Badge>
+                        )
+                      })()}
                     </p>
                   </div>
                 </div>
@@ -690,11 +748,16 @@ export function ContactsTable({
           ) : (
             table.getRowModel().rows.map((row) => {
               const contact = row.original
+              const completeness = getCompleteness(contact)
+              const hasLowCompleteness = completeness < 0.5
+              const hasMediumCompleteness = completeness >= 0.5 && completeness < 0.8
+              const rowBg = hasLowCompleteness ? 'bg-red-50 active:bg-red-100' : hasMediumCompleteness ? 'bg-yellow-50 active:bg-yellow-100' : ''
+
               return (
                 <div
                   key={contact.id}
                   className={`rounded-lg border border-border bg-card p-3 cursor-pointer active:bg-muted/50 flex items-center gap-2 ${
-                    row.getIsSelected() ? 'bg-muted/30' : ''
+                    row.getIsSelected() ? 'bg-muted/30' : rowBg
                   }`}
                   onClick={() => {
                     if (selectMode) {
@@ -713,7 +776,7 @@ export function ContactsTable({
                     />
                   )}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium text-sm">{contact.name}</span>
                       {contact.flagCategory && (
                         <Badge className={FLAG_LABELS[contact.flagCategory].className + ' text-[10px] px-1.5 py-0'}>
@@ -721,12 +784,14 @@ export function ContactsTable({
                         </Badge>
                       )}
                     </div>
-                    <div className="text-xs text-muted-foreground mt-1">
+                    <div className="text-xs text-muted-foreground mt-1 flex flex-wrap items-center gap-x-1">
                       {contact.jobTitle && <span>{contact.jobTitle}</span>}
-                      {contact.jobTitle && contact.serviceType && <span> · </span>}
+                      {contact.jobTitle && contact.serviceType && <span>·</span>}
                       {contact.serviceType && <span>{contact.serviceType}</span>}
-                      {(contact.jobTitle || contact.serviceType) && contact.email && <span> · </span>}
-                      {contact.email && <span>{contact.email}</span>}
+                      {(contact.jobTitle || contact.serviceType) && contact.email && <span>·</span>}
+                      {contact.email && <span className="truncate">{contact.email}</span>}
+                      {contact.email && contact.phone && <span>·</span>}
+                      {contact.phone && <span className="truncate">{contact.phone}</span>}
                     </div>
                   </div>
                 </div>
@@ -768,19 +833,27 @@ export function ContactsTable({
                 </TableCell>
               </TableRow>
             ) : (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  className={`cursor-pointer ${row.getIsSelected() ? 'bg-muted/30' : ''}`}
-                  onClick={() => setDetailContact(row.original)}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="whitespace-nowrap">
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
+              table.getRowModel().rows.map((row) => {
+                const contact = row.original
+                const completeness = getCompleteness(contact)
+                const hasLowCompleteness = completeness < 0.5
+                const hasMediumCompleteness = completeness >= 0.5 && completeness < 0.8
+                const rowBg = hasLowCompleteness ? 'bg-red-50' : hasMediumCompleteness ? 'bg-yellow-50' : ''
+
+                return (
+                  <TableRow
+                    key={row.id}
+                    className={`cursor-pointer ${row.getIsSelected() ? 'bg-muted/30' : rowBg}`}
+                    onClick={() => setDetailContact(row.original)}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id} className="py-3">
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                )
+              })
             )}
           </TableBody>
         </Table>

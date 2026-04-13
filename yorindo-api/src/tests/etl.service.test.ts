@@ -130,7 +130,8 @@ describe('EtlService', () => {
 
     const result = await service.processFile(filePath, 'user-1')
 
-    expect(result.upserted).toBe(0)
+    // Low-confidence rows are now imported AND flagged
+    expect(result.upserted).toBe(1)
     expect(result.flagged).toBe(1)
 
     const { data: allFlagged } = await flaggedRepo.findAll({ page: 1, pageSize: 50 })
@@ -138,9 +139,10 @@ describe('EtlService', () => {
     expect(flagged.length).toBe(1)
     expect(flagged[0]?.rawData.normalized.flags).toContain('low_confidence')
 
+    // Contact is still imported (just flagged for review)
     const { data: allContacts } = await contactRepo.findAll({ page: 1, pageSize: 200 })
     const newContacts = allContacts.filter(c => c.name === 'Low Confidence')
-    expect(newContacts.length).toBe(0)
+    expect(newContacts.length).toBe(1)
   })
 
   it('handles empty files gracefully', async () => {

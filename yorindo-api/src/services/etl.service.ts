@@ -53,6 +53,7 @@ export interface EtlProcessOptions {
   eventId?: string | null
   uploadSource?: UploadSource
   originalFilename?: string | null
+  onProgress?: (percent: number) => void
 }
 
 export interface EtlResult {
@@ -389,6 +390,7 @@ export class EtlService {
       })
 
       const batches = chunk(preparedRows, this.batchSize)
+      const totalBatches = batches.length
       for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
         const batch = batches[batchIndex]!
         console.info('[ETL] Processing batch', {
@@ -398,6 +400,13 @@ export class EtlService {
           batchCount: batches.length,
           batchLength: batch.length,
         })
+
+        // Update progress
+        if (opts.onProgress) {
+          const rowsProcessed = Math.min((batchIndex + 1) * this.batchSize, result.processed)
+          const percent = Math.round((rowsProcessed / result.processed) * 100)
+          opts.onProgress(percent)
+        }
 
         try {
           const normalized = await retryWithBackoff(
@@ -439,89 +448,93 @@ export class EtlService {
 
             const validatedRow = parsedRow.data
 
-            if (validatedRow.confidence >= 0.7) {
-              const contact = await this.contactRepo.upsert({
-                name: validatedRow.name,
-                phone: validatedRow.phone,
-                email: validatedRow.email,
-                serviceType: validatedRow.serviceType,
-                jobTitle: validatedRow.jobTitle,
-                city: validatedRow.city,
-                provinceCode: validatedRow.provinceCode,
-                provinceName: validatedRow.provinceName,
-                cityCode: validatedRow.cityCode,
-                cityName: validatedRow.cityName,
-                company: validatedRow.company,
-                department: validatedRow.department,
-                eventDate: validatedRow.eventDate,
-                topicTags: null,
-                source: toContactSource(uploadSource),
-                completenessScore: computeCompletenessScore(validatedRow),
-                consentStatus: 'legacy_unverified',
-                flagCategory: null,
-                deletedAt: null,
+            // Always upsert the contact regardless of confidence
+            const contact = await this.contactRepo.upsert({
+              name: validatedRow.name,
+              phone: validatedRow.phone,
+              email: validatedRow.email,
+              serviceType: validatedRow.serviceType,
+              jobTitle: validatedRow.jobTitle,
+              city: validatedRow.city,
+              provinceCode: validatedRow.provinceCode,
+              provinceName: validatedRow.provinceName,
+              cityCode: validatedRow.cityCode,
+              cityName: validatedRow.cityName,
+              company: validatedRow.company,
+              department: validatedRow.department,
+              eventDate: validatedRow.eventDate,
+              topicTags: null,
+              source: toContactSource(uploadSource),
+              completenessScore: computeCompletenessScore(validatedRow),
+              consentStatus: 'legacy_unverified',
+              flagCategory: null,
+              deletedAt: null,
+            })
+
+            // For low-confidence rows, also create a flagged record for review
+            // but the contact is still imported
+            if (validatedRow.confidence < 0.7) {
+              console.warn('[ETL] Low confidence row still imported', {
+                uploadId: upload.id,
+                filename,
+                batchIndex: batchIndex + 1,
+                rowIndexInBatch: index,
+                confidence: validatedRow.confidence,
+                summary: summarizeFlaggedRow(validatedRow, rawRow),
               })
-
-              // Check if serviceType/jobTitle match any standard values
-              try {
-                const flags: string[] = []
-                if (validatedRow.serviceType && validatedRow.serviceType.trim()) {
-                  const normService = getNormalizationService()
-                  const industryMatch = await normService.matchIndustry(validatedRow.serviceType)
-                  if (!industryMatch.matched) flags.push('industry-unmatched')
-                }
-                if (validatedRow.jobTitle && validatedRow.jobTitle.trim()) {
-                  const normService = getNormalizationService()
-                  const jobMatch = await normService.matchJobTitle(validatedRow.jobTitle)
-                  if (!jobMatch.matched) flags.push('jobtitle-unmatched')
-                }
-
-                // Apply flags if any unmatched
-                if (flags.length > 0) {
-                  // Prioritize industry-unmatched if both exist
-                  const flagToApply = flags.includes('industry-unmatched') ? 'industry-unmatched' : 'jobtitle-unmatched'
-                  await this.contactRepo.update(contact.id, { flagCategory: flagToApply as any })
-                }
-              } catch {
-                // Normalization service unavailable (e.g., tests without DB) — skip flagging
-              }
-
-              if (opts.eventId) {
-                await this.registrationRepo.create({
-                  contactId: contact.id,
-                  eventId: opts.eventId,
-                  status: 'attended',
-                  ticketToken: null,
-                  aiScore: validatedRow.confidence,
-                  flagOverride: false,
-                  approvedAt: null,
-                  attendedAt: validatedRow.eventDate ? `${validatedRow.eventDate}T00:00:00.000Z` : new Date().toISOString(),
-                  uploadSource,
-                  eventDate: validatedRow.eventDate,
-                })
-              }
-
-              await this.deduplicationService.findPotentialDuplicates(contact)
-              result.upserted++
-              continue
+              await this.flaggedRepo.create({
+                rawData: { ...rawRow, normalized: validatedRow },
+                flags: [...validatedRow.flags, ...(rawRow.dateParseFlag ? [String(rawRow.dateParseFlag)] : [])],
+                status: 'pending',
+                uploadId: upload.id,
+                resolvedBy: null,
+                resolvedAt: null,
+              })
+              result.flagged++
             }
 
-            console.warn('[ETL] Row flagged', {
-              uploadId: upload.id,
-              filename,
-              batchIndex: batchIndex + 1,
-              rowIndexInBatch: index,
-              summary: summarizeFlaggedRow(validatedRow, rawRow),
-            })
-            await this.flaggedRepo.create({
-              rawData: { ...rawRow, normalized: validatedRow },
-              flags: [...validatedRow.flags, ...(rawRow.dateParseFlag ? [String(rawRow.dateParseFlag)] : [])],
-              status: 'pending',
-              uploadId: upload.id,
-              resolvedBy: null,
-              resolvedAt: null,
-            })
-            result.flagged++
+            // Check if serviceType/jobTitle match any standard values
+            try {
+              const flags: string[] = []
+              if (validatedRow.serviceType && validatedRow.serviceType.trim()) {
+                const normService = getNormalizationService()
+                const industryMatch = await normService.matchIndustry(validatedRow.serviceType)
+                if (!industryMatch.matched) flags.push('industry-unmatched')
+              }
+              if (validatedRow.jobTitle && validatedRow.jobTitle.trim()) {
+                const normService = getNormalizationService()
+                const jobMatch = await normService.matchJobTitle(validatedRow.jobTitle)
+                if (!jobMatch.matched) flags.push('jobtitle-unmatched')
+              }
+
+              // Apply flags if any unmatched
+              if (flags.length > 0) {
+                // Prioritize industry-unmatched if both exist
+                const flagToApply = flags.includes('industry-unmatched') ? 'industry-unmatched' : 'jobtitle-unmatched'
+                await this.contactRepo.update(contact.id, { flagCategory: flagToApply as any })
+              }
+            } catch {
+              // Normalization service unavailable (e.g., tests without DB) — skip flagging
+            }
+
+            if (opts.eventId) {
+              await this.registrationRepo.create({
+                contactId: contact.id,
+                eventId: opts.eventId,
+                status: 'attended',
+                ticketToken: null,
+                aiScore: validatedRow.confidence,
+                flagOverride: false,
+                approvedAt: null,
+                attendedAt: validatedRow.eventDate ? `${validatedRow.eventDate}T00:00:00.000Z` : new Date().toISOString(),
+                uploadSource,
+                eventDate: validatedRow.eventDate,
+              })
+            }
+
+            await this.deduplicationService.findPotentialDuplicates(contact)
+            result.upserted++
+            continue
           }
 
           console.info('[ETL] Batch completed', {

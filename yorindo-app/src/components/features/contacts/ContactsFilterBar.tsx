@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
-import { Loader2, Search, X } from 'lucide-react'
+import { Search, X } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -15,47 +15,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover'
-import { toast } from 'sonner'
 import type { ContactsFacets } from '@/types/api'
-
-const INDUSTRIES = [
-  { value: '', label: 'Semua Industri' },
-  { value: 'teknologi', label: 'Teknologi' },
-  { value: 'kesehatan', label: 'Kesehatan' },
-  { value: 'manufaktur', label: 'Manufaktur' },
-  { value: 'keuangan', label: 'Keuangan' },
-  { value: 'pendidikan', label: 'Pendidikan' },
-  { value: 'retail', label: 'Retail' },
-  { value: 'properti', label: 'Properti' },
-  { value: 'otomotif', label: 'Otomotif' },
-  { value: 'energi', label: 'Energi' },
-  { value: 'telekomunikasi', label: 'Telekomunikasi' },
-]
-
-interface IndustrySuggestion {
-  slug: string
-  label: string
-  confidence: number
-}
-
-interface SuggestionResponse {
-  suggestions: IndustrySuggestion[]
-  matchedSlug: string | null
-  fallback: boolean
-}
+import { useIndustries, useJobTitles } from '@/hooks/useStandardValues'
 
 export function ContactsFilterBar() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const cityDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const jobTitleDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const serviceType = searchParams.get('serviceType') ?? ''
   const city = searchParams.get('city') ?? ''
@@ -64,10 +31,8 @@ export function ContactsFilterBar() {
 
   const hasActiveFilters = !!(serviceType || city || jobTitle || q)
 
-  // ── State lokal untuk input nama, kota, jabatan (debounced ke URL param) ──
+  // ── State lokal untuk input nama (debounced ke URL param q) ──
   const [nameQuery, setNameQuery] = useState(q)
-  const [cityQuery, setCityQuery] = useState(city)
-  const [jobTitleQuery, setJobTitleQuery] = useState(jobTitle)
 
   // Facets query
   const { data: facets } = useQuery<ContactsFacets>({
@@ -88,13 +53,19 @@ export function ContactsFilterBar() {
     return citiesData.map((c: { city_name: string }) => ({ value: c.city_name, label: c.city_name }))
   }, [citiesData])
 
-  // Smart filter state
-  const [smartQuery, setSmartQuery] = useState(q)
-  const [aiStatus, setAiStatus] = useState<'idle' | 'loading' | 'matched' | 'fallback'>('idle')
-  const [matchedSlug, setMatchedSlug] = useState<string | null>(null)
-  const [useSmartMode, setUseSmartMode] = useState(false)
-  const [segmentName, setSegmentName] = useState('')
-  const smartDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Industries from API
+  const { data: industriesData } = useIndustries()
+  const industryOptions = useMemo(() => {
+    if (!industriesData) return []
+    return industriesData.map((ind) => ({ value: ind.slug, label: ind.name }))
+  }, [industriesData])
+
+  // Job titles from API
+  const { data: jobTitlesData } = useJobTitles()
+  const jobTitleOptions = useMemo(() => {
+    if (!jobTitlesData) return []
+    return jobTitlesData.map((jt) => ({ value: jt.name, label: jt.name }))
+  }, [jobTitlesData])
 
   const updateParam = useCallback((key: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString())
@@ -103,16 +74,6 @@ export function ContactsFilterBar() {
     params.delete('page')
     router.push(`${pathname}?${params.toString()}`)
   }, [searchParams, router, pathname])
-
-  const debounceCity = useCallback((fn: () => void) => {
-    if (cityDebounceRef.current) clearTimeout(cityDebounceRef.current)
-    cityDebounceRef.current = setTimeout(fn, 300)
-  }, [])
-
-  const debounceJobTitle = useCallback((fn: () => void) => {
-    if (jobTitleDebounceRef.current) clearTimeout(jobTitleDebounceRef.current)
-    jobTitleDebounceRef.current = setTimeout(fn, 350)
-  }, [])
 
   // ── Handler search nama (debounce 350ms ke URL param q) ──────────────────
   const handleNameChange = (val: string) => {
@@ -128,62 +89,9 @@ export function ContactsFilterBar() {
     updateParam('q', '')
   }
 
-  const fetchIndustrySuggestions = async (qval: string) => {
-    if (!qval || qval.length < 2) {
-      setAiStatus('idle')
-      setMatchedSlug(null)
-      return
-    }
-    setAiStatus('loading')
-    try {
-      const res = await fetch(`/api/contacts/industry-suggestions?q=${encodeURIComponent(qval)}`)
-      const data: SuggestionResponse = await res.json()
-      if (data.fallback || !data.matchedSlug) {
-        setAiStatus('fallback')
-        setMatchedSlug(null)
-      } else {
-        setAiStatus('matched')
-        setMatchedSlug(data.matchedSlug)
-        updateParam('serviceType', data.matchedSlug)
-      }
-    } catch {
-      setAiStatus('fallback')
-      setMatchedSlug(null)
-    }
-  }
-
-  const handleSmartQueryChange = (val: string) => {
-    setSmartQuery(val)
-    if (smartDebounceRef.current) clearTimeout(smartDebounceRef.current)
-    smartDebounceRef.current = setTimeout(() => fetchIndustrySuggestions(val), 500)
-  }
-
-  const clearSmartFilter = () => {
-    setSmartQuery('')
-    setAiStatus('idle')
-    setMatchedSlug(null)
-    setUseSmartMode(false)
-    updateParam('serviceType', '')
-  }
-
   const handleReset = () => {
     router.push(pathname)
-    setSmartQuery('')
-    setAiStatus('idle')
-    setMatchedSlug(null)
-    setUseSmartMode(false)
     setNameQuery('')
-    setCityQuery('')
-    setJobTitleQuery('')
-  }
-
-  const handleSaveSegment = () => {
-    if (!segmentName.trim()) return
-    const segments = JSON.parse(localStorage.getItem('yorindo:segments') ?? '[]') as Array<{ name: string; params: Record<string, string> }>
-    segments.push({ name: segmentName.trim(), params: Object.fromEntries(searchParams) })
-    localStorage.setItem('yorindo:segments', JSON.stringify(segments))
-    toast.success(`Segmen '${segmentName.trim()}' disimpan`)
-    setSegmentName('')
   }
 
   const getServiceTypeCount = (slug: string) => {
@@ -191,8 +99,6 @@ export function ContactsFilterBar() {
     const f = facets.serviceType.find((i) => i.slug === slug)
     return f?.count ?? null
   }
-
-  const isSearching = aiStatus === 'loading'
 
   return (
     <div className="flex flex-wrap gap-3 mb-4 items-end">
@@ -222,89 +128,27 @@ export function ContactsFilterBar() {
       </div>
 
       {/* ── INDUSTRI filter ───────────────────────────────────────────────── */}
-      <div className="space-y-1">
-        <div className="flex items-center gap-2">
-          <label className="block text-xs text-muted-foreground">Industri</label>
-          <button
-            type="button"
-            onClick={() => {
-              if (useSmartMode) clearSmartFilter()
-              else setUseSmartMode(true)
-            }}
-            className="text-xs text-primary underline"
-          >
-            {useSmartMode ? 'Ganti ke dropdown' : '✨ AI Smart Search'}
-          </button>
-        </div>
-        {useSmartMode ? (
-          <div className="relative w-48">
-            <div className="relative">
-              <Input
-                type="text"
-                placeholder="Ketik industri bebas..."
-                value={smartQuery}
-                onChange={(e) => handleSmartQueryChange(e.target.value)}
-                className="h-9 pr-16"
-                aria-busy={isSearching}
-              />
-              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                {isSearching && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
-                <Badge className="bg-violet-100 text-violet-700 text-[10px] px-1 py-0">AI ✦</Badge>
-              </div>
-            </div>
-            {aiStatus === 'matched' && matchedSlug && (
-              <div className="mt-1">
-                <Badge className="bg-green-100 text-green-700 text-xs">
-                  AI: {INDUSTRIES.find((i) => i.value === matchedSlug)?.label ?? matchedSlug}
-                </Badge>
-              </div>
-            )}
-            {aiStatus === 'fallback' && (
-              <div className="mt-1">
-                <p className="text-xs text-muted-foreground">Tidak cocok — gunakan dropdown:</p>
-                <Select
-                  value={serviceType || 'all'}
-                  onValueChange={(val) => updateParam('serviceType', val === 'all' ? '' : val)}
-                >
-                  <SelectTrigger className="w-48 mt-1 h-9">
-                    <SelectValue placeholder="Semua Industri" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Semua Industri</SelectItem>
-                    {INDUSTRIES.slice(1).map((i) => {
-                      const count = getServiceTypeCount(i.value)
-                      return (
-                        <SelectItem key={i.value} value={i.value}>
-                          {i.label}{count !== null ? ` (${count})` : ''}
-                        </SelectItem>
-                      )
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-          </div>
-        ) : (
-          <Select
-            value={serviceType || 'all'}
-            onValueChange={(val) => updateParam('serviceType', val === 'all' ? '' : val)}
-          >
-            <SelectTrigger className="w-48 h-9">
-              <SelectValue placeholder="Semua Industri" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Semua Industri</SelectItem>
-              {INDUSTRIES.slice(1).map((i) => {
-                const count = getServiceTypeCount(i.value)
-                return (
-                  <SelectItem key={i.value} value={i.value}>
-                    {i.label}{count !== null ? ` (${count})` : ''}
-                  </SelectItem>
-                )
-              })}
-            </SelectContent>
-          </Select>
-        )}
+      <div>
+        <label className="block text-xs text-muted-foreground mb-1">Industri</label>
+        <Select
+          value={serviceType || 'all'}
+          onValueChange={(val) => updateParam('serviceType', val === 'all' ? '' : val)}
+        >
+          <SelectTrigger className="w-48 h-9">
+            <SelectValue placeholder="Semua Industri" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Semua Industri</SelectItem>
+            {industryOptions.map((i) => {
+              const count = getServiceTypeCount(i.value)
+              return (
+                <SelectItem key={i.value} value={i.value}>
+                  {i.label}{count !== null ? ` (${count})` : ''}
+                </SelectItem>
+              )
+            })}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* ── KOTA filter ───────────────────────────────────────────────────── */}
@@ -323,56 +167,20 @@ export function ContactsFilterBar() {
       {/* ── JABATAN filter ────────────────────────────────────────────────── */}
       <div>
         <label className="block text-xs text-muted-foreground mb-1">Jabatan</label>
-        <div className="relative w-40">
-          <Input
-            type="text"
-            placeholder="Cari jabatan..."
-            value={jobTitleQuery}
-            onChange={(e) => {
-              setJobTitleQuery(e.target.value)
-              debounceJobTitle(() => updateParam('jobTitle', e.target.value))
-            }}
-            className="h-9 pr-7"
-          />
-          {jobTitleQuery && (
-            <button
-              type="button"
-              onClick={() => {
-                setJobTitleQuery('')
-                updateParam('jobTitle', '')
-              }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          )}
-        </div>
+        <Combobox
+          options={jobTitleOptions}
+          value={jobTitle}
+          onValueChange={(v) => updateParam('jobTitle', v)}
+          placeholder="Pilih jabatan..."
+          searchPlaceholder="Cari jabatan..."
+          emptyText="Jabatan tidak ditemukan."
+        />
       </div>
 
       {/* Action buttons */}
       <Button variant="outline" onClick={handleReset}>
         Reset Filter
       </Button>
-
-      {/* Save Segment popover */}
-      {hasActiveFilters && (
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" size="sm">Simpan Segmen</Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-64 space-y-2 p-3">
-            <Input
-              placeholder="Nama segmen..."
-              autoFocus
-              className="h-8"
-              value={segmentName}
-              onChange={(e) => setSegmentName(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSaveSegment()}
-            />
-            <Button size="sm" className="w-full" onClick={handleSaveSegment}>Simpan</Button>
-          </PopoverContent>
-        </Popover>
-      )}
     </div>
   )
 }

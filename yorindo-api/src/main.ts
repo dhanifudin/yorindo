@@ -3,6 +3,7 @@ import { config } from './config/index.js'
 import { buildServer } from './server.js'
 import { startEtlWorker } from './workers/etl.worker.js'
 import { startBlastWorker } from './workers/blast.worker.js'
+import { syncCities } from './lib/cities-sync.js'
 
 if (config.sentryDsn) {
   Sentry.init({ dsn: config.sentryDsn, environment: config.nodeEnv })
@@ -21,6 +22,18 @@ async function start(): Promise<void> {
       blastWorker = startBlastWorker()
       fastify.log.info('Blast worker started')
     }
+
+    // Sync cities data in the background — non-blocking so the server starts quickly
+    if (config.nodeEnv !== 'test') {
+      syncCities().then((result) => {
+        fastify.log.info(
+          `Cities synced: ${result.inserted} inserted, ${result.updated} updated, ${result.total} total`,
+        )
+      }).catch((err) => {
+        fastify.log.warn({ err }, 'Background cities sync failed')
+      })
+    }
+
     await fastify.listen({ port: config.port, host: '0.0.0.0' })
     fastify.log.info(`Server listening on port ${config.port}`)
     if (workerStarted) fastify.log.info('ETL worker started')

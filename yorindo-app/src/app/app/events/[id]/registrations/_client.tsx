@@ -399,7 +399,7 @@ export default function RegistrationsPage({ params }: RegistrationsPageProps) {
         return null
       },
     },
-  ], [fastMode, approveMutation, rejectMutation]) // eslint-disable-line react-hooks/exhaustive-deps
+  ], [fastMode, approveMutation, rejectMutation])  
 
   // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({

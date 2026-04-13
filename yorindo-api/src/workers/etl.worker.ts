@@ -35,15 +35,17 @@ export function startEtlWorker(): Worker {
         originalFilename?: string | null
       }
 
-      const options = {} as {
+      const options: {
         eventId?: string | null
         uploadSource?: 'etl_import' | 'onsite_import'
         originalFilename?: string | null
-      }
+        onProgress?: (percent: number) => void
+      } = {}
 
       if (data.eventId !== undefined) options.eventId = data.eventId
       if (data.uploadSource !== undefined) options.uploadSource = data.uploadSource
       if (data.originalFilename !== undefined) options.originalFilename = data.originalFilename
+      options.onProgress = (percent: number) => job.updateProgress(percent)
 
       console.info('[ETL] Worker picked up job', {
         jobId: job.id,
