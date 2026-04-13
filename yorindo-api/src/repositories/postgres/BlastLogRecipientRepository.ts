@@ -20,9 +20,9 @@ export class PostgresBlastLogRecipientRepository
 
     for (const contactId of contactIds) {
       const id = createId()
-      values.push(`($${idx}, $${idx + 1}, $${idx + 2}, $${idx + 3}, NOW())`)
-      params.push(id, blastLogId, contactId, eventId)
-      idx += 4
+      values.push(`($${idx}, $${idx + 1}, $${idx + 2}, $${idx + 3}, $${idx + 4}, NOW())`)
+      params.push(id, blastLogId, contactId, eventId, channel)
+      idx += 5
     }
 
     await this.query(
