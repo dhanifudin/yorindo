@@ -12,7 +12,7 @@ import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { Save, RotateCcw, Eye, EyeOff, Shield, Mail, MessageSquare, Brain, Loader2, Building2, Briefcase } from 'lucide-react'
+import { Save, RotateCcw, Eye, EyeOff, Shield, Mail, MessageSquare, Brain, Loader2, Building2, Briefcase, KeyRound } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { StandardValuesManager } from '@/components/settings/StandardValuesManager'
 
@@ -85,6 +85,32 @@ function EmailProviderSection({
   const [testSending, setTestSending] = useState(false)
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
   const [testEmail, setTestEmail] = useState('')
+  const [revealedSecrets, setRevealedSecrets] = useState<Record<string, string>>({})
+  const [revealingSecret, setRevealingSecret] = useState<string | null>(null)
+
+  const handleRevealSecret = async (key: string) => {
+    if (revealedSecrets[key]) {
+      setFormValues((prev) => ({ ...prev, [key]: revealedSecrets[key] }))
+      setShowSecrets((prev) => ({ ...prev, [key]: true }))
+      return
+    }
+    setRevealingSecret(key)
+    try {
+      const res = await fetch(`/api/settings/${key}/raw`)
+      if (!res.ok) throw new Error('Failed to reveal secret')
+      const data = await res.json() as { value: string | null }
+      if (data.value) {
+        setRevealedSecrets((prev) => ({ ...prev, [key]: data.value! }))
+        setFormValues((prev) => ({ ...prev, [key]: data.value! }))
+        setShowSecrets((prev) => ({ ...prev, [key]: true }))
+        toast.success('Nilai rahasia ditampilkan')
+      }
+    } catch {
+      toast.error('Gagal menampilkan nilai rahasia')
+    } finally {
+      setRevealingSecret(null)
+    }
+  }
 
   const handleTestSend = async () => {
     if (!testEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(testEmail)) {
@@ -172,13 +198,39 @@ function EmailProviderSection({
             <div className="space-y-4">
               <div>
                 <Label htmlFor="BREVO_API_KEY">API Key</Label>
-                <Input
-                  id="BREVO_API_KEY"
-                  type={showSecrets['BREVO_API_KEY'] ? 'text' : 'password'}
-                  value={getValue('BREVO_API_KEY')}
-                  onChange={(e) => setFormValues((prev) => ({ ...prev, BREVO_API_KEY: e.target.value }))}
-                  placeholder="xapikey-..."
-                />
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Input
+                      id="BREVO_API_KEY"
+                      type={showSecrets['BREVO_API_KEY'] ? 'text' : 'password'}
+                      value={getValue('BREVO_API_KEY')}
+                      onChange={(e) => setFormValues((prev) => ({ ...prev, BREVO_API_KEY: e.target.value }))}
+                      placeholder="xapikey-..."
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowSecrets((prev) => ({ ...prev, BREVO_API_KEY: !prev['BREVO_API_KEY'] }))}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showSecrets['BREVO_API_KEY'] ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleRevealSecret('BREVO_API_KEY')}
+                    disabled={revealingSecret === 'BREVO_API_KEY'}
+                    title="Reveal saved API key from server"
+                  >
+                    {revealingSecret === 'BREVO_API_KEY' ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : (
+                      <KeyRound size={16} />
+                    )}
+                  </Button>
+                </div>
                 <p className="text-xs text-muted-foreground mt-1">
                   Get from{' '}
                   <a href="https://app.brevo.com/settings/keys/api" target="_blank" rel="noopener noreferrer" className="underline">
