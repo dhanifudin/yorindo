@@ -36,8 +36,8 @@ const NAV_ITEMS = [
   { href: '/app/data',         label: 'Data',      icon: Briefcase,       roles: ['admin'] },
   // { href: '/app/templates',    label: 'Template',  icon: FileText,        roles: ['admin'] }, // Hidden for now
   { href: '/app/users',        label: 'Akun',      icon: UserCog,         roles: ['admin'] },
+  { href: '/app/scan',         label: 'Scan',      icon: QrCode,          roles: ['staff', 'admin'] },
   { href: '/app/settings',     label: 'Settings',  icon: Settings,        roles: ['admin'] },
-  // { href: '/app/scan',         label: 'Scan',      icon: QrCode,          roles: ['staff', 'admin'] }, // Hidden until implementation is ready
 ]
 
 export function AdminShell({ children }: { children: React.ReactNode }) {

@@ -1093,6 +1093,39 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(200).send(responseBody)
   })
 
+  // GET /api/events/:id/participants — search participants by name (for manual checkin)
+  fastify.get('/api/events/:id/participants', { preHandler: [requireAuth, requireRoles('admin', 'staff')] }, async (request, reply) => {
+    const params = EventIdParamsSchema.safeParse(request.params)
+    if (!params.success) return replyValidationError(reply, params.error.issues, 'Invalid event id')
+    const event = await requireEventOr404(reply, params.data.id)
+    if (!event) return
+    const allowed = await requireEventAccessOr403(reply, request.user as JwtPayload | undefined, event.id)
+    if (!allowed) return
+
+    const query = request.query as { name?: string }
+    const nameFilter = query.name?.trim()
+
+    const registrations = await registrationRepository.findByEvent(event.id, { page: 1, pageSize: 500 })
+    const results: Array<{ id: string; name: string; phone: string; ticketToken: string; status: string }> = []
+
+    for (const reg of registrations.data) {
+      if (reg.status !== 'approved') continue
+      const contact = await contactRepository.findById(reg.contactId)
+      if (!contact) continue
+      const contactName = contact.name ?? ''
+      if (nameFilter && !contactName.toLowerCase().includes(nameFilter.toLowerCase())) continue
+      results.push({
+        id: reg.id,
+        name: contactName,
+        phone: contact.phone ?? '',
+        ticketToken: reg.ticketToken ?? '',
+        status: reg.status,
+      })
+    }
+
+    return reply.status(200).send({ data: results })
+  })
+
   fastify.get('/api/events/:id/confirmation', { preHandler: [requireAuth, requireRoles('admin', 'staff')] }, async (request, reply) => {
     const params = EventIdParamsSchema.safeParse(request.params)
     if (!params.success) return replyValidationError(reply, params.error.issues, 'Invalid event id')

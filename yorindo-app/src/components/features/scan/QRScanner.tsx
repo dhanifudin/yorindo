@@ -129,13 +129,6 @@ export function QRScanner({ eventId }: QRScannerProps) {
         id="qr-reader"
         className="w-full flex-1 bg-black"
       />
-      {process.env.NODE_ENV === 'development' && (
-        <p className="mt-2 mx-4 text-xs text-muted-foreground text-center pb-2">
-          Token uji: <code className="bg-muted px-1 rounded">MOCK_INVALID</code>,{' '}
-          <code className="bg-muted px-1 rounded">MOCK_ALREADY</code>,{' '}
-          <code className="bg-muted px-1 rounded">MOCK_WRONG_EVENT</code>
-        </p>
-      )}
     </div>
   )
 }

@@ -631,6 +631,14 @@ components:
           type: string
           description: QR ticket JWT token
 
+    ManualCheckinBody:
+      type: object
+      required: [registrationId]
+      properties:
+        registrationId:
+          type: string
+          description: Registration ID to mark as attended
+
     ScanResult:
       type: object
       required: [status]
@@ -4417,6 +4425,61 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
 
+  /events/{id}/participants:
+    get:
+      summary: Search participants by name for manual check-in (admin/staff)
+      operationId: getEventParticipants
+      tags: [Events]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: name
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of approved participants matching the search
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        name: { type: string }
+                        phone: { type: string }
+                        ticketToken: { type: string }
+                        status: { type: string }
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: User not assigned to this event
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
   /events/{id}/checkin/stats:
     get:
       summary: Get live check-in stats for event (admin/staff) — poll every 15s
@@ -5541,6 +5604,49 @@ paths:
                 $ref: '#/components/schemas/ApiError'
         '403':
           description: Insufficient role (admin/staff only)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /scan/manual-checkin:
+    post:
+      summary: Manual check-in by registration ID (admin/staff)
+      operationId: scanManualCheckin
+      description: >
+        Marks a participant as attended by their registration ID.
+        Used for manual check-in when QR scanning is not possible.
+      tags: [Scan]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ManualCheckinBody'
+      responses:
+        '200':
+          description: >
+            Check-in processed or already attended. Check `status` field.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScanResult'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: User not assigned to this event
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Registration not found
           content:
             application/json:
               schema:
