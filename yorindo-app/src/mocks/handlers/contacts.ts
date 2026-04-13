@@ -74,7 +74,6 @@ export const contactHandlers = [
     const serviceType = url.searchParams.get('serviceType') ?? ''
     const city = url.searchParams.get('city') ?? ''
     const jobTitle = url.searchParams.get('jobTitle') ?? ''
-    const flagFilter = url.searchParams.get('flagFilter') ?? ''
     const missingEmail = url.searchParams.get('missingEmail') === 'true'
     const missingPhone = url.searchParams.get('missingPhone') === 'true'
     const q = url.searchParams.get('q') ?? ''
@@ -83,8 +82,6 @@ export const contactHandlers = [
     if (serviceType) filtered = filtered.filter((c) => c.serviceType === serviceType)
     if (city) filtered = filtered.filter((c) => c.city.toLowerCase().includes(city.toLowerCase()))
     if (jobTitle) filtered = filtered.filter((c) => (c.jobTitle ?? '').toLowerCase().includes(jobTitle.toLowerCase()))
-    if (flagFilter === 'flagged') filtered = filtered.filter((c) => c.flagCategory !== null)
-    if (flagFilter === 'unflagged') filtered = filtered.filter((c) => c.flagCategory === null)
     if (missingEmail) filtered = filtered.filter((c) => !c.email)
     if (missingPhone) filtered = filtered.filter((c) => !c.phone)
     if (q) filtered = filtered.filter((c) =>

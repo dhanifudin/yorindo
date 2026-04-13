@@ -36,6 +36,9 @@ const FLAG_LABEL: Record<string, string> = {
   EMAIL_UNVERIFIABLE: 'Email tidak dapat diverifikasi',
   NAME_INCOMPLETE: 'Nama tidak lengkap',
   CITY_UNRECOGNIZED: 'Kota tidak dikenali',
+  'admin-review-requested': 'Perlu tinjauan admin',
+  'admin-flagged-invalid': 'Data invalid',
+  'admin-flagged-duplicate': 'Duplikat',
 }
 
 export const STATUS_BADGE: Record<string, string> = {

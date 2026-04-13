@@ -55,11 +55,12 @@ async function dismissDuplicate(pairId: string) {
 
 export function DuplicateContactsTab() {
   const queryClient = useQueryClient()
+  const [page, setPage] = useState(1)
   const [mergePair, setMergePair] = useState<DuplicatePair | null>(null)
 
   const { data, isLoading } = useQuery<DuplicateResponse>({
-    queryKey: ['contacts-duplicates'],
-    queryFn: () => fetchDuplicates(),
+    queryKey: ['contacts-duplicates', page],
+    queryFn: () => fetchDuplicates(page),
     staleTime: 60_000,
   })
 
@@ -67,7 +68,7 @@ export function DuplicateContactsTab() {
     mutationFn: dismissDuplicate,
     onSuccess: () => {
       toast.success('Duplikat diabaikan')
-      queryClient.invalidateQueries({ queryKey: ['contacts-duplicates'] })
+      queryClient.invalidateQueries({ queryKey: ['contacts-duplicates', page] })
     },
     onError: () => toast.error('Gagal mengabaikan duplikat'),
   })
@@ -160,6 +161,24 @@ export function DuplicateContactsTab() {
         onOpenChange={(open) => { if (!open) setMergePair(null) }}
         pair={mergePair}
       />
+
+      {/* Pagination */}
+      {data && data.pagination.totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            Halaman {data.pagination.page} dari {data.pagination.totalPages}
+            <span> · {data.pagination.total} pasangan</span>
+          </p>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={data.pagination.page === 1}>
+              Sebelumnya
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(data.pagination.totalPages, p + 1))} disabled={data.pagination.page === data.pagination.totalPages}>
+              Berikutnya
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

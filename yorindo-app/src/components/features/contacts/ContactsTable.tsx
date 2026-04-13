@@ -60,12 +60,6 @@ const STATUS_LABELS: Record<ContactHistoryItem['status'], string> = {
 
 const SKELETON_ROWS = 8
 
-const FLAG_FILTER_OPTIONS = [
-  { value: '', label: 'Semua' },
-  { value: 'flagged', label: 'Ditandai' },
-  { value: 'unflagged', label: 'Tidak Ditandai' },
-] as const
-
 interface ContactsTableProps {
   rowSelection: RowSelectionState
   onRowSelectionChange: (updater: RowSelectionState | ((old: RowSelectionState) => RowSelectionState)) => void
@@ -82,7 +76,7 @@ export function ContactsTable({
   selectedIds,
 }: ContactsTableProps) {
   const searchParams = useSearchParams()
-  const { flagFilter, setFilter } = useFilterStore()
+  const { flagged, setFilter } = useFilterStore()
   const page = parseInt(searchParams.get('page') ?? '1', 10)
   const { data, isLoading, isError } = useContacts()
   const [detailContact, setDetailContact] = useState<Contact | null>(null)
@@ -693,22 +687,19 @@ export function ContactsTable({
         </SheetContent>
       </Sheet>
 
-      {/* Flag filter */}
+      {/* Flag filter chip */}
       <div className="flex gap-2 mb-3">
-        {FLAG_FILTER_OPTIONS.map((opt) => (
-          <button
-            key={opt.value}
-            type="button"
-            onClick={() => setFilter({ flagFilter: opt.value as typeof flagFilter })}
-            className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-              flagFilter === opt.value
-                ? 'border-primary bg-primary/10 text-primary'
-                : 'border-border text-muted-foreground hover:bg-muted'
-            }`}
-          >
-            {opt.label}
-          </button>
-        ))}
+        <button
+          type="button"
+          onClick={() => setFilter({ flagged: !flagged })}
+          className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+            flagged
+              ? 'border-orange-300 bg-orange-50 text-orange-700'
+              : 'border-border text-muted-foreground hover:bg-muted'
+          }`}
+        >
+          Perlu Tinjauan
+        </button>
       </div>
 
       {/* Mobile section */}

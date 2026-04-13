@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import { auditLogRepository, contactRepository, eventRepository, flaggedRecordsRepository, queueService, registrationRepository, suppressionRepository, getNormalizationService } from '../container.js'
+import { getPool } from '../lib/postgres.js'
 import { requireAdmin, requireAuth, type JwtPayload } from '../middleware/auth.js'
 import type { Contact, DuplicatePair, FlaggedRecord, FlaggedRecordStatus, RegistrationStatus, SuppressionRecord } from '../types/domain.js'
 import { INDONESIAN_INDUSTRIES } from '../repositories/memory/_seeds.js'
@@ -14,9 +15,9 @@ const ContactsQuerySchema = z.object({
   serviceType: z.string().trim().optional(),
   city: z.string().trim().optional(),
   jobTitle: z.string().trim().optional(),
-  flagFilter: z.enum(['flagged', 'unflagged']).optional(),
   missingEmail: z.coerce.boolean().optional(),
   missingPhone: z.coerce.boolean().optional(),
+  flagged: z.coerce.boolean().optional(),
   q: z.string().trim().optional(),
   sortBy: z.string().trim().optional(),
   sortDir: z.enum(['asc', 'desc']).optional(),
@@ -142,13 +143,6 @@ function toSortBy(sortBy?: string): string | undefined {
   if (sortBy === 'industry') return 'industryId'
   if (sortBy === 'created_at') return 'createdAt'
   return sortBy
-}
-
-// Mengubah filter flag FE ke filter repository yang setara.
-function toFlagFilter(flagFilter?: 'flagged' | 'unflagged') {
-  if (!flagFilter) return {}
-  if (flagFilter === 'flagged') return { flagCategory: 'ANY' }
-  return { flagCategory: 'NONE' }
 }
 
 /**
@@ -361,7 +355,6 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     const sortBy = toSortBy(query.sortBy)
-    const flagFilter = toFlagFilter(query.flagFilter)
     if (sortBy) paginationParams.sortBy = sortBy
     if (query.sortDir) paginationParams.sortDir = query.sortDir
     if (query.serviceType) filters.serviceType = query.serviceType
@@ -369,8 +362,8 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
     if (query.jobTitle) filters.jobTitle = query.jobTitle
     if (query.missingEmail) filters.missingEmail = true
     if (query.missingPhone) filters.missingPhone = true
+    if (query.flagged) filters.flagCategory = 'ANY'
     if (query.q) filters.search = query.q
-    if (flagFilter.flagCategory) filters.flagCategory = flagFilter.flagCategory
 
     const { data, total } = await contactRepository.findAll(
       paginationParams,
@@ -864,48 +857,129 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
       })
     }
 
-    const approvedContact = await contactRepository.upsert({
-      name: approvedDraft.name,
-      phone: approvedDraft.phone,
-      email: approvedDraft.email,
-      serviceType: approvedDraft.serviceType,
-      jobTitle: approvedDraft.jobTitle,
-      city: approvedDraft.city,
-      provinceCode: null,
-      provinceName: null,
-      cityCode: null,
-      cityName: null,
-      company: approvedDraft.company,
-      department: approvedDraft.department,
-      eventDate: approvedDraft.eventDate,
-      topicTags: null,
-      source: 'excel_upload',
-      completenessScore: computeApprovalCompleteness({
+    const contactId = flaggedRecord.rawData.contactId as string | undefined
+    let approvedContact: Awaited<ReturnType<typeof contactRepository.upsert>>
+
+    if (contactId) {
+      // Flagged record came from existing contact — update it
+      const existingContact = await contactRepository.findById(contactId)
+      if (existingContact) {
+        await contactRepository.update(contactId, {
+          name: approvedDraft.name,
+          phone: approvedDraft.phone,
+          email: approvedDraft.email,
+          city: approvedDraft.city,
+          company: approvedDraft.company,
+          serviceType: approvedDraft.serviceType,
+          jobTitle: approvedDraft.jobTitle,
+          department: approvedDraft.department,
+          flagCategory: null,
+        })
+        await flaggedRecordsRepository.discard(flaggedRecord.id, actor.sub)
+
+        await auditLogRepository.create({
+          action: 'flagged_record.approved',
+          actorId: actor.sub,
+          actorRole: actor.role,
+          eventId: null,
+          targetId: flaggedRecord.id,
+          targetType: 'flagged_record',
+          metadata: { contactId, contactUpdated: true },
+        })
+
+        const responseBody = { success: true, action: 'contact_updated' }
+        validateOpenApiResponse({ path: '/contacts/flagged/{id}', method: 'patch', status: 200, body: responseBody })
+        return reply.status(200).send(responseBody)
+      } else {
+        // Contact was deleted — fall back to upsert
+        approvedContact = await contactRepository.upsert({
+          name: approvedDraft.name,
+          phone: approvedDraft.phone,
+          email: approvedDraft.email,
+          serviceType: approvedDraft.serviceType,
+          jobTitle: approvedDraft.jobTitle,
+          city: approvedDraft.city,
+          provinceCode: null,
+          provinceName: null,
+          cityCode: null,
+          cityName: null,
+          company: approvedDraft.company,
+          department: approvedDraft.department,
+          eventDate: approvedDraft.eventDate,
+          topicTags: null,
+          source: 'excel_upload',
+          completenessScore: computeApprovalCompleteness({
+            name: approvedDraft.name,
+            phone: approvedDraft.phone,
+            email: approvedDraft.email,
+            company: approvedDraft.company,
+            serviceType: approvedDraft.serviceType,
+            jobTitle: approvedDraft.jobTitle,
+            department: approvedDraft.department,
+            city: approvedDraft.city,
+          }),
+          consentStatus: 'legacy_unverified',
+          flagCategory: null,
+          deletedAt: null,
+        })
+
+        await flaggedRecordsRepository.resolve(flaggedRecord.id, {
+          name: approvedContact.name,
+          phone: approvedContact.phone,
+          email: approvedContact.email,
+          city: approvedContact.city,
+          company: approvedContact.company,
+          department: approvedContact.department ?? null,
+          serviceType: approvedContact.serviceType,
+          jobTitle: approvedContact.jobTitle,
+          eventDate: approvedContact.eventDate,
+        }, actor.sub)
+      }
+    } else {
+      // Original ETL flow — upsert contact
+      approvedContact = await contactRepository.upsert({
         name: approvedDraft.name,
         phone: approvedDraft.phone,
         email: approvedDraft.email,
-        company: approvedDraft.company,
         serviceType: approvedDraft.serviceType,
         jobTitle: approvedDraft.jobTitle,
-        department: approvedDraft.department,
         city: approvedDraft.city,
-      }),
-      consentStatus: 'legacy_unverified',
-      flagCategory: null,
-      deletedAt: null,
-    })
+        provinceCode: null,
+        provinceName: null,
+        cityCode: null,
+        cityName: null,
+        company: approvedDraft.company,
+        department: approvedDraft.department,
+        eventDate: approvedDraft.eventDate,
+        topicTags: null,
+        source: 'excel_upload',
+        completenessScore: computeApprovalCompleteness({
+          name: approvedDraft.name,
+          phone: approvedDraft.phone,
+          email: approvedDraft.email,
+          company: approvedDraft.company,
+          serviceType: approvedDraft.serviceType,
+          jobTitle: approvedDraft.jobTitle,
+          department: approvedDraft.department,
+          city: approvedDraft.city,
+        }),
+        consentStatus: 'legacy_unverified',
+        flagCategory: null,
+        deletedAt: null,
+      })
 
-    await flaggedRecordsRepository.resolve(flaggedRecord.id, {
-      name: approvedContact.name,
-      phone: approvedContact.phone,
-      email: approvedContact.email,
-      city: approvedContact.city,
-      company: approvedContact.company,
-      department: approvedContact.department ?? null,
-      serviceType: approvedContact.serviceType,
-      jobTitle: approvedContact.jobTitle,
-      eventDate: approvedContact.eventDate,
-    }, actor.sub)
+      await flaggedRecordsRepository.resolve(flaggedRecord.id, {
+        name: approvedContact.name,
+        phone: approvedContact.phone,
+        email: approvedContact.email,
+        city: approvedContact.city,
+        company: approvedContact.company,
+        department: approvedContact.department ?? null,
+        serviceType: approvedContact.serviceType,
+        jobTitle: approvedContact.jobTitle,
+        eventDate: approvedContact.eventDate,
+      }, actor.sub)
+    }
 
     const resolved = await flaggedRecordsRepository.findById(flaggedRecord.id)
     if (!resolved) {
@@ -1029,51 +1103,53 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(202).send(responseBody)
   })
 
-  // ── PUT /api/contacts/bulk-flag ───────────────────────────────────
-  const BulkFlagBodySchema = z.object({
-    ids: z.array(z.string().trim().min(1)),
-    flagCategory: z.enum(['invalid-data', 'duplicate']).nullable(),
-  })
-
-  fastify.put('/api/contacts/bulk-flag', adminOnly, async (request, reply) => {
-    const bodyResult = BulkFlagBodySchema.safeParse(request.body)
-    if (!bodyResult.success) {
-      return reply.status(400).send({
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Invalid bulk flag payload',
-          details: bodyResult.error.issues,
-        },
-      })
+  // GET /api/contacts/:id/recommended-events — suggest published/active events for a contact
+  fastify.get('/api/contacts/:id/recommended-events', { preHandler: [requireAuth] }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const params = z.object({ id: z.string().min(1) }).safeParse((request as FastifyRequest).params)
+    if (!params.success) {
+      return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: 'Invalid contact id', details: [] } })
     }
 
-    validateOpenApiRequest({ path: '/contacts/bulk-flag', method: 'put', body: bodyResult.data })
-
-    const { ids, flagCategory } = bodyResult.data
-    let updated = 0
-    for (const id of ids) {
-      const result = await contactRepository.update(id, { flagCategory })
-      if (result) updated++
+    const contact = await contactRepository.findById(params.data.id)
+    if (!contact) {
+      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Contact not found', details: [] } })
     }
 
-    const actor = request.user as JwtPayload
-    await auditLogRepository.create({
-      action: 'contact.bulk_flagged',
-      actorId: actor.sub,
-      actorRole: actor.role,
-      eventId: null,
-      targetId: `bulk-flag-${Date.now()}`,
-      targetType: 'contact',
-      metadata: { ids, flagCategory, updated },
+    // Get all published or active events
+    const eventsResult = await eventRepository.findAll({ page: 1, pageSize: 200 })
+    const eligibleEvents = eventsResult.data.filter((e) => e.status === 'published' || e.status === 'active')
+
+    // Simple scoring: match contact industry/serviceType with event industry tags
+    const recommendations = eligibleEvents.map((event) => {
+      let score = 50 // base score
+      const factors: string[] = []
+
+      if (contact.serviceType && event.targetCriteria?.serviceTypes?.includes(contact.serviceType)) {
+        score += 30
+        factors.push(`industry:${contact.serviceType}`)
+      }
+      if (contact.city && event.targetCriteria?.cities?.includes(contact.city)) {
+        score += 15
+        factors.push(`city:${contact.city}`)
+      }
+      if (event.topicTags?.length) {
+        factors.push(`topic:${event.topicTags[0]}`)
+      }
+
+      return {
+        eventId: event.id,
+        name: event.name,
+        eventDate: event.startDate,
+        status: event.status,
+        score: Math.min(score, 100),
+        factors,
+      }
     })
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 10)
 
-    const responseBody = {
-      success: true,
-      updated,
-      requested: ids.length,
-      flagCategory,
-    }
-    validateOpenApiResponse({ path: '/contacts/bulk-flag', method: 'put', status: 200, body: responseBody })
+    const responseBody = { recommendations, totalMatched: recommendations.length }
+    validateOpenApiResponse({ path: '/contacts/{id}/recommended-events', method: 'get', status: 200, body: responseBody })
     return reply.status(200).send(responseBody)
   })
 
@@ -1143,6 +1219,7 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
       company: z.string().trim().nullable().optional(),
       serviceType: z.string().trim().nullable().optional(),
       jobTitle: z.string().trim().nullable().optional(),
+      flagCategory: z.enum(['invalid-data', 'duplicate', 'industry-unmatched', 'jobtitle-unmatched']).nullable().optional(),
     }).safeParse((request as FastifyRequest).body)
 
     if (!params.success || !body.success) {
@@ -1183,6 +1260,7 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
     if (data.company !== undefined) update.company = data.company
     if (data.serviceType !== undefined) update.serviceType = data.serviceType
     if (data.jobTitle !== undefined) update.jobTitle = data.jobTitle
+    if (data.flagCategory !== undefined) update.flagCategory = data.flagCategory
 
     if (Object.keys(update).length === 0) {
       return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: 'No fields to update', details: [] } })
@@ -1227,5 +1305,102 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
     const normalizationService = getNormalizationService()
     const result = await normalizationService.flagUnmatchedContacts()
     return reply.status(200).send(result)
+  })
+
+  // ── GET /api/contacts/cities/unmatched ────────────────────────────
+  fastify.get('/api/contacts/cities/unmatched', { preHandler: [requireAuth, requireAdmin] }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const page = parseInt((request.query as Record<string, string>).page ?? '1', 10)
+    const pageSize = parseInt((request.query as Record<string, string>).pageSize ?? '50', 10)
+    const offset = (page - 1) * pageSize
+
+    // Get contacts whose city doesn't match any city in the cities table
+    const countResult = await getPool().query<{ count: string }>(
+      `SELECT COUNT(DISTINCT LOWER(TRIM(city))) 
+       FROM contacts 
+       WHERE city IS NOT NULL AND city != ''
+       AND LOWER(TRIM(city)) NOT IN (SELECT LOWER(city_name) FROM cities)`,
+    )
+    const total = parseInt(countResult.rows[0]?.count ?? '0', 10)
+
+    const { rows } = await getPool().query<{
+      city: string
+      count: string
+      contactIds: string[]
+    }>(
+      `SELECT TRIM(city) as city, COUNT(*) as count, ARRAY_AGG(id) as contactIds
+       FROM contacts
+       WHERE city IS NOT NULL AND city != ''
+       AND LOWER(TRIM(city)) NOT IN (SELECT LOWER(city_name) FROM cities)
+       GROUP BY LOWER(TRIM(city)), TRIM(city)
+       ORDER BY COUNT(*) DESC
+       LIMIT $1 OFFSET $2`,
+      [pageSize, offset],
+    )
+
+    // Fetch sample contacts for each unmatched city
+    const result = await Promise.all(rows.map(async (row: { city: string; count: string; contactIds: string[] }) => {
+      const contactsResult = await getPool().query<{
+        id: string
+        name: string
+        email: string | null
+        phone: string | null
+      }>(
+        `SELECT id, name, email, phone FROM contacts WHERE TRIM(city) = $1 LIMIT 10`,
+        [row.city],
+      )
+      return {
+        city: row.city,
+        count: parseInt(row.count, 10),
+        contactIds: row.contactIds,
+        contacts: contactsResult.rows,
+      }
+    }))
+
+    return reply.status(200).send({
+      cityGroups: result,
+      total,
+      totalPages: Math.ceil(total / pageSize),
+    })
+  })
+
+  // ── PATCH /api/contacts/:id/city ──────────────────────────────────
+  fastify.patch('/api/contacts/:id/city', { preHandler: [requireAuth, requireAdmin] }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const params = z.object({ id: z.string().min(1) }).safeParse((request as FastifyRequest).params)
+    const body = z.object({ city: z.string().trim().min(1) }).safeParse((request as FastifyRequest).body)
+
+    if (!params.success || !body.success) {
+      return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: 'Invalid payload', details: [] } })
+    }
+
+    const contact = await contactRepository.findById(params.data.id)
+    if (!contact) {
+      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Contact not found', details: [] } })
+    }
+
+    const updated = await contactRepository.update(params.data.id, { city: body.data.city })
+    if (!updated) {
+      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Contact not found', details: [] } })
+    }
+
+    return reply.status(200).send(updated)
+  })
+
+  // ── POST /api/contacts/cities/bulk-normalize ──────────────────────
+  fastify.post('/api/contacts/cities/bulk-normalize', { preHandler: [requireAuth, requireAdmin] }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const body = z.object({
+      oldCity: z.string().trim().min(1),
+      newCity: z.string().trim().min(1),
+    }).safeParse((request as FastifyRequest).body)
+
+    if (!body.success) {
+      return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: 'Invalid payload', details: body.error.issues } })
+    }
+
+    const { rowCount } = await getPool().query(
+      `UPDATE contacts SET city = $1 WHERE LOWER(TRIM(city)) = LOWER($2)`,
+      [body.data.newCity, body.data.oldCity],
+    )
+
+    return reply.status(200).send({ success: true, normalized: rowCount ?? 0 })
   })
 }

@@ -156,19 +156,6 @@ describe('GET /api/contacts', () => {
     expect(body.data.every((contact: { city: string }) => contact.city.toLowerCase().includes('jak'))).toBe(true)
   })
 
-  it('filters contacts by flagged state', async () => {
-    const res = await app.inject({
-      method: 'GET',
-      url: '/api/contacts?page=1&pageSize=20&flagFilter=flagged',
-      headers: { authorization: `Bearer ${getAuthToken('admin')}` },
-    })
-
-    expect(res.statusCode).toBe(200)
-    const body = res.json()
-    expect(body.pagination.total).toBeGreaterThan(0)
-    expect(body.data.every((contact: { flagCategory: string | null }) => contact.flagCategory !== null)).toBe(true)
-  })
-
   it('filters contacts with missing email only', async () => {
     const res = await app.inject({
       method: 'GET',

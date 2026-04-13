@@ -17,13 +17,12 @@ import { ContactsPagination } from './ContactsPagination'
 import { ActionToolbar } from './ActionToolbar'
 import { BlastModal } from './BlastModal'
 import { NormalizationHealthFlags } from './NormalizationHealthFlags'
-import { MissingFieldsTab } from './MissingFieldsTab'
+import { FlaggedContactsTab } from './FlaggedContactsTab'
 import { DuplicateContactsTab } from './DuplicateContactsTab'
 import { ContactNormalizationTab } from './ContactNormalizationTab'
 
 export function ContactsCommandCenter() {
   const [activeView, setActiveView] = useState<'contacts' | 'flagged' | 'duplicates' | 'normalize'>('contacts')
-  const [missingField, setMissingField] = useState<'email' | 'phone'>('email')
   const [triageMode, setTriageMode] = useState<'flagged' | 'duplicates' | null>(null)
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
   const [selectMode, setSelectMode] = useState(false)
@@ -33,12 +32,16 @@ export function ContactsCommandCenter() {
   const { setFilter } = useFilterStore()
   const { data: contacts } = useContacts()
 
-  const hasFilters = ['serviceType', 'city', 'jobTitle', 'q', 'missingEmail', 'missingPhone', 'flagFilter']
-    .some((k) => !!searchParams.get(k))
+  const hasFilters = ['serviceType', 'city', 'jobTitle', 'q', 'missingEmail', 'missingPhone', 'flagged']
+    .some((k) => {
+      const v = searchParams.get(k)
+      if (k === 'missingEmail' || k === 'missingPhone' || k === 'flagged') return v === 'true'
+      return !!v
+    })
 
   // Reset selection when filter params change (exclude page — page navigation keeps selection).
   // Using the "reset during render" pattern to avoid setState-in-effect lint error.
-  const filterKey = ['serviceType', 'city', 'jobTitle', 'q', 'missingEmail', 'missingPhone', 'flagFilter']
+  const filterKey = ['serviceType', 'city', 'jobTitle', 'q', 'missingEmail', 'missingPhone', 'flagged']
     .map((k) => `${k}=${searchParams.get(k) ?? ''}`)
     .join('&')
   const [prevFilterKey, setPrevFilterKey] = useState(filterKey)
@@ -73,9 +76,9 @@ export function ContactsCommandCenter() {
       city: searchParams.get('city') ?? '',
       jobTitle: searchParams.get('jobTitle') ?? '',
       page: parseInt(searchParams.get('page') ?? '1', 10),
-      flagFilter: (searchParams.get('flagFilter') ?? '') as '' | 'flagged' | 'unflagged',
       missingEmail: searchParams.get('missingEmail') === 'true',
       missingPhone: searchParams.get('missingPhone') === 'true',
+      flagged: searchParams.get('flagged') === 'true',
     })
   }, [searchParams, setFilter])
 
@@ -95,7 +98,7 @@ export function ContactsCommandCenter() {
         </Button>
       </div>
 
-      <ContactsHealthFlags onNavigate={(view, field) => { setActiveView(view); if (field) setMissingField(field) }} />
+      <ContactsHealthFlags onNavigate={() => setActiveView('flagged')} />
       <NormalizationHealthFlags onNavigate={() => setActiveView('normalize')} />
 
       {/* View tabs */}
@@ -138,7 +141,7 @@ export function ContactsCommandCenter() {
         </TabsContent>
 
         <TabsContent value="flagged" className="mt-4">
-          <MissingFieldsTab defaultField={missingField} />
+          <FlaggedContactsTab />
         </TabsContent>
 
         <TabsContent value="duplicates" className="mt-4">

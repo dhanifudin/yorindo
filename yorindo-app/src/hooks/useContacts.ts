@@ -13,9 +13,9 @@ async function fetchContacts(params: {
   serviceType: string
   city: string
   jobTitle: string
-  flagFilter: string
   missingEmail: boolean
   missingPhone: boolean
+  flagged: boolean
   q: string
 }): Promise<PaginatedResponse<Contact>> {
   const qs = new URLSearchParams()
@@ -24,9 +24,9 @@ async function fetchContacts(params: {
   if (params.serviceType) qs.set('serviceType', params.serviceType)
   if (params.city) qs.set('city', params.city)
   if (params.jobTitle) qs.set('jobTitle', params.jobTitle)
-  if (params.flagFilter) qs.set('flagFilter', params.flagFilter)
   if (params.missingEmail) qs.set('missingEmail', 'true')
   if (params.missingPhone) qs.set('missingPhone', 'true')
+  if (params.flagged) qs.set('flagged', 'true')
   if (params.q) qs.set('q', params.q)
 
   const res = await fetch(`/api/contacts?${qs.toString()}`)
@@ -36,7 +36,7 @@ async function fetchContacts(params: {
 
 export function useContacts() {
   const searchParams = useSearchParams()
-  const { serviceType: storeServiceType, city: storeCity, jobTitle: storeJobTitle, page: storePage, flagFilter, missingEmail, missingPhone } = useFilterStore()
+  const { serviceType: storeServiceType, city: storeCity, jobTitle: storeJobTitle, page: storePage, missingEmail, missingPhone, flagged } = useFilterStore()
 
   const serviceType = storeServiceType || searchParams.get('serviceType') || ''
   const city = storeCity || searchParams.get('city') || ''
@@ -45,8 +45,8 @@ export function useContacts() {
   const q = searchParams.get('q') ?? ''
 
   return useQuery({
-    queryKey: ['contacts', { page, pageSize: PAGE_SIZE, serviceType, city, jobTitle, flagFilter, missingEmail, missingPhone, q }],
-    queryFn: () => fetchContacts({ page, pageSize: PAGE_SIZE, serviceType, city, jobTitle, flagFilter, missingEmail, missingPhone, q }),
+    queryKey: ['contacts', { page, pageSize: PAGE_SIZE, serviceType, city, jobTitle, missingEmail, missingPhone, flagged, q }],
+    queryFn: () => fetchContacts({ page, pageSize: PAGE_SIZE, serviceType, city, jobTitle, missingEmail, missingPhone, flagged, q }),
   })
 }
 

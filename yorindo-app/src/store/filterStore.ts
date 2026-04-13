@@ -5,9 +5,9 @@ interface FilterStore {
   city: string
   jobTitle: string
   page: number
-  flagFilter: '' | 'flagged' | 'unflagged'
   missingEmail: boolean
   missingPhone: boolean
+  flagged: boolean
   setFilter: (f: Partial<Omit<FilterStore, 'setFilter' | 'resetFilter'>>) => void
   resetFilter: () => void
 }
@@ -17,17 +17,17 @@ export const useFilterStore = create<FilterStore>((set) => ({
   city: '',
   jobTitle: '',
   page: 1,
-  flagFilter: '',
   missingEmail: false,
   missingPhone: false,
+  flagged: false,
   setFilter: (f) => set((s) => ({ ...s, ...f })),
   resetFilter: () => set({
     serviceType: '',
     city: '',
     jobTitle: '',
     page: 1,
-    flagFilter: '',
     missingEmail: false,
     missingPhone: false,
+    flagged: false,
   }),
 }))

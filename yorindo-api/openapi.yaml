@@ -2310,45 +2310,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
 
-  /contacts/bulk-flag:
-    put:
-      summary: Bulk set or clear flag category on contacts (admin only)
-      operationId: bulkFlagContacts
-      tags: [Contacts]
-      security:
-        - BearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/BulkFlagBody'
-      responses:
-        '200':
-          description: Number of contacts updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BulkFlagResult'
-        '400':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-        '403':
-          description: Admin only
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-
   /contacts/flagged:
     get:
       summary: List flagged records requiring review (admin only)
@@ -6916,6 +6877,28 @@ paths:
                 standardId: { type: string }
       responses:
         '200': { description: Contact normalized }
+  /contacts/{id}/city:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string }
+    patch:
+      summary: Update a contact's city
+      operationId: updateContactCity
+      tags: [Contact Normalization]
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [city]
+              properties:
+                city: { type: string }
+      responses:
+        '200': { description: Contact updated }
   /contacts/{id}:
     patch:
       summary: Update a contact (name, email, phone, city, company, serviceType, jobTitle)
@@ -6988,6 +6971,63 @@ paths:
                 properties:
                   industryCount: { type: integer }
                   jobTitleCount: { type: integer }
+  /contacts/cities/unmatched:
+    get:
+      summary: Get contacts with non-standard city names
+      operationId: getUnmatchedCities
+      tags: [Contact Normalization]
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, default: 50 }
+      responses:
+        '200':
+          description: List of non-standard city names with contact counts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cityGroups:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        city: { type: string }
+                        count: { type: integer }
+                        contactIds: { type: array, items: { type: string } }
+                  total: { type: integer }
+                  totalPages: { type: integer }
+  /contacts/cities/bulk-normalize:
+    post:
+      summary: Bulk normalize city names
+      operationId: bulkNormalizeCities
+      tags: [Contact Normalization]
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [oldCity, newCity]
+              properties:
+                oldCity: { type: string }
+                newCity: { type: string }
+      responses:
+        '200':
+          description: Normalization result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  normalized: { type: integer }
   /cities:
     get:
       summary: List all cities (cached, 5 min TTL)
