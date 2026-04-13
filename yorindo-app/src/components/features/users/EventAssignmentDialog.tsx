@@ -24,7 +24,7 @@ export function EventAssignmentDialog({ user, open, onClose }: EventAssignmentDi
 
   const { data: eventsData } = useQuery<{ data: Event[] }>({
     queryKey: ['events'],
-    queryFn: () => fetch('/api/events?pageSize=200').then((r) => r.json()),
+    queryFn: () => fetch('/api/events?pageSize=100').then((r) => r.json()),
     enabled: open,
   })
 
