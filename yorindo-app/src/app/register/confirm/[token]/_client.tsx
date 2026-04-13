@@ -1,12 +1,13 @@
 'use client'
 
-import { use, useState, useEffect, useRef } from 'react'
+import { use, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { useAuthStore } from '@/store/authStore'
+// SSO deferred — participant auto-login hidden for now
+// import { useAuthStore } from '@/store/authStore'
 
 interface ConfirmPageProps {
   params: Promise<{ token: string }>
@@ -28,10 +29,11 @@ interface ConfirmResult {
 
 export default function ConfirmPage({ params }: ConfirmPageProps) {
   const { token } = use(params)
-  const { setAuth } = useAuthStore()
+  // SSO deferred — setAuth and participant auto-login hidden
+  // const { setAuth } = useAuthStore()
   const router = useRouter()
-  const [participantAuthDone, setParticipantAuthDone] = useState(false)
-  const authAttemptedRef = useRef(false)
+  // const [participantAuthDone, setParticipantAuthDone] = useState(false)
+  // const authAttemptedRef = useRef(false)
 
   const { data, isLoading, isError, error } = useQuery<ConfirmResult>({
     queryKey: ['confirm-registration', token],
@@ -48,6 +50,8 @@ export default function ConfirmPage({ params }: ConfirmPageProps) {
     refetchOnWindowFocus: false,
   })
 
+  // SSO deferred — participant auto-login effect hidden
+  /*
   useEffect(() => {
     if (!data?.registration || participantAuthDone || authAttemptedRef.current) return
     authAttemptedRef.current = true
@@ -72,6 +76,7 @@ export default function ConfirmPage({ params }: ConfirmPageProps) {
     }
     createAccount()
   }, [data, participantAuthDone, setAuth])
+  */
 
   if (isLoading) {
     return (
@@ -128,12 +133,12 @@ export default function ConfirmPage({ params }: ConfirmPageProps) {
                   </a>
                 )
               })()}
-              {/* Dashboard entry */}
-              {participantAuthDone && (
+              {/* Dashboard entry — SSO deferred, hidden until participant SSO is enabled */}
+              {/* participantAuthDone && (
                 <Button className="w-full" onClick={() => router.push('/app')}>
                   Masuk ke Dashboard →
                 </Button>
-              )}
+              ) */}
               {/* Social share */}
               {data?.registration.eventSlug && (
                 <div className="pt-2 space-y-2">

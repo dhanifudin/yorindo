@@ -14,8 +14,9 @@ import { getUserFriendlyError } from '@/lib/error-messages'
 import { Label } from '@/components/ui/label'
 import { Combobox } from '@/components/ui/combobox'
 import type { Event } from '@/types/api'
-import { MockGoogleAuthDialog } from '@/components/auth/MockGoogleAuthDialog'
-import { GoogleIcon } from '@/components/icons/GoogleIcon'
+// SSO deferred — participant Google SSO hidden for now
+// import { MockGoogleAuthDialog } from '@/components/auth/MockGoogleAuthDialog'
+// import { GoogleIcon } from '@/components/icons/GoogleIcon'
 import { surveyCustomWidgets } from '@/components/features/surveys/widgets'
 
 const EVENT_TYPE_LABELS: Record<string, string> = {
@@ -65,8 +66,9 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
   const [form, setForm] = useState<FormData>({ name: '', email: '', secondaryEmail: '', phone: '', company: '', industry: '', title: '', location: '', surveyAnswers: {}, consent: false })
   const [submitted, setSubmitted] = useState(false)
   const [regId, setRegId] = useState<string | null>(null)
-  const [ssoFilled, setSsoFilled] = useState(false)
-  const [showSsoDialog, setShowSsoDialog] = useState(false)
+  // SSO deferred — ssoFilled and showSsoDialog hidden for now
+  // const [ssoFilled, setSsoFilled] = useState(false)
+  // const [showSsoDialog, setShowSsoDialog] = useState(false)
 
   const { data: event } = useQuery<Event>({
     queryKey: ['public-event-form', eventSlug],
@@ -174,14 +176,15 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
 
   return (
     <>
-    <MockGoogleAuthDialog
+    {/* SSO deferred — MockGoogleAuthDialog hidden */}
+    {/* <MockGoogleAuthDialog
       open={showSsoDialog}
       onOpenChange={setShowSsoDialog}
       onSuccess={(name, email) => {
         setForm((p) => ({ ...p, name, email }))
         setSsoFilled(true)
       }}
-    />
+    /> */}
     <div className="w-full max-w-2xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
       {/* Event details banner */}
       {event && (
@@ -237,43 +240,18 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
             <div className="space-y-5">
               <h2 className="text-lg font-semibold">Informasi Kontak</h2>
 
-              {/* Gmail SSO pre-fill */}
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full flex items-center gap-2"
-                onClick={() => setShowSsoDialog(true)}
-              >
-                <GoogleIcon />
-                Lanjutkan dengan Google
-              </Button>
-              <div className="relative flex items-center gap-2">
-                <div className="flex-1 h-px bg-border" />
-                <span className="text-xs text-muted-foreground">atau isi manual</span>
-                <div className="flex-1 h-px bg-border" />
-              </div>
-
               {/* Required fields */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label htmlFor="name">
                     Nama Lengkap <span className="text-destructive">*</span>
                   </Label>
-                  <div className="relative">
-                    <Input
-                      id="name"
-                      value={form.name}
-                      onChange={(e) => !ssoFilled && setForm((p) => ({ ...p, name: e.target.value }))}
-                      placeholder="Nama lengkap Anda"
-                      readOnly={ssoFilled}
-                      className={ssoFilled ? 'pr-20 bg-muted/40' : ''}
-                    />
-                    {ssoFilled && (
-                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-green-600 font-medium">
-                        ✓ Terisi dari Google
-                      </span>
-                    )}
-                  </div>
+                  <Input
+                    id="name"
+                    value={form.name}
+                    onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+                    placeholder="Nama lengkap Anda"
+                  />
                 </div>
 
                 <div className="space-y-1.5">
@@ -292,22 +270,13 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
                   <Label htmlFor="email">
                     Email <span className="text-destructive">*</span>
                   </Label>
-                  <div className="relative">
-                    <Input
-                      id="email"
-                      type="email"
-                      value={form.email}
-                      onChange={(e) => !ssoFilled && setForm((p) => ({ ...p, email: e.target.value }))}
-                      placeholder="email@contoh.com"
-                      readOnly={ssoFilled}
-                      className={ssoFilled ? 'pr-20 bg-muted/40' : ''}
-                    />
-                    {ssoFilled && (
-                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-green-600 font-medium">
-                        ✓ Terisi dari Google
-                      </span>
-                    )}
-                  </div>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={form.email}
+                    onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
+                    placeholder="email@contoh.com"
+                  />
                 </div>
 
                 <div className="space-y-1.5">
