@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import type { RowSelectionState } from '@tanstack/react-table'
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { useContacts } from '@/hooks/useContacts'
 import { Button } from '@/components/ui/button'
@@ -19,7 +19,6 @@ import { ContactsPagination } from './ContactsPagination'
 import { ActionToolbar } from './ActionToolbar'
 import { BlastModal } from './BlastModal'
 import { NormalizationHealthFlags } from './NormalizationHealthFlags'
-import { useEmailConfig } from '@/hooks/useEmailConfig'
 import { MissingFieldsTab } from './MissingFieldsTab'
 import { DuplicateContactsTab } from './DuplicateContactsTab'
 import { ContactNormalizationTab } from './ContactNormalizationTab'
@@ -32,12 +31,9 @@ export function ContactsCommandCenter() {
   const [selectMode, setSelectMode] = useState(false)
   const [blastModalOpen, setBlastModalOpen] = useState(false)
 
-  const router = useRouter()
-  const pathname = usePathname()
   const searchParams = useSearchParams()
   const { setFilter } = useFilterStore()
   const { data: contacts } = useContacts()
-  const { data: emailConfig } = useEmailConfig()
 
   const hasFilters = ['serviceType', 'city', 'jobTitle', 'q', 'missingEmail', 'missingPhone', 'flagFilter']
     .some((k) => !!searchParams.get(k))
@@ -142,10 +138,6 @@ export function ContactsCommandCenter() {
             selectedNames={selectedNames}
             onClearSelection={handleClearSelection}
             onOpenBlastModal={() => {
-              if (emailConfig && !emailConfig.configured) {
-                router.push('/app/settings')
-                return
-              }
               setBlastModalOpen(true)
             }}
           />
