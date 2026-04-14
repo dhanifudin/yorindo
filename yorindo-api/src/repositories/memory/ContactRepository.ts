@@ -62,7 +62,7 @@ export class InMemoryContactRepository implements IContactRepository {
         source: SOURCES[i % SOURCES.length]!,
         completenessScore: Math.round((0.4 + (i % 7) * 0.09) * 1000) / 1000,
         consentStatus: status,
-        flagCategory: i % 15 === 0 ? 'invalid-data' : i % 22 === 0 ? 'duplicate' : null,
+        flagCategory: i % 17 === 0 ? 'invalid-data' : i % 23 === 0 ? 'duplicate' : null,
         deletedAt: null,
         createdAt: new Date(Date.now() - i * 86400000).toISOString(),
         updatedAt: new Date().toISOString(),
@@ -165,7 +165,10 @@ export class InMemoryContactRepository implements IContactRepository {
 
     if (filters?.serviceTypes?.length) data = data.filter(c => c.serviceType && filters.serviceTypes!.includes(c.serviceType))
     if (filters?.cities?.length) data = data.filter(c => c.city && filters.cities!.includes(c.city))
-    if (filters?.jobTitles?.length) data = data.filter(c => c.jobTitle && filters.jobTitles!.includes(c.jobTitle))
+    if (filters?.jobTitles?.length) {
+      const lowerJobTitles = filters.jobTitles.map(j => j.toLowerCase())
+      data = data.filter(c => c.jobTitle && lowerJobTitles.includes(c.jobTitle.toLowerCase()))
+    }
 
     if (filters?.search) {
       const q = filters.search.toLowerCase()

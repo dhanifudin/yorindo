@@ -146,7 +146,7 @@ export class PostgresEventRepository
 
   async findBySlug(slug: string): Promise<Event | null> {
     const { rows } = await this.query<EventRow>(
-      `SELECT * FROM events WHERE slug = $1 AND deleted_at IS NULL AND status IN ('published', 'active')`,
+      `SELECT * FROM events WHERE slug = $1 AND deleted_at IS NULL`,
       [slug],
     )
     return rows[0] ? this.mapRow(rows[0]) : null

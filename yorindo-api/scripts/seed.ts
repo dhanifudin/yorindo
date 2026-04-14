@@ -171,10 +171,10 @@ async function seed(): Promise<void> {
       await client.query(`
         INSERT INTO contacts (
           id, name, phone, email, city, company, company_size, source, consent_status,
-          industry_id, job_title_id, service_type,
+          industry_id, job_title_id, job_title, service_type,
           province_code, province_name, city_code, city_name
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, 'manual', 'active', $8, $9, $10, $11, $12, $13, $14)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, 'manual', 'active', $8, $9, $10, $11, $12, $13, $14, $15)
       `, [
         createId(),
         `Contact ${i}`,
@@ -185,6 +185,7 @@ async function seed(): Promise<void> {
         size,
         industryId ?? null,
         jobTitleId ?? null,
+        jobTitleName,
         serviceType,
         location?.province_code ?? null,
         location?.province_name ?? null,

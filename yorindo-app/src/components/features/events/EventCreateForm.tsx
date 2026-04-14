@@ -989,19 +989,6 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
             })}
           </div>
         </div>
-
-        {/* Job Titles */}
-        <div>
-          <Label htmlFor="targetJobTitlesRaw">Jabatan</Label>
-          <Input
-            id="targetJobTitlesRaw"
-            type="text"
-            value={targetJobTitlesRaw}
-            onChange={(e) => setTargetJobTitlesRaw(e.target.value)}
-            placeholder="Contoh: direktur, manajer, supervisor"
-          />
-          <p className="mt-1 text-xs text-muted-foreground">Pisahkan dengan koma</p>
-        </div>
       </fieldset>
 
       {/* Vendor */}
