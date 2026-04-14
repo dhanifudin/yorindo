@@ -17,7 +17,43 @@ import { hashSync } from '@node-rs/bcrypt'
 import { createId } from '@paralleldrive/cuid2'
 import { seedDemo } from './seed-demo'
 import { runMigrations } from './migrate'
-import { INDONESIAN_INDUSTRIES, INDONESIAN_JOB_TITLES } from '../src/repositories/memory/_seeds.js'
+
+// ─── Seed data (inlined to avoid src/ imports in Docker) ─────────────────────
+const SEED_INDUSTRIES = [
+  { slug: 'teknologi-informasi', name: 'Teknologi Informasi & Software' },
+  { slug: 'kesehatan',           name: 'Farmasi & Alat Kesehatan' },
+  { slug: 'keuangan',            name: 'Keuangan & Perbankan' },
+  { slug: 'pendidikan',          name: 'Pendidikan & Pelatihan' },
+  { slug: 'manufaktur',          name: 'Manufaktur & Fabrikasi' },
+  { slug: 'ritel',               name: 'Ritel & Perdagangan' },
+  { slug: 'properti',            name: 'Properti & Real Estat' },
+  { slug: 'otomotif',            name: 'Otomotif & Suku Cadang' },
+  { slug: 'fmcg',                name: 'FMCG & Makanan Minuman' },
+  { slug: 'kimia-industri',      name: 'Bahan Kimia Industri' },
+  { slug: 'tekstil',             name: 'Tekstil & Garmen' },
+  { slug: 'energi',              name: 'Energi & Pertambangan' },
+  { slug: 'logistik',            name: 'Logistik & Transportasi' },
+  { slug: 'konstruksi',          name: 'Konstruksi & Infrastruktur' },
+  { slug: 'telekomunikasi',      name: 'Telekomunikasi' },
+]
+
+const SEED_JOB_TITLES = [
+  { slug: 'direktur',          name: 'Direktur' },
+  { slug: 'manajer',           name: 'Manajer' },
+  { slug: 'supervisor',        name: 'Supervisor' },
+  { slug: 'staf',              name: 'Staf' },
+  { slug: 'engineer',          name: 'Engineer' },
+  { slug: 'analis',            name: 'Analis' },
+  { slug: 'konsultan',         name: 'Konsultan' },
+  { slug: 'wirausaha',         name: 'Wirausaha' },
+  { slug: 'kepala-bagian',     name: 'Kepala Bagian / Head' },
+  { slug: 'koordinator',       name: 'Koordinator' },
+  { slug: 'spesialis',         name: 'Spesialis' },
+  { slug: 'admin',             name: 'Admin' },
+  { slug: 'teknisi',           name: 'Teknisi' },
+  { slug: 'operator',          name: 'Operator' },
+  { slug: 'presiden-direktur', name: 'Presiden Direktur / CEO' },
+]
 
 if (process.env.NODE_ENV === 'production' && process.env.ALLOW_SEED !== 'true') {
   console.error('Seed script blocked in production to prevent accidental data loss.')
@@ -62,37 +98,37 @@ async function seed(): Promise<void> {
     await client.query('BEGIN')
 
     // Industries
-    const industryValues = INDONESIAN_INDUSTRIES.map((ind, i) =>
+    const industryValues = SEED_INDUSTRIES.map((ind, i) =>
       `($${i * 3 + 1}, '${ind.slug}', '${ind.name}')`
     ).join(',\n        ')
-    const industryParams = INDONESIAN_INDUSTRIES.flatMap((ind) => [ind.id, ind.slug, ind.name])
+    const industryParams = SEED_INDUSTRIES.flatMap((ind) => [createId(), ind.slug, ind.name])
     await client.query(`
       INSERT INTO industries (id, slug, name) VALUES
         ${industryValues}
       ON CONFLICT (slug) DO NOTHING
     `, industryParams)
-    console.log(`✓ Seeded ${INDONESIAN_INDUSTRIES.length} industries`)
+    console.log(`✓ Seeded ${SEED_INDUSTRIES.length} industries`)
 
     // Fetch actual IDs (handles ON CONFLICT DO NOTHING case)
-    const industrySlugs = INDONESIAN_INDUSTRIES.map((ind) => ind.slug)
+    const industrySlugs = SEED_INDUSTRIES.map((ind) => ind.slug)
     const placeholders = industrySlugs.map((_, i) => `$${i + 1}`).join(',')
     const industryRows = await client.query(`SELECT id, slug FROM industries WHERE slug IN (${placeholders})`, industrySlugs)
     const industryMap = Object.fromEntries(industryRows.rows.map((r: { id: string; slug: string }) => [r.slug, r.id]))
 
     // Job Titles
-    const jobTitleValues = INDONESIAN_JOB_TITLES.map((jt, i) =>
+    const jobTitleValues = SEED_JOB_TITLES.map((jt, i) =>
       `($${i * 3 + 1}, '${jt.slug}', '${jt.name}')`
     ).join(',\n        ')
-    const jobTitleParams = INDONESIAN_JOB_TITLES.flatMap((jt) => [jt.id, jt.slug, jt.name])
+    const jobTitleParams = SEED_JOB_TITLES.flatMap((jt) => [createId(), jt.slug, jt.name])
     await client.query(`
       INSERT INTO job_titles (id, slug, name) VALUES
         ${jobTitleValues}
       ON CONFLICT (slug) DO NOTHING
     `, jobTitleParams)
-    console.log(`✓ Seeded ${INDONESIAN_JOB_TITLES.length} job titles`)
+    console.log(`✓ Seeded ${SEED_JOB_TITLES.length} job titles`)
 
     // Fetch actual job title IDs
-    const jobSlugs = INDONESIAN_JOB_TITLES.map((jt) => jt.slug)
+    const jobSlugs = SEED_JOB_TITLES.map((jt) => jt.slug)
     const jobPlaceholders = jobSlugs.map((_, i) => `$${i + 1}`).join(',')
     const jobTitleRows = await client.query(`SELECT id, slug FROM job_titles WHERE slug IN (${jobPlaceholders})`, jobSlugs)
     const jobTitleMap = Object.fromEntries(jobTitleRows.rows.map((r: { id: string; slug: string }) => [r.slug, r.id]))
@@ -129,10 +165,8 @@ async function seed(): Promise<void> {
       const size = sizes[i % sizes.length]
       const location = cityLocationMap[city]
       const industryId = industryMap[industrySlugsSeed[i % industrySlugsSeed.length]]
-      const jobSlug = jobSlugsSeed[i % jobSlugsSeed.length]
-      const jobTitleId = jobTitleMap[jobSlug]
-      const serviceType = INDONESIAN_INDUSTRIES.find(ind => ind.slug === industrySlugsSeed[i % industrySlugsSeed.length])?.name ?? ''
-      const jobTitleName = INDONESIAN_JOB_TITLES.find(jt => jt.slug === jobSlug)?.name ?? jobSlug
+      const jobTitleId = jobTitleMap[jobSlugsSeed[i % jobSlugsSeed.length]]
+      const serviceType = SEED_INDUSTRIES.find(ind => ind.slug === industrySlugsSeed[i % industrySlugsSeed.length])?.name ?? ''
 
       await client.query(`
         INSERT INTO contacts (
