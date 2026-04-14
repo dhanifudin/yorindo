@@ -62,13 +62,17 @@ async function seed(): Promise<void> {
     await client.query('BEGIN')
 
     // Industries
-    const industryValues = INDONESIAN_INDUSTRIES.map((ind, i) =>
-      `($${i * 3 + 1}, '${ind.slug}', '${ind.name}')`
-    ).join(',\n        ')
-    const industryParams = INDONESIAN_INDUSTRIES.flatMap((ind) => [ind.id, ind.slug, ind.name])
+    const industryValues: string[] = []
+    const industryParams: (string | number)[] = []
+    let idx = 1
+    for (const ind of INDONESIAN_INDUSTRIES) {
+      industryValues.push(`($${idx}, $${idx + 1}, $${idx + 2})`)
+      industryParams.push(ind.id, ind.slug, ind.name)
+      idx += 3
+    }
     await client.query(`
       INSERT INTO industries (id, slug, name) VALUES
-        ${industryValues}
+        ${industryValues.join(',\n        ')}
       ON CONFLICT (slug) DO NOTHING
     `, industryParams)
     console.log(`✓ Seeded ${INDONESIAN_INDUSTRIES.length} industries`)
@@ -80,13 +84,17 @@ async function seed(): Promise<void> {
     const industryMap = Object.fromEntries(industryRows.rows.map((r: { id: string; slug: string }) => [r.slug, r.id]))
 
     // Job Titles
-    const jobTitleValues = INDONESIAN_JOB_TITLES.map((jt, i) =>
-      `($${i * 3 + 1}, '${jt.slug}', '${jt.name}')`
-    ).join(',\n        ')
-    const jobTitleParams = INDONESIAN_JOB_TITLES.flatMap((jt) => [jt.id, jt.slug, jt.name])
+    const jobTitleValues: string[] = []
+    const jobTitleParams: (string | number)[] = []
+    idx = 1
+    for (const jt of INDONESIAN_JOB_TITLES) {
+      jobTitleValues.push(`($${idx}, $${idx + 1}, $${idx + 2})`)
+      jobTitleParams.push(jt.id, jt.slug, jt.name)
+      idx += 3
+    }
     await client.query(`
       INSERT INTO job_titles (id, slug, name) VALUES
-        ${jobTitleValues}
+        ${jobTitleValues.join(',\n        ')}
       ON CONFLICT (slug) DO NOTHING
     `, jobTitleParams)
     console.log(`✓ Seeded ${INDONESIAN_JOB_TITLES.length} job titles`)
@@ -118,7 +126,7 @@ async function seed(): Promise<void> {
     `, [createId(), createId(), createId()])
     console.log('✓ Seeded events (draft, published, completed)')
 
-    // Contacts — valid status values: provisional | pending | approved | rejected
+    // Contacts — all emails go to ramon.silvanus@gmail.com with + aliases to avoid duplicates
     const cities = ['Jakarta', 'Bandung', 'Surabaya', 'Medan', 'Yogyakarta']
     const sizes = ['<50', '50-200', '200-1000', '>1000']
     const industrySlugsSeed = ['teknologi-informasi', 'kesehatan', 'keuangan', 'manufaktur', 'otomotif']
@@ -133,6 +141,8 @@ async function seed(): Promise<void> {
       const jobTitleId = jobTitleMap[jobSlug]
       const serviceType = INDONESIAN_INDUSTRIES.find(ind => ind.slug === industrySlugsSeed[i % industrySlugsSeed.length])?.name ?? ''
       const jobTitleName = INDONESIAN_JOB_TITLES.find(jt => jt.slug === jobSlug)?.name ?? jobSlug
+      // All emails delivered to ramon.silvanus@gmail.com, unique via + alias
+      const email = i <= 8 ? `ramon.silvanus+contact${i}@gmail.com` : null
 
       await client.query(`
         INSERT INTO contacts (
@@ -145,7 +155,7 @@ async function seed(): Promise<void> {
         createId(),
         `Contact ${i}`,
         `+6281200000${String(i).padStart(3, '0')}`,
-        i <= 8 ? `contact${i}@example.com` : null, // contacts 9-10 missing email
+        email,
         city,
         `PT Perusahaan ${i}`,
         size,
@@ -159,7 +169,7 @@ async function seed(): Promise<void> {
         location?.city_name ?? null,
       ])
     }
-    console.log('✓ Seeded 10 contacts (8 complete, 2 missing email)')
+    console.log('✓ Seeded 10 contacts (8 with ramon.silvanus+ aliases, 2 missing email)')
 
     // Duplicate contact pairs (3 pairs for dev testing)
     const devDupPairs = [
