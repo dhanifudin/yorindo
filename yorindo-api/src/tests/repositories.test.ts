@@ -30,10 +30,10 @@ describe('InMemoryContactRepository', () => {
   it('findAll filters by serviceType', async () => {
     const { data, total } = await repo.findAll(
       { page: 1, pageSize: 20 },
-      { serviceType: 'Teknologi' },
+      { serviceType: 'Farmasi & Alat Kesehatan' },
     )
     expect(total).toBeGreaterThan(0)
-    expect(data.every((contact) => contact.serviceType === 'Teknologi')).toBe(true)
+    expect(data.every((contact) => contact.serviceType === 'Farmasi & Alat Kesehatan')).toBe(true)
   })
 
   it('findAll sorts by name ascending', async () => {

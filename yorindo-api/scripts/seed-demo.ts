@@ -61,12 +61,16 @@ const INDUSTRY_WEIGHTS = [30, 20, 15, 15, 10, 10] // percentage distribution
 
 // Industry display values matching registration form options
 const INDUSTRY_DISPLAY_NAMES: Record<string, string> = {
-  teknologi: 'Teknologi Informasi & Software',
-  keuangan:  'Keuangan & Perbankan',
-  kesehatan: 'Farmasi & Alat Kesehatan',
-  manufaktur:'Fabrikasi Logam & Mesin Presisi',
-  retail:    'Ritel & Perdagangan',
-  pendidikan:'Pendidikan & Penelitian',
+  teknologi:    'Teknologi Informasi & Software',
+  keuangan:     'Keuangan & Perbankan',
+  kesehatan:    'Farmasi & Alat Kesehatan',
+  manufaktur:   'Manufaktur & Fabrikasi',
+  retail:       'Ritel & Perdagangan',
+  pendidikan:   'Pendidikan & Pelatihan',
+  otomotif:     'Otomotif & Suku Cadang',
+  fmcg:         'FMCG & Makanan Minuman',
+  energi:       'Energi & Pertambangan',
+  logistik:     'Logistik & Transportasi',
 }
 const SIZES: Array<'<50' | '50-200' | '200-1000' | '>1000'> = ['<50', '50-200', '200-1000', '>1000']
 const SIZE_WEIGHTS = [25, 35, 25, 15]
@@ -554,29 +558,30 @@ export async function seedDemo(pool: Pool): Promise<void> {
       const ev = EVENTS[ei]
       const eventId = eventIds[ei]
 
-      // Registration survey schema
+      // Registration survey schema — NO duplicate contact fields
+      // The main registration form already collects: name, email, phone, company, industry, title, location
       const regSchema = {
-        title: 'Formulir Registrasi',
+        title: 'Survei Event',
         type: 'object',
         properties: {
-          namaLengkap: { type: 'string', title: 'Nama Lengkap' },
-          email: { type: 'string', title: 'Email', format: 'email' },
-          perusahaan: { type: 'string', title: 'Nama Perusahaan' },
-          jabatan: { type: 'string', title: 'Jabatan' },
-          nomorTelepon: { type: 'string', title: 'Nomor Telepon / WhatsApp' },
-          industri: {
-            type: 'string',
-            title: 'Industri',
-            enum: ['Teknologi', 'Keuangan', 'Kesehatan', 'Manufaktur', 'Pendidikan'],
-          },
           bagaimanaTahu: {
             type: 'string',
             title: 'Bagaimana Anda mengetahui event ini?',
             enum: ['Media Sosial', 'Email', 'Rekomendasi Teman', 'Website', 'Lainnya'],
           },
           ekspektasi: { type: 'string', title: 'Apa ekspektasi Anda dari event ini?', maxLength: 500 },
+          pengalamanSebelumnya: {
+            type: 'string',
+            title: 'Apakah Anda pernah menghadiri event serupa sebelumnya?',
+            enum: ['Ya, sering', 'Ya, beberapa kali', 'Pertama kali'],
+          },
+          topikMinat: {
+            type: 'string',
+            title: 'Topik apa yang paling Anda minati?',
+            enum: ['Transformasi Digital', 'ERP & Automasi', 'AI & Machine Learning', 'Cloud & Infrastruktur', 'Cybersecurity', 'Lainnya'],
+          },
         },
-        required: ['namaLengkap', 'email', 'perusahaan', 'jabatan', 'nomorTelepon'],
+        required: ['bagaimanaTahu', 'ekspektasi'],
       }
 
       await client.query(

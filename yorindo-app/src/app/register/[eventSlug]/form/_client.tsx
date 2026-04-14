@@ -1,6 +1,6 @@
  'use client'
 
-import { use, useState } from 'react'
+import { use, useState, useMemo } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import Form from '@rjsf/shadcn'
@@ -13,10 +13,10 @@ import { Badge } from '@/components/ui/badge'
 import { getUserFriendlyError } from '@/lib/error-messages'
 import { Label } from '@/components/ui/label'
 import { Combobox } from '@/components/ui/combobox'
+import { ComboboxWithOther } from '@/components/ui/combobox-with-other'
+import { useIndustries, useJobTitles } from '@/hooks/useStandardValues'
+import { useCities } from '@/hooks/useCities'
 import type { Event } from '@/types/api'
-// SSO deferred — participant Google SSO hidden for now
-// import { MockGoogleAuthDialog } from '@/components/auth/MockGoogleAuthDialog'
-// import { GoogleIcon } from '@/components/icons/GoogleIcon'
 import { surveyCustomWidgets } from '@/components/features/surveys/widgets'
 
 const EVENT_TYPE_LABELS: Record<string, string> = {
@@ -26,20 +26,6 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
   seminar: 'Seminar',
   webinar: 'Webinar',
 }
-
-const INDUSTRIES = [
-  'Otomotif & Suku Cadang (Auto Parts)',
-  'Elektronik & Peralatan Rumah Tangga',
-  'Fast-Moving Consumer Goods (FMCG)',
-  'Makanan & Minuman (F&B)',
-  'Farmasi & Alat Kesehatan',
-  'Plastik & Kemasan (Packaging)',
-  'Fabrikasi Logam & Mesin Presisi',
-  'Bahan Kimia Industri',
-  'Alat Berat & Karoseri',
-  'Tekstil & Garmen',
-  'Yang lain',
-]
 
 interface RegistrationFormPageProps {
   params: Promise<{ eventSlug: string }>
@@ -81,11 +67,25 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
     enabled: !!event?.id && step === 1,
   })
 
-  const { data: citiesData } = useQuery<{ data: { value: string; label: string }[] }>({
-    queryKey: ['locations-cities'],
-    queryFn: () => fetch('/api/locations/cities').then((r) => r.json()),
-    staleTime: 24 * 60 * 60 * 1000,
-  })
+  // Standard values from the system
+  const { data: industries, isLoading: industriesLoading } = useIndustries()
+  const { data: jobTitles, isLoading: jobTitlesLoading } = useJobTitles()
+  const { data: cities } = useCities()
+
+  // Map API data to Combobox options
+  const industryOptions = useMemo(() => {
+    const opts = (industries ?? []).map((ind) => ({ value: ind.name, label: ind.name }))
+    return opts
+  }, [industries])
+
+  const jobTitleOptions = useMemo(() => {
+    const opts = (jobTitles ?? []).map((jt) => ({ value: jt.name, label: jt.name }))
+    return opts
+  }, [jobTitles])
+
+  const cityOptions = useMemo(() => {
+    return (cities ?? []).map((c) => ({ value: c.city_name, label: c.city_name }))
+  }, [cities])
 
   // Phone lookup removed per updated acceptance criteria (dedup handled server-side)
 
@@ -309,13 +309,14 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
                   <Label htmlFor="industry">
                     Jenis Industri Manufaktur <span className="text-destructive">*</span>
                   </Label>
-                  <Combobox
-                    options={INDUSTRIES.map((ind) => ({ value: ind, label: ind }))}
+                  <ComboboxWithOther
+                    options={industryOptions}
                     value={form.industry}
                     onValueChange={(v) => setForm((p) => ({ ...p, industry: v }))}
                     placeholder="Pilih industri"
                     searchPlaceholder="Cari industri..."
                     emptyText="Industri tidak ditemukan."
+                    otherLabel="Lainnya (ketik manual)..."
                   />
                 </div>
 
@@ -323,11 +324,14 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
                   <Label htmlFor="title">
                     Jabatan <span className="text-muted-foreground text-xs">(opsional)</span>
                   </Label>
-                  <Input
-                    id="title"
+                  <ComboboxWithOther
+                    options={jobTitleOptions}
                     value={form.title}
-                    onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
-                    placeholder="Jabatan Anda"
+                    onValueChange={(v) => setForm((p) => ({ ...p, title: v }))}
+                    placeholder="Pilih jabatan"
+                    searchPlaceholder="Cari jabatan..."
+                    emptyText="Jabatan tidak ditemukan."
+                    otherLabel="Lainnya (ketik manual)..."
                   />
                 </div>
 
@@ -336,11 +340,11 @@ export default function RegistrationFormPage({ params }: RegistrationFormPagePro
                     Lokasi Kantor/Pabrik <span className="text-muted-foreground text-xs">(opsional)</span>
                   </Label>
                   <Combobox
-                    options={citiesData?.data ?? []}
+                    options={cityOptions}
                     value={form.location}
                     onValueChange={(v) => setForm((p) => ({ ...p, location: v }))}
-                    placeholder="Cari kota..."
-                    searchPlaceholder="Ketik nama kota..."
+                    placeholder="Pilih kota..."
+                    searchPlaceholder="Cari kota..."
                     emptyText="Kota tidak ditemukan."
                   />
                 </div>
