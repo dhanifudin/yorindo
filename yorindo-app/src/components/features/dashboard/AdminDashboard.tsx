@@ -165,6 +165,9 @@ export function AdminDashboard() {
                   <tr
                     key={event.id}
                     className="hover:bg-muted/30 transition-colors cursor-pointer group"
+                    onClick={() => {
+                      window.location.href = `/app/events/${event.id}`
+                    }}
                   >
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
@@ -172,7 +175,7 @@ export function AdminDashboard() {
                           <CalendarDays className="h-3.5 w-3.5 text-primary" />
                         </div>
                         <div>
-                          <div className="font-medium text-foreground text-[13.5px] leading-snug">
+                          <div className="font-medium text-foreground text-[13.5px] leading-snug group-hover:text-primary transition-colors">
                             {event.name}
                           </div>
                           <div className="text-[11px] text-muted-foreground mt-0.5 sm:hidden">

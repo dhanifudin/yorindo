@@ -89,6 +89,22 @@ function weightedPick<T>(items: T[], weights: number[]): T {
   return items[items.length - 1]
 }
 
+// Real Gmail accounts for blast testing (all route to active inboxes via + aliasing)
+const BLAST_TEST_USERNAMES = [
+  'azizaja595',
+  'herdianielysa',
+  'sdesmarina',
+  'ericksurbaktii',
+  'dhanifudin',
+  'ramon.silvanus',
+]
+
+function generateTestEmail(index: number): string {
+  const username = BLAST_TEST_USERNAMES[index % BLAST_TEST_USERNAMES.length]
+  const suffix = Math.floor(index / BLAST_TEST_USERNAMES.length)
+  return `${username}+${suffix}@gmail.com`
+}
+
 function pick<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)]
 }
@@ -271,7 +287,7 @@ export async function seedDemo(pool: Pool): Promise<void> {
       const size = weightedPick(SIZES, SIZE_WEIGHTS)
       const prefix = pick(PHONE_PREFIXES)
       const phone = `${prefix}${String(10000000 + i).slice(-8)}`
-      const email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}${i}@example.com`
+      const email = generateTestEmail(i)
       const isOptedOut = i < 15 // ~15 opted-out contacts
       // Contacts 480-489: missing email (incomplete data)
       // Contacts 490-499: missing phone (incomplete data)
@@ -313,7 +329,7 @@ export async function seedDemo(pool: Pool): Promise<void> {
       const size = weightedPick(SIZES, SIZE_WEIGHTS)
       const prefix = pick(PHONE_PREFIXES)
       const phone = `${prefix}${String(20000000 + i).slice(-8)}`
-      const email = `nonstandard.${firstName.toLowerCase()}.${i}@example.com`
+      const email = generateTestEmail(contactCount + i)
 
       // Use non-standard values that won't match any industry/job title
       const nonStandardIndustry = pick(NON_STANDARD_INDUSTRIES)
@@ -625,7 +641,7 @@ export async function seedDemo(pool: Pool): Promise<void> {
     let totalPostSurveys = 0
 
     const REG_NAMES = ['Andi Pratama', 'Dewi Lestari', 'Fajar Nugroho', 'Maya Putri', 'Roni Hermawan', 'Siti Rahayu', 'Budi Santoso', 'Linda Wijaya', 'Hendra Kusuma', 'Putri Handayani']
-    const REG_EMAILS = ['andi@mail.com', 'dewi@mail.com', 'fajar@mail.com', 'maya@mail.com', 'roni@mail.com', 'siti@mail.com', 'budi@mail.com', 'linda@mail.com', 'hendra@mail.com', 'putri@mail.com']
+    const REG_EMAILS = BLAST_TEST_USERNAMES.map((u, i) => `${u}+reg${i}@gmail.com`)
     const REG_COMPANIES = ['PT Telkom', 'Bank Mandiri', 'Gojek', 'Tokopedia', 'Pertamina', 'Astra International', 'Unilever Indonesia', 'Indofood', 'XL Axiata', 'Garuda Indonesia']
     const REG_JOBS = ['Software Engineer', 'Product Manager', 'Data Analyst', 'DevOps Engineer', 'IT Manager', 'Marketing Director', 'Business Analyst', 'CTO', 'Project Manager', 'Sales Director']
     const REG_INDUSTRIES = ['Teknologi', 'Keuangan', 'Kesehatan', 'Manufaktur', 'Pendidikan', 'Retail']

@@ -192,8 +192,14 @@ export function ViewerDashboard() {
               </thead>
               <tbody>
                 {recentEvents.map((event) => (
-                  <tr key={event.id} className="border-t border-border">
-                    <td className="px-4 py-3 font-medium">{event.name}</td>
+                  <tr
+                    key={event.id}
+                    className="border-t border-border cursor-pointer hover:bg-muted/30 transition-colors"
+                    onClick={() => {
+                      window.location.href = `/app/events/${event.id}`
+                    }}
+                  >
+                    <td className="px-4 py-3 font-medium hover:text-primary transition-colors">{event.name}</td>
                     <td className="px-4 py-3">
                       <Badge variant={STATUS_VARIANTS[event.status] ?? 'outline'}>
                         {STATUS_LABELS[event.status] ?? event.status}
