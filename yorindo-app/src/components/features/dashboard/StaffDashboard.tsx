@@ -50,11 +50,16 @@ function EventCard({ event, showScanLink }: { event: Event; showScanLink: boolea
   const pct = total > 0 ? Math.round((attended / total) * 100) : 0
 
   return (
-    <Card>
+    <Card
+      className="cursor-pointer hover:border-primary/50 transition-colors group"
+      onClick={() => {
+        window.location.href = `/app/events/${event.id}`
+      }}
+    >
       <CardContent className="p-4 space-y-3">
         <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="font-semibold truncate">{event.name}</p>
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold truncate group-hover:text-primary transition-colors">{event.name}</p>
             <div className="flex items-center gap-2 mt-1">
               <Badge className={STATUS_BADGE[event.status] ?? 'bg-muted text-muted-foreground'}>
                 {STATUS_LABEL[event.status] ?? event.status}
