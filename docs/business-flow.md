@@ -91,7 +91,7 @@ Buka Link Registrasi ──→ Isi Formulir ──→ Pending/Approved
 ```
 
 ### Fitur Utama
-- **Formulir publik** — peserta mengisi data di `/register/{slug}`
+- **Formulir publik** — peserta mengisi data di `/register/{slug}` dengan industri & jabatan standar + opsi "Lainnya"
 - **Approval queue** — admin meninjau pendaftaran di tab Registrasi
 - **Bulk approval** — setujui banyak peserta sekaligus
 - **Fast Mode** — toggle untuk approval tanpa konfirmasi (hemat waktu)
@@ -126,12 +126,12 @@ Peserta Datang ──→ Scanner QR / Manual ──→ Status: Attended
 ### Cara Check-in
 | Metode | Lokasi | Keterangan |
 |--------|--------|------------|
-| **Scanner QR** | Tab Check-in → Scanner | Scan via kamera HP (PWA) |
-| **Manual** | Tab Check-in → Tabel | Cari nama/telepon, klik "Check-in" |
+| **Scanner QR** | `/app/scan` | Scan QR via kamera HP, event otomatis terpilih |
+| **Manual** | `/app/scan` | Cari nama peserta, klik "Perbarui" untuk check-in |
 
 ### Fitur Utama
+- **Event otomatis** — staff melihat event yang ditugaskan, admin bisa pilih event aktif
 - **Dashboard real-time** — statistik Hadir / Belum Hadir / % Kehadiran
-- **Daftar peserta** — tab "Belum Hadir" dan "Sudah Hadir"
 - **Pencarian** — filter by nama, telepon, email, atau kode tiket
 
 ---
@@ -160,7 +160,7 @@ Event Selesai ──→ Tab Laporan (Otomatis Pindah ke Depan)
 | Peran | Akses |
 |-------|-------|
 | **Admin** | Full access — kelola event, approval, blast, check-in, laporan |
-| **Staff** | Check-in + Laporan event yang ditugaskan |
+| **Staff** | Check-in (`/app/scan`) + Laporan event yang ditugaskan |
 | **Viewer** | Baca-only — lihat overview + laporan |
 | **Participant** | Hanya dashboard pribadi |
 
