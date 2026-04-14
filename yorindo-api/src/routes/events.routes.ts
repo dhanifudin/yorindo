@@ -154,14 +154,14 @@ const EventSponsorVendorIdParamsSchema = z.object({
 })
 
 const CreateEventSponsorBodySchema = z.object({
-  vendor_id: z.string().trim().min(1),
+  vendorId: z.string().trim().min(1),
   tier: z.enum(['premium', 'standard', 'supporter']),
-  display_order: z.number().int().min(1),
+  displayOrder: z.number().int().min(1),
 })
 
 const UpdateEventSponsorBodySchema = z.object({
   tier: z.enum(['premium', 'standard', 'supporter']).optional(),
-  display_order: z.number().int().min(1).optional(),
+  displayOrder: z.number().int().min(1).optional(),
 })
 
 const AudiencePreviewBodySchema = z.object({
@@ -1627,15 +1627,15 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
 
     // Check if sponsor already exists
     const existing = await eventSponsorRepository.findByEvent(event.id)
-    if (existing.some((s) => s.vendorId === body.data.vendor_id)) {
+    if (existing.some((s) => s.vendorId === body.data.vendorId)) {
       return reply.status(409).send({ error: { code: 'CONFLICT', message: 'Vendor already attached to this event', details: [] } })
     }
 
     const sponsor = await eventSponsorRepository.create({
       eventId: event.id,
-      vendorId: body.data.vendor_id,
+      vendorId: body.data.vendorId,
       tier: body.data.tier,
-      displayOrder: body.data.display_order,
+      displayOrder: body.data.displayOrder,
     })
 
     const vendor = await vendorRepository.findById(sponsor.vendorId)
@@ -1668,7 +1668,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
 
     const updates: any = {}
     if (body.data.tier) updates.tier = body.data.tier
-    if (body.data.display_order) updates.displayOrder = body.data.display_order
+    if (body.data.displayOrder) updates.displayOrder = body.data.displayOrder
 
     const updated = await eventSponsorRepository.update(event.id, params.data.vendorId, updates)
     if (!updated) {
