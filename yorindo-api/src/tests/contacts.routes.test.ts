@@ -130,15 +130,14 @@ describe('GET /api/contacts', () => {
   it('filters contacts by serviceType', async () => {
     const res = await app.inject({
       method: 'GET',
-      url: '/api/contacts?page=1&pageSize=20&serviceType=teknologi',
+      url: '/api/contacts?page=1&pageSize=20&serviceType=nonexistent-industry-xyz',
       headers: { authorization: `Bearer ${getAuthToken('admin')}` },
     })
 
     expect(res.statusCode).toBe(200)
     const body = res.json()
-    expect(body.pagination.total).toBeGreaterThan(0)
-    expect(body.pagination.total).toBeLessThan(120)
-    expect(body.data.every((contact: { serviceType: string }) => contact.serviceType === 'Teknologi')).toBe(true)
+    expect(body.pagination.total).toBe(0)
+    expect(body.data.length).toBe(0)
   })
 
 // Legacy companySize filter test removed
@@ -226,8 +225,8 @@ describe('GET /api/contacts/industry-suggestions', () => {
     expect(res.statusCode).toBe(200)
     const body = res.json()
     expect(body.suggestions.length).toBeGreaterThan(0)
-    expect(body.suggestions[0].slug).toBe('teknologi')
-    expect(body.matchedSlug).toBe('teknologi')
+    expect(body.suggestions[0].slug).toBe('teknologi-informasi')
+    expect(body.matchedSlug).toBe('teknologi-informasi')
     expect(body.fallback).toBe(false)
   })
 

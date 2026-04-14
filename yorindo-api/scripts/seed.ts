@@ -17,6 +17,7 @@ import { hashSync } from '@node-rs/bcrypt'
 import { createId } from '@paralleldrive/cuid2'
 import { seedDemo } from './seed-demo'
 import { runMigrations } from './migrate'
+import { INDONESIAN_INDUSTRIES, INDONESIAN_JOB_TITLES } from '../src/repositories/memory/_seeds.js'
 
 if (process.env.NODE_ENV === 'production' && process.env.ALLOW_SEED !== 'true') {
   console.error('Seed script blocked in production to prevent accidental data loss.')
@@ -61,31 +62,39 @@ async function seed(): Promise<void> {
     await client.query('BEGIN')
 
     // Industries
-    const industryTekId = createId()
-    const industryKesId = createId()
+    const industryValues = INDONESIAN_INDUSTRIES.map((ind, i) =>
+      `($${i * 3 + 1}, '${ind.slug}', '${ind.name}')`
+    ).join(',\n        ')
+    const industryParams = INDONESIAN_INDUSTRIES.flatMap((ind) => [ind.id, ind.slug, ind.name])
     await client.query(`
       INSERT INTO industries (id, slug, name) VALUES
-        ($1, 'teknologi', 'Teknologi Informasi'),
-        ($2, 'kesehatan', 'Kesehatan')
+        ${industryValues}
       ON CONFLICT (slug) DO NOTHING
-    `, [industryTekId, industryKesId])
-    console.log('✓ Seeded industries')
+    `, industryParams)
+    console.log(`✓ Seeded ${INDONESIAN_INDUSTRIES.length} industries`)
 
     // Fetch actual IDs (handles ON CONFLICT DO NOTHING case)
-    const industryRows = await client.query(`SELECT id, slug FROM industries WHERE slug IN ('teknologi', 'kesehatan')`)
+    const industrySlugs = INDONESIAN_INDUSTRIES.map((ind) => ind.slug)
+    const placeholders = industrySlugs.map((_, i) => `$${i + 1}`).join(',')
+    const industryRows = await client.query(`SELECT id, slug FROM industries WHERE slug IN (${placeholders})`, industrySlugs)
     const industryMap = Object.fromEntries(industryRows.rows.map((r: { id: string; slug: string }) => [r.slug, r.id]))
 
     // Job Titles
+    const jobTitleValues = INDONESIAN_JOB_TITLES.map((jt, i) =>
+      `($${i * 3 + 1}, '${jt.slug}', '${jt.name}')`
+    ).join(',\n        ')
+    const jobTitleParams = INDONESIAN_JOB_TITLES.flatMap((jt) => [jt.id, jt.slug, jt.name])
     await client.query(`
       INSERT INTO job_titles (id, slug, name) VALUES
-        ($1, 'software-engineer', 'Software Engineer'),
-        ($2, 'product-manager', 'Product Manager')
+        ${jobTitleValues}
       ON CONFLICT (slug) DO NOTHING
-    `, [createId(), createId()])
-    console.log('✓ Seeded job_titles')
+    `, jobTitleParams)
+    console.log(`✓ Seeded ${INDONESIAN_JOB_TITLES.length} job titles`)
 
     // Fetch actual job title IDs
-    const jobTitleRows = await client.query(`SELECT id, slug FROM job_titles WHERE slug IN ('software-engineer', 'product-manager')`)
+    const jobSlugs = INDONESIAN_JOB_TITLES.map((jt) => jt.slug)
+    const jobPlaceholders = jobSlugs.map((_, i) => `$${i + 1}`).join(',')
+    const jobTitleRows = await client.query(`SELECT id, slug FROM job_titles WHERE slug IN (${jobPlaceholders})`, jobSlugs)
     const jobTitleMap = Object.fromEntries(jobTitleRows.rows.map((r: { id: string; slug: string }) => [r.slug, r.id]))
 
     // Users
@@ -112,17 +121,16 @@ async function seed(): Promise<void> {
     // Contacts — valid status values: provisional | pending | approved | rejected
     const cities = ['Jakarta', 'Bandung', 'Surabaya', 'Medan', 'Yogyakarta']
     const sizes = ['<50', '50-200', '200-1000', '>1000']
-    const industrySlugs = ['teknologi', 'kesehatan']
-    const jobSlugs = ['software-engineer', 'product-manager']
-    const industryNames = ['Teknologi Informasi & Software', 'Farmasi & Alat Kesehatan']
+    const industrySlugsSeed = ['teknologi-informasi', 'kesehatan', 'keuangan', 'manufaktur', 'otomotif']
+    const jobSlugsSeed = ['engineer', 'manajer', 'direktur', 'staf', 'spesialis']
 
     for (let i = 1; i <= 10; i++) {
       const city = cities[i % cities.length]
       const size = sizes[i % sizes.length]
       const location = cityLocationMap[city]
-      const industryId = industryMap[industrySlugs[i % 2]]
-      const jobTitleId = jobTitleMap[jobSlugs[i % 2]]
-      const serviceType = industryNames[i % 2]
+      const industryId = industryMap[industrySlugsSeed[i % industrySlugsSeed.length]]
+      const jobTitleId = jobTitleMap[jobSlugsSeed[i % jobSlugsSeed.length]]
+      const serviceType = INDONESIAN_INDUSTRIES.find(ind => ind.slug === industrySlugsSeed[i % industrySlugsSeed.length])?.name ?? ''
 
       await client.query(`
         INSERT INTO contacts (
@@ -157,8 +165,8 @@ async function seed(): Promise<void> {
       { nameA: 'Ahmad Hidayat', phoneA: '+628120000105', emailA: 'ahmad.h@office.id', nameB: 'Ahmad Hidayat S.', phoneB: '+628120000106', emailB: 'ahmadh@gmail.com', score: 0.78 },
     ]
     const location0 = cityLocationMap['Jakarta']
-    const industryId0 = industryMap['teknologi']
-    const jobTitleId0 = jobTitleMap['software-engineer']
+    const industryId0 = industryMap['teknologi-informasi']
+    const jobTitleId0 = jobTitleMap['engineer']
     for (const pair of devDupPairs) {
       const primaryId = createId()
       const duplicateId = createId()
