@@ -735,11 +735,11 @@ export function EventCreateForm({ event, onSuccess, onCancel }: EventCreateFormP
     const toRemove = [...originalIds].filter((id) => !nextIds.has(id))
 
     await Promise.allSettled([
-      ...toAdd.map((vendorId) =>
+      ...toAdd.map((vendorId, index) =>
         fetch(`/api/events/${eventId}/sponsors`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ vendorId, tier: 'standard' }),
+          body: JSON.stringify({ vendorId, tier: 'standard', displayOrder: index + 1 }),
         })
       ),
       ...toRemove.map((vendorId) =>
