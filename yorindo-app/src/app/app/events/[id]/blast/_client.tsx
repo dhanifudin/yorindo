@@ -87,7 +87,7 @@ export default function BlastPage({ params }: BlastPageProps) {
     enabled: !!id,
     staleTime: 30_000,
   })
-  const approvedCount = approvedCountData?.pagination.total ?? 0
+  const approvedCount = approvedCountData?.pagination?.total ?? 0
 
   // Templates for sheet
   const { data: templates = [] } = useQuery<Template[]>({
@@ -115,24 +115,6 @@ export default function BlastPage({ params }: BlastPageProps) {
 
   return (
     <div className="space-y-4">
-      {/* Email config warning */}
-      {emailConfig && !emailConfig.configured && !emailConfigLoading && (
-        <Alert variant="destructive">
-          <Settings className="h-4 w-4" />
-          <AlertDescription>
-            Provider email belum dikonfigurasi.{' '}
-            <button
-              type="button"
-              onClick={() => router.push('/app/settings')}
-              className="underline font-medium hover:no-underline"
-            >
-              Buka Pengaturan
-            </button>
-            {' '}untuk mengatur provider email sebelum mengirim undangan.
-          </AlertDescription>
-        </Alert>
-      )}
-
       {/* Audience target list with selection */}
       <AudienceTargetList
         contacts={contacts}
@@ -151,7 +133,7 @@ export default function BlastPage({ params }: BlastPageProps) {
         </p>
         <Button
           onClick={() => setSheetOpen(true)}
-          disabled={audienceLoading || (emailConfig ? !emailConfig.configured : false)}
+          disabled={audienceLoading || selectedContactIds.size === 0}
         >
           Kirim Undangan
         </Button>
