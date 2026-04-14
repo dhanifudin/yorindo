@@ -1219,16 +1219,23 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
 
     // Normalize legacy slug serviceTypes to the display names stored in the contacts table
     const SERVICE_TYPE_SLUG_TO_DISPLAY: Record<string, string> = {
-      teknologi: 'Elektronik & Peralatan Rumah Tangga',
-      keuangan: 'Fast-Moving Consumer Goods (FMCG)',
+      'teknologi-informasi': 'Teknologi Informasi & Software',
+      teknologi: 'Teknologi Informasi & Software',
       kesehatan: 'Farmasi & Alat Kesehatan',
-      manufaktur: 'Fabrikasi Logam & Mesin Presisi',
-      retail: 'Tekstil & Garmen',
-      pendidikan: 'Yang lain',
-      otomotif: 'Otomotif & Komponen',
+      keuangan: 'Keuangan & Perbankan',
+      manufaktur: 'Manufaktur & Fabrikasi',
+      retail: 'Ritel & Perdagangan',
+      ritel: 'Ritel & Perdagangan',
+      pendidikan: 'Pendidikan & Pelatihan',
+      otomotif: 'Otomotif & Suku Cadang',
       energi: 'Energi & Pertambangan',
-      properti: 'Properti & Konstruksi',
+      properti: 'Properti & Real Estat',
       telekomunikasi: 'Telekomunikasi',
+      fmcg: 'FMCG & Makanan Minuman',
+      'kimia-industri': 'Bahan Kimia Industri',
+      tekstil: 'Tekstil & Garmen',
+      logistik: 'Logistik & Transportasi',
+      konstruksi: 'Konstruksi & Infrastruktur',
     }
     if ((effectiveFilters.serviceTypes as string[] | undefined)?.length) {
       effectiveFilters.serviceTypes = (effectiveFilters.serviceTypes as string[]).map(
