@@ -1205,17 +1205,14 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     const bodyData = body.data as Record<string, unknown>
     const effectiveFilters: Record<string, unknown> = { ...bodyData }
     const hasBodyServiceTypes = Array.isArray(bodyData.serviceTypes) && bodyData.serviceTypes.length > 0
-    const hasBodyTopicTags = Array.isArray(bodyData.topicTags) && bodyData.topicTags.length > 0
     if (event.targetCriteria && !hasBodyServiceTypes) {
       if (event.targetCriteria.serviceTypes) effectiveFilters.serviceTypes = event.targetCriteria.serviceTypes
       if (event.targetCriteria.cities) effectiveFilters.cities = event.targetCriteria.cities
-      if (event.targetCriteria.jobTitles) effectiveFilters.jobTitles = event.targetCriteria.jobTitles
+      // NOTE: jobTitles is stored but NOT used for filtering (data inconsistency between form and contacts)
     }
 
-    // Apply event topicTags as secondary filter (contacts must have at least one matching tag)
-    if (event.topicTags?.length && !hasBodyTopicTags) {
-      effectiveFilters.topicTags = event.topicTags
-    }
+    // NOTE: We intentionally do NOT apply event.topicTags as a filter here.
+    // topicTags are for event categorization, not contact matching.
 
     // Normalize legacy slug serviceTypes to the display names stored in the contacts table
     const SERVICE_TYPE_SLUG_TO_DISPLAY: Record<string, string> = {
@@ -1244,25 +1241,41 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     // Delegate filtering to the repository (handles slug→ID conversion, excludes deleted)
-    const filters: import('../interfaces/repositories/IContactRepository.js').ContactFilters = {
-      consentStatus: 'active',       // Exclude suppressed contacts
-      flagCategory: 'NONE',          // Exclude flagged contacts
-      hasEmail: true,                // Must have email for blast delivery
-      hasPhone: true,                // Must have phone for blast delivery
-    }
+    // NOTE: Only serviceTypes and cities are used for filtering. jobTitles is stored for reference only.
+    const filters: import('../interfaces/repositories/IContactRepository.js').ContactFilters = {}
     const svcTypes = effectiveFilters.serviceTypes as string[] | undefined
     const cities = effectiveFilters.cities as string[] | undefined
-    const jobTitles = effectiveFilters.jobTitles as string[] | undefined
-    const topicTags = effectiveFilters.topicTags as string[] | undefined
     if (svcTypes?.length) filters.serviceTypes = svcTypes
     if (cities?.length) filters.cities = cities
-    if (jobTitles?.length) filters.jobTitles = jobTitles
-    if (topicTags?.length) filters.topicTags = topicTags
 
     // Fetch all matching contacts (use large pageSize, rely on total for accurate count)
+    // DEBUG: Log what filters are being applied
+    console.log('[AUDIENCE-PREVIEW DEBUG]', {
+      eventId: params.data.id,
+      eventTargetCriteria: event.targetCriteria,
+      effectiveFilters,
+      repositoryFilters: filters,
+    })
+
     const contacts = await contactRepository.findAll({ page: 1, pageSize: 10000 }, filters)
     let matchedContacts = contacts.data
     const matchTotal = contacts.total
+
+    // DEBUG: Log results
+    console.log('[AUDIENCE-PREVIEW RESULT]', {
+      totalInDb: matchTotal,
+      matchedAfterBehavior: matchedContacts.length,
+      sampleContacts: matchedContacts.slice(0, 3).map(c => ({
+        id: c.id,
+        name: c.name,
+        serviceType: c.serviceType,
+        city: c.city,
+        consentStatus: c.consentStatus,
+        flagCategory: c.flagCategory,
+        hasEmail: !!c.email,
+        hasPhone: !!c.phone,
+      })),
+    })
 
     // Apply behavior and lastAttendedBefore filters using registrationRepository
     if (body.data.behavior?.length || body.data.lastAttendedBefore) {
