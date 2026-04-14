@@ -12,8 +12,8 @@ export const citiesRoutes: FastifyPluginAsync = async (fastify) => {
     cityCache = null
   }
 
-  // GET /api/cities
-  fastify.get('/api/cities', { preHandler: [requireAuth] }, async (request: FastifyRequest, reply: FastifyReply) => {
+  // GET /api/cities (public — needed for registration form)
+  fastify.get('/api/cities', async (request: FastifyRequest, reply: FastifyReply) => {
     // Check cache first
     if (cityCache && Date.now() < cityCache.expiresAt) {
       return reply.status(200).send(cityCache.data)

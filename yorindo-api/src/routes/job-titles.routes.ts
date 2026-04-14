@@ -7,8 +7,8 @@ import { createId } from '@paralleldrive/cuid2'
 export const jobTitlesRoutes: FastifyPluginAsync = async (fastify) => {
   const adminOnly = { preHandler: [requireAuth, requireAdmin] }
 
-  // GET /api/job-titles
-  fastify.get('/api/job-titles', { preHandler: [requireAuth] }, async (request: FastifyRequest, reply: FastifyReply) => {
+  // GET /api/job-titles (public — needed for registration form)
+  fastify.get('/api/job-titles', async (request: FastifyRequest, reply: FastifyReply) => {
     const pool = getPool()
     const { rows } = await pool.query<{ id: string; slug: string; name: string }>(
       'SELECT id, slug, name FROM job_titles ORDER BY name',
