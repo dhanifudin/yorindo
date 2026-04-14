@@ -7,8 +7,8 @@ import { createId } from '@paralleldrive/cuid2'
 export const industriesRoutes: FastifyPluginAsync = async (fastify) => {
   const adminOnly = { preHandler: [requireAuth, requireAdmin] }
 
-  // GET /api/industries
-  fastify.get('/api/industries', { preHandler: [requireAuth] }, async (request: FastifyRequest, reply: FastifyReply) => {
+  // GET /api/industries (public — needed for registration form)
+  fastify.get('/api/industries', async (request: FastifyRequest, reply: FastifyReply) => {
     const pool = getPool()
     const { rows } = await pool.query<{ id: string; slug: string; name: string }>(
       'SELECT id, slug, name FROM industries ORDER BY name',
