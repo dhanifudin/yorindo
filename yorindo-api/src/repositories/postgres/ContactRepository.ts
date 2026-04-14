@@ -125,8 +125,10 @@ export class PostgresContactRepository
       idx++
     }
     if (filters?.jobTitles?.length) {
-      conditions.push(`job_title = ANY($${idx}::text[])`)
-      values.push(filters.jobTitles)
+      // Case-insensitive match: compare LOWER(job_title) against LOWER values
+      const lowerValues = filters.jobTitles.map(j => j.toLowerCase())
+      conditions.push(`LOWER(job_title) = ANY($${idx}::text[])`)
+      values.push(lowerValues)
       idx++
     }
     if (filters?.topicTags?.length) {
