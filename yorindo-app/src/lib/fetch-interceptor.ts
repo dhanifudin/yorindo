@@ -61,9 +61,11 @@ export function setupFetchInterceptor(): void {
 
     // Add auth header for API requests if token exists (read from localStorage directly)
     // Match both relative (/api/...) and same-origin absolute (http://localhost/api/...) URLs
+    // Skip public endpoints — they don't need auth and attaching a stale token causes 401s
+    const isPublicEndpoint = url.startsWith('/api/events/public/') || url.startsWith('/api/registrations')
     const isApiUrl = url.startsWith('/api/') ||
       (url.startsWith(window.location.origin) && new URL(url).pathname.startsWith('/api/'))
-    if (isApiUrl && !headers.has('Authorization')) {
+    if (isApiUrl && !isPublicEndpoint && !headers.has('Authorization')) {
       const token = getStoredToken() || useAuthStore.getState().accessToken
       if (token) {
         headers.set('Authorization', `Bearer ${token}`)
@@ -83,7 +85,9 @@ export function setupFetchInterceptor(): void {
       const isAuthEndpoint = ['/api/auth/login', '/api/auth/refresh', '/api/auth/logout'].some(u => url.startsWith(u))
       const alreadyRetried = headers.get('x-auth-retry') === '1'
 
-      if (isApi && !isAuthEndpoint && !alreadyRetried) {
+      // Don't redirect to login for public endpoints — they may legitimately return 401
+      // when a stale token was attached (e.g., user was previously logged in as admin)
+      if (isApi && !isAuthEndpoint && !isPublicEndpoint && !alreadyRetried) {
         const refreshedToken = await refreshAccessToken()
         if (refreshedToken) {
           const currentUser = useAuthStore.getState().user
