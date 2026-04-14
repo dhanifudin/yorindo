@@ -1,7 +1,7 @@
 # EM . U — System Design & Cost Analysis
 
 **Project:** EM . U — Event Management Platform for KADA
-**Version:** 2.0 (Updated 2026-04-12)
+**Version:** 2.1 (Updated 2026-04-13)
 
 > Kurs referensi: **1 USD ≈ Rp 16.300** (April 2026)
 
@@ -38,7 +38,7 @@ Ini adalah perjalanan lengkap dari kontak hingga laporan event:
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │  1. KONTAK                                                       │
-│     Upload CSV/Excel → normalisasi berbasis aturan → tersimpan  │
+│     Upload Excel (.xlsx) → normalisasi berbasis aturan → tersimpan  │
 └────────────────────────────┬────────────────────────────────────┘
                              ↓
 ┌─────────────────────────────────────────────────────────────────┐
@@ -92,7 +92,7 @@ Tidak menyimpan data apapun secara permanen — semua data ada di API.
 
 ### Lapisan 2 — Logika Bisnis (Backend API)
 
-**Hono** — server API yang berjalan di Node.js/Bun.
+**Fastify** — server API yang berjalan di Node.js.
 
 Bertanggung jawab untuk:
 - Memproses semua operasi bisnis (setujui pendaftaran, kirim email, hitung statistik)
@@ -175,7 +175,7 @@ make ssl-init DOMAIN=your.domain.com EMAIL=admin@your.domain.com
 ## 4. Fitur yang Sudah Dibangun
 
 ### Manajemen Kontak
-- Upload kontak via CSV atau Excel
+- Upload kontak via Excel (.xlsx)
 - Normalisasi berbasis aturan (format nomor telepon, kapitalisasi nama, standarisasi kota) — tanpa AI
 - Deteksi duplikat dan saran penggabungan
 - Tagging dan segmentasi kontak berdasarkan industri, kota, perusahaan

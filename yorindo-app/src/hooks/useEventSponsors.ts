@@ -11,7 +11,11 @@ async function attachSponsor(eventId: string, body: AttachSponsorBody): Promise<
   const res = await fetch(`/api/events/${eventId}/sponsors`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    body: JSON.stringify({
+      vendorId: body.vendorId,
+      tier: body.tier ?? 'standard',
+      displayOrder: body.displayOrder ?? 1,
+    }),
   })
   if (!res.ok) throw new Error('Failed to attach sponsor')
   return res.json()

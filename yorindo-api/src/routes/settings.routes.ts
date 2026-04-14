@@ -59,6 +59,7 @@ export const settingsRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(200).send(setting)
   })
 
+  
   // GET /api/settings/:key/raw — return unmasked secret value (admin only, logged)
   fastify.get('/api/settings/:key/raw', { preHandler: [requireAuth, requireAdmin] }, async (request, reply) => {
     const pool = getPool()

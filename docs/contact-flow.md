@@ -24,7 +24,7 @@ The system reads every row from the spreadsheet and processes it:
 - **Phone numbers** are converted to the Indonesian format (`+62XXXXXXXXXX`).
 - **Email addresses** are validated and lowercased.
 - **Names and other text** are formatted to Title Case.
-- **Cities** are matched against the official Indonesian city database (e.g., `jkt` → `Jakarta Pusat`, `surabaya` → `Kota Surabaya`).
+- **Cities** are matched against the official Indonesian city database (e.g., `jkt` → `Jakarta Pusat`, `surabaya` → `Kota Surabaya`, `solo` → `Kota Surakarta`).
 
 ---
 
@@ -104,6 +104,51 @@ Once your contact data is clean, you can send invitations:
 2. Click **Blast N kontak →** in the action toolbar.
 3. Choose the event, email template, and schedule.
 4. Click **Kirim Blast** to send invitations immediately or schedule for later.
+
+---
+
+## Standard Values Reference
+
+The system maintains standard lists for consistent data. These are managed by admins in the **Data** section:
+
+### Industries (15 standard values)
+
+Teknologi Informasi & Software, Farmasi & Alat Kesehatan, Keuangan & Perbankan, Pendidikan & Pelatihan, Manufaktur & Fabrikasi, Ritel & Perdagangan, Properti & Real Estat, Otomotif & Suku Cadang, FMCG & Makanan Minuman, Bahan Kimia Industri, Tekstil & Garmen, Energi & Pertambangan, Logistik & Transportasi, Konstruksi & Infrastruktur, Telekomunikasi
+
+### Job Titles (15 standard values)
+
+Direktur, Manajer, Supervisor, Staf, Engineer, Analis, Konsultan, Wirausaha, Kepala Bagian / Head, Koordinator, Spesialis, Admin, Teknisi, Operator, Presiden Direktur / CEO
+
+### Cities
+
+Cities are synced from the official Indonesian wilayah.id database and include all kabupaten/kota across Indonesia.
+
+---
+
+## Registration Form
+
+When participants register for an event, the form collects:
+
+### Contact Information (Step 1)
+- Nama Lengkap *
+- Nama Perusahaan/Instansi *
+- Email *
+- Email Perusahaan (optional)
+- No. Handphone (WA) *
+- Jenis Industri Manufaktur * — with dropdown + "Lainnya (ketik manual)" option
+- Jabatan — with dropdown + "Lainnya (ketik manual)" option
+- Lokasi Kantor/Pabrik — dropdown of official Indonesian cities only
+
+### Event Survey (Step 2)
+- How they found out about the event
+- Their expectations
+- Previous event experience
+- Topic interests
+
+### Confirmation (Step 3–4)
+- Review entered data
+- Accept data privacy consent
+- Submit registration
 
 ---
 
