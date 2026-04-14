@@ -62,7 +62,7 @@ export function setupFetchInterceptor(): void {
     // Add auth header for API requests if token exists (read from localStorage directly)
     // Match both relative (/api/...) and same-origin absolute (http://localhost/api/...) URLs
     // Skip public endpoints — they don't need auth and attaching a stale token causes 401s
-    const isPublicEndpoint = url.startsWith('/api/events/public/') || url.startsWith('/api/registrations')
+    const isPublicEndpoint = url.startsWith('/api/events/public/') || url.startsWith('/api/registrations/confirm')
     const isApiUrl = url.startsWith('/api/') ||
       (url.startsWith(window.location.origin) && new URL(url).pathname.startsWith('/api/'))
     if (isApiUrl && !isPublicEndpoint && !headers.has('Authorization')) {
