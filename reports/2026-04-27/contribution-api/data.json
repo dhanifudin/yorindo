@@ -1,0 +1,185 @@
+{
+  "generatedAt": "2026-04-27T11:42:02.563Z",
+  "period": {
+    "since": "2025-01-01",
+    "until": "now"
+  },
+  "summary": {
+    "issuesOpened": 188,
+    "prsOpened": 157,
+    "issueComments": 132,
+    "prComments": 0,
+    "prReviews": 0,
+    "contributors": 14
+  },
+  "contributors": [
+    {
+      "login": "dhanifudin",
+      "issuesOpened": 111,
+      "prsOpened": 77,
+      "issueComments": 23,
+      "prComments": 0,
+      "prReviews": 0,
+      "reviewsApproved": 0,
+      "reviewsRequestedChanges": 0,
+      "reviewsCommented": 0,
+      "total": 211
+    },
+    {
+      "login": "azizaja595e",
+      "issuesOpened": 36,
+      "prsOpened": 0,
+      "issueComments": 10,
+      "prComments": 0,
+      "prReviews": 0,
+      "reviewsApproved": 0,
+      "reviewsRequestedChanges": 0,
+      "reviewsCommented": 0,
+      "total": 46
+    },
+    {
+      "login": "bogyramadhan-afk",
+      "issuesOpened": 19,
+      "prsOpened": 0,
+      "issueComments": 19,
+      "prComments": 0,
+      "prReviews": 0,
+      "reviewsApproved": 0,
+      "reviewsRequestedChanges": 0,
+      "reviewsCommented": 0,
+      "total": 38
+    },
+    {
+      "login": "raquellajuvabel",
+      "issuesOpened": 7,
+      "prsOpened": 0,
+      "issueComments": 24,
+      "prComments": 0,
+      "prReviews": 0,
+      "reviewsApproved": 0,
+      "reviewsRequestedChanges": 0,
+      "reviewsCommented": 0,
+      "total": 31
+    },
+    {
+      "login": "GiovanniDimas",
+      "issuesOpened": 0,
+      "prsOpened": 21,
+      "issueComments": 4,
+      "prComments": 0,
+      "prReviews": 0,
+      "reviewsApproved": 0,
+      "reviewsRequestedChanges": 0,
+      "reviewsCommented": 0,
+      "total": 25
+    },
+    {
+      "login": "lanleimeng",
+      "issuesOpened": 2,
+      "prsOpened": 21,
+      "issueComments": 1,
+      "prComments": 0,
+      "prReviews": 0,
+      "reviewsApproved": 0,
+      "reviewsRequestedChanges": 0,
+      "reviewsCommented": 0,
+      "total": 24
+    },
+    {
+      "login": "erick-surbakti",
+      "issuesOpened": 0,
+      "prsOpened": 15,
+      "issueComments": 7,
+      "prComments": 0,
+      "prReviews": 0,
+      "reviewsApproved": 0,
+      "reviewsRequestedChanges": 0,
+      "reviewsCommented": 0,
+      "total": 22
+    },
+    {
+      "login": "ninditya",
+      "issuesOpened": 0,
+      "prsOpened": 11,
+      "issueComments": 5,
+      "prComments": 0,
+      "prReviews": 0,
+      "reviewsApproved": 0,
+      "reviewsRequestedChanges": 0,
+      "reviewsCommented": 0,
+      "total": 16
+    },
+    {
+      "login": "yohanesjuliantino12",
+      "issuesOpened": 2,
+      "prsOpened": 12,
+      "issueComments": 1,
+      "prComments": 0,
+      "prReviews": 0,
+      "reviewsApproved": 0,
+      "reviewsRequestedChanges": 0,
+      "reviewsCommented": 0,
+      "total": 15
+    },
+    {
+      "login": "thisiselysa",
+      "issuesOpened": 6,
+      "prsOpened": 0,
+      "issueComments": 7,
+      "prComments": 0,
+      "prReviews": 0,
+      "reviewsApproved": 0,
+      "reviewsRequestedChanges": 0,
+      "reviewsCommented": 0,
+      "total": 13
+    },
+    {
+      "login": "Adzky",
+      "issuesOpened": 1,
+      "prsOpened": 0,
+      "issueComments": 11,
+      "prComments": 0,
+      "prReviews": 0,
+      "reviewsApproved": 0,
+      "reviewsRequestedChanges": 0,
+      "reviewsCommented": 0,
+      "total": 12
+    },
+    {
+      "login": "Rinaaa13",
+      "issuesOpened": 0,
+      "prsOpened": 0,
+      "issueComments": 12,
+      "prComments": 0,
+      "prReviews": 0,
+      "reviewsApproved": 0,
+      "reviewsRequestedChanges": 0,
+      "reviewsCommented": 0,
+      "total": 12
+    },
+    {
+      "login": "rialfi49",
+      "issuesOpened": 4,
+      "prsOpened": 0,
+      "issueComments": 6,
+      "prComments": 0,
+      "prReviews": 0,
+      "reviewsApproved": 0,
+      "reviewsRequestedChanges": 0,
+      "reviewsCommented": 0,
+      "total": 10
+    },
+    {
+      "login": "adyatma7",
+      "issuesOpened": 0,
+      "prsOpened": 0,
+      "issueComments": 2,
+      "prComments": 0,
+      "prReviews": 0,
+      "reviewsApproved": 0,
+      "reviewsRequestedChanges": 0,
+      "reviewsCommented": 0,
+      "total": 2
+    }
+  ]
+}
